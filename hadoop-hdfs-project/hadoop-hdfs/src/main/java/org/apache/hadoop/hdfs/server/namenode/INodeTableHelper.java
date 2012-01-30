@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -24,6 +26,7 @@ import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
 public class INodeTableHelper {
+	static final Log LOG = LogFactory.getLog(INodeTableHelper.class);
 	static final int MAX_DATA = 128;
 	public static FSNamesystem ns = null;
 	static final int RETRY_COUNT = 3; 
@@ -532,7 +535,36 @@ public class INodeTableHelper {
 		return null;
 	}
 
-
+	public static INode getINodeByName(String name) throws IOException{
+		boolean done = false;
+		int tries = RETRY_COUNT;
+		
+		LOG.info("getINodeByName:"+name);
+		
+		Session session = DBConnector.obtainSession();
+		while (done == false && tries > 0) {
+			try {
+				INode ret = getINodeByNameBasic(name, session);
+				
+				if (ret == null) 
+					return null; //file does not exist, so no point looking for the parent
+				
+				//attaching the parent
+				String parentName = name.substring(0, name.lastIndexOf('/'));
+				INodeDirectory inodeParent = (INodeDirectory) getINodeByNameBasic(parentName, session);				
+				ret.setParent(inodeParent);
+				done = true;
+				return ret;
+			}
+			catch (ClusterJException e){
+				System.err.println("InodeTableHelper.getINodeByNameBasic() threw error " + e.getMessage());
+				tries--;
+			}
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Use this method to retrieve an INode from the
 	 * database by its name. This method will not
@@ -546,7 +578,8 @@ public class INodeTableHelper {
 	public static INode getINodeByNameBasic (String name, Session session) throws IOException{
 
 		List<InodeTable> resultList = getResultListUsingField("name", name, session);
-
+		
+		//FIXME: == 1?
 		assert (resultList.size() == 1) : "More than one Inode exists with name " + name;
 
 		for (InodeTable result: resultList) {
@@ -633,6 +666,7 @@ public class INodeTableHelper {
 		inode.setFullPathName(inodetable.getName());
 		inode.setLocalName(inodetable.getLocalName());
 		
+		System.err.println("inode in convert function: " + inode);
 		
 		return inode;
 	}
@@ -843,6 +877,8 @@ public class INodeTableHelper {
 		}
 		
 	}
+	
+	/*TODO: This function is doing two roundtrips. Can we reduce this to one? Because fetching seems unnecessary?*/
 	private static void updateModificationTimeInternal(String name, long modTime, Session session){
 		
 		List<InodeTable> results = INodeTableHelper.getResultListUsingField ("name", name, session);

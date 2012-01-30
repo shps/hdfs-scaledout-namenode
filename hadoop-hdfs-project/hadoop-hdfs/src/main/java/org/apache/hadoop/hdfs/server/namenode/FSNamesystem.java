@@ -2470,6 +2470,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     DirectoryListing dl;
     readLock();
     try {
+    	
+    	if (isPermissionEnabled) {
+    		LOG.info("Checking permissions..");
+            if (dir.isDir(src)) {
+              checkPathAccess(src, FsAction.READ_EXECUTE);
+            } else {
+              checkTraverse(src);
+            }
+          }
+    	
     	//W: Not required at the moment
     	if (auditLog.isInfoEnabled() && isExternalInvocation()) {
     		logAuditEvent(UserGroupInformation.getCurrentUser(),

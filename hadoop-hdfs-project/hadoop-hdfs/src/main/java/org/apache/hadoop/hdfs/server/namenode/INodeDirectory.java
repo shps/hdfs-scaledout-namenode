@@ -141,15 +141,37 @@ class INodeDirectory extends INode {
 			return null;
 		}
 
-	
+
 
 	}
 
 	/**
 	 * Return the INode of the last component in components, or null if the last
 	 * component does not exist.
+	 * 
+	 * [CHANGES]
+	 * W: The Inode walk is not required for KTHFS, because we can use full path name directly. If this
+	 *    works, it should reduce the latency greatly.
+	 * W: no need of 
 	 */
-	private INode getNode(byte[][] components, boolean resolveLink) 
+	private INode getNodeDirect(String name, boolean resolveLink) 
+			throws UnresolvedLinkException {
+		
+		INode node;
+		try {
+			System.err.println("name: " + name);
+			return INodeTableHelper.getINodeByName(name);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+
+
+
+	}
+
+	@SuppressWarnings("unused")
+	private INode getNodeOldV2(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
 		INode[] inode  = new INode[1];
 
@@ -158,6 +180,7 @@ class INodeDirectory extends INode {
 		return inode[0];
 	}
 
+	@SuppressWarnings("unused")
 	private INode getNodeOld(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
 		INode[] inode  = new INode[1];
@@ -168,7 +191,9 @@ class INodeDirectory extends INode {
 	/* Will fetch from DB */
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		return getNode(getPathComponents(path), resolveLink);
+		//return getNodeOldV2(getPathComponents(path), resolveLink);
+		//W: no need to break file path into components
+		return getNodeDirect(path, resolveLink);
 	}
 	/**
 	 * Retrieve existing INodes from a path. If existing is big enough to store
@@ -273,7 +298,7 @@ class INodeDirectory extends INode {
 			index = 0;
 		}
 
-		
+
 		while (count < components.length && curNode != null) {
 			final boolean lastComp = (count == components.length - 1);      
 			if (index >= 0) {
@@ -293,7 +318,7 @@ class INodeDirectory extends INode {
 						constructPath(components, count+1),
 						linkTarget);
 			}
-			
+
 			if (lastComp || !curNode.isDirectory()) {
 				break;
 			}
@@ -373,7 +398,7 @@ class INodeDirectory extends INode {
 			}
 			node.setPermission(p);
 		}
-		
+
 		int low = Collections.binarySearch(getChildrenFromDB(), node.name);
 		if(low >= 0){
 			return null;
@@ -385,7 +410,7 @@ class INodeDirectory extends INode {
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
 		}
-		
+
 		// Assumption: If this piece of code is being executed, it already
 		// is in the DB, and has a fullpathname ready for its Inode instance.
 		if (this.getFullPathName().equals(Path.SEPARATOR)){
@@ -394,10 +419,10 @@ class INodeDirectory extends INode {
 		else{
 			node.setFullPathName(this.getFullPathName() + Path.SEPARATOR + node.getLocalName());
 		}
-		
+
 		// Invoke addChild to DB
 		INodeTableHelper.addChild(node);
-		
+
 		return node;
 	}
 
@@ -555,13 +580,13 @@ class INodeDirectory extends INode {
 
 	/*W: added for KTHFS*/
 	List<INode> getChildrenFromDB() {
-		
+
 		//List<INode> childrenFromDB = new ArrayList<INode>();
 		try {
 			List<INode> childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName());
 			if(childrenFromDB != null) 
 				return childrenFromDB;
-			
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -572,17 +597,17 @@ class INodeDirectory extends INode {
 	List<INode> getChildrenRaw() {
 
 		List<INode> childrenFromDB = null;
-		
+
 		try {
 			childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		//silence compiler
 		return childrenFromDB;
-		
+
 		// return children;
 	}
 
@@ -595,10 +620,10 @@ class INodeDirectory extends INode {
 		for (INode child : childrenTemp) {
 			total += child.collectSubtreeBlocksAndClear(v);
 		}
-		
+
 		// Remove me from the DB when done
 		INodeTableHelper.removeChild(this);
-		
+
 		parent = null;
 		children = null;
 		return total;
