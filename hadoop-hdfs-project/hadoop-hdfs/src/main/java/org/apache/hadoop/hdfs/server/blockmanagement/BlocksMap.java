@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.KthFsHelper;
 import org.apache.hadoop.hdfs.util.GSet;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
+import org.mortbay.log.Log;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -40,6 +41,9 @@ class BlocksMap {
     }
 
     public boolean hasNext() {
+    	/*[thesis-comment] System.err.println("\n\nblockInfo=" + blockInfo + "nextIdx="+ nextIdx  +"bi.getCapacity()="+ blockInfo.getCapacity()
+              +"bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx) + "\n\n");*/
+         
       return blockInfo != null && nextIdx < blockInfo.getCapacity()
               && blockInfo.getDatanode(nextIdx) != null;
     }

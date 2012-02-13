@@ -227,7 +227,7 @@ public class INodeTableHelper {
 	public static INode removeChildInternal(INode node, Session session) throws ClusterJDatastoreException {
 		List<InodeTable> results = getResultListUsingField("name", node.getFullPathName(), session);
 		if( !results.isEmpty()){
-			session.deletePersistent(results.get(0));
+			session.deletePersistent(results.get(0)); //FIXME: W: if a list is returned, all elements should be deleted
 		}
 		return node;
 	}

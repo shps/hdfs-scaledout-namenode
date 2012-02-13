@@ -497,8 +497,12 @@ public class BlockManager {
     if(oldBlock == null ||
         fileINode.getPreferredBlockSize() == oldBlock.getNumBytes())
       return null;
-    assert oldBlock == getStoredBlock(oldBlock) :
-      "last block of the file is not in blocksMap";
+    LOG.debug("oldBlock=" + oldBlock);
+    LOG.debug("getStoredBlock(oldBlock)=" + getStoredBlock(oldBlock));
+    /*assert oldBlock == getStoredBlock(oldBlock) :
+      "last block of the file is not in blocksMap";*/
+    assert oldBlock.equals(getStoredBlock(oldBlock)) :
+        "last block of the file is not in blocksMap";
 
     DatanodeDescriptor[] targets = getNodes(oldBlock);
 

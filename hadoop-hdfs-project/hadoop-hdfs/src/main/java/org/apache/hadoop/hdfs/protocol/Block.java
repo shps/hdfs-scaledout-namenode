@@ -203,8 +203,10 @@ public class Block implements Writable, Comparable<Block> {
       return true;
     }
     if (!(o instanceof Block)) {
+    	System.err.println("\n\n\nFATAL!!! no is not an instanceof Block\n\n\n\n");
       return false;
     }
+    System.err.println("\n\n\nFATAL!!! compareTo:"+compareTo((Block)o)+"\n\n\n\n");
     return compareTo((Block)o) == 0;
   }
 

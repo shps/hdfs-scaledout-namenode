@@ -165,7 +165,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return new BlockInfo(this);
   }
 
-  /** Set expected locations */
+  /** Set expected locations */ //FIXME: [thesis] replicas need to be persisted!
   public void setExpectedLocations(DatanodeDescriptor[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
@@ -232,14 +232,14 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    */
   public void initializeBlockRecovery(long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
-    blockRecoveryId = recoveryId;
+    blockRecoveryId = recoveryId; //FIXME: this should be either persisted to database / or stored globally 
     if (replicas.size() == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
 
-    int previous = primaryNodeIndex;
+    int previous = primaryNodeIndex; //FIXME: this should be either persisted to database / or stored globally 
     for(int i = 1; i <= replicas.size(); i++) {
       int j = (previous + i)%replicas.size();
       if (replicas.get(j).isAlive()) {

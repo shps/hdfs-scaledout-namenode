@@ -330,6 +330,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DBConnector.setConfiguration(conf);
       INodeTableHelper.ns = this;
       BlocksHelper.ns = this;
+      LeaseHelper.setLeaseManager(leaseManager); //TODO: do the same for other helpers
 
       this.dir = new FSDirectory(this, conf);
       // [STATELESS] Add rootDir to DBMS
@@ -1114,12 +1115,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       startFileInternal(src, permissions, holder, clientMachine, flag,
-          createParent, replication, blockSize);
-      
-      
-      /*W: testing clusterj*/
-      //se.sics.clusterj.Main_LW.insertINodeFile(src, holder, clientMachine, 123);
-      
+          createParent, replication, blockSize); 
       
     } finally {
       writeUnlock();
@@ -2367,7 +2363,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       long recoveryId =
         ((BlockInfoUnderConstruction)storedBlock).getBlockRecoveryId();
-      if(recoveryId != newgenerationstamp) {
+      if(recoveryId != newgenerationstamp) { //FIXME: [thesis] this exception fill be fixed once recoveryID is stored in DB
         throw new IOException("The recovery id " + newgenerationstamp
                               + " does not match current recovery id "
                               + recoveryId + " for block " + lastblock); 
@@ -2381,8 +2377,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       else {
         // update last block
-        storedBlock.setGenerationStamp(newgenerationstamp);
-        storedBlock.setNumBytes(newlength);
+        storedBlock.setGenerationStamp(newgenerationstamp); //FIXME: [thesis] should be sent to DB
+        storedBlock.setNumBytes(newlength); //FIXME: [thesis] should be sent to DB
 
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the

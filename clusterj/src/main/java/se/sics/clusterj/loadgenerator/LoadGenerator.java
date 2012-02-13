@@ -26,6 +26,10 @@ import se.sics.clusterj.InodeTable;
  *  se.sics.clusterj.loadgenerator.LoadGenerator 200 40 2
  *
  */
+/**
+ * @author wmalik
+ *
+ */
 public class LoadGenerator 
 {
 

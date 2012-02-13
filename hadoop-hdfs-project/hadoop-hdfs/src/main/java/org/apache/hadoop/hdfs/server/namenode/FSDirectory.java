@@ -783,7 +783,7 @@ public class FSDirectory implements Closeable {
         dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
 
         // Collect the blocks and remove the lease for previous dst
-        if (removedDst != null) {
+        if (removedDst != null) { 
           INode rmdst = removedDst;
           removedDst = null;
           List<Block> collectedBlocks = new ArrayList<Block>();

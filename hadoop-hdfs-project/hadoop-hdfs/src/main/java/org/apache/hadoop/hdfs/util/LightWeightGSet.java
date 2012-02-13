@@ -138,13 +138,11 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 	/*KTHFS method for getting a BlockInfo from the database*/
 	public E get(final K key) {
 		
-		//TODO: use functions from BlocksHelper
 		//validate key
 		if (key == null) {
 			throw new NullPointerException("key == null");
 		}
 		Block binfo = (Block)key;
-		//System.err.println("NUMBYTES HERE IS AAAAAAAA : " + binfo.getNumBytes());
 		return (E)BlocksHelper.getBlockInfo(binfo.getBlockId());
 
 	}

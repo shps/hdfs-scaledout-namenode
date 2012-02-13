@@ -119,6 +119,7 @@ class INodeDirectory extends INode {
 		return getChildINode(DFSUtil.string2Bytes(name));
 	}
 
+	//W: FIXME: all children calls to be replaced by getChildrenFromDB()
 	private INode getChildINode(byte[] name) {
 		if (children == null) {
 			return null;
@@ -159,22 +160,18 @@ class INodeDirectory extends INode {
 		
 		INode node;
 		try {
-			System.err.println("name: " + name);
 			return INodeTableHelper.getINodeByName(name);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
-
-
-
 	}
 
 	@SuppressWarnings("unused")
 	private INode getNodeOldV2(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
 		INode[] inode  = new INode[1];
-
+		
 		getExistingPathINodes(components, inode, resolveLink);
 
 		return inode[0];
@@ -191,9 +188,9 @@ class INodeDirectory extends INode {
 	/* Will fetch from DB */
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		//return getNodeOldV2(getPathComponents(path), resolveLink);
+		return getNodeOldV2(getPathComponents(path), resolveLink);
 		//W: no need to break file path into components
-		return getNodeDirect(path, resolveLink);
+		//return getNodeDirect(path, resolveLink);
 	}
 	/**
 	 * Retrieve existing INodes from a path. If existing is big enough to store
@@ -297,7 +294,9 @@ class INodeDirectory extends INode {
 		if (index > 0) {
 			index = 0;
 		}
-
+		
+		//Transaction tx = DBConnector.obtainSession().currentTransaction();
+		//tx.begin();
 
 		while (count < components.length && curNode != null) {
 			final boolean lastComp = (count == components.length - 1);      
@@ -330,6 +329,8 @@ class INodeDirectory extends INode {
 			index++;
 
 		}
+		
+		//tx.commit();
 
 		return count;
 	}
@@ -601,7 +602,6 @@ class INodeDirectory extends INode {
 		try {
 			childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -611,6 +611,7 @@ class INodeDirectory extends INode {
 		// return children;
 	}
 
+	//FIXME: W: should delete everything in one transaction to reduce latency of this operation
 	int collectSubtreeBlocksAndClear(List<Block> v) {
 		int total = 1;
 		List<INode> childrenTemp = getChildrenFromDB();

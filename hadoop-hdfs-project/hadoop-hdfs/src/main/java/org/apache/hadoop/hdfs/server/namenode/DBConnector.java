@@ -35,19 +35,20 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
  *    FSDirectory will make sure this stays safe. * 
  */
 public class DBConnector {
-	static int NUM_SESSION_FACTORIES;
+	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
 	
 	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
+		//NUM_SESSION_FACTORIES = 3;
 		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
 		
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
 			Properties p = new Properties();
-			p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, "localhost"));
+			p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, "cloud3.sics.se"));
 			p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, "kthfs"));
 			p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
 			sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
@@ -70,6 +71,7 @@ public class DBConnector {
 		else {
 			// Pick a random sessionFactory
 			Random r = new Random();
+			System.err.println("NUM_SESS_FACTS: " + NUM_SESSION_FACTORIES);
 			Session session = sessionFactory[r.nextInt(NUM_SESSION_FACTORIES)].getSession();
 			sessionPool.put(threadId, session);
 			return session;
