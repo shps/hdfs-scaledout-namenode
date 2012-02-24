@@ -1,7 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.Collections;
-import java.util.HashMap;
+
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -49,7 +48,7 @@ public class DBConnector {
 		{
 			Properties p = new Properties();
 			p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, "cloud3.sics.se"));
-			p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, "kthfs"));
+			p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, "kthfs-inodes"));
 			p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
 			sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
 		}

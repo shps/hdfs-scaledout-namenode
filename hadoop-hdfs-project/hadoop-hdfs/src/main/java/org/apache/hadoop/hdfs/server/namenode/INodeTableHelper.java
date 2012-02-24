@@ -25,6 +25,7 @@ import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
+@Deprecated
 public class INodeTableHelper {
 	static final Log LOG = LogFactory.getLog(INodeTableHelper.class);
 	static final int MAX_DATA = 128;
@@ -86,7 +87,6 @@ public class INodeTableHelper {
 		try {
 			node.getPermissionStatus().write(permissionString);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -508,7 +508,7 @@ public class INodeTableHelper {
 	
 	public static INode getChildDirectoryInternal(String parentDir, String searchDir, Session session) throws IOException {
 
-		/*W: TODO
+		/*
 		 *  1. Get all children of parentDir
             2. search for searchDir in parentDir's children
 		 *  3. if found then create an INode and return it
@@ -657,16 +657,14 @@ public class INodeTableHelper {
 			tmp.setHeader(inodetable.getHeader());
 			inode = tmp;
 			
-			((INodeFile)(inode)).setID(inodetable.getId()); //W: ugly cast - not sure if we should do this
+			((INodeFile)(inode)).setID(inodetable.getId()); 
 			BlockInfo[] blocksArray = BlocksHelper.getBlocksArrayInternal((INodeFile)inode, DBConnector.obtainSession());
 			((INodeFile)(inode)).setBlocksList(blocksArray);
 		}
 
 		/* FIXME: Call getLocalName() */
-		inode.setFullPathName(inodetable.getName());
+		//inode.setFullPathName(inodetable.getName()); //for simple
 		inode.setLocalName(inodetable.getLocalName());
-		
-		System.err.println("inode in convert function: " + inode);
 		
 		return inode;
 	}
@@ -739,7 +737,7 @@ public class INodeTableHelper {
 			((INodeFile)(inode)).setID(inodetable.getId()); //W: ugly cast - not sure if we should do this
 		}
 		
-		inode.setFullPathName(inodetable.getName());
+		//inode.setFullPathName(inodetable.getName()); //for simple
 
 		return inode;
 		
@@ -881,7 +879,7 @@ public class INodeTableHelper {
 	/*TODO: This function is doing two roundtrips. Can we reduce this to one? Because fetching seems unnecessary?*/
 	private static void updateModificationTimeInternal(String name, long modTime, Session session){
 		
-		List<InodeTable> results = INodeTableHelper.getResultListUsingField ("name", name, session);
+		List<InodeTable> results = getResultListUsingField ("name", name, session);
 		assert ! results.isEmpty(): "updateModicationTime : Inode" + name +" doesn't exist in DB";
 		InodeTable inode = results.get(0);
 		

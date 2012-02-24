@@ -91,7 +91,7 @@ public class INodeFile extends INode {
 	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
 	  //[KTHFS] Call for update in replication
 	  try {
-		  INodeTableHelper.updateHeader(this.getFullPathName(), header);
+		  INodeHelper.updateHeader(this.id, header);
 	  } catch (IOException e) {
 		  // TODO Auto-generated catch block
 		  e.printStackTrace();
@@ -100,22 +100,6 @@ public class INodeFile extends INode {
 
 
   
-  /*FIXME: This should be called when the inodes are created
-	 * 
-	 * added for KTHFS
-	 * 
-	 * */
-	public void setID(long id) {
-		this.id = id;
-	}
-
-	/*
-	 * added for KTHFS
-	 * 
-	 * */
-	public long getID() {
-		return this.id;
-	}
 
   /**
    * [STATELESS] get header
@@ -258,7 +242,8 @@ public class INodeFile extends INode {
 		blocks = null;
 
 		// [Stateless] Remove me from DB
-		INodeTableHelper.removeChild(this);
+		//INodeHelper.removeChild(this);
+		INodeHelper.removeChild(this.id);
 		return 1;
 	}
 

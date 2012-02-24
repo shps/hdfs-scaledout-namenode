@@ -44,7 +44,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    */
   protected byte[] name;
   protected String fullPathName; // Required for Kthfs stateless
-  protected long id;
+  protected long id; //added for KTHFS
   protected INodeDirectory parent;
   protected long modificationTime;
   protected long accessTime;
@@ -271,13 +271,14 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   /** {@inheritDoc} */
   public String getFullPathName() {
     // Get the full path name of this inode.
-	return fullPathName;
-    //return FSDirectory.getFullPathName(this);
+	//return fullPathName;
+    return FSDirectory.getFullPathName(this);
   }
   
+  /*Removed for simple
   public void setFullPathName(String name) {
 	  fullPathName = name;
-  }
+  }*/
 
   /** {@inheritDoc} */
   public String toString() {
@@ -291,7 +292,8 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * @return parent INode
    */
   INodeDirectory getParent() {
-    return this.parent;
+    //return this.parent;
+	  return INodeHelper.getParent(this.id);
   }
 
   /** 
@@ -491,4 +493,24 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     return new INodeFile(permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
   }
+  
+  
+  	public void setID(long id) {
+		this.id = id;
+	}
+
+	public long getID() {
+		return this.id;
+	}
+	protected long parentid;
+	
+	public void setParentIDLocal(long pid) {
+		this.parentid = pid;
+	}
+	public long getParentIDLocal() {
+		return this.parentid;
+	}
+	
+	
+  
 }

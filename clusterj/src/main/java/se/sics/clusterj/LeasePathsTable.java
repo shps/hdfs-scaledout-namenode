@@ -8,7 +8,7 @@ import com.mysql.clusterj.annotation.*;
  * This is a ClusterJ interface for interacting with the "LeasePaths" table
  * @author wmalik
  */
-@PersistenceCapable(table="LeasePaths")
+@PersistenceCapable(table="LeasePath")
 public interface LeasePathsTable {
 	
 	@Column(name = "holderID")

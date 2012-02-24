@@ -593,7 +593,7 @@ public class FSDirectory implements Closeable {
     String srcChildName = null;
     try {
       // remove src
-      //srcChild = removeChild(srcInodes, srcInodes.length-1);
+      srcChild = removeChild(srcInodes, srcInodes.length-1);
       srcChild = srcInodes[srcInodes.length-1];
       if (srcChild == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -605,10 +605,10 @@ public class FSDirectory implements Closeable {
       srcChild.setLocalName(dstComponents[dstInodes.length-1]);
       
       // add src to the destination
-      //dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
-      //    srcChild, UNKNOWN_DISK_SPACE, false);
+      dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
+          srcChild, UNKNOWN_DISK_SPACE, false);
     //[KTHFS] We do not add child, but update previous node in DB
-      dstChild = INodeTableHelper.updateSrcDst(src, dst);
+      //dstChild = INodeHelper.updateSrcDst(src, dst); //for simple
       
       if (dstChild != null) {
         srcChild = null;
@@ -617,11 +617,11 @@ public class FSDirectory implements Closeable {
               + src + " is renamed to " + dst);
         }
         // update modification time of dst and the parent of src
-        srcInodes[srcInodes.length-2].setModificationTime(timestamp);
-        dstInodes[dstInodes.length-2].setModificationTime(timestamp);
+        srcInodes[srcInodes.length-2].setModificationTime(timestamp); //FIXME: should be persisted to DB
+        dstInodes[dstInodes.length-2].setModificationTime(timestamp); //FIXME: should be persisted to DB
         
         // [Stateless] Update fullpath and parents for all subtrees
-        INodeTableHelper.updateParentAcrossSubTree(src, dst);
+        //INodeHelper.updateParentAcrossSubTree(src, dst); //for simple
         return true;
       }
     } finally {
@@ -1219,10 +1219,10 @@ public class FSDirectory implements Closeable {
 	       
 	      rootDir.addNode(path, newnode);*/
 	      
-	      INodeFile newestNode =  INodeTableHelper.completeFileUnderConstruction(oldnode, newnode);
+	      INodeFile newestNode =  INodeHelper.completeFileUnderConstruction(oldnode, newnode);
 	      
-	      newnode.setID(newestNode.getID());
-	      newnode.setFullPathName(newestNode.getFullPathName());
+	      newnode.setID(newestNode.getID()); //FIXME: should be done inside the above function
+	      //newnode.setFullPathName(newestNode.getFullPathName()); //removed for simple
 	      
 	      int index = 0;
 	      for (BlockInfo b : newestNode.getBlocks()) {
@@ -1833,11 +1833,11 @@ public class FSDirectory implements Closeable {
    * Return the removed node; null if the removal fails.
    */
   private INode removeChild(INode[] pathComponents, int pos) {
-	INodeDirectory dir = ((INodeDirectory)pathComponents[pos-1]);	
+	INodeDirectory dir = ((INodeDirectory)pathComponents[pos-1]);	//parent of file/dir being removed
     INode removedNode = dir.removeChild(pathComponents[pos]);
     if (removedNode != null) {
       INode.DirCounts counts = new INode.DirCounts();
-      removedNode.spaceConsumedInTree(counts);
+      removedNode.spaceConsumedInTree(counts); //[W] works?
       updateCountNoQuotaCheck(pathComponents, pos,
                   -counts.getNsCount(), -counts.getDsCount());
     }

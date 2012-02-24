@@ -158,7 +158,7 @@ public class BlocksHelper {
 
 			//W: assuming that this function will only be called on an INodeFile
 			if (single == false){
-				INodeFile node = (INodeFile)INodeTableHelper.getINode(bit.getINodeID());
+				INodeFile node = (INodeFile)INodeHelper.getINode(bit.getINodeID());
 				if (node == null){
 					return null;
 				}
@@ -702,7 +702,7 @@ public class BlocksHelper {
 
 		long inodeId = blockInfoTable.getINodeID();
 		
-		return INodeTableHelper.getINode(inodeId);
+		return INodeHelper.getINode(inodeId);
 	}
 		
 	public static int getTripletsIndex(DatanodeDescriptor node, long blockId)

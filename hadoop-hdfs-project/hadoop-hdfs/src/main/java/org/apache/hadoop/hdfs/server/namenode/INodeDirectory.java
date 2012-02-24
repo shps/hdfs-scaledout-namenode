@@ -89,7 +89,8 @@ class INodeDirectory extends INode {
 
 		try {
 			// Remove child from DB
-			INodeTableHelper.removeChild(node);
+			//INodeHelper.removeChild(node); //for simple
+			INodeHelper.removeChild(node.getID());
 			return node;
 		} catch (ClusterJDatastoreException e)
 		{
@@ -109,17 +110,17 @@ class INodeDirectory extends INode {
 		if (low>=0) { // an old child exists so replace by the newChild
 			children.set(low, newChild);
 			//[kthfs] Call to INodeTableHelper to replaceChild in the DB
-			INodeTableHelper.replaceChild(this, newChild);
+			INodeHelper.replaceChild(this, newChild);
 		} else {
 			throw new IllegalArgumentException("No child exists to be replaced");
 		}
 	}
 
 	INode getChild(String name) {
-		return getChildINode(DFSUtil.string2Bytes(name));
+		return getChildINodeFromDB(DFSUtil.string2Bytes(name));
 	}
 
-	//W: FIXME: all children calls to be replaced by getChildrenFromDB()
+	@Deprecated
 	private INode getChildINode(byte[] name) {
 		if (children == null) {
 			return null;
@@ -134,48 +135,32 @@ class INodeDirectory extends INode {
 	private INode getChildINodeFromDB(byte[] name) {
 
 		INode child;
-		try {
-			child = INodeTableHelper.getChildDirectory(this.getFullPathName(), new String(name));
+		try {			
+			child = INodeHelper.getINode(DFSUtil.bytes2String(name), this.id);
 			return child;
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
-
-
-
 	}
 
 	/**
 	 * Return the INode of the last component in components, or null if the last
 	 * component does not exist.
-	 * 
-	 * [CHANGES]
-	 * W: The Inode walk is not required for KTHFS, because we can use full path name directly. If this
-	 *    works, it should reduce the latency greatly.
-	 * W: no need of 
+	 *  
 	 */
-	private INode getNodeDirect(String name, boolean resolveLink) 
+	/*private INode getNodeDirect(String name, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		
+
 		INode node;
 		try {
-			return INodeTableHelper.getINodeByName(name);
+			return INodeHelper.getINodeByName(name);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
-	}
+	}*/
 
-	@SuppressWarnings("unused")
-	private INode getNodeOldV2(byte[][] components, boolean resolveLink) 
-			throws UnresolvedLinkException {
-		INode[] inode  = new INode[1];
-		
-		getExistingPathINodes(components, inode, resolveLink);
-
-		return inode[0];
-	}
 
 	@SuppressWarnings("unused")
 	private INode getNodeOld(byte[][] components, boolean resolveLink) 
@@ -185,10 +170,10 @@ class INodeDirectory extends INode {
 		return inode[0];
 	}
 
-	/* Will fetch from DB */
+	
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		return getNodeOldV2(getPathComponents(path), resolveLink);
+		return getNodeOld(getPathComponents(path), resolveLink);
 		//W: no need to break file path into components
 		//return getNodeDirect(path, resolveLink);
 	}
@@ -294,9 +279,6 @@ class INodeDirectory extends INode {
 		if (index > 0) {
 			index = 0;
 		}
-		
-		//Transaction tx = DBConnector.obtainSession().currentTransaction();
-		//tx.begin();
 
 		while (count < components.length && curNode != null) {
 			final boolean lastComp = (count == components.length - 1);      
@@ -323,13 +305,12 @@ class INodeDirectory extends INode {
 			}
 
 			INodeDirectory parentDir = (INodeDirectory)curNode; //W: will always return / in the first iteration
-			//curNode = parentDir.getChildINode(components[count + 1]); //W: iterating through the path
 			curNode = parentDir.getChildINodeFromDB(components[count + 1]);
 			count++;
 			index++;
 
 		}
-		
+
 		//tx.commit();
 
 		return count;
@@ -406,23 +387,15 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeTableHelper.updateModificationTime(this.getFullPathName(),node.getModificationTime());
+		INodeHelper.updateModificationTime(this.id, node.getModificationTime());
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
 		}
-
-		// Assumption: If this piece of code is being executed, it already
-		// is in the DB, and has a fullpathname ready for its Inode instance.
-		if (this.getFullPathName().equals(Path.SEPARATOR)){
-			node.setFullPathName(this.getFullPathName() + node.getLocalName());
-		}
-		else{
-			node.setFullPathName(this.getFullPathName() + Path.SEPARATOR + node.getLocalName());
-		}
-
+		
+		node.setID(DFSUtil.getRandom().nextLong()); //added for simple
 		// Invoke addChild to DB
-		INodeTableHelper.addChild(node);
+		INodeHelper.addChild(node, false, this.id);
 
 		return node;
 	}
@@ -579,12 +552,10 @@ class INodeDirectory extends INode {
 		return getChildrenFromDB();
 	}
 
-	/*W: added for KTHFS*/
 	List<INode> getChildrenFromDB() {
-
-		//List<INode> childrenFromDB = new ArrayList<INode>();
 		try {
-			List<INode> childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName());
+			//List<INode> childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName()); //for simple
+			List<INode> childrenFromDB = INodeHelper.getChildren(this.id);
 			if(childrenFromDB != null) 
 				return childrenFromDB;
 
@@ -596,19 +567,14 @@ class INodeDirectory extends INode {
 
 
 	List<INode> getChildrenRaw() {
-
 		List<INode> childrenFromDB = null;
-
 		try {
-			childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName());
+			childrenFromDB = INodeHelper.getChildren(this.id);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 		//silence compiler
 		return childrenFromDB;
-
-		// return children;
 	}
 
 	//FIXME: W: should delete everything in one transaction to reduce latency of this operation
@@ -623,10 +589,14 @@ class INodeDirectory extends INode {
 		}
 
 		// Remove me from the DB when done
-		INodeTableHelper.removeChild(this);
+		INodeHelper.removeChild(this.id);
 
 		parent = null;
 		children = null;
 		return total;
 	}
+
+
+
+
 }

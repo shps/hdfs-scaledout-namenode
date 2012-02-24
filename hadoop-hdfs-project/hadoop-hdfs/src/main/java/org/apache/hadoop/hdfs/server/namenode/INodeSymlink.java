@@ -65,7 +65,8 @@ public class INodeSymlink extends INode {
   @Override
   int collectSubtreeBlocksAndClear(List<Block> v) {
 	// [Stateless] Remove me from DB
-	INodeTableHelper.removeChild(this);
+	//INodeHelper.removeChild(this);
+	  INodeHelper.removeChild(this.id);
     return 1;
   }
 

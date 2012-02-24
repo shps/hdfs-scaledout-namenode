@@ -328,15 +328,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     if(fsImage == null) {
       DBConnector.setConfiguration(conf);
-      INodeTableHelper.ns = this;
+      INodeHelper.ns = this;
       BlocksHelper.ns = this;
       LeaseHelper.setLeaseManager(leaseManager); //TODO: do the same for other helpers
 
       this.dir = new FSDirectory(this, conf);
-      // [STATELESS] Add rootDir to DBMS
-      this.dir.rootDir.setFullPathName(Path.SEPARATOR);
-  	  INodeTableHelper.addChild(this.dir.rootDir);
-  	  
       StartupOption startOpt = NameNode.getStartupOption(conf);
       this.dir.loadFSImage(startOpt);
       long timeTakenToLoadFSImage = now() - systemStart;
@@ -345,14 +341,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                 (int) timeTakenToLoadFSImage);
     } else {
       DBConnector.setConfiguration(conf);
-      INodeTableHelper.ns = this;
+      INodeHelper.ns = this;
       BlocksHelper.ns = this;
-
       this.dir = new FSDirectory(fsImage, this, conf);
-      // [STATELESS] Add rootDir to DBMS
-      this.dir.rootDir.setFullPathName(Path.SEPARATOR);
-  	  INodeTableHelper.addChild(this.dir.rootDir);
+
     }
+    this.dir.rootDir.setLocalName(Path.SEPARATOR);
+    INodeHelper.addChild(this.dir.rootDir, true, 1337L); //TODO: implement a new function addRoot()
+    LOG.info("Added root inode");
     this.safeMode = new SafeModeInfo(conf);
   }
 
@@ -1610,6 +1606,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasReadOrWriteLock();
     INodeFile file = dir.getFileINode(src);
     checkLease(src, holder, file);
+    LOG.debug("pendingFile: " + file);
+    LOG.debug("pendingFile: " + file.getLocalName() + "" + file.getParent());
+
     
     return (INodeFileUnderConstruction)file;
   }

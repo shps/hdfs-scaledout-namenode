@@ -28,7 +28,6 @@
 	</organization>
 
 	<modules>
-		<module>clusterj</module>
 		<module>hadoop-project</module>
 		<module>hadoop-project-dist</module>
 		<module>hadoop-assemblies</module> 
