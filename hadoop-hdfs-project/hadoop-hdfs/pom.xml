@@ -33,10 +33,17 @@
   </properties>
 
   <dependencies>
+
+<dependency>
+	<groupId>mysql</groupId>
+	<artifactId>mysql-connector-java</artifactId>
+	<version>5.1.18</version>
+        <scope>provided</scope>
+</dependency> 
 <dependency>
 <groupId>se.sics.dight</groupId>
     <artifactId>clusterj</artifactId>
-</dependency>
+</dependency> 
     <dependency>
       <groupId>org.aspectj</groupId>
       <artifactId>aspectjtools</artifactId>

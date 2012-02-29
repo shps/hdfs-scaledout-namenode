@@ -12,7 +12,9 @@ import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 
 
@@ -38,17 +40,15 @@ public class DBConnector {
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
 	
-	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
-		//NUM_SESSION_FACTORIES = 3;
 		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
 		
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
 			Properties p = new Properties();
-			p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, "cloud3.sics.se"));
-			p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, "kthfs-inodes"));
+			p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
+			p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
 			p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
 			sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
 		}
@@ -61,7 +61,7 @@ public class DBConnector {
 	 * NOTE: Do not close the session returned by this call
 	 * or you will die.
 	 */
-	public static Session obtainSession (){
+	public synchronized static Session obtainSession (){
 		long threadId = Thread.currentThread().getId();
 		
 		if (sessionPool.containsKey(threadId))	{

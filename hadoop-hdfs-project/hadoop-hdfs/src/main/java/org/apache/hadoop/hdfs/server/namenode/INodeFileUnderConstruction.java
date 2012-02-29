@@ -100,6 +100,9 @@ public class INodeFileUnderConstruction extends INodeFile {
                                   getModificationTime(),
                                   getModificationTime(),
                                   getPreferredBlockSize());
+    obj.setID(getID()); //for simple
+    obj.setLocalName(getLocalName()); //for simple
+    obj.setParentIDLocal(getParentIDLocal()); //for simple
     return obj;
     
   }

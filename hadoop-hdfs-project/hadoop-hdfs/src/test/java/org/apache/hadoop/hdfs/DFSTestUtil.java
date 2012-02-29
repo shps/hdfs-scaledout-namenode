@@ -179,6 +179,7 @@ public class DFSTestUtil {
   
   public static void createFile(FileSystem fs, Path fileName, long fileLen, 
       short replFactor, long seed) throws IOException {
+	  System.out.println("getParent:"+fileName.getParent());
     if (!fs.mkdirs(fileName.getParent())) {
       throw new IOException("Mkdirs failed to create " + 
                             fileName.getParent().toString());

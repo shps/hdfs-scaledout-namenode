@@ -61,6 +61,7 @@ public class TestCorruptFilesJsp  {
 
       // create files
       for (Path filepath : filepaths) {
+    	  System.out.println("filepath:"+filepath);
         DFSTestUtil.createFile(fs, filepath, FILE_SIZE, (short) 1, 0L);
         DFSTestUtil.waitReplication(fs, filepath, (short) 1);
       }

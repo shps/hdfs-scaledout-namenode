@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.KthFsHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.GSet;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 import org.mortbay.log.Log;
@@ -41,9 +41,13 @@ class BlocksMap {
     }
 
     public boolean hasNext() {
-    	/*[thesis-comment] System.err.println("\n\nblockInfo=" + blockInfo + "nextIdx="+ nextIdx  +"bi.getCapacity()="+ blockInfo.getCapacity()
-              +"bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx) + "\n\n");*/
-         
+    	NameNode.LOG.debug("blockInfo=" + blockInfo);
+    	NameNode.LOG.debug("bi.getCapacity()="+ blockInfo.getCapacity());
+    	NameNode.LOG.debug("bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx));
+
+    	/*[thesis-comment]*/ /*System.err.println("\n\nblockInfo=" + blockInfo + "nextIdx="+ nextIdx  +"bi.getCapacity()="+ blockInfo.getCapacity()
+        +"bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx) + "\n\n");*/
+    	
       return blockInfo != null && nextIdx < blockInfo.getCapacity()
               && blockInfo.getDatanode(nextIdx) != null;
     }
@@ -139,9 +143,8 @@ class BlocksMap {
       return;
     }
     blockInfo.setINode(null);
-    System.out.println("remove block number: "+blockInfo.numNodes());
+    System.out.println("numNodes() for block: "+blockInfo.numNodes());
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
-    	System.out.println("in the remove loop with idx = "+idx);
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo); // remove from the list and wipe the location
     }
@@ -157,6 +160,7 @@ class BlocksMap {
    * returns Iterator that iterates through the nodes the block belongs to.
    */
   Iterator<DatanodeDescriptor> nodeIterator(Block b) {
+	  NameNode.LOG.debug("Inside BlocksMap.nodeIterator with blk:" + b);
     return nodeIterator(blocks.get(b));
   }
 

@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
+import org.mortbay.log.Log;
 
 import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
 
@@ -128,6 +129,7 @@ public class FSDirectory implements Closeable {
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, UNKNOWN_DISK_SPACE);
+    //INodeHelper.addChild(rootDir, true, 1337L); //no idea why NUM_SESS_FACT fails with this. Later. 
     
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
@@ -606,7 +608,7 @@ public class FSDirectory implements Closeable {
       
       // add src to the destination
       dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
-          srcChild, UNKNOWN_DISK_SPACE, false);
+          srcChild, UNKNOWN_DISK_SPACE, false, true);
     //[KTHFS] We do not add child, but update previous node in DB
       //dstChild = INodeHelper.updateSrcDst(src, dst); //for simple
       
@@ -629,7 +631,7 @@ public class FSDirectory implements Closeable {
         // put it back
         srcChild.setLocalName(srcChildName);
         addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, srcChild, 
-            UNKNOWN_DISK_SPACE, false);
+            UNKNOWN_DISK_SPACE, false, true);
       }
     }
     NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -769,7 +771,7 @@ public class FSDirectory implements Closeable {
       removedSrc.setLocalName(dstComponents[dstInodes.length - 1]);
       // add src as dst to complete rename
       dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
-          removedSrc, UNKNOWN_DISK_SPACE, false);
+          removedSrc, UNKNOWN_DISK_SPACE, false, true);
 
       int filesDeleted = 0;
       if (dstChild != null) {
@@ -797,13 +799,13 @@ public class FSDirectory implements Closeable {
         // Rename failed - restore src
         removedSrc.setLocalName(srcChildName);
         addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, removedSrc, 
-            UNKNOWN_DISK_SPACE, false);
+            UNKNOWN_DISK_SPACE, false, true);
       }
       if (removedDst != null) {
         // Rename failed - restore dst
         removedDst.setLocalName(dstChildName);
         addChildNoQuotaCheck(dstInodes, dstInodes.length - 1, removedDst, 
-            UNKNOWN_DISK_SPACE, false);
+            UNKNOWN_DISK_SPACE, false, true);
       }
     }
     NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -1111,6 +1113,7 @@ public class FSDirectory implements Closeable {
 
     INode[] inodes =  rootDir.getExistingPathINodes(src, false);
     INode targetNode = inodes[inodes.length-1];
+    
 
     if (targetNode == null) { // non-existent src
       if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1140,12 +1143,13 @@ public class FSDirectory implements Closeable {
     }
     
     // Remove the node from the namespace
+    //[thesis] commented because the inode should be removed from DB at the end
     targetNode = removeChild(inodes, pos);
     if (targetNode == null) {
       return 0;
     }
     // set the parent's modification time
-    inodes[pos-1].setModificationTime(mtime);
+    inodes[pos-1].setModificationTime(mtime); //FIXME: [thesis] should be persisted to DB
     
     // If INodeDirectory, then we've already cleared it from
     // the DB, so iterate through its children and clear the
@@ -1167,9 +1171,9 @@ public class FSDirectory implements Closeable {
     return filesRemoved;
   }
 
- /* *//**
+   /**
    * Replaces the specified inode with the specified one.
-   *//*
+   */
   public void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
       throws IOException, UnresolvedLinkException {    
     writeLock();
@@ -1184,56 +1188,24 @@ public class FSDirectory implements Closeable {
                               "failed to remove " + path);
       } 
       
-       Currently oldnode and newnode are assumed to contain the same
-       * blocks. Otherwise, blocks need to be removed from the blocksMap.
+       //Currently oldnode and newnode are assumed to contain the same
+       //* blocks. Otherwise, blocks need to be removed from the blocksMap.
        
       rootDir.addNode(path, newnode); 
 
+      /* [W] No need to patch the blocks in the db because we are resuing the inodeid
       int index = 0;
       for (BlockInfo b : newnode.getBlocks()) {
         BlockInfo info = getBlockManager().addINode(b, newnode);
         newnode.setBlock(index, info); // inode refers to the block in BlocksMap
         index++;
-      }
+      }*/
     } finally {
       writeUnlock();
     }
-  }*/
+  }
   
-  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
-	      throws IOException, UnresolvedLinkException {    
-	    writeLock();
-	    try {
-	      //
-	      // Remove the node from the namespace 
-	      //
-	      /*if (!oldnode.removeNode()) {
-	        NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
-	                                     "failed to remove " + path);
-	        throw new IOException("FSDirectory.replaceNode: " +
-	                              "failed to remove " + path);
-	      } 
-	      
-	       Currently oldnode and newnode are assumed to contain the same
-	       * blocks. Otherwise, blocks need to be removed from the blocksMap.
-	       
-	      rootDir.addNode(path, newnode);*/
-	      
-	      INodeFile newestNode =  INodeHelper.completeFileUnderConstruction(oldnode, newnode);
-	      
-	      newnode.setID(newestNode.getID()); //FIXME: should be done inside the above function
-	      //newnode.setFullPathName(newestNode.getFullPathName()); //removed for simple
-	      
-	      int index = 0;
-	      for (BlockInfo b : newestNode.getBlocks()) {
-	        BlockInfo info = getBlockManager().addINode(b, newestNode);
-	        newestNode.setBlock(index, info); // inode refers to the block in BlocksMap
-	        index++;
-	      }
-	    } finally {
-	      writeUnlock();
-	    }
-	  }
+
 
   /**
    * Get a partial listing of the indicated directory
@@ -1271,6 +1243,7 @@ public class FSDirectory implements Closeable {
 			HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
 			for (int i=0; i<numOfListing; i++) {
 				INode cur = contents.get(startChild+i);
+				NameNode.LOG.debug(cur.name);
 				listing[i] = createFileStatus(cur.name, cur, needLocation);
 			}
 			return new DirectoryListing(
@@ -1519,6 +1492,19 @@ public class FSDirectory implements Closeable {
 
   /** Return the full path name of the specified inode */
   static String getFullPathName(INode inode) {
+	  if(inode.getLocalName().equals(INodeDirectory.ROOT_NAME))
+		  return "";
+	  return getFullPathName(INodeHelper.getINode(inode.getParentIDLocal())) +"/"+ inode.getLocalName();
+  }
+  
+  static String labgetFullPathName(INode inode) {
+	  
+	  
+	  return null;
+  }
+  
+  @Deprecated
+  static String getFullPathNameOld(INode inode) {
 	
     // calculate the depth of this inode from root
     int depth = 0;
@@ -1773,7 +1759,7 @@ public class FSDirectory implements Closeable {
    * QuotaExceededException is thrown if it violates quota limit */
   private <T extends INode> T addChild(INode[] pathComponents, int pos,
       T child, long childDiskspace, boolean inheritPermission,
-      boolean checkQuota) throws QuotaExceededException {
+      boolean checkQuota, boolean reuseID) throws QuotaExceededException {
 	// The filesystem limits are not really quotas, so this check may appear
 	// odd.  It's because a rename operation deletes the src, tries to add
 	// to the dest, if that fails, re-adds the src from whence it came.
@@ -1797,7 +1783,7 @@ public class FSDirectory implements Closeable {
     }
     
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
-        child, inheritPermission, true);
+        child, inheritPermission, true, reuseID);
     if (addedNode == null) {
       updateCount(pathComponents, pos, -counts.getNsCount(), 
           -childDiskspace, true);
@@ -1811,16 +1797,16 @@ public class FSDirectory implements Closeable {
       throws QuotaExceededException {
 	
     return addChild(pathComponents, pos, child, childDiskspace,
-        inheritPermission, true);
+        inheritPermission, true, false);
   }
   
   private <T extends INode> T addChildNoQuotaCheck(INode[] pathComponents,
-      int pos, T child, long childDiskspace, boolean inheritPermission) {
+      int pos, T child, long childDiskspace, boolean inheritPermission, boolean reuseID) {
     T inode = null;
     try {
 
       inode = addChild(pathComponents, pos, child, childDiskspace,
-          inheritPermission, false);
+          inheritPermission, false, reuseID);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e); 
     }

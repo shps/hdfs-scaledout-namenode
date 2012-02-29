@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.mortbay.log.Log;
 
 /** I-node for closed file. */
 public class INodeFile extends INode {
@@ -42,8 +43,6 @@ public class INodeFile extends INode {
 
 	protected BlockInfo blocks[] = null;
 
-	/*added for KTHFS*/
-	protected long id = -1;
 
 	INodeFile(PermissionStatus permissions,
 			int nrBlocks, short replication, long modificationTime,
@@ -183,7 +182,6 @@ public class INodeFile extends INode {
 	/**
 	 * add a block to the block list
 	 */
-	//FIXME: KTHFSBLOCKS use BlocksHelper.addBlock instead
 /*	void addBlock(BlockInfo newblock) {
 		if (this.blocks == null) {
 			this.blocks = new BlockInfo[1];
@@ -204,7 +202,7 @@ public class INodeFile extends INode {
 			this.blocks[0] = newblock;
 		} else {*/
 			BlocksHelper.addBlock(newblock);
-			this.blocks = BlocksHelper.getBlocksArray(this);
+			this.blocks = BlocksHelper.getBlocksArray(this); //TODO: [thesis] is this required?
 		//}
 	}
 
@@ -231,19 +229,18 @@ public class INodeFile extends INode {
 	}
 
 	int collectSubtreeBlocksAndClear(List<Block> v) {
+		
 		parent = null;
-		if(blocks != null && v != null) {
+		if(blocks != null && v != null) { //TODO: [thesis] blocks should be fetched from DB here
 			for (BlockInfo blk : blocks) {
 				v.add(blk);
 				blk.setINode(null);
 			}
 		}
-		//FIXME: Reflect this in the DB plz
+		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
 		blocks = null;
 
-		// [Stateless] Remove me from DB
-		//INodeHelper.removeChild(this);
-		INodeHelper.removeChild(this.id);
+		INodeHelper.removeChild(super.id);
 		return 1;
 	}
 
@@ -328,7 +325,6 @@ public class INodeFile extends INode {
 	 * Get the last block of the file.
 	 * Make sure it has the right type.
 	 */
-	//FIXME: KTHFSBLOCKS
 	/*public <T extends BlockInfo> T getLastBlock() throws IOException {
 
 		@SuppressWarnings("unchecked")
@@ -339,15 +335,6 @@ public class INodeFile extends INode {
 	public <T extends BlockInfo> T getLastBlock() throws IOException {
 		
 		BlockInfo [] tempblocks = BlocksHelper.getBlocksArray(this);
-		
-		/*
-		KthFsHelper.printKTH("\n\n");
-      	KthFsHelper.printKTH("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \t length of tempblocks in INodeFile.getLastBLock: " + tempblocks.length);
-      	
-      	for(int i=0;i<tempblocks.length;i++) {
-      	KthFsHelper.printKTH("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \t tempblocks["+i+"] = " + tempblocks[i]);
-      	}
-      	*/
 		
 		if (tempblocks == null || tempblocks.length == 0)
 			return null;
@@ -368,8 +355,6 @@ public class INodeFile extends INode {
 	public int numBlocks() {
 		return blocks == null ? 0 : blocks.length;
 	}
-
-
 
 
 

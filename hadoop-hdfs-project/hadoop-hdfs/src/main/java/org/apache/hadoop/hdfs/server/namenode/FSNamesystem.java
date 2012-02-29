@@ -330,7 +330,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DBConnector.setConfiguration(conf);
       INodeHelper.ns = this;
       BlocksHelper.ns = this;
-      LeaseHelper.setLeaseManager(leaseManager); //TODO: do the same for other helpers
+      LeaseHelper.initialize(leaseManager); //TODO: do the same for other helpers
 
       this.dir = new FSDirectory(this, conf);
       StartupOption startOpt = NameNode.getStartupOption(conf);
@@ -346,9 +346,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.dir = new FSDirectory(fsImage, this, conf);
 
     }
-    this.dir.rootDir.setLocalName(Path.SEPARATOR);
-    INodeHelper.addChild(this.dir.rootDir, true, 1337L); //TODO: implement a new function addRoot()
-    LOG.info("Added root inode");
+    INodeHelper.addChild(this.dir.rootDir, true, 1337L); //TODO: implement a new function addRoot(). Should be done inside FSDirectory
     this.safeMode = new SafeModeInfo(conf);
   }
 
@@ -1229,6 +1227,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                         holder,
                                         clientMachine,
                                         clientNode);
+        
+        cons.setLocalName(node.getLocalName()); //for simple
+        cons.setParentIDLocal(node.getParentIDLocal()); //for simple
+        cons.setID(node.getID()); //for simple
+        
         dir.replaceNode(src, node, cons);
         leaseManager.addLease(cons.getClientName(), src);
 
@@ -1933,11 +1936,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // Unlink the target directory from directory tree
       
-      if (!dir.delete(src, collectedBlocks)) {
+      if (!dir.delete(src, collectedBlocks)) { //[thesis] only the inode is deleted at this point, the blocks are still there
     	  return false;
       }
       deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
       if (deleteNow) { // Perform small deletes right away
+    	  LOG.debug("Inside deleteInternal.deleteNow with collectedBlocks.size() " + collectedBlocks.size() + " blkid:" + collectedBlocks.get(0).getBlockId());
       	removeBlocks(collectedBlocks);
       }
     } finally {
@@ -1967,10 +1971,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     int start = 0;
     int end = 0;
+    LOG.debug("Inside removeBlocks with size " + blocks.size());
     while (start < blocks.size()) {
       end = BLOCK_DELETION_INCREMENT + start;
       end = end > blocks.size() ? blocks.size() : end;
       for (int i=start; i<end; i++) {
+    	  LOG.debug("inside removeBlocks.forloop startend");
         blockManager.removeBlock(blocks.get(i));
       }
       start = end;
@@ -1984,6 +1990,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
     for(Block b : blocks) {
+      LOG.debug("inside removePathAndBlocks forloop block: " + b);
       blockManager.removeBlock(b);
     }
   }
@@ -2004,7 +2011,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     readLock();
     try {
       
-    	/*FIXME: W: Commented out for the time being*/
       if (!DFSUtil.isValidName(src)) {
         throw new InvalidPathException("Invalid file name: " + src);
       }
@@ -2395,7 +2401,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
           for (int i = 0; i < descriptors.length; i++) {
-            descriptors[i].addBlock(storedBlock); //FIXME: KTHFS  Blocks!!!
+            descriptors[i].addBlock(storedBlock);
           }
         }
         // add pipeline locations into the INodeUnderConstruction
@@ -3500,7 +3506,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       FsAction subAccess) throws AccessControlException, UnresolvedLinkException {
     FSPermissionChecker pc = new FSPermissionChecker(
         fsOwner.getShortUserName(), supergroup);
-    if (!pc.isSuper) { /*FIXME: [KTHFS] used for checking if the user is a super user*/
+    if (!pc.isSuper) { 
       dir.waitForReady();
       readLock();
       try {

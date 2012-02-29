@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
-import org.apache.hadoop.hdfs.server.namenode.KthFsHelper;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 
 /**

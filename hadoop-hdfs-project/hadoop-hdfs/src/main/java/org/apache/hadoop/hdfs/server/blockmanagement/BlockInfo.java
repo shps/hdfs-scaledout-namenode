@@ -25,8 +25,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeTableHelper;
-import org.apache.hadoop.hdfs.server.namenode.KthFsHelper;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**

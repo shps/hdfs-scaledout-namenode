@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.mortbay.log.Log;
 
 import se.sics.clusterj.InodeTable;
 
@@ -87,16 +88,22 @@ class INodeDirectory extends INode {
 	INode removeChild(INode node) {
 		assert getChildrenFromDB() != null;
 
-		try {
-			// Remove child from DB
-			//INodeHelper.removeChild(node); //for simple
+			INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
 			INodeHelper.removeChild(node.getID());
-			return node;
-		} catch (ClusterJDatastoreException e)
-		{
-			return null;
-		}
+			return removedNode;
 	}
+
+	@Deprecated
+	INode removeChildOld(INode node) {
+	    assert children != null;
+	    int low = Collections.binarySearch(children, node.name);
+	    if (low >= 0) {
+	      return children.remove(low);
+	    } else {
+	      return null;
+	    }
+	  }
+
 
 	/** Replace a child that has the same name as newChild by newChild.
 	 * 
@@ -109,7 +116,6 @@ class INodeDirectory extends INode {
 		int low = Collections.binarySearch(children, newChild.name);
 		if (low>=0) { // an old child exists so replace by the newChild
 			children.set(low, newChild);
-			//[kthfs] Call to INodeTableHelper to replaceChild in the DB
 			INodeHelper.replaceChild(this, newChild);
 		} else {
 			throw new IllegalArgumentException("No child exists to be replaced");
@@ -162,8 +168,7 @@ class INodeDirectory extends INode {
 	}*/
 
 
-	@SuppressWarnings("unused")
-	private INode getNodeOld(byte[][] components, boolean resolveLink) 
+	private INode getNode(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
 		INode[] inode  = new INode[1];
 		getExistingPathINodes(components, inode, resolveLink);
@@ -173,9 +178,7 @@ class INodeDirectory extends INode {
 	
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		return getNodeOld(getPathComponents(path), resolveLink);
-		//W: no need to break file path into components
-		//return getNodeDirect(path, resolveLink);
+		return getNode(getPathComponents(path), resolveLink);
 	}
 	/**
 	 * Retrieve existing INodes from a path. If existing is big enough to store
@@ -269,6 +272,7 @@ class INodeDirectory extends INode {
 	// Uses DB
 	int getExistingPathINodes(byte[][] components, INode[] existing, 
 			boolean resolveLink) throws UnresolvedLinkException {
+		
 		assert compareBytes(this.name, components[0]) == 0 :
 			"Incorrect name " + getLocalName() + " expected " + 
 			DFSUtil.bytes2String(components[0]);
@@ -370,7 +374,8 @@ class INodeDirectory extends INode {
 	 *          node, otherwise
 	 */
 	<T extends INode> T addChild(final T node, boolean inheritPermission,
-			boolean setModTime) {
+			boolean setModTime,
+			boolean reuseID/*[W] added to reuse the same ID for move operations*/) {
 		if (inheritPermission) {
 			FsPermission p = getFsPermission();
 			//make sure the  permission has wx for the user
@@ -393,7 +398,8 @@ class INodeDirectory extends INode {
 			node.setGroup(getGroupName());
 		}
 		
-		node.setID(DFSUtil.getRandom().nextLong()); //added for simple
+		if(!reuseID)
+			node.setID(DFSUtil.getRandom().nextLong()); //added for simple
 		// Invoke addChild to DB
 		INodeHelper.addChild(node, false, this.id);
 
@@ -449,7 +455,7 @@ class INodeDirectory extends INode {
 		// insert into the parent children list
 		newNode.name = localname;
 
-		if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, false) == null)
 			return null;
 		return parent;
 	}
@@ -497,7 +503,7 @@ class INodeDirectory extends INode {
 		// insert into the parent children list
 		INodeDirectory parent = getParent(pathComponents);
 
-		if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, true) == null)
 			return null;
 		return parent;
 	}
@@ -554,11 +560,9 @@ class INodeDirectory extends INode {
 
 	List<INode> getChildrenFromDB() {
 		try {
-			//List<INode> childrenFromDB = INodeTableHelper.getChildren(this.getFullPathName()); //for simple
 			List<INode> childrenFromDB = INodeHelper.getChildren(this.id);
 			if(childrenFromDB != null) 
 				return childrenFromDB;
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -580,7 +584,9 @@ class INodeDirectory extends INode {
 	//FIXME: W: should delete everything in one transaction to reduce latency of this operation
 	int collectSubtreeBlocksAndClear(List<Block> v) {
 		int total = 1;
-		List<INode> childrenTemp = getChildrenFromDB();
+		List<INode> childrenTemp = getChildrenFromDB(); //TODO: confirm if raw needs to be used here
+		INodeHelper.removeChild(this.id); //[thesis] moved from below to fix the directory removal issue
+		
 		if (childrenTemp == null) {
 			return total;
 		}
@@ -589,8 +595,7 @@ class INodeDirectory extends INode {
 		}
 
 		// Remove me from the DB when done
-		INodeHelper.removeChild(this.id);
-
+		//INodeHelper.removeChild(this.id);
 		parent = null;
 		children = null;
 		return total;

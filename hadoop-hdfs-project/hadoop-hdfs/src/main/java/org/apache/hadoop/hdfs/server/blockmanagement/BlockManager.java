@@ -58,7 +58,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.KthFsHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -799,9 +798,11 @@ public class BlockManager {
    */
   private void addToInvalidates(Block b) {
     StringBuilder datanodes = new StringBuilder();
+    LOG.debug("Inside addToInvalidates with block:"+b);
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); it
         .hasNext();) {
       DatanodeDescriptor node = it.next();
+      LOG.debug("Inside addToInvalidates.forloop");
       invalidateBlocks.add(b, node, false);
       datanodes.append(node.getName()).append(" ");
     }
@@ -2369,7 +2370,8 @@ public class BlockManager {
   }
 
   public void removeBlock(Block block) {
-    block.setNumBytes(BlockCommand.NO_ACK);
+    LOG.debug("inside removeBlock with block:" + block);
+    block.setNumBytes(BlockCommand.NO_ACK); //TODO: [thesis] should be sent to DB
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);

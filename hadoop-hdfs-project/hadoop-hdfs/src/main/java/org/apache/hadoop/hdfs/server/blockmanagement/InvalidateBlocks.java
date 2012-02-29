@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.mortbay.log.Log;
 
 /** 
  * Keeps a Collection for every named machine containing blocks
@@ -67,6 +68,8 @@ class InvalidateBlocks {
    */
   synchronized void add(final Block block, final DatanodeInfo datanode,
       final boolean log) {
+	  NameNode.LOG.debug("[thesis] block being added to invalidates: " + block.getBlockId() 
+			  + " DN:"+datanode.getHostName());
     Collection<Block> set = node2blocks.get(datanode.getStorageID());
     if (set == null) {
       set = new HashSet<Block>();

@@ -48,7 +48,7 @@ public class TestLeaseHelper {
   @Before
   public void connect() throws IOException {
 	  DBConnector.setConfiguration(CONF);
-	  LeaseHelper.setLeaseManager(leaseManager);
+	  LeaseHelper.initialize(leaseManager);
   }
 
   @After

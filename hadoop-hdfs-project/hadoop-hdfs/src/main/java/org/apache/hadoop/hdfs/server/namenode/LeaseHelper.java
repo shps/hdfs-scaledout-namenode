@@ -39,111 +39,6 @@ public class LeaseHelper {
 
 	
 	/**
-	 * This method inserts a record (or updates if holder is already present) in the Lease table. 
-	 * The call to this method should be wrapped in  tx.begin() and tx.commit() calls.
-	 * 
-	 * @param holder
-	 * @param lastUpdated
-	 */
-	private static void insertLeaseInternal(Session session, String holder, long lastUpdated, int holderID) {
-
-		LeaseTable leaseTable = session.newInstance(LeaseTable.class);
-		leaseTable.setHolder(holder);
-		leaseTable.setLastUpdated(lastUpdated);
-		leaseTable.setHolderID(holderID);
-		session.savePersistent(leaseTable);
-	}
-
-	/**
-	 * This method inserts a record in the Lease table. The call to this method should be wrapped in
-	 * tx.begin() and tx.commit calls
-	 * @param session
-	 * @param holderID
-	 * @param path
-	 */
-	private static void insertLeasePathsInternal(Session session, int holderID, String path) {
-
-		LeasePathsTable leasePathsTable = session.newInstance(LeasePathsTable.class);
-		leasePathsTable.setHolderID(holderID);
-		leasePathsTable.setPath(path);
-		session.makePersistent(leasePathsTable);
-	}
-
-	/**
-	 * This method is used for querying the Lease table
-	 * @param session
-	 * @param holder
-	 * @return a LeaseTable object which is held by <b>holder</b>. If there is no holder, then it returns null
-	 */
-	private static LeaseTable selectLeaseTableInternal(Session session, String holder) {
-
-		Object holderKey = holder;
-		return session.find(LeaseTable.class, holderKey);
-	}
-
-
-	/**
-	 * This method is used for querying the LeasePaths table
-	 * 
-	 * @param session
-	 * @param column
-	 * @param value
-	 * @return a List of LeasePathsTable objects. If no matching rows are found, a List with size = 0 is returned
-	 */
-	private static List<LeasePathsTable> selectLeasePathsTableInternal(Session session, String column, Object value){
-
-		QueryBuilder qb = session.getQueryBuilder();
-		QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
-		dobj.where(dobj.get(column).equal(dobj.param("param")));
-		Query<LeasePathsTable> query = session.createQuery(dobj);
-		query.setParameter("param", value);
-		return 	query.getResultList();
-	}
-
-	/**
-	 * Deletes a Lease record from the database. After this method is executed, the deleteLeasePathsInternal
-	 * method should be executed immediately
-	 * 
-	 * @param session
-	 * @param holder
-	 * @return the holderID of the deleted record, so that its 
-	 * corresponding rows in LeasePaths can be deleted. Returns -1 if lease not found
-	 */
-	private static void deleteLeaseInternal(Session session, String holder) {		
-		session.deletePersistent(LeaseTable.class, holder);
-	}
-
-	/**
-	 * This method deletes all records belonging to <b>holderID</b> from the LeasePaths table
-	 * @param session
-	 * @param holderID
-	 */
-	@SuppressWarnings("unused")
-	private static void deleteLeasePathsAllInternal(Session session, int holderID) {
-		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
-		for(LeasePathsTable leasePath : leasePathTables)
-			session.deletePersistent(leasePath);
-	}
-
-	/**
-	 * Deletes the row which has holderID=holderID and path=src 
-	 * @param session
-	 * @param holderID
-	 * @param src
-	 * @return true if a row was deleted, false if row was not found
-	 */
-	private static boolean deleteLeasePathsInternal(Session session, int holderID, String src) {
-		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
-		for(LeasePathsTable leasePath : leasePathTables) {
-			if(leasePath.getPath().equals(src)) {
-				session.deletePersistent(leasePath);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
 	 * This method creates a Lease object using the values stored in leaseTable and pathList
 	 * @param leaseTable
 	 * @param pathList
@@ -152,13 +47,13 @@ public class LeaseHelper {
 	 */
 	private static Lease createLeaseObject(LeaseTable leaseTable, List<LeasePathsTable> pathList) {
 
-		if (leaseTable == null) //TODO: should pathList be checked also?
+		if (leaseTable == null)
 			return null;
-		
-		
+		if (lm == null) {
+			LOG.error("LeaseManager has not been initialized yet");
+			return null;
+		}
 		Lease lease = lm.new Lease(leaseTable.getHolder(), leaseTable.getHolderID(), leaseTable.getLastUpdated());
-
-
 		TreeSet<String> paths = convertLeasePathsTableToTreeSet(pathList);	
 		lease.setPaths(paths);
 		return lease;
@@ -270,11 +165,7 @@ public class LeaseHelper {
 		}
 	}
 
-	private static void renewLeaseInternal(Session session, String holder) {
-		LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
-		leaseTable.setLastUpdated(now());
-		session.updatePersistent(leaseTable);
-	}
+	
 
 	/**
 	 * Fetches a lease from the database
@@ -438,39 +329,7 @@ public class LeaseHelper {
 	}
 
 
-	/**
-	 * Returns a sorted set of leases. 
-	 * @param session
-	 * @return A SortedSet of Leases 
-	 */
-	private static SortedSet<Lease> getSortedLeasesInternal(Session session) {
-		List<LeaseTable> leaseTables = getAllLeaseTables(session);
-		SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
-		
-		for(LeaseTable leaseTable : leaseTables) {
-			sortedLeases.add(getLease(leaseTable.getHolder()));
-		}
-		return sortedLeases;
-	}
 	
-	/**Fetches lease and paths from the database and returns a path sorted TreeMap<String, Lease>
-	 * @param session
-	 * @return TreeMap<String, Lease> sorted by path
-	 */
-	private static SortedMap<String, Lease> getSortedLeasesByPathInternal(Session session) {
-		List<LeaseTable> leaseTables = getAllLeaseTables(session);
-		SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
-		
-		for(LeaseTable leaseTable : leaseTables) {
-			//sortedLeases.add(getLease(leaseTable.getHolder()));
-			Lease lease = getLease(leaseTable.getHolder());
-			for(String path : lease.getPathsLocal()) {
-				sortedLeasesByPath.put(path, lease);
-			}
-			
-		}
-		return sortedLeasesByPath;
-	}
 	
 	/**
 	 * @return A sorted set of leases
@@ -518,40 +377,7 @@ public class LeaseHelper {
 		return new TreeMap<String, Lease>();
 	}
 	
-	/**
-	 * Selects rows in the Lease table using holderID. 
-	 * If there is more than one row in the database with holderID, it throws an error and returns null.
-	 * If no matching rows are found, it returns null.
-	 * 
-	 * This function causes a full table scan in the Lease table, so should be 
-	 * used only if no other option is available.
-	 *  
-	 * @param session
-	 * @param holderID
-	 * @return a LeaseTable object, returns null if not found, or if two or more rows exist with same holderID
-	 */
-	private static LeaseTable selectLeaseTableInternal(Session session, int holderID) {
-		QueryBuilder qb = session.getQueryBuilder();
-		QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
 
-		dobj.where(dobj.get("holderID").equal(dobj.param("param")));
-
-		Query<LeaseTable> query = session.createQuery(dobj);
-		query.setParameter("param", holderID); //the WHERE clause of SQL
-		List<LeaseTable> leaseTables = query.getResultList();
-		
-		if(leaseTables.size() > 1) {
-			LOG.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
-			return null;
-		}
-		else if (leaseTables.size() == 1) {
-			return leaseTables.get(0);
-		}
-		else {
-			LOG.info("No rows found for holderID:" + holderID + " in Lease table");
-			return null;
-		}
-	}
 	
 	/**
 	 * Searches for a lease by path
@@ -615,8 +441,193 @@ public class LeaseHelper {
 	/**Sets the leaseManager object. This method should be called before using any of the helper functions in this class.
 	 * @param leaseMgr
 	 */
-	public static void setLeaseManager(LeaseManager leaseMgr) {
+	public static void initialize(LeaseManager leaseMgr) {
 		lm = leaseMgr;
+	}
+	
+	
+	////////////////////////////////////////////////////////////////////////
+	// 				Internal Methods
+	////////////////////////////////////////////////////////////////////////
+	
+	/**
+	 * This method inserts a record (or updates if holder is already present) in the Lease table. 
+	 * The call to this method should be wrapped in  tx.begin() and tx.commit() calls.
+	 * 
+	 * @param holder
+	 * @param lastUpdated
+	 */
+	private static void insertLeaseInternal(Session session, String holder, long lastUpdated, int holderID) {
+
+		LeaseTable leaseTable = session.newInstance(LeaseTable.class);
+		leaseTable.setHolder(holder);
+		leaseTable.setLastUpdated(lastUpdated);
+		leaseTable.setHolderID(holderID);
+		session.savePersistent(leaseTable);
+	}
+
+	/**
+	 * This method inserts a record in the Lease table. The call to this method should be wrapped in
+	 * tx.begin() and tx.commit calls
+	 * @param session
+	 * @param holderID
+	 * @param path
+	 */
+	private static void insertLeasePathsInternal(Session session, int holderID, String path) {
+
+		LeasePathsTable leasePathsTable = session.newInstance(LeasePathsTable.class);
+		leasePathsTable.setHolderID(holderID);
+		leasePathsTable.setPath(path);
+		session.makePersistent(leasePathsTable);
+	}
+
+	/**
+	 * This method is used for querying the Lease table
+	 * @param session
+	 * @param holder
+	 * @return a LeaseTable object which is held by <b>holder</b>. If there is no holder, then it returns null
+	 */
+	private static LeaseTable selectLeaseTableInternal(Session session, String holder) {
+
+		Object holderKey = holder;
+		return session.find(LeaseTable.class, holderKey);
+	}
+
+
+	/**
+	 * This method is used for querying the LeasePaths table
+	 * 
+	 * @param session
+	 * @param column
+	 * @param value
+	 * @return a List of LeasePathsTable objects. If no matching rows are found, a List with size = 0 is returned
+	 */
+	private static List<LeasePathsTable> selectLeasePathsTableInternal(Session session, String column, Object value){
+
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
+		dobj.where(dobj.get(column).equal(dobj.param("param")));
+		Query<LeasePathsTable> query = session.createQuery(dobj);
+		query.setParameter("param", value);
+		return 	query.getResultList();
+	}
+
+	/**
+	 * Deletes a Lease record from the database. After this method is executed, the deleteLeasePathsInternal
+	 * method should be executed immediately
+	 * 
+	 * @param session
+	 * @param holder
+	 * @return the holderID of the deleted record, so that its 
+	 * corresponding rows in LeasePaths can be deleted. Returns -1 if lease not found
+	 */
+	private static void deleteLeaseInternal(Session session, String holder) {		
+		session.deletePersistent(LeaseTable.class, holder);
+	}
+
+	/**
+	 * This method deletes all records belonging to <b>holderID</b> from the LeasePaths table
+	 * @param session
+	 * @param holderID
+	 */
+	@SuppressWarnings("unused")
+	private static void deleteLeasePathsAllInternal(Session session, int holderID) {
+		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
+		for(LeasePathsTable leasePath : leasePathTables)
+			session.deletePersistent(leasePath);
+	}
+
+	/**
+	 * Deletes the row which has holderID=holderID and path=src 
+	 * @param session
+	 * @param holderID
+	 * @param src
+	 * @return true if a row was deleted, false if row was not found
+	 */
+	private static boolean deleteLeasePathsInternal(Session session, int holderID, String src) {
+		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
+		for(LeasePathsTable leasePath : leasePathTables) {
+			if(leasePath.getPath().equals(src)) {
+				session.deletePersistent(leasePath);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private static void renewLeaseInternal(Session session, String holder) {
+		LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+		leaseTable.setLastUpdated(now());
+		session.updatePersistent(leaseTable);
+	}
+
+	/**
+	 * Returns a sorted set of leases. 
+	 * @param session
+	 * @return A SortedSet of Leases 
+	 */
+	private static SortedSet<Lease> getSortedLeasesInternal(Session session) {
+		List<LeaseTable> leaseTables = getAllLeaseTables(session);
+		SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
+		
+		for(LeaseTable leaseTable : leaseTables) {
+			sortedLeases.add(getLease(leaseTable.getHolder()));
+		}
+		return sortedLeases;
+	}
+	
+	/**Fetches lease and paths from the database and returns a path sorted TreeMap<String, Lease>
+	 * @param session
+	 * @return TreeMap<String, Lease> sorted by path
+	 */
+	private static SortedMap<String, Lease> getSortedLeasesByPathInternal(Session session) {
+		List<LeaseTable> leaseTables = getAllLeaseTables(session);
+		SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
+		
+		for(LeaseTable leaseTable : leaseTables) {
+			//sortedLeases.add(getLease(leaseTable.getHolder()));
+			Lease lease = getLease(leaseTable.getHolder());
+			for(String path : lease.getPathsLocal()) {
+				sortedLeasesByPath.put(path, lease);
+			}
+			
+		}
+		return sortedLeasesByPath;
+	}
+	
+	/**
+	 * Selects rows in the Lease table using holderID. 
+	 * If there is more than one row in the database with holderID, it throws an error and returns null.
+	 * If no matching rows are found, it returns null.
+	 * 
+	 * This function causes a full table scan in the Lease table, so should be 
+	 * used only if no other option is available.
+	 *  
+	 * @param session
+	 * @param holderID
+	 * @return a LeaseTable object, returns null if not found, or if two or more rows exist with same holderID
+	 */
+	private static LeaseTable selectLeaseTableInternal(Session session, int holderID) {
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
+
+		dobj.where(dobj.get("holderID").equal(dobj.param("param")));
+
+		Query<LeaseTable> query = session.createQuery(dobj);
+		query.setParameter("param", holderID); //the WHERE clause of SQL
+		List<LeaseTable> leaseTables = query.getResultList();
+		
+		if(leaseTables.size() > 1) {
+			LOG.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
+			return null;
+		}
+		else if (leaseTables.size() == 1) {
+			return leaseTables.get(0);
+		}
+		else {
+			LOG.info("No rows found for holderID:" + holderID + " in Lease table");
+			return null;
+		}
 	}
 
 }

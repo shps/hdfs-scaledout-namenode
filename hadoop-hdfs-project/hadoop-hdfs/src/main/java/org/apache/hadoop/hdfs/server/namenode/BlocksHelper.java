@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 public class BlocksHelper {
 
+	private static Log LOG = LogFactory.getLog(BlocksHelper.class);
 	public static FSNamesystem ns = null;
 	static final int RETRY_COUNT = 3; 
 
@@ -40,7 +43,7 @@ public class BlocksHelper {
 	public static void appendBlocks(INodeFile thisNode, INodeFile [] inodes, int totalAddedBlocks) {
 		int tries=RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0 ){
@@ -57,7 +60,7 @@ public class BlocksHelper {
 				tries--;
 			}
 		}
-		
+
 	}
 	private static void appendBlocksInternal (INodeFile thisNode, INodeFile[] inodes, int totalAddedBlocks, Session session){
 		for(INodeFile in: inodes) {
@@ -82,24 +85,24 @@ public class BlocksHelper {
 		BlockInfoTable bInfoTable = session.newInstance(BlockInfoTable.class);
 		bInfoTable.setBlockId(newblock.getBlockId());
 		bInfoTable.setGenerationStamp(newblock.getGenerationStamp());
-		bInfoTable.setINodeID(newblock.getINode().getID()); //FIXME: store ID in INodeFile objects - use Mariano :)
+		bInfoTable.setINodeID(newblock.getINode().getID()); 
 		bInfoTable.setNumBytes(newblock.getNumBytes());
 		bInfoTable.setReplication(-1); //FIXME: see if we need to store this or not
 		return bInfoTable;
 	}
 
-//	private static List<TripletsTable> getTriplets(long blockId) {
-//		Session s = DBConnector.sessionFactory.getSession();
-//		QueryBuilder qb = s.getQueryBuilder();
-//		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
-//		dobj.where(dobj.get("blockId").equal(dobj.param("blockId"))); //works?
-//		Query<TripletsTable> query = s.createQuery(dobj);
-//		query.setParameter("blockId", blockId); //W: WHERE blockId = blockId
-//		
-//
-//		return query.getResultList(); 
-//	}
-//
+	//	private static List<TripletsTable> getTriplets(long blockId) {
+	//		Session s = DBConnector.sessionFactory.getSession();
+	//		QueryBuilder qb = s.getQueryBuilder();
+	//		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
+	//		dobj.where(dobj.get("blockId").equal(dobj.param("blockId"))); //works?
+	//		Query<TripletsTable> query = s.createQuery(dobj);
+	//		query.setParameter("blockId", blockId); //W: WHERE blockId = blockId
+	//		
+	//
+	//		return query.getResultList(); 
+	//	}
+	//
 	/** Return a BlockInfo object from an blockId 
 	 * @param blockId
 	 * @return
@@ -108,30 +111,37 @@ public class BlocksHelper {
 	public static BlockInfo getBlockInfo(long blockId)  {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
 				BlockInfo ret = getBlockInfoInternal(blockId, session, false);
 				done=true;
+				LOG.debug("inside getBlockInfo input:" + blockId);
+				if(ret != null)
+					LOG.debug("inside getBlockInfo output:" + ret.getBlockId());
+				else
+					LOG.debug("inside getBlockInfo output:" + null);
 				return ret;
 			}
 			catch (ClusterJException e){
 				System.err.println("getBlockInfo failed " + e.getMessage());
 				tries--;
 			}
+
 		}
 		return null;
 	}
 	/** When called with single=false, will not retrieve the INodes for the Block */
-	private static BlockInfo getBlockInfoInternal(long blockId, Session session, boolean single){	
+	private static BlockInfo getBlockInfoInternal(long blockId, Session session, boolean single) {
 		BlockInfoTable bit = session.find(BlockInfoTable.class, blockId);
 
 		if(bit == null)
 		{
+			LOG.debug("inside getBlockInfoInternal BlockInfoTable is null");
 			return null;
 		}
-			else {
+		else {
 			Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
 			BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
 
@@ -157,15 +167,14 @@ public class BlocksHelper {
 			}
 
 			//W: assuming that this function will only be called on an INodeFile
-			if (single == false){
+			if (single == false){ 
 				INodeFile node = (INodeFile)INodeHelper.getINode(bit.getINodeID());
-				if (node == null){
-					return null;
-				}
+				if (node != null) { 
 				node.setBlocksList(getBlocksArrayInternal(node, session));
 
 				blockInfo.setINodeWithoutTransaction(node);
 				updateINodeIDInternal(node.getID(), blockInfo, session);
+				}
 			}
 			blockInfo.setBlockIndex(bit.getBlockIndex()); 
 			blockInfo.setTimestamp(bit.getTimestamp());
@@ -178,7 +187,7 @@ public class BlocksHelper {
 	public static BlockInfo getBlockInfoSingle(long blockId) throws IOException {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -193,11 +202,11 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-	
+
 	public static void putBlockInfo(BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {
@@ -242,10 +251,10 @@ public class BlocksHelper {
 	public static void updateIndex(int idx, BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-		
+
 		while (done == false && tries > 0) {
 			try {
 				tx.begin();
@@ -265,20 +274,20 @@ public class BlocksHelper {
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
 		bit.setBlockId(binfo.getBlockId());
 		bit.setGenerationStamp(binfo.getGenerationStamp());
-		bit.setINodeID(binfo.getINode().getID()); //FIXME: verify if this is working - use Mariano
+		bit.setINodeID(binfo.getINode().getID());
 		bit.setBlockIndex(idx); //setting the index in the table
 		bit.setNumBytes(binfo.getNumBytes());
 		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
 		s.updatePersistent(bit);
-		
+
 	}
 	public static void updateINodeID(long iNodeID, BlockInfo binfo){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-						
+
 		while (done == false && tries > 0) {
 			try {
 				tx.begin();
@@ -294,7 +303,7 @@ public class BlocksHelper {
 			}
 		}
 	}
-	
+
 	private static void updateINodeIDInternal(long iNodeID, BlockInfo binfo, Session s) {
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
 		bit.setBlockId(binfo.getBlockId());
@@ -312,7 +321,7 @@ public class BlocksHelper {
 	public static List<BlockInfoTable> getResultListUsingField(String field, long value){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -337,7 +346,7 @@ public class BlocksHelper {
 		return 	query.getResultList();
 
 	}
-	
+
 	public static List<TripletsTable> getTripletsByFields(String datanodeName, String nextBlockId, String hostNameValue, long nextValue){
 		int tries = RETRY_COUNT;
 		boolean done = false;
@@ -355,7 +364,7 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-	
+
 	/*
 	 * Internal method: use this to perform queries of the type, where field1 is
 	 * a string and field2 is of type long:
@@ -366,7 +375,7 @@ public class BlocksHelper {
 	private static List<TripletsTable> getTripletsByFieldsInternal(String fieldName1, String fieldName2, String fieldValue1, long fieldValue2, Session session){
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
-		
+
 		Predicate pred = dobj.get(fieldName1).equal(dobj.param("param1"));
 		Predicate pred2 = dobj.get(fieldName2).equal(dobj.param("param2"));
 		Predicate and = pred.and(pred2);
@@ -377,11 +386,11 @@ public class BlocksHelper {
 		return 	query.getResultList();
 
 	}
-	
+
 	public static BlockInfo[] getBlocksArray(INodeFile inode) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -393,22 +402,23 @@ public class BlocksHelper {
 				System.err.println("getBlocksArray failed " + e.getMessage());
 				tries--;
 			}
+
 		}
 		return null;
 	}
-	
-	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session){
+
+	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) {
 		if(inode==null)
 			return null;
-		
+
 		List<BlockInfoTable> blocksList = getResultListUsingFieldInternal("iNodeID", inode.getID(), session);
 
 		if(blocksList.size() == 0 || blocksList == null) {
 			return null;
 		}
-		
+
 		BlockInfo[] blocksArray = new BlockInfo[blocksList.size()];
-		
+
 		for(int i=0; i<blocksArray.length; i++) {
 			// Now we're effectively calling getBlockInfoSingle()
 			blocksArray[i] = getBlockInfoInternal(blocksList.get(i).getBlockId(), session, true);
@@ -419,22 +429,22 @@ public class BlocksHelper {
 		Arrays.sort(blocksArray, new BlockInfoComparator());
 		return blocksArray;
 	}
-	
-	
+
+
 	public static class BlockInfoComparator implements Comparator<BlockInfo> {
 
 		@Override
 		public int compare(BlockInfo o1, BlockInfo o2) {
 			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
 		}
-		
+
 	}
 
 	/** Update the DataNode in the triplets table.*/
 	public static void setDatanode(long blockId, int index, String name) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {
@@ -452,30 +462,30 @@ public class BlocksHelper {
 			}
 		}
 	}	
-	
-		private  static void setDatanodeInternal(long blockId, int index, String name, Session session) {
-			Object[] pKey = new Object[2];
-			pKey[0]=blockId;
-			pKey[1]=index;
-			TripletsTable triplet = session.find(TripletsTable.class, pKey);
-			if (triplet != null) {
-				triplet.setDatanodeName(name);
-				triplet.setIndex(index);
-				session.savePersistent(triplet);
-			}
-			else {
-				TripletsTable newTriplet = session.newInstance(TripletsTable.class);
-				newTriplet.setBlockId(blockId);
-				newTriplet.setDatanodeName(name);
-				newTriplet.setIndex(index);
-				session.savePersistent(newTriplet);
-			}
+
+	private  static void setDatanodeInternal(long blockId, int index, String name, Session session) {
+		Object[] pKey = new Object[2];
+		pKey[0]=blockId;
+		pKey[1]=index;
+		TripletsTable triplet = session.find(TripletsTable.class, pKey);
+		if (triplet != null) {
+			triplet.setDatanodeName(name);
+			triplet.setIndex(index);
+			session.savePersistent(triplet);
 		}
-	
+		else {
+			TripletsTable newTriplet = session.newInstance(TripletsTable.class);
+			newTriplet.setBlockId(blockId);
+			newTriplet.setDatanodeName(name);
+			newTriplet.setIndex(index);
+			session.savePersistent(newTriplet);
+		}
+	}
+
 	public static DatanodeDescriptor getDatanode (long blockId, int index){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -490,25 +500,25 @@ public class BlocksHelper {
 		}
 		return null;
 	}	
-	
+
 	private static DatanodeDescriptor getDataDescriptorInternal(long blockId, int index, Session session){
 		Object[] pKey = new Object[2];
 		pKey[0]=blockId;
 		pKey[1]=index;
 		TripletsTable triplet = session.find(TripletsTable.class, pKey);
-		
+
 		if (triplet != null && triplet.getDatanodeName() != null) {
 			DatanodeDescriptor ret = ns.getBlockManager().getDatanodeManager().getDatanodeByName(triplet.getDatanodeName());
 			return ret;
 		}
-		
+
 		return null;
 	}
-	
+
 	public static DatanodeDescriptor[] getDataNodesFromBlock (long blockId){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -523,8 +533,8 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-	
-	
+
+
 	private static DatanodeDescriptor[] getDataNodesFromBlockInternal (long blockId, Session session){
 		List<TripletsTable> result = getTripletsListUsingFieldInternal("blockId", blockId, session);
 		DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
@@ -536,11 +546,11 @@ public class BlocksHelper {
 		}
 		return nodeDescriptor;
 	}
-	
+
 	public static List<TripletsTable> getTripletsListUsingField(String field, long value){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
@@ -555,8 +565,8 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-	
-	
+
+
 	private static List<TripletsTable> getTripletsListUsingFieldInternal(String field, long value, Session s){
 		QueryBuilder qb = s.getQueryBuilder();
 		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
@@ -575,11 +585,11 @@ public class BlocksHelper {
 		query.setParameter("param", value);
 		return query.getResultList();
 	}
-	
+
 	public static BlockInfo removeBlocks(Block key){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {
@@ -599,8 +609,8 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-	
-	
+
+
 	private static BlockInfo removeBlocksInternal(Block key, Session s)
 	{
 		long blockId = key.getBlockId();
@@ -611,31 +621,31 @@ public class BlocksHelper {
 		s.deletePersistent(bit);
 		return bi;
 	}
-	
-	
+
+
 	public static void removeTriplets(BlockInfo blockInfo, int index)
 	{
 		Session session = DBConnector.obtainSession();	
 		Transaction tx = session.currentTransaction();
 		tx.begin();
-		
+
 		Object[] pKey = new Object[2];
 		pKey[0]=blockInfo.getBlockId();
 		pKey[1]=index;
 		TripletsTable triplet = session.find(TripletsTable.class, pKey);
 		session.deletePersistent(triplet);
-		
+
 		// The triplets entries in the DB for a block have an ordered list of
 		// indices. Removal of an entry of an index X means that all entries
 		// with index greater than X needs to be corrected (decremented by 1
 		// basically).
 		List<TripletsTable> results = getTripletsListUsingFieldInternal ("blockId", blockInfo.getBlockId(), session);
-		
+
 		Collections.sort(results, new TripletsTableComparator());
-		
+
 		for (TripletsTable t: results)	{
 			long oldIndex = t.getIndex();
-			
+
 			// entry that needs its index corrected
 			if (index < oldIndex)
 			{				
@@ -643,40 +653,41 @@ public class BlocksHelper {
 				// MySQL cluster indices. Thus, editing a primary key or a part of
 				// a composite key => we need to remove the entry, and re-insert it
 				// into the DB.
-				
+
 				TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
 				replacementEntry.setBlockId(t.getBlockId());
 				replacementEntry.setDatanodeName(t.getDatanodeName());
 				replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
-				
+
 				session.deletePersistent(t); // Delete old entry
 				session.makePersistent(replacementEntry); // Add new one
 			}
 		}
 		tx.commit();
 	}
-	
-	
-	
+
+
+
 	public static class TripletsTableComparator implements Comparator<TripletsTable> {
 
 		@Override
 		public int compare(TripletsTable o1, TripletsTable o2) {
 			return o1.getIndex() < o2.getIndex() ? -1 : 1;
 		}
-		
+
 	}
-	
-	
+
+
 	/** Given a BlockInfo object, find the number of triplets that exist  */
 	public static int getTripletsForBlockLength (BlockInfo blockinfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
-		
+
 		Session session = DBConnector.obtainSession();
 		while (done == false && tries > 0) {
 			try {
 				int ret = getTripletsForBlockLengthInternal(blockinfo, session);
+				LOG.debug("inside getTripletsForBlockLength length:"+ ret);
 				done=true;
 				return ret;
 			}
@@ -687,24 +698,23 @@ public class BlocksHelper {
 		}
 		return -1;
 	}
-	
-	
+
+
 	private static int getTripletsForBlockLengthInternal (BlockInfo blockinfo, Session session) {
 		List<TripletsTable> results = getTripletsListUsingFieldInternal ("blockId", blockinfo.getBlockId(), session);
 		return results.size();
 	}
-	
-	
+
+
 	public static INode getInodeFromBlockId (long blockId) {
-		
+
 		Session session = DBConnector.obtainSession();
 		BlockInfoTable blockInfoTable = session.find(BlockInfoTable.class, blockId);
 
 		long inodeId = blockInfoTable.getINodeID();
-		
 		return INodeHelper.getINode(inodeId);
 	}
-		
+
 	public static int getTripletsIndex(DatanodeDescriptor node, long blockId)
 	{
 		int blockIndex;
@@ -731,7 +741,7 @@ public class BlocksHelper {
 		}
 		return -1;
 	}
-	
+
 	/*
 	 * This replaces BlockInfo.findDatanode().
 	 * It finds the rows corresponding to a (blockId, datanode) tuple,
@@ -763,11 +773,11 @@ public class BlocksHelper {
 		Session session = DBConnector.obtainSession();
 		List<TripletsTable> results = getTripletsListUsingFieldInternal ("blockId", blockId, session);
 		int count = 0;
-		
+
 		if (results != null && results.size() > 0)
 		{
 			// Sort by index, so the highest index is last.
-			
+
 			for (TripletsTable t: results)
 			{
 				if (t.getDatanodeName() != null)
@@ -778,7 +788,7 @@ public class BlocksHelper {
 		}
 		return count;
 	}
-	
+
 	/*
 	 * Find all BlockInfo objects associated with a particular DataNode.
 	 * 
@@ -790,13 +800,11 @@ public class BlocksHelper {
 		Session session = DBConnector.obtainSession();
 
 		List<TripletsTable> tripletsForDatanode = getTripletsListUsingFieldInternal("datanodeName", dataNodeName, session);
-		
 		for (TripletsTable t: tripletsForDatanode)
 		{
 			System.err.println("Adding blockid: " + t.getBlockId());
 			ret.add(getBlockInfoInternal(t.getBlockId(), session, false));
 		}
-		
 		return ret;
 	}
 }
