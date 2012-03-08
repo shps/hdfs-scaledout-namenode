@@ -219,7 +219,7 @@ public class INodeHelper {
 		query.setParameter("parentID", parentid);
 		List<INodeTableSimple> results = query.getResultList();
 		if(results.size() > 1) {
-			LOG.error(results.size() + " row(s) with same name|parentID. FATAL.");
+			LOG.error(results.size() + " row(s) with same name|parentID. Not good!");
 			return results.get(0);
 		}
 		else if(results.size() == 0){
