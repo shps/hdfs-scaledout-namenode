@@ -326,12 +326,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dtSecretManager = createDelegationTokenSecretManager(conf);
     this.registerMBean(); // register the MBean for the FSNamesystemState
     
-    if(fsImage == null) {
+    if(NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
       DBConnector.setConfiguration(conf);
-      INodeHelper.ns = this;
-      BlocksHelper.ns = this;
-      LeaseHelper.initialize(leaseManager); //TODO: do the same for other helpers
-
+      INodeHelper.initialize(this);
+      BlocksHelper.initialize(this);
+      LeaseHelper.initialize(leaseManager);
+    }
+    //TODO: truncate the DB tables when StartupOption.FORMAT
+    if(fsImage == null) {
       this.dir = new FSDirectory(this, conf);
       StartupOption startOpt = NameNode.getStartupOption(conf);
       this.dir.loadFSImage(startOpt);
@@ -340,13 +342,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.getNameNodeMetrics().setFsImageLoadTime(
                                 (int) timeTakenToLoadFSImage);
     } else {
-      DBConnector.setConfiguration(conf);
-      INodeHelper.ns = this;
-      BlocksHelper.ns = this;
-      this.dir = new FSDirectory(fsImage, this, conf);
+          this.dir = new FSDirectory(fsImage, this, conf);
 
     }
-    INodeHelper.addChild(this.dir.rootDir, true, 1337L); //TODO: implement a new function addRoot(). Should be done inside FSDirectory
+    INodeHelper.addChild(this.dir.rootDir, true, 1337L);
     this.safeMode = new SafeModeInfo(conf);
   }
 
@@ -1609,10 +1608,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasReadOrWriteLock();
     INodeFile file = dir.getFileINode(src);
     checkLease(src, holder, file);
-    LOG.debug("pendingFile: " + file);
-    LOG.debug("pendingFile: " + file.getLocalName() + "" + file.getParent());
-
-    
     return (INodeFileUnderConstruction)file;
   }
 
@@ -1660,7 +1655,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    //getEditLog().logSync();
     return success;
   }
 
@@ -1941,7 +1935,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
       if (deleteNow) { // Perform small deletes right away
-    	  LOG.debug("Inside deleteInternal.deleteNow with collectedBlocks.size() " + collectedBlocks.size() + " blkid:" + collectedBlocks.get(0).getBlockId());
       	removeBlocks(collectedBlocks);
       }
     } finally {
@@ -1976,7 +1969,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       end = BLOCK_DELETION_INCREMENT + start;
       end = end > blocks.size() ? blocks.size() : end;
       for (int i=start; i<end; i++) {
-    	  LOG.debug("inside removeBlocks.forloop startend");
         blockManager.removeBlock(blocks.get(i));
       }
       start = end;
@@ -1990,7 +1982,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
     for(Block b : blocks) {
-      LOG.debug("inside removePathAndBlocks forloop block: " + b);
       blockManager.removeBlock(b);
     }
   }

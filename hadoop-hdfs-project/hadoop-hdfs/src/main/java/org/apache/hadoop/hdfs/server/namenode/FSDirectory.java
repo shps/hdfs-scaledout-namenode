@@ -172,7 +172,6 @@ public class FSDirectory implements Closeable {
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {
       fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
-
       startOpt = StartupOption.REGULAR;
     }
     boolean success = false;
@@ -1493,7 +1492,7 @@ public class FSDirectory implements Closeable {
   /** Return the full path name of the specified inode */
   static String getFullPathName(INode inode) {
 	  if(inode.getLocalName().equals(INodeDirectory.ROOT_NAME))
-		  return "";
+		  return INodeDirectory.ROOT_NAME;
 	  return getFullPathName(INodeHelper.getINode(inode.getParentIDLocal())) +"/"+ inode.getLocalName();
   }
   

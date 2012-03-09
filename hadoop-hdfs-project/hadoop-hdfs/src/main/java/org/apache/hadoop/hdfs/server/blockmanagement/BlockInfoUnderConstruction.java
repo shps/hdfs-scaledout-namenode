@@ -221,7 +221,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
-    BlocksHelper.updateINodeID(this.getINode().getID(),this);
+    BlocksHelper.updateBlockInfoInDB(this.getINode().getID(),this);
   }
   
 

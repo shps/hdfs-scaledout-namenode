@@ -134,12 +134,12 @@ public class INodeFile extends INode {
 	 */
 	public BlockInfo[] getBlocks() {
 		
-		BlockInfo [] ret = BlocksHelper.getBlocksArray(this);
+		BlockInfo [] ret = BlocksHelper.getBlockInfoArray(this);
 		
-		if (ret == null)
+		if (ret == null) {
 			return new BlockInfo[0];
+		}
 		else {
-			
 			return ret;
 		}
 	}
@@ -153,30 +153,32 @@ public class INodeFile extends INode {
 		super.setPermission(permission.applyUMask(UMASK));
 	}
 
-  /**
-   * append array of blocks to this.blocks
-   */
-  //FIXME: KTHFSBLOCKS use BlocksHelper.appendBlocks instead
- /* void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
-    int size = this.blocks.length;
 
-    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
-    System.arraycopy(this.blocks, 0, newlist, 0, size);
-
-    for(INodeFile in: inodes) {
-      System.arraycopy(in.blocks, 0, newlist, size, in.blocks.length);
-      size += in.blocks.length;
-    }
-
-    for(BlockInfo bi: newlist) {
-      bi.setINode(this);
-    }
-    this.blocks = newlist;
-  }*/
-
+  
+	/**
+	 * append array of blocks to this.blocks
+	 */
 	void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
-		BlocksHelper.appendBlocks(this, inodes, totalAddedBlocks);
+		BlocksHelper.appendBlocks(inodes, totalAddedBlocks);
 	}
+	
+	@Deprecated
+	  void appendBlocksOld(INodeFile [] inodes, int totalAddedBlocks) {
+	    int size = this.blocks.length;
+
+	    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
+	    System.arraycopy(this.blocks, 0, newlist, 0, size);
+
+	    for(INodeFile in: inodes) {
+	      System.arraycopy(in.blocks, 0, newlist, size, in.blocks.length);
+	      size += in.blocks.length;
+	    }
+
+	    for(BlockInfo bi: newlist) {
+	      bi.setINode(this);
+	    }
+	    this.blocks = newlist;
+	  }
 
 
 	/**
@@ -202,14 +204,14 @@ public class INodeFile extends INode {
 			this.blocks[0] = newblock;
 		} else {*/
 			BlocksHelper.addBlock(newblock);
-			this.blocks = BlocksHelper.getBlocksArray(this); //TODO: [thesis] is this required?
+			//this.blocks = BlocksHelper.getBlocksArray(this); //TODO: [thesis] redundant (SITW)
 		//}
 	}
 
 	/**
 	 * Set file block
-	 *//*
-  //FIXME: KTHFSBLOCKS
+	 */
+  /*
   public void setBlock_old(int idx, BlockInfo blk) {
     this.blocks[idx] = blk;
   }*/
@@ -314,7 +316,7 @@ public class INodeFile extends INode {
 */
 	
 	BlockInfo getPenultimateBlock() {
-		BlockInfo [] tempblocks = BlocksHelper.getBlocksArray(this);
+		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
 		if (tempblocks == null || tempblocks.length <= 1) {
 			return null;
 		}
@@ -334,7 +336,7 @@ public class INodeFile extends INode {
 	}*/
 	public <T extends BlockInfo> T getLastBlock() throws IOException {
 		
-		BlockInfo [] tempblocks = BlocksHelper.getBlocksArray(this);
+		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
 		
 		if (tempblocks == null || tempblocks.length == 0)
 			return null;

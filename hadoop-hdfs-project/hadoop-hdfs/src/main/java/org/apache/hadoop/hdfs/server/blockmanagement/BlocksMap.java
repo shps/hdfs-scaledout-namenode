@@ -41,13 +41,9 @@ class BlocksMap {
     }
 
     public boolean hasNext() {
-    	NameNode.LOG.debug("blockInfo=" + blockInfo);
-    	NameNode.LOG.debug("bi.getCapacity()="+ blockInfo.getCapacity());
-    	NameNode.LOG.debug("bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx));
-
-    	/*[thesis-comment]*/ /*System.err.println("\n\nblockInfo=" + blockInfo + "nextIdx="+ nextIdx  +"bi.getCapacity()="+ blockInfo.getCapacity()
-        +"bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx) + "\n\n");*/
-    	
+    	//NameNode.LOG.debug("blockInfo=" + blockInfo);
+    	//NameNode.LOG.debug("bi.getCapacity()="+ blockInfo.getCapacity());
+    	//NameNode.LOG.debug("bi.getDatanode(nextIdx)="+ blockInfo.getDatanode(nextIdx));
       return blockInfo != null && nextIdx < blockInfo.getCapacity()
               && blockInfo.getDatanode(nextIdx) != null;
     }
@@ -160,7 +156,6 @@ class BlocksMap {
    * returns Iterator that iterates through the nodes the block belongs to.
    */
   Iterator<DatanodeDescriptor> nodeIterator(Block b) {
-	  NameNode.LOG.debug("Inside BlocksMap.nodeIterator with blk:" + b);
     return nodeIterator(blocks.get(b));
   }
 

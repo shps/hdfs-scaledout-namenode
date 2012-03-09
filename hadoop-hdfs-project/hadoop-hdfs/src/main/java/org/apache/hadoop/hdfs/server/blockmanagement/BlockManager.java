@@ -798,11 +798,9 @@ public class BlockManager {
    */
   private void addToInvalidates(Block b) {
     StringBuilder datanodes = new StringBuilder();
-    LOG.debug("Inside addToInvalidates with block:"+b);
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); it
         .hasNext();) {
       DatanodeDescriptor node = it.next();
-      LOG.debug("Inside addToInvalidates.forloop");
       invalidateBlocks.add(b, node, false);
       datanodes.append(node.getName()).append(" ");
     }
@@ -1542,11 +1540,6 @@ public class BlockManager {
     }
     BlockUCState ucState = storedBlock.getBlockUCState();
     
-    // Block is on the NN
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("In memory blockUCState = " + ucState);
-    }
-
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
       assert storedBlock.findDatanode(dn) < 0 : "Block " + block
@@ -2370,7 +2363,6 @@ public class BlockManager {
   }
 
   public void removeBlock(Block block) {
-    LOG.debug("inside removeBlock with block:" + block);
     block.setNumBytes(BlockCommand.NO_ACK); //TODO: [thesis] should be sent to DB
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);

@@ -31,9 +31,17 @@ import com.mysql.clusterj.query.QueryDomainType;
 public class INodeHelper {
 	static final Log LOG = LogFactory.getLog(INodeHelper.class);
 	static final int MAX_DATA = 128;
-	public static FSNamesystem ns = null;
+	private static FSNamesystem ns = null;
 	static final int RETRY_COUNT = 3; 
 
+	
+	/**Sets the FSNamesystem object. This method should be called before using any of the helper functions in this class.
+	 * @param fsns an already initialized FSNamesystem object
+	 */
+	public static void initialize(FSNamesystem fsns) {
+		ns = fsns;
+	}
+	
 	public static void replaceChild (INode thisInode, INode newChild){
 		boolean done = false;
 		int tries = RETRY_COUNT;
@@ -125,7 +133,6 @@ public class INodeHelper {
 			((INodeDirectoryWithQuota)(inode)).setID(inodetable.getId()); //added for simple
 		}
 		if (inodetable.getIsUnderConstruction()) {
-			LOG.debug("INodeFileUnderConstruction");
 			//Get the full list of blocks for this inodeID, 
 			// at this point no blocks have no INode reference
 			BlockInfo [] blocks = new BlockInfo [1];
@@ -147,7 +154,6 @@ public class INodeHelper {
 			((INodeFile)(inode)).setBlocksList(blocksArray);
 		}
 		if (inodetable.getIsClosedFile()) {
-			LOG.debug("Closed File");
 			 inode = new INodeFile(ps,
 					0,
 					getReplicationFromHeader(inodetable.getHeader()),
@@ -223,7 +229,6 @@ public class INodeHelper {
 			return results.get(0);
 		}
 		else if(results.size() == 0){
-			LOG.info("Not found in database: " + name + "|" + parentid);
 			return null;
 		}
 		else 
@@ -235,8 +240,6 @@ public class INodeHelper {
 	 * @param inodeid
 	 */
 	private static void deleteINodeTableInternal(Session session, long inodeid) {
-		if(LOG.isDebugEnabled())
-			LOG.debug("deleteINodeTableInternal:"+inodeid);
 		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
 		session.deletePersistent(inodet);
 	}
@@ -353,12 +356,12 @@ public class INodeHelper {
 				return null;
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeTableSimpleHelper.getINode() threw error " + e.getMessage());
+				System.err.println("INodeHelper.getINode() threw error " + e.getMessage());
 				tries--;
 			} 
 			catch (IOException io) {
 				tries--;
-				LOG.debug("INodeTableSimpleHelper.getINode()" + io.getMessage());
+				LOG.debug("INodeHelper.getINode()" + io.getMessage());
 				io.printStackTrace();
 			}
 		}

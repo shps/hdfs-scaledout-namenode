@@ -74,7 +74,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	public void setINode(INodeFile inode) {
 		this.inode = inode;
 		if(inode!=null) //FIXME: W: no need for this check 
-			BlocksHelper.updateINodeID(inode.getID(), this);
+			BlocksHelper.updateBlockInfoInDB(inode.getID(), this);
 	}
 	
 	public void setINodeWithoutTransaction(INodeFile inode) {	
