@@ -2,7 +2,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -28,20 +31,24 @@ import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
+/**
+ * This class provides the CRUD operations for inodes stored in database. 
+ * It also provides helper methods for conversion from/to HDFS/ClusterJ data structures 
+ * All methods ending with "Internal" in this class must be wrapped with tx.begin() and tx.commit(). 
+ * This gives us an opportunity to pack multiple operations in a single transaction to reduce round-trips 
+ */
 public class INodeHelper {
 	static final Log LOG = LogFactory.getLog(INodeHelper.class);
-	static final int MAX_DATA = 128;
 	private static FSNamesystem ns = null;
 	static final int RETRY_COUNT = 3; 
 
-	
 	/**Sets the FSNamesystem object. This method should be called before using any of the helper functions in this class.
 	 * @param fsns an already initialized FSNamesystem object
 	 */
 	public static void initialize(FSNamesystem fsns) {
 		ns = fsns;
 	}
-	
+
 	public static void replaceChild (INode thisInode, INode newChild){
 		boolean done = false;
 		int tries = RETRY_COUNT;
@@ -53,7 +60,7 @@ public class INodeHelper {
 			try {
 				tx.begin();
 
-				replaceChildInternal(thisInode, newChild, session);
+				replaceChild(thisInode, newChild, session);
 				done = true;
 
 				tx.commit();
@@ -67,15 +74,15 @@ public class INodeHelper {
 		}
 	}
 
-	//FIXME: for simple, this should update the times of parent also
-	public static void replaceChildInternal (INode thisInode, INode newChild, Session session){
+	//TODO: for simple, this should update the times of parent also
+	private static void replaceChild (INode thisInode, INode newChild, Session session){
 
-		INodeTableSimple inode = selectINodeTableInternal(session, newChild.getLocalName(), thisInode.getID());
-		assert inode == null : "Child not found in database";
+		INodeTableSimple inodet = selectINodeTableInternal(session, newChild.getLocalName(), thisInode.getID());
+		assert inodet == null : "Child not found in database";
 
-		inode.setModificationTime(thisInode.modificationTime); 
-		inode.setATime(thisInode.getAccessTime()); 
-		inode.setName(newChild.getLocalName()); 
+		inodet.setModificationTime(thisInode.modificationTime); 
+		inodet.setATime(thisInode.getAccessTime()); 
+		inodet.setName(newChild.getLocalName()); 
 		DataOutputBuffer permissionString = new DataOutputBuffer();
 
 		try {
@@ -84,32 +91,32 @@ public class INodeHelper {
 			e.printStackTrace();
 		}
 
-		inode.setPermission(permissionString.getData());
-		inode.setParentID(newChild.getParent().getID());
-		inode.setNSQuota(newChild.getNsQuota());
-		inode.setDSQuota(newChild.getDsQuota());
+		inodet.setPermission(permissionString.getData());
+		//inode.setParentID(newChild.getParent().getID()); //FIXME: no need of this roundtrip
+		inodet.setParentID(newChild.getParentIDLocal()); 
+		inodet.setNSQuota(newChild.getNsQuota());
+		inodet.setDSQuota(newChild.getDsQuota());
 
 		if (newChild instanceof INodeDirectory)
 		{
-			inode.setIsClosedFile(false);
-			inode.setIsUnderConstruction(false);
-			inode.setIsDirWithQuota(false);    
-			inode.setIsDir(true);
+			inodet.setIsClosedFile(false);
+			inodet.setIsUnderConstruction(false);
+			inodet.setIsDirWithQuota(false);    
+			inodet.setIsDir(true);
 		}
 		if (newChild instanceof INodeDirectoryWithQuota)
 		{
-			inode.setIsClosedFile(false);
-			inode.setIsDir(false);	    	
-			inode.setIsUnderConstruction(false);
-			inode.setIsDirWithQuota(true);    	
-			inode.setNSCount(((INodeDirectoryWithQuota) newChild).getNsCount());
-			inode.setDSCount(((INodeDirectoryWithQuota) newChild).getDsCount());
+			inodet.setIsClosedFile(false);
+			inodet.setIsDir(false);	    	
+			inodet.setIsUnderConstruction(false);
+			inodet.setIsDirWithQuota(true);    	
+			inodet.setNSCount(((INodeDirectoryWithQuota) newChild).getNsCount());
+			inodet.setDSCount(((INodeDirectoryWithQuota) newChild).getDsCount());
 		}
-
-		session.updatePersistent(inode);
+		updateINodeTableInternal(session, inodet);
 	}
 
-	
+
 	private static INode convertINodeTableToINode (INodeTableSimple inodetable) throws IOException
 	{
 
@@ -147,14 +154,14 @@ public class INodeHelper {
 					inodetable.getClientName(),
 					inodetable.getClientMachine(),
 					ns.getBlockManager().getDatanodeManager().getDatanodeByHost(inodetable.getClientNode()));
-			
+
 			((INodeFile)(inode)).setID(inodetable.getId()); 
 
 			BlockInfo[] blocksArray = BlocksHelper.getBlocksArrayInternal((INodeFile)inode, DBConnector.obtainSession());
 			((INodeFile)(inode)).setBlocksList(blocksArray);
 		}
 		if (inodetable.getIsClosedFile()) {
-			 inode = new INodeFile(ps,
+			inode = new INodeFile(ps,
 					0,
 					getReplicationFromHeader(inodetable.getHeader()),
 					inodetable.getModificationTime(),
@@ -195,9 +202,14 @@ public class INodeHelper {
 		return header & ~headerMask;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+	/////////////////////////////////////////////////////
 	//Basic functions, added for Simple
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////
+
+
 
 	/** Fetch a tuple from database using primary key inodeid
 	 * @param session
@@ -280,24 +292,20 @@ public class INodeHelper {
 		inodet.setParentID(parentID);
 		inodet.setIsDir(isDir);
 		inodet.setIsDirWithQuota(isDirWithQuota);
-
 		inodet.setModificationTime(modificationTime);
 		inodet.setATime(aTime);
 		inodet.setPermission(permission);
 		inodet.setNSCount(nscount);
 		inodet.setDSCount(dscount);
-
 		inodet.setNSQuota(nsquota);
 		inodet.setDSQuota(dsquota);
 		inodet.setIsUnderConstruction(isUnderConstruction);
 		inodet.setClientName(clientName);
-
 		inodet.setClientMachine(clientMachine);
 		inodet.setClientNode(clientNode);
 		inodet.setIsClosedFile(isCloseFile);
 		inodet.setHeader(header);
 		inodet.setSymlink(symlink);
-
 		session.makePersistent(inodet);
 	}
 
@@ -334,7 +342,7 @@ public class INodeHelper {
 
 		return null;
 	}
-	
+
 	/**Fetches a fully cooked INode object from the database using inodeid
 	 * @param name
 	 * @param parentid
@@ -380,7 +388,7 @@ public class INodeHelper {
 		int tries = RETRY_COUNT;
 		Session session = DBConnector.obtainSession();
 		List<INode> children = new ArrayList<INode>();
-		
+
 		while (done == false && tries > 0) {
 			try {
 				List<INodeTableSimple> inodetList = getChildrenInternal(session, parentid);
@@ -447,7 +455,7 @@ public class INodeHelper {
 		}
 
 	}
-	
+
 	/**Internal function for updating the modification time of an inode in the database
 	 * @param session
 	 * @param inodeid
@@ -458,7 +466,7 @@ public class INodeHelper {
 		inodet.setModificationTime(modTime);
 		session.updatePersistent(inodet);
 	}
-	
+
 	/** Adds a child to a directory
 	 * @param node
 	 * @param parentid
@@ -518,8 +526,9 @@ public class INodeHelper {
 
 		inode.setPermission(permissionString.getData());
 
-		if(!isRoot)
-			inode.setParentID(parentid); //added for simple
+//		if(!isRoot)
+//			inode.setParentID(parentid); //added for simple
+		inode.setParentID(parentid);
 
 		inode.setNSQuota(node.getNsQuota());
 		inode.setDSQuota(node.getDsQuota());
@@ -572,9 +581,12 @@ public class INodeHelper {
 			insertINodeTableInternal(session, inode);
 
 	}
-	
-	
-	public static synchronized void removeChild(long inodeid) {
+
+
+	/** Deletes an inode from the database
+	 * @param inodeid the inodeid to remove
+	 */
+	public static /*synchronized*/ void removeChild(long inodeid) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 
@@ -599,7 +611,13 @@ public class INodeHelper {
 		}
 
 	}
-	
+
+	/** Updates the header of an inode in database
+	 * @param inodeid
+	 * @param header
+	 * @return
+	 * @throws IOException
+	 */
 	public static boolean updateHeader (long inodeid ,long header) throws IOException{
 		boolean done = false;
 		int tries = RETRY_COUNT;
@@ -607,7 +625,7 @@ public class INodeHelper {
 		Session session = DBConnector.obtainSession();
 		INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
 		assert inode == null : "INodeTableSimple object not found";
- 
+
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {
 			try {
@@ -628,21 +646,25 @@ public class INodeHelper {
 		return false;
 	}
 
+	/** Updates the header of an inode in database
+	 * @param session
+	 * @param inodeid
+	 * @param header
+	 */
 	private static void updateHeaderInternal (Session session, long inodeid, long header){
 		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
 		inodet.setHeader(header);
 		session.updatePersistent(inodet);
 	}
-	
-	public static INodeDirectory getParent(long inodeid) {
+
+	public static INodeDirectory getParent(long parentid) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 		Session session = DBConnector.obtainSession();
 
 		while (done == false && tries > 0) {
 			try {
-				INodeTableSimple inodet = selectINodeTableInternal(session, inodeid);
-				INodeTableSimple parent_inodet = selectINodeTableInternal(session, inodet.getParentID());
+				INodeTableSimple parent_inodet = selectINodeTableInternal(session, parentid);
 				INodeDirectory parentDir = (INodeDirectory)convertINodeTableToINode(parent_inodet);
 				done = true;
 				session.flush();
@@ -659,6 +681,106 @@ public class INodeHelper {
 		}
 		return null;
 	}
+
+	/** Fetch inodes from the database in one shot (using the ClusterJ "in" clause). 
+	 *  This is far better (in terms of latency ) than launching multiple primary key lookups in a transaction
+	 *  
+	 * @param entries
+	 * @return chained inodes, or null if either the chain is broken or some IDs dont exist in database
+	 */
+	public static INode[] getINodes(INodeEntry[] entries) {
+		boolean done = false;
+		int tries = RETRY_COUNT;
+		Session session = DBConnector.obtainSession();
+
+		while (done == false && tries > 0) {
+			try {
+				List<INodeTableSimple>  inodetList = sortINodesByPath(selectINodesInternal(session, entries));
+				if(inodetList == null)
+					return null;
+				else if(inodetList.size() == 0)
+					return null;
+				else {
+					INode[] inodes = new INode[inodetList.size()];
+					for(int i=0; i < inodetList.size(); i++) {
+						inodes[i] = convertINodeTableToINode(inodetList.get(i));
+					}
+					return inodes;
+				}
+			}
+			catch (ClusterJException e){
+				System.err.println("INodeTableSimpleHelper.getINodes() threw error " + e.getMessage());
+				tries--;
+			}
+			catch (IOException io) {
+				tries--;
+				LOG.error("INodeHelper.getINode()" + io.getMessage());
+				io.printStackTrace();
+			}
+		}
+		return null;
+	}
+	
+	private static List<INodeTableSimple> selectINodesInternal(Session session, INodeEntry[] entries) throws IOException {
+		Long[] IDs = new Long[entries.length];
+		for (int i = 0; i < entries.length; i++) {
+			IDs[i] = entries[i].id; 
+		}
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+		PredicateOperand field = dobj.get("id");
+		PredicateOperand values = dobj.param("param");
+		Predicate predicate = field.in(values);
+		dobj.where(predicate);
+		Query<INodeTableSimple> query = session.createQuery(dobj);
+		query.setParameter("param", IDs);
+		List<INodeTableSimple> results = query.getResultList();
+		
+		if(results.size() != entries.length) //means the cache is old, so invalidate
+			return null;
+		return results;
+
+	}
+
+	
+	/** Chain the inodes together according to the directory hierarchy
+	 *  This is required because the ClusterJ "in" clause doesn't guarantee the order
+	 *  
+	 * @param inodeList a list of inodets which need to be sorted
+	 * @return
+	 */
+	public static List<INodeTableSimple> sortINodesByPath(List<INodeTableSimple> inodeList) {
+
+		if(inodeList == null)
+			return null;
+		if(inodeList.size() == 1)
+			return inodeList;
+
+		//converting list to a map so that we can get an inode in O(1) during chaining
+		Map<Long, INodeTableSimple> inodesMap = new HashMap<Long, INodeTableSimple>(); //<pid, inodetable>
+		for(INodeTableSimple inodet : inodeList) {
+			inodesMap.put(inodet.getParentID(), inodet);
+		}
+
+		List<INodeTableSimple> inodetSorted = 
+				new ArrayList<INodeTableSimple>(inodeList.size());
+		int count = 0;
+		INodeTableSimple root = inodesMap.get(-1L); //use a constant here
+		inodetSorted.add(root);
+		Long next_parent_id = root.getId();
+
+		//lets chain the inodes together
+		while(count < inodeList.size()-1) {
+			INodeTableSimple inodet = inodesMap.get(next_parent_id);
+			if(inodet == null) //if the chain is broken, return null and invalidate the cache
+				return null;
+			inodetSorted.add(inodet);
+			next_parent_id = inodet.getId();
+			count++;
+		}
+		return inodetSorted;
+	}
+	
 
 }
 

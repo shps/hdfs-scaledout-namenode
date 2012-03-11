@@ -345,7 +345,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           this.dir = new FSDirectory(fsImage, this, conf);
 
     }
-    INodeHelper.addChild(this.dir.rootDir, true, 1337L);
+    INodeHelper.addChild(this.dir.rootDir, true, -1L);
+    INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
+    cache.putRoot(this.dir.rootDir); //added for magic cache
+    
     this.safeMode = new SafeModeInfo(conf);
   }
 

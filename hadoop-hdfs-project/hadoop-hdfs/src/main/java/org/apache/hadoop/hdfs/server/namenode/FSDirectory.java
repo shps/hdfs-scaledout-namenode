@@ -533,6 +533,9 @@ public class FSDirectory implements Closeable {
     FileAlreadyExistsException {
     assert hasWriteLock();
     INode[] srcInodes = rootDir.getExistingPathINodes(src, false);
+    for (int i = 0; i < srcInodes.length; i++) {
+		NameNode.LOG.debug("srcInodes: " + srcInodes[i]);
+	}
     INode srcInode = srcInodes[srcInodes.length-1];
     
     // check the validation of the source
@@ -1218,7 +1221,6 @@ public class FSDirectory implements Closeable {
 			boolean needLocation) throws UnresolvedLinkException, IOException {
 		String srcs = normalizePath(src);
 
-		// Read from MySQL Cluster and return the DirectoryListing object
 		readLock();
 		try {
 			INode targetNode = rootDir.getNode(srcs, true);
@@ -1242,7 +1244,6 @@ public class FSDirectory implements Closeable {
 			HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
 			for (int i=0; i<numOfListing; i++) {
 				INode cur = contents.get(startChild+i);
-				NameNode.LOG.debug(cur.name);
 				listing[i] = createFileStatus(cur.name, cur, needLocation);
 			}
 			return new DirectoryListing(

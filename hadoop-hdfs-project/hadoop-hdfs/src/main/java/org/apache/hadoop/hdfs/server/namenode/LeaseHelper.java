@@ -26,7 +26,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 
 /** This is a helper class for manipulating the Leases stored in DB. 
- *  All methods ending with "Internal" in this class must be wrapped inside tx.begin() and tx.commit(). 
+ *  All methods ending with "Internal" in this class must be wrapped with tx.begin() and tx.commit(). 
  *  This gives us an opportunity to pack multiple operations in a single transaction to reduce round-trips
  * 
  *  @author wmalik

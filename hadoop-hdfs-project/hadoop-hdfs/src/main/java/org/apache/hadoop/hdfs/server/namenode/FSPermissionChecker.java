@@ -121,7 +121,6 @@ class FSPermissionChecker {
     }
     // check if (parentAccess != null) && file exists, then check sb
       // Resolve symlinks, the check is performed on the link target.
-    /*FIXME: [KTHFS] This func needs to be changed internally. It should return MySQL Inodes instead of in-memory Inodes*/  
     INode[] inodes = root.getExistingPathINodes(path, true); 
       int ancestorIndex = inodes.length - 2;
       for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;

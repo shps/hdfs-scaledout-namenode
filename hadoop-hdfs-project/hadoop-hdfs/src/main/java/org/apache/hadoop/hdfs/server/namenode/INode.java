@@ -300,8 +300,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 	 * @return parent INode
 	 */
 	INodeDirectory getParent() {
-		// return this.parent;
-		return INodeHelper.getParent(this.id);
+		return INodeHelper.getParent(this.parentid);
 	}
 
 	/**

@@ -155,30 +155,32 @@ class INodeDirectory extends INode {
 	 * component does not exist.
 	 *  
 	 */
-	/*private INode getNodeDirect(String name, boolean resolveLink) 
-			throws UnresolvedLinkException {
-
-		INode node;
-		try {
-			return INodeHelper.getINodeByName(name);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}*/
-
-
 	private INode getNode(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
+		INodeCacheImpl.LOG.debug("Cache Miss"); //TODO: Increment the cache miss metric here
 		INode[] inode  = new INode[1];
 		getExistingPathINodes(components, inode, resolveLink);
 		return inode[0];
 	}
 
-	
+	/** Returns a fully cooked INode from the cache
+	 * @param path
+	 * @return
+	 */
+	INode getNodeFromCache(String path) {
+		if(path.equals("/"))
+			return this;
+		INodeCache cache = INodeCacheImpl.getInstance();
+		return cache.getNode(path);
+	}
+
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		return getNode(getPathComponents(path), resolveLink);
+
+		INode nodeFromCache = getNodeFromCache(path);
+		return nodeFromCache != null ?  
+				nodeFromCache : getNode(getPathComponents(path), resolveLink);
+		
 	}
 	/**
 	 * Retrieve existing INodes from a path. If existing is big enough to store
@@ -222,6 +224,103 @@ class INodeDirectory extends INode {
 	 *        be thrown when the path refers to a symbolic link.
 	 * @return number of existing INodes in the path
 	 */
+	
+	// Uses DB
+	int getExistingPathINodes(byte[][] components, INode[] existing, 
+			boolean resolveLink) throws UnresolvedLinkException {
+		
+		assert compareBytes(this.name, components[0]) == 0 :
+			"Incorrect name " + getLocalName() + " expected " + 
+			DFSUtil.bytes2String(components[0]);
+		
+		//do the if cache.get stuff here
+		
+		INode curNode = this;
+		INode[] inodes = new INode[components.length]; //[thesis] for magic cache
+		inodes[0] = this; //[thesis] for magic cache
+
+		INodeCache cache = INodeCacheImpl.getInstance();
+		
+		int count = 0;
+		int index = existing.length - components.length;
+		if (index > 0) {
+			index = 0;
+		}
+
+		while (count < components.length && curNode != null) {
+			final boolean lastComp = (count == components.length - 1);      
+			if (index >= 0) {
+				existing[index] = curNode;
+			}
+			if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
+				if(NameNode.stateChangeLog.isDebugEnabled()) {
+					NameNode.stateChangeLog.debug("UnresolvedPathException " +
+							" count: " + count +
+							" component: " + DFSUtil.bytes2String(components[count]) +
+							" full path: " + constructPath(components, 0) +
+							" remaining path: " + constructPath(components, count+1) +
+							" symlink: " + ((INodeSymlink)curNode).getLinkValue());
+				}
+				final String linkTarget = ((INodeSymlink)curNode).getLinkValue();
+				throw new UnresolvedPathException(constructPath(components, 0),
+						constructPath(components, count+1),
+						linkTarget);
+			}
+
+			if (lastComp || !curNode.isDirectory()) {
+				break;
+			}
+
+			INodeDirectory parentDir = (INodeDirectory)curNode; //W: will always return / in the first iteration
+			curNode = parentDir.getChildINodeFromDB(components[count + 1]);
+			
+			inodes[count+1] = curNode; //[thesis] for magic cache
+			
+			count++;
+			index++;
+
+		}
+		cache.store(inodes);
+		return count;
+	}
+
+	/**
+	 * Retrieve the existing INodes along the given path. The first INode
+	 * always exist and is this INode.
+	 * 
+	 * @param path the path to explore
+	 * @param resolveLink indicates whether UnresolvedLinkException should 
+	 *        be thrown when the path refers to a symbolic link.
+	 * @return INodes array containing the existing INodes in the order they
+	 *         appear when following the path from the root INode to the
+	 *         deepest INodes. The array size will be the number of expected
+	 *         components in the path, and non existing components will be
+	 *         filled with null
+	 *         
+	 * @see #getExistingPathINodes(byte[][], INode[])
+	 */
+	INode[] getExistingPathINodes(String path, boolean resolveLink) 
+			throws UnresolvedLinkException {
+		byte[][] components = getPathComponents(path);
+		INode[] inodes = new INode[components.length];
+
+		//TODO [thesis] Caching Magic
+		/*INodeCache cache = INodeCache.getInstance();
+		long ids[] = cache.get(path);
+		if(ids != null)
+			if(ids.length == components.length) {
+				INodeCache.LOG.debug("CACHE HIT size:" + ids.length);
+				return INodeHelper.getINodes(ids); //one shot lookup
+			}
+		
+		INodeCache.LOG.debug("CACHE MISS");
+		this.getExistingPathINodes(components, inodes, resolveLink);
+		cache.store(inodes);*/
+		this.getExistingPathINodes(components, inodes, resolveLink);
+		return inodes;
+	}
+
+	@Deprecated
 	int getExistingPathINodesOld(byte[][] components, INode[] existing, 
 			boolean resolveLink) throws UnresolvedLinkException {
 		assert compareBytes(this.name, components[0]) == 0 :
@@ -261,7 +360,7 @@ class INodeDirectory extends INode {
 
 			INodeDirectory parentDir = (INodeDirectory)curNode;
 			curNode = parentDir.getChildINode(components[count + 1]);
-			curNode = parentDir.getChildINodeFromDB(components[count + 1]); 
+			//curNode = parentDir.getChildINodeFromDB(components[count + 1]); 
 			count++;
 			index++;
 		}
@@ -269,81 +368,6 @@ class INodeDirectory extends INode {
 		return count;
 	}
 
-	// Uses DB
-	int getExistingPathINodes(byte[][] components, INode[] existing, 
-			boolean resolveLink) throws UnresolvedLinkException {
-		
-		assert compareBytes(this.name, components[0]) == 0 :
-			"Incorrect name " + getLocalName() + " expected " + 
-			DFSUtil.bytes2String(components[0]);
-
-		INode curNode = this;
-		int count = 0;
-		int index = existing.length - components.length;
-		if (index > 0) {
-			index = 0;
-		}
-
-		while (count < components.length && curNode != null) {
-			final boolean lastComp = (count == components.length - 1);      
-			if (index >= 0) {
-				existing[index] = curNode;
-			}
-			if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
-				if(NameNode.stateChangeLog.isDebugEnabled()) {
-					NameNode.stateChangeLog.debug("UnresolvedPathException " +
-							" count: " + count +
-							" componenent: " + DFSUtil.bytes2String(components[count]) +
-							" full path: " + constructPath(components, 0) +
-							" remaining path: " + constructPath(components, count+1) +
-							" symlink: " + ((INodeSymlink)curNode).getLinkValue());
-				}
-				final String linkTarget = ((INodeSymlink)curNode).getLinkValue();
-				throw new UnresolvedPathException(constructPath(components, 0),
-						constructPath(components, count+1),
-						linkTarget);
-			}
-
-			if (lastComp || !curNode.isDirectory()) {
-				break;
-			}
-
-			INodeDirectory parentDir = (INodeDirectory)curNode; //W: will always return / in the first iteration
-			curNode = parentDir.getChildINodeFromDB(components[count + 1]);
-			count++;
-			index++;
-
-		}
-
-		//tx.commit();
-
-		return count;
-	}
-
-	/**
-	 * Retrieve the existing INodes along the given path. The first INode
-	 * always exist and is this INode.
-	 * 
-	 * @param path the path to explore
-	 * @param resolveLink indicates whether UnresolvedLinkException should 
-	 *        be thrown when the path refers to a symbolic link.
-	 * @return INodes array containing the existing INodes in the order they
-	 *         appear when following the path from the root INode to the
-	 *         deepest INodes. The array size will be the number of expected
-	 *         components in the path, and non existing components will be
-	 *         filled with null
-	 *         
-	 * @see #getExistingPathINodes(byte[][], INode[])
-	 */
-	INode[] getExistingPathINodes(String path, boolean resolveLink) 
-			throws UnresolvedLinkException {
-		byte[][] components = getPathComponents(path);
-		INode[] inodes = new INode[components.length];
-
-		this.getExistingPathINodes(components, inodes, resolveLink);
-
-		return inodes;
-	}
 
 	/**
 	 * Given a child's name, return the index of the next child

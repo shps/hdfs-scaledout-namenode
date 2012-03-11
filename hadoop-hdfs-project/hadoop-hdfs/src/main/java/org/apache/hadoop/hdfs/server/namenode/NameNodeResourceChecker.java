@@ -109,14 +109,14 @@ public class NameNodeResourceChecker {
    */
   Collection<String> getVolumesLowOnSpace() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Going to check the following volumes disk space: " + volumes);
+      //LOG.debug("Going to check the following volumes disk space: " + volumes);
     }
     Collection<String> lowVolumes = new ArrayList<String>();
     for (DF volume : volumes.values()) {
       long availableSpace = volume.getAvailable();
       String fileSystem = volume.getFilesystem();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Space available on volume '" + fileSystem + "' is " + availableSpace);
+        //LOG.debug("Space available on volume '" + fileSystem + "' is " + availableSpace);
       }
       if (availableSpace < duReserved) {
         LOG.warn("Space available on volume '" + fileSystem + "' is "
