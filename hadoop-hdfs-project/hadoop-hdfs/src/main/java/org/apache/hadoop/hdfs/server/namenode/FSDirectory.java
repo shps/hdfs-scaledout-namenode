@@ -1132,20 +1132,7 @@ public class FSDirectory implements Closeable {
     }
     int pos = inodes.length - 1;
     
-    // [Stateless] when removing an INode from the database,
-    // we lose information of the node's children as well.
-    // So we retrieve the list of children beforehand, and
-    // then perform garbage collection from that point onwards.
-    // NOTE: Only INodeDirectory* types have children
-    
-    List<INode> tempChildren = null;
-    if (targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota)
-    {		
-    	tempChildren = ((INodeDirectory) targetNode).getChildrenFromDB();
-    }
-    
     // Remove the node from the namespace
-    //[thesis] commented because the inode should be removed from DB at the end
     targetNode = removeChild(inodes, pos);
     if (targetNode == null) {
       return 0;
@@ -1153,24 +1140,17 @@ public class FSDirectory implements Closeable {
     // set the parent's modification time
     inodes[pos-1].setModificationTime(mtime); //FIXME: [thesis] should be persisted to DB
     
-    // If INodeDirectory, then we've already cleared it from
-    // the DB, so iterate through its children and clear the
-    // associated blocks
     int filesRemoved = 1;
-    if (targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota){
-    	for (INode child: tempChildren) {
-    		filesRemoved += child.collectSubtreeBlocksAndClear(collectedBlocks);
-    	}
-    }    
-    else{
+    if(targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota)
     	filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
-    }
-    
+    else //since we have already deleted the inode, we just need to clear the blocks
+    	filesRemoved = ((INodeFile)targetNode).collectSubtreeBlocksAndClearNoDelete(collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           +src+" is removed");
     }
     return filesRemoved;
+
   }
 
    /**

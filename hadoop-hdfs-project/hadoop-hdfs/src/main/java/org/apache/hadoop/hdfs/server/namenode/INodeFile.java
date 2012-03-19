@@ -242,7 +242,21 @@ public class INodeFile extends INode {
 		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
 		blocks = null;
 
-		INodeHelper.removeChild(super.id);
+		INodeHelper.removeChild(super.id); //TODO, why super.id?
+		return 1;
+	}
+	
+	int collectSubtreeBlocksAndClearNoDelete(List<Block> v) {
+		
+		parent = null;
+		if(blocks != null && v != null) { 
+			for (BlockInfo blk : blocks) {
+				v.add(blk);
+				blk.setINode(null);
+			}
+		}
+		blocks = null;
+
 		return 1;
 	}
 

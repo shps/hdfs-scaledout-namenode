@@ -54,11 +54,9 @@ public class INodeCacheImpl implements INodeCache {
 				|| entries.length == 0)
 			return false;
 
-		LOG.debug("entries.length:" + entries.length);
 		for (int i = 0; i < entries.length; i++) {
 			String component = DFSUtil.bytes2String(components[i]);
 			String inodeName = DFSUtil.bytes2String(entries[i].name);
-			LOG.debug("component=" + component + " inodeName=" + inodeName);
 			if(!component.equals(inodeName))
 				return false;
 		}
@@ -81,14 +79,14 @@ public class INodeCacheImpl implements INodeCache {
 		INodeEntry[] inodesWithoutNulls = Arrays.copyOfRange(inodes, 0, i);
 		
 		//DEBUG
-		for (int k = 0; k < inodesWithoutNulls.length; k++) {
-			if(inodesWithoutNulls[k] != null)
-				LOG.debug("From cache: " + DFSUtil.bytes2String(inodesWithoutNulls[k].name)
-						 + ":" + inodesWithoutNulls[k].id
-						);
-			else
-				LOG.debug("From cache: " + null);
-		}
+//		for (int k = 0; k < inodesWithoutNulls.length; k++) {
+//			if(inodesWithoutNulls[k] != null)
+//				LOG.debug("From cache: " + DFSUtil.bytes2String(inodesWithoutNulls[k].name)
+//						 + ":" + inodesWithoutNulls[k].id
+//						);
+//			else
+//				LOG.debug("From cache: " + null);
+//		}
 
 		if(inodesWithoutNulls.length == components.length) {
 			return inodesWithoutNulls;

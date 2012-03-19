@@ -10,4 +10,4 @@ echo "\n\n** About to run org.apache.hadoop.fs.loadGenerator.DataGenerator"
 $HADOOP org.apache.hadoop.fs.loadGenerator.DataGenerator -inDir /tmp/
 
 echo "\n\n** About to run org.apache.hadoop.fs.loadGenerator.LoadGenerator"
-$HADOOP org.apache.hadoop.fs.loadGenerator.LoadGenerator -numOfThreads 20 -elapsedTime 10 -startTime 1
+$HADOOP org.apache.hadoop.fs.loadGenerator.LoadGenerator -numOfThreads 1 -elapsedTime 10 -startTime 1

@@ -252,6 +252,7 @@ public class INodeHelper {
 	 * @param inodeid
 	 */
 	private static void deleteINodeTableInternal(Session session, long inodeid) {
+		LOG.debug("Removing " + inodeid);
 		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
 		session.deletePersistent(inodet);
 	}
@@ -605,7 +606,7 @@ public class INodeHelper {
 			catch (ClusterJException e){
 				if(tx.isActive())
 					tx.rollback();
-				System.err.println("INodeHelper.removeChild() threw error " + e.getMessage());
+				LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
 				tries--;
 			}
 		}

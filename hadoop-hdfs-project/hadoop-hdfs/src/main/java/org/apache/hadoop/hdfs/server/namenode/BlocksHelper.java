@@ -526,7 +526,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				System.err.println("removeBlocks failed " + e.getMessage());
 				tries--;
 			}

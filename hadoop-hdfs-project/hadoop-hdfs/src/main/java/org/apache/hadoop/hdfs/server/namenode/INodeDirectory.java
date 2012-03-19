@@ -605,11 +605,10 @@ class INodeDirectory extends INode {
 		return childrenFromDB;
 	}
 
-	//FIXME: W: should delete everything in one transaction to reduce latency of this operation
+	//TODO: [thesis] should delete everything in one transaction to reduce latency of this operation
 	int collectSubtreeBlocksAndClear(List<Block> v) {
 		int total = 1;
-		List<INode> childrenTemp = getChildrenFromDB(); //TODO: confirm if raw needs to be used here
-		INodeHelper.removeChild(this.id); //[thesis] moved from below to fix the directory removal issue
+		List<INode> childrenTemp = getChildrenFromDB(); //TODO: confirm if raw can be used here
 		
 		if (childrenTemp == null) {
 			return total;
@@ -618,8 +617,6 @@ class INodeDirectory extends INode {
 			total += child.collectSubtreeBlocksAndClear(v);
 		}
 
-		// Remove me from the DB when done
-		//INodeHelper.removeChild(this.id);
 		parent = null;
 		children = null;
 		return total;
