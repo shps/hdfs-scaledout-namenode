@@ -841,6 +841,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (clientMachine == null) {
       clientMachine = "";
     }
+    LOG.debug("[thesis] clientMachine: "+clientMachine);
     return clientMachine;
   }
 }

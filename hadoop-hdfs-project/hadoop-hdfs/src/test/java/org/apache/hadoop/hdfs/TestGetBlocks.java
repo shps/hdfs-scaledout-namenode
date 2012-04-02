@@ -172,7 +172,8 @@ public class TestGetBlocks extends TestCase {
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    (new TestGetBlocks()).testGetBlocks();
+    //(new TestGetBlocks()).testGetBlocks();
+	  (new TestGetBlocks()).testBlockKey();
   }
 
 }

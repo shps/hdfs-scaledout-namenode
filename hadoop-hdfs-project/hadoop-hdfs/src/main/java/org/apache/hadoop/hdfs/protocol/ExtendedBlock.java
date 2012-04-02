@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -58,6 +59,7 @@ public class ExtendedBlock implements Writable {
   }
   
   public ExtendedBlock(String poolId, Block b) {
+	  NameNode.LOG.debug("[thesis] ExtendedBlock() about to be instantiated with poolId " + poolId);
     this.poolId = poolId;
     this.block = b;
   }

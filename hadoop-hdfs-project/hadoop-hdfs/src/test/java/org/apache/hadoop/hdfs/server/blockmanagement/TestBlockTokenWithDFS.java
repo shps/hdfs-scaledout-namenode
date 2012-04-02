@@ -89,6 +89,8 @@ public class TestBlockTokenWithDFS {
         totalRead += nRead;
       }
     } catch (IOException e) {
+    	System.err.println("[thesis] W: IOException");
+    	e.printStackTrace(System.err);
       return false;
     }
     assertEquals("Cannot read file.", toRead.length, totalRead);
@@ -109,10 +111,12 @@ public class TestBlockTokenWithDFS {
 
   private boolean checkFile(byte[] fileToCheck) {
     if (fileToCheck.length != rawData.length) {
+    	System.err.println("[thesis] W: fileToCheck.length != rawData.length");
       return false;
     }
     for (int i = 0; i < fileToCheck.length; i++) {
       if (fileToCheck[i] != rawData[i]) {
+    	  System.err.println("[thesis] W: fileToCheck[i] != rawData[i]");
         return false;
       }
     }
@@ -189,7 +193,7 @@ public class TestBlockTokenWithDFS {
    * testing that APPEND operation can handle token expiration when
    * re-establishing pipeline is needed
    */
-  @Test
+  //@Test
   public void testAppend() throws Exception {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
@@ -250,7 +254,7 @@ public class TestBlockTokenWithDFS {
    * testing that WRITE operation can handle token expiration when
    * re-establishing pipeline is needed
    */
-  @Test
+  //@Test
   public void testWrite() throws Exception {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
@@ -550,7 +554,7 @@ public class TestBlockTokenWithDFS {
   /**
    * Integration testing of access token, involving NN, DN, and Balancer
    */
-  @Test
+  //@Test
   public void testEnd2End() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);

@@ -107,8 +107,8 @@ public class BlockTokenSecretManager extends
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(currentKey.getKeyId(), currentKey);
-    allKeys.put(nextKey.getKeyId(), nextKey);
+    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
+    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
   }
 
   /** Export block keys, only to be used in master mode */
@@ -118,12 +118,12 @@ public class BlockTokenSecretManager extends
     if (LOG.isDebugEnabled())
       LOG.debug("Exporting access keys");
     return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
-        currentKey, allKeys.values().toArray(new BlockKey[0]));
+        currentKey, allKeys.values().toArray(new BlockKey[0])); //TODO: fetch from NDB
   }
 
   private synchronized void removeExpiredKeys() {
     long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet()
+    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO: fetch from NDB
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, BlockKey> e = it.next();
       if (e.getValue().getExpiryDate() < now) {
@@ -146,7 +146,7 @@ public class BlockTokenSecretManager extends
     for (int i = 0; i < receivedKeys.length; i++) {
       if (receivedKeys[i] == null)
         continue;
-      this.allKeys.put(receivedKeys[i].getKeyId(), receivedKeys[i]);
+      this.allKeys.put(receivedKeys[i].getKeyId(), receivedKeys[i]); //TODO: send to NDB in one shot
     }
   }
 
@@ -171,18 +171,18 @@ public class BlockTokenSecretManager extends
     LOG.info("Updating block keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
-    allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(),
+    allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO: send to NDB
         System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
         currentKey.getKey()));
     // update the estimated expiry date of new currentKey
     currentKey = new BlockKey(nextKey.getKeyId(), System.currentTimeMillis()
         + 2 * keyUpdateInterval + tokenLifetime, nextKey.getKey());
-    allKeys.put(currentKey.getKeyId(), currentKey);
+    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
     // generate a new nextKey
     serialNo++;
-    nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
+    nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3 
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(nextKey.getKeyId(), nextKey);
+    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
     return true;
   }
 
@@ -191,12 +191,13 @@ public class BlockTokenSecretManager extends
       EnumSet<AccessMode> modes) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, block, modes);
+    return generateToken(userID, block, modes); 
   }
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
       ExtendedBlock block, EnumSet<AccessMode> modes) throws IOException {
+	  LOG.debug("generateToken() BTSM");
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
@@ -305,6 +306,7 @@ public class BlockTokenSecretManager extends
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generating block token for " + identifier.toString());
     }
+    LOG.debug("createPassword() BTSM");
     return createPassword(identifier.getBytes(), key.getKey());
   }
 
@@ -323,9 +325,12 @@ public class BlockTokenSecretManager extends
       throw new InvalidToken("Block token with " + identifier.toString()
           + " is expired.");
     }
+    
+    LOG.debug("retrievePassword() BTSM");
+    
     BlockKey key = null;
     synchronized (this) {
-      key = allKeys.get(identifier.getKeyId());
+      key = allKeys.get(identifier.getKeyId()); //TODO: get from NDB
     }
     if (key == null) {
       throw new InvalidToken("Can't re-compute password for "

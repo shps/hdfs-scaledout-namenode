@@ -9,12 +9,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import se.sics.clusterj.DelegationKeyTable;
-import se.sics.clusterj.LeaseTable;
 
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
@@ -108,39 +106,6 @@ class SecretHelper {
 		BlockKey bKey = new BlockKey();
 		bKey.readFields(keyBytes);
 		return bKey;
-	}
-	
-	public static void put(int keyId, BlockKey blockKey) {
-		int tries = RETRY_COUNT;
-		boolean done = false;
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-
-		DataOutputBuffer keyBytes = new DataOutputBuffer();
-		try {
-			blockKey.write(keyBytes);
-		} catch (IOException e1) {
-			LOG.error("IOException while converting blockKey to bytes: "
-					+ e1.getMessage());
-			e1.printStackTrace();
-			return;
-		}
-		
-		while(done == false && tries > 0) {
-			try {	
-				tx.begin();
-				insert(session, keyId, blockKey.getExpiryDate(), keyBytes.getData(), (short)1337);
-				tx.commit();
-				session.flush();
-				done = true;
-			}
-			catch(ClusterJException e) {
-				if(tx.isActive())
-					tx.rollback();
-				LOG.error("ClusterJException in put(): " + e.getMessage());
-				tries--;
-			}
-		}
 	}
 	
 	

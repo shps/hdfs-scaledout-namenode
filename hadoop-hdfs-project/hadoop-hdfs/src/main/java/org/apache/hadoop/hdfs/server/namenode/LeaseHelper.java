@@ -129,7 +129,8 @@ public class LeaseHelper {
 				return lease;
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in addLease: " + e.getMessage());
 				tries--;
 			}
@@ -158,7 +159,8 @@ public class LeaseHelper {
 				session.flush();
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in renewLease: " + e.getMessage());
 				tries--;
 			}
@@ -213,7 +215,8 @@ public class LeaseHelper {
 				tx.commit();
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
 				tries--;
 			}
@@ -246,7 +249,8 @@ public class LeaseHelper {
 
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in renewLeaseAndAddPath: " + e.getMessage());
 				tries--;
 			}
@@ -274,7 +278,8 @@ public class LeaseHelper {
 				tx.commit();
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
 				tries--;
 			}
@@ -304,7 +309,8 @@ public class LeaseHelper {
 				return found;
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
+				if(tx.isActive())
+					tx.rollback();
 				LeaseHelper.LOG.error("ClusterJException in removePath: " + e.getMessage());
 				tries--;
 			}

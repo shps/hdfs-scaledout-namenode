@@ -250,7 +250,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private DatanodeStatistics datanodeStatistics;
 
   // Block pool ID used by this namenode
-  private String blockPoolId;
+  private String blockPoolId = "h4ck3d-810ck-p001";
 
   LeaseManager leaseManager = new LeaseManager(this); 
 
@@ -692,6 +692,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
+	  
+	  LOG.info("[thesis] FSNamesystem.getBlockLocations() called");
+	  
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
     if (blocks != null) {
       blockManager.getDatanodeManager().sortLocatedBlocks(
@@ -770,8 +773,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           dir.setTimes(src, inode, -1, now, false); //TODO: KTHFS W: change the setTime method of INodes
         }
-        return blockManager.createLocatedBlocks(inode.getBlocks() /*W: start storing Blocks when iNodes are created*/,
-            inode.computeFileSize(false), /*W: make sure this method works fine after blocks are stored in the DB*/
+        return blockManager.createLocatedBlocks(inode.getBlocks(),
+            inode.computeFileSize(false),
             inode.isUnderConstruction(),
             offset, length, needBlockToken);
       } finally {
@@ -1454,7 +1457,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   void setBlockPoolId(String bpid) {
-    blockPoolId = bpid;
+	//[Wasif] Quick fix to keep the block pool consistent across namenodes
+    //blockPoolId = bpid; //[thesis]
   }
 
   /**
@@ -1551,6 +1555,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Create next block
     LocatedBlock b = new LocatedBlock(getExtendedBlock(newBlock), targets, fileLength);
+    LOG.debug("about to call BTSM.setBlockToken from FSNamesystem.getAdditionalBlock()");
     blockManager.setBlockToken(b, BlockTokenSecretManager.AccessMode.WRITE);
     return b;
   }
@@ -4403,7 +4408,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   @Override  // NameNodeMXBean
   public String getBlockPoolId() {
-    return blockPoolId;
+    //return blockPoolId; //[thesis]
+	//[Wasif] Quick fix to keep the block pool consistent across namenodes
+	return "h4ck3d-810ck-p001"; 
   }
 
   /** @return the block manager. */

@@ -659,7 +659,11 @@ public class BlocksHelper {
 		if (results != null && results.size() > 0)
 		{
 			Collections.sort(results, new TripletsTableComparator());
-			return results.get(0).getIndex();
+//			for(int i=0; i<results.size(); i++) {
+//				if(results.get(i).getDatanodeName().equals(node.getName()))
+//					results.get(i).getIndex();
+//			}
+			return results.get(0).getIndex(); //FIXME: this should only return a datanode which is connected to this NN
 		}
 		return -1;
 	}
@@ -683,7 +687,7 @@ public class BlocksHelper {
 			// Sort by index, so the highest index is last.
 			for (TripletsTable t: results)
 			{
-				if (t.getDatanodeName() != null)
+				if (t.getDatanodeName() != null) //FIXME: [thesis] this should be dnManager.getDatanodeByName(t.getDatanodeName()) != null
 				{
 					count++;
 				}

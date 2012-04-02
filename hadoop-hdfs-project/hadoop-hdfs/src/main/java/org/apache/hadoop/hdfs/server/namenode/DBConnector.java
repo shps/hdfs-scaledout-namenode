@@ -6,6 +6,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
@@ -39,11 +41,13 @@ public class DBConnector {
 	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
+	static final Log LOG = LogFactory.getLog(DBConnector.class);
 	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
 		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
-		
+		LOG.info("Database connect string: "+ conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
+		LOG.info("Database name: " + conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
 			Properties p = new Properties();

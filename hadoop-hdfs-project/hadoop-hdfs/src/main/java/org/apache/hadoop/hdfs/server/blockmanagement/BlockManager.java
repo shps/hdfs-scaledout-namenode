@@ -581,7 +581,7 @@ public class BlockManager {
 
   /** @return a LocatedBlock for the given block */
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos
-      ) throws IOException {
+      ) throws IOException { //TODO: [thesis] make changes to this function
     if (blk instanceof BlockInfoUnderConstruction) {
       if (blk.isComplete()) {
         throw new IOException(
@@ -631,7 +631,6 @@ public class BlockManager {
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
-    	System.err.println("Blocks.length == 0? I mean, how? I don't understand");
       return new LocatedBlocks(0, isFileUnderConstruction,
           Collections.<LocatedBlock>emptyList(), null, false);
     } else {
@@ -1720,8 +1719,9 @@ public class BlockManager {
     // Now check for completion of blocks and safe block count
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
-    int numCurrentReplica = numLiveReplicas
+    int numCurrentReplica = numLiveReplicas //[thesis] confirm this value!
       + pendingReplications.getNumReplicas(storedBlock);
+   
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication)
@@ -1745,11 +1745,15 @@ public class BlockManager {
 
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
+    LOG.debug("[W] numLiveReplicas=" + numLiveReplicas);
+    LOG.debug("[W] numCurrentReplica=" + numCurrentReplica);
+    LOG.debug("[W] fileReplication=" + fileReplication);
     if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedReplicas(), fileReplication);
     } else {
-      updateNeededReplications(storedBlock, curReplicaDelta, 0);
+    	LOG.debug("[W] curReplicaDelta=" + curReplicaDelta);
+      updateNeededReplications(storedBlock, curReplicaDelta, 0); //[thesis] This bug needs to DIE!
     }
     if (numCurrentReplica > fileReplication) {
       processOverReplicatedBlock(storedBlock, fileReplication, node, delNodeHint);
