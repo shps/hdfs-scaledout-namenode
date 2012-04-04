@@ -1,3 +1,4 @@
+//This is git test
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -377,7 +378,7 @@ public class NameNode {
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
-    if ((isRole(NamenodeRole.NAMENODE))
+    if ((isRole(NamenodeRole.READER) || isRole(NamenodeRole.WRITER))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
@@ -442,7 +443,7 @@ public class NameNode {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.NAMENODE);
+    this(conf, NamenodeRole.READER);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
@@ -652,6 +653,10 @@ public class NameNode {
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
+      } else if (StartupOption.READER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.READER;
+      } else if (StartupOption.WRITER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.WRITER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
         // might be followed by two args

@@ -49,6 +49,8 @@ public final class HdfsServerConstants {
     REGULAR ("-regular"),
     BACKUP  ("-backup"),
     CHECKPOINT("-checkpoint"),
+    READER ("Reader"),
+    WRITER ("Writer"),
     UPGRADE ("-upgrade"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
@@ -67,8 +69,10 @@ public final class HdfsServerConstants {
         return NamenodeRole.BACKUP;
       case CHECKPOINT: 
         return NamenodeRole.CHECKPOINT;
+      case WRITER: 
+        return NamenodeRole.WRITER;
       default:
-        return NamenodeRole.NAMENODE;
+        return NamenodeRole.READER;
       }
     }
     
@@ -92,7 +96,9 @@ public final class HdfsServerConstants {
    * Defines the NameNode role.
    */
   static public enum NamenodeRole {
-    NAMENODE  ("NameNode"),
+//      NAMENODE("Name Node");
+    READER ("Reader Node"),
+    WRITER("Writer Node"),
     BACKUP    ("Backup Node"),
     CHECKPOINT("Checkpoint Node");
 
