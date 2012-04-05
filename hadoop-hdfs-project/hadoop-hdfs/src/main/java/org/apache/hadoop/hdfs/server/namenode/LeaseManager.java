@@ -93,7 +93,8 @@ public class LeaseManager {
 		return leases.get(holder); 
 	}
 
-	SortedSet<Lease> getSortedLeases() {return LeaseHelper.getSortedLeases();}
+	static SortedSet<Lease> getSortedLeases() {return LeaseHelper.getSortedLeases();}
+        
 	@Deprecated
 	SortedSet<Lease> getSortedLeasesOld() {return sortedLeases;}
 

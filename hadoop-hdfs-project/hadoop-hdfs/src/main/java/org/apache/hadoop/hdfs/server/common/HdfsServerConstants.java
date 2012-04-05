@@ -65,10 +65,11 @@ public final class HdfsServerConstants {
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
       switch(this) {
-      case BACKUP: 
-        return NamenodeRole.BACKUP;
-      case CHECKPOINT: 
-        return NamenodeRole.CHECKPOINT;
+//  TODO:Kamal, remove if backup role removal is alright
+//      case BACKUP: 
+//        return NamenodeRole.BACKUP;
+//      case CHECKPOINT: 
+//        return NamenodeRole.CHECKPOINT;
       case WRITER: 
         return NamenodeRole.WRITER;
       default:
@@ -98,9 +99,10 @@ public final class HdfsServerConstants {
   static public enum NamenodeRole {
 //      NAMENODE("Name Node");
     READER ("Reader Node"),
-    WRITER("Writer Node"),
-    BACKUP    ("Backup Node"),
-    CHECKPOINT("Checkpoint Node");
+    WRITER("Writer Node");
+//  TODO:Kamal, remove if backup role removal is alright
+//    BACKUP    ("Backup Node"),
+//    CHECKPOINT("Checkpoint Node");
 
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}

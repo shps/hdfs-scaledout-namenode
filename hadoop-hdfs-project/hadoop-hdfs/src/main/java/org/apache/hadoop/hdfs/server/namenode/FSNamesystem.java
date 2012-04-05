@@ -116,7 +116,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
@@ -138,7 +137,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -147,7 +145,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.IOUtils;
@@ -262,17 +259,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
   
-  Daemon nnrmthread = null; // NamenodeResourceMonitor thread
-
-  private volatile boolean hasResourcesAvailable = false;
+  //TODO:kamal resource monitor
+//  Daemon nnrmthread = null; // NamenodeResourceMonitor thread
+  
+//TODO:kamal resource monitor
+//  private volatile boolean hasResourcesAvailable = false;
   private volatile boolean fsRunning = true;
   long systemStart = 0;
 
+  //TODO:kamal resource monitor
   //resourceRecheckInterval is how often namenode checks for the disk space availability
-  private long resourceRecheckInterval;
+//  private long resourceRecheckInterval;
 
+  //TODO:kamal resource monitor
   // The actual resource checker instance.
-  NameNodeResourceChecker nnResourceChecker;
+//  NameNodeResourceChecker nnResourceChecker;
 
   private FsServerDefaults serverDefaults;
   // allow appending to hdfs files
@@ -294,12 +295,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // lock to protect FSNamesystem.
   private ReentrantReadWriteLock fsLock;
+  
+  private NameNode nameNode;
 
   /**
    * FSNamesystem constructor.
    */
-  FSNamesystem(Configuration conf) throws IOException {
+  FSNamesystem(Configuration conf, NameNode nameNode) throws IOException {
     try {
+      this.nameNode = nameNode;
       initialize(conf, null);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
@@ -313,11 +317,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private void initialize(Configuration conf, FSImage fsImage)
       throws IOException {
-    resourceRecheckInterval = conf.getLong(
-        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
-        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
-    nnResourceChecker = new NameNodeResourceChecker(conf);
-    checkAvailableResources();
+//TODO:kamal resource monitor
+//      resourceRecheckInterval = conf.getLong(
+//        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
+//        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
+//    nnResourceChecker = new NameNodeResourceChecker(conf);
+//    checkAvailableResources();
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
@@ -367,10 +372,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       setBlockTotal();
       blockManager.activate(conf);
 
-      this.lmthread = new Daemon(leaseManager.new Monitor());
-      lmthread.start();
-      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
-      nnrmthread.start();
+      if(nameNode.isWritingNN()) {
+          this.lmthread = new Daemon(leaseManager.new Monitor());
+          lmthread.start();
+      }
+//      TODO:kamal, resouce monitor
+//      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+//      nnrmthread.start();
     } finally {
       writeUnlock();
     }
@@ -510,7 +518,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
           getClusterId(), getBlockPoolId(),
           dir.fsImage.getStorage().getCTime(),
-          upgradeManager.getUpgradeVersion());
+          upgradeManager.getUpgradeVersion()
+          );
     } finally {
       readUnlock();
     }
@@ -527,7 +536,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (blockManager != null) blockManager.close();
       if (smmthread != null) smmthread.interrupt();
       if (dtSecretManager != null) dtSecretManager.stopThreads();
-      if (nnrmthread != null) nnrmthread.interrupt();
+//TODO:kamal resource monitor
+//      if (nnrmthread != null) nnrmthread.interrupt();
     } catch (Exception e) {
       LOG.warn("Exception shutting down FSNamesystem", e);
     } finally {
@@ -1108,6 +1118,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       short replication, long blockSize) throws AccessControlException,
       SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
+//      TODO:kamal, writing check
     writeLock();
     try {
       startFileInternal(src, permissions, holder, clientMachine, flag,
@@ -1147,6 +1158,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long blockSize) throws SafeModeException, FileAlreadyExistsException,
       AccessControlException, UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
@@ -1280,7 +1292,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   boolean recoverLease(String src, String holder, String clientMachine)
-      throws IOException {
+      throws IOException, ImproperUsageException{
+      if (!nameNode.isWritingNN())
+          throw new ImproperUsageException();
+      
     writeLock();
     try {
       if (isInSafeMode()) {
@@ -1313,6 +1328,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void recoverLeaseInternal(INode fileInode, 
       String src, String holder, String clientMachine, boolean force)
       throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) fileInode;
@@ -1394,7 +1410,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock appendFile(String src, String holder, String clientMachine)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, IOException {
+      ParentNotDirectoryException, ImproperUsageException, IOException {
+      
+    if(!nameNode.isWritingNN())
+        throw new ImproperUsageException();
+    
     if (supportAppends == false) {
       throw new UnsupportedOperationException("Append to hdfs not supported." +
                             " Please refer to dfs.support.append configuration parameter.");
@@ -1451,7 +1471,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                          ) 
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
-      IOException {
+      ImproperUsageException, IOException {
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
+    
     checkBlock(previous);
     long fileLength, blockSize;
     int replication;
@@ -1616,6 +1639,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void checkLease(String src, String holder, INode file)
       throws LeaseExpiredException {
+    assert nameNode.isWritingNN();
     assert hasReadOrWriteLock();
     if (file == null || file.isDirectory()) {
       Lease lease = leaseManager.getLease(holder);
@@ -1664,6 +1688,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private boolean completeFileInternal(String src, 
       String holder, Block last) throws SafeModeException,
       UnresolvedLinkException, IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " +
@@ -1780,7 +1805,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   @Deprecated
   boolean renameTo(String src, String dst) 
-    throws IOException, UnresolvedLinkException {
+    throws IOException, UnresolvedLinkException, ImproperUsageException {
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
     boolean status = false;
     HdfsFileStatus resultingStat = null;
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1809,6 +1836,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Deprecated
   private boolean renameToInternal(String src, String dst)
     throws IOException, UnresolvedLinkException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -1864,6 +1892,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void renameToInternal(String src, String dst,
       Options.Rename... options) throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -1979,6 +2008,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   void removePathAndBlocks(String src, List<Block> blocks) {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src);
     if (blocks == null) {
@@ -2154,8 +2184,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean internalReleaseLease(Lease lease, String src, 
       String recoveryLeaseHolder) throws AlreadyBeingCreatedException, 
-      IOException, UnresolvedLinkException {
+      IOException, UnresolvedLinkException, ImproperUsageException {
     LOG.info("Recovering lease=" + lease + ", src=" + src);
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
+        
     assert !isInSafeMode();
     assert hasWriteLock();
     INodeFile iFile = dir.getFileINode(src);
@@ -2279,6 +2312,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private Lease reassignLease(Lease lease, String src, String newHolder,
       INodeFileUnderConstruction pendingFile) throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if(newHolder == null)
       return lease;
@@ -2288,6 +2322,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
       INodeFileUnderConstruction pendingFile) throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     pendingFile.setClientName(newHolder);
     return leaseManager.reassignLease(lease, src, newHolder);
@@ -2295,6 +2330,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void commitOrCompleteLastBlock(final INodeFileUnderConstruction fileINode,
       final Block commitBlock) throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
       return;
@@ -2315,6 +2351,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void finalizeINodeFileUnderConstruction(String src, 
       INodeFileUnderConstruction pendingFile) 
       throws IOException, UnresolvedLinkException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
 
@@ -2332,7 +2369,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void commitBlockSynchronization(ExtendedBlock lastblock,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
-      throws IOException, UnresolvedLinkException {
+      throws IOException, UnresolvedLinkException, ImproperUsageException {
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
     String src = "";
     writeLock();
     try {
@@ -2433,7 +2472,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Renew the lease(s) held by the given client
    */
-  void renewLease(String holder) throws IOException {
+  void renewLease(String holder) throws ImproperUsageException, IOException {
+    if (nameNode.isWritingNN())
+        throw new ImproperUsageException();
     writeLock();
     try {
       if (isInSafeMode()) {
@@ -2569,7 +2610,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return cmds;
       }
 
-      //check distributed upgrade
       DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
       if (cmd != null) {
         return new DatanodeCommand[] {cmd};
@@ -2579,57 +2619,58 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       readUnlock();
     }
   }
+// TODO:kamal, resource monitor
+//  /**
+//   * Returns whether or not there were available resources at the last check of
+//   * resources.
+//   *
+//   * @return true if there were sufficient resources available, false otherwise.
+//   */
+//  private boolean nameNodeHasResourcesAvailable() {
+//    return hasResourcesAvailable;
+//  }
+//
+//  /**
+//   * Perform resource checks and cache the results.
+//   * @throws IOException
+//   */
+//  private void checkAvailableResources() throws IOException {
+//    hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
+//  }
 
-  /**
-   * Returns whether or not there were available resources at the last check of
-   * resources.
-   *
-   * @return true if there were sufficient resources available, false otherwise.
-   */
-  private boolean nameNodeHasResourcesAvailable() {
-    return hasResourcesAvailable;
-  }
-
-  /**
-   * Perform resource checks and cache the results.
-   * @throws IOException
-   */
-  private void checkAvailableResources() throws IOException {
-    hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
-  }
-
-  /**
-   * Periodically calls hasAvailableResources of NameNodeResourceChecker, and if
-   * there are found to be insufficient resources available, causes the NN to
-   * enter safe mode. If resources are later found to have returned to
-   * acceptable levels, this daemon will cause the NN to exit safe mode.
-   */
-  class NameNodeResourceMonitor implements Runnable  {
-    @Override
-    public void run () {
-      try {
-        while (fsRunning) {
-          checkAvailableResources();
-          if(!nameNodeHasResourcesAvailable()) {
-            String lowResourcesMsg = "NameNode low on available disk space. ";
-            if (!isInSafeMode()) {
-              FSNamesystem.LOG.warn(lowResourcesMsg + "Entering safe mode.");
-            } else {
-              FSNamesystem.LOG.warn(lowResourcesMsg + "Already in safe mode.");
-            }
-            enterSafeMode(true);
-          }
-          try {
-            Thread.sleep(resourceRecheckInterval);
-          } catch (InterruptedException ie) {
-            // Deliberately ignore
-          }
-        }
-      } catch (Exception e) {
-        FSNamesystem.LOG.error("Exception in NameNodeResourceMonitor: ", e);
-      }
-    }
-  }
+ 
+//  /**
+//   * Periodically calls hasAvailableResources of NameNodeResourceChecker, and if
+//   * there are found to be insufficient resources available, causes the NN to
+//   * enter safe mode. If resources are later found to have returned to
+//   * acceptable levels, this daemon will cause the NN to exit safe mode.
+//   */
+//  class NameNodeResourceMonitor implements Runnable  {
+//    @Override
+//    public void run () {
+//      try {
+//        while (fsRunning) {
+//          checkAvailableResources();
+//          if(!nameNodeHasResourcesAvailable()) {
+//            String lowResourcesMsg = "NameNode low on available disk space. ";
+//            if (!isInSafeMode()) {
+//              FSNamesystem.LOG.warn(lowResourcesMsg + "Entering safe mode.");
+//            } else {
+//              FSNamesystem.LOG.warn(lowResourcesMsg + "Already in safe mode.");
+//            }
+//            enterSafeMode(true);
+//          }
+//          try {
+//            Thread.sleep(resourceRecheckInterval);
+//          } catch (InterruptedException ie) {
+//            // Deliberately ignore
+//          }
+//        }
+//      } catch (Exception e) {
+//        FSNamesystem.LOG.error("Exception in NameNodeResourceMonitor: ", e);
+//      }
+//    }
+//  }
   
   FSImage getFSImage() {
     return dir.fsImage;
@@ -3017,8 +3058,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private boolean needEnter() {
       return (threshold != 0 && blockSafe < blockThreshold) ||
-        (getNumLiveDataNodes() < datanodeThreshold) ||
-        (!nameNodeHasResourcesAvailable());
+        (getNumLiveDataNodes() < datanodeThreshold) 
+//              TODO:kamal, resource monitor
+//              || (!nameNodeHasResourcesAvailable())
+              ;
     }
       
     /**
@@ -3131,10 +3174,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         leaveMsg = "Safe mode will be turned off automatically";
       }
       if(isManual()) {
-        if(upgradeManager.getUpgradeState())
-          return leaveMsg + " upon completion of " + 
-            "the distributed upgrade: upgrade progress = " + 
-            upgradeManager.getUpgradeStatus() + "%";
+//          TODO: kamal, upgrade manager
+//        if(upgradeManager.getUpgradeState())
+//          return leaveMsg + " upon completion of " + 
+//            "the distributed upgrade: upgrade progress = " + 
+//            upgradeManager.getUpgradeStatus() + "%";
         leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
       }
 
@@ -3348,7 +3392,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     long numUCBlocks = 0;
     readLock();
     try {
-      for (Lease lease : leaseManager.getSortedLeases()) {
+      for (Lease lease : LeaseManager.getSortedLeases()) {
         for (String path : lease.getPaths()) {
           INode node;
           try {
@@ -3442,7 +3486,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return (blockManager.getINode(b) != null);
   }
 
-  // Distributed upgrade manager
   final UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode(this);
 
   UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
@@ -3728,7 +3771,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void updatePipeline(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
-      throws IOException {
+      throws IOException, ImproperUsageException {
+    if(!nameNode.isWritingNN())
+        throw new ImproperUsageException();
     writeLock();
     try {
       if (isInSafeMode()) {
@@ -3756,6 +3801,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
+    assert nameNode.isWritingNN();
     assert hasWriteLock();
     // check the vadility of the block and lease holder name
     final INodeFileUnderConstruction pendingFile = 
@@ -3796,7 +3842,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
-  void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo) {
+  void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo) 
+          throws ImproperUsageException{
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
+    
     String overwrite;
     String replaceBy;
     assert hasWriteLock();
@@ -3821,10 +3871,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Serializes leases. 
    */
-  void saveFilesUnderConstruction(DataOutputStream out) throws IOException {
+  void saveFilesUnderConstruction(DataOutputStream out) throws ImproperUsageException, IOException {
     // This is run by an inferior thread of saveNamespace, which holds a read
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
+      
+    if (!nameNode.isWritingNN())
+        throw new ImproperUsageException();
+    
     synchronized (leaseManager) {
       out.writeInt(leaseManager.countPath()); // write the size
 
@@ -3852,57 +3906,59 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  /**
-   * Register a Backup name-node, verifying that it belongs
-   * to the correct namespace, and adding it to the set of
-   * active journals if necessary.
-   * 
-   * @param bnReg registration of the new BackupNode
-   * @param nnReg registration of this NameNode
-   * @throws IOException if the namespace IDs do not match
-   */
-  void registerBackupNode(NamenodeRegistration bnReg,
-      NamenodeRegistration nnReg) throws IOException {
-    writeLock();
-    try {
-      if(getFSImage().getStorage().getNamespaceID() 
-         != bnReg.getNamespaceID())
-        throw new IOException("Incompatible namespaceIDs: "
-            + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
-            + bnReg.getRole() +
-            " node namespaceID = " + bnReg.getNamespaceID());
-      if (bnReg.getRole() == NamenodeRole.BACKUP) {
-        
-      }
-    } finally {
-      writeUnlock();
-    }
-  }
+//  TODO:Kamal, backup role removal
+//  /**
+//   * Register a Backup name-node, verifying that it belongs
+//   * to the correct namespace, and adding it to the set of
+//   * active journals if necessary.
+//   * 
+//   * @param bnReg registration of the new BackupNode
+//   * @param nnReg registration of this NameNode
+//   * @throws IOException if the namespace IDs do not match
+//   */
+//  void registerBackupNode(NamenodeRegistration bnReg,
+//      NamenodeRegistration nnReg) throws IOException {
+//    writeLock();
+//    try {
+//      if(getFSImage().getStorage().getNamespaceID() 
+//         != bnReg.getNamespaceID())
+//        throw new IOException("Incompatible namespaceIDs: "
+//            + " Namenode namespaceID = "
+//            + getFSImage().getStorage().getNamespaceID() + "; "
+//            + bnReg.getRole() +
+//            " node namespaceID = " + bnReg.getNamespaceID());
+//      if (bnReg.getRole() == NamenodeRole.BACKUP) {
+//        
+//      }
+//    } finally {
+//      writeUnlock();
+//    }
+//  }
 
-  /**
-   * Release (unregister) backup node.
-   * <p>
-   * Find and remove the backup stream corresponding to the node.
-   * @param registration
-   * @throws IOException
-   */
-  void releaseBackupNode(NamenodeRegistration registration)
-    throws IOException {
-    writeLock();
-    try {
-      if(getFSImage().getStorage().getNamespaceID()
-         != registration.getNamespaceID())
-        throw new IOException("Incompatible namespaceIDs: "
-            + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
-            + registration.getRole() +
-            " node namespaceID = " + registration.getNamespaceID());
-      //getEditLog().releaseBackupStream(registration);
-    } finally {
-      writeUnlock();
-    }
-  }
+//  TODO:Kamal, back-up role removal
+//  /**
+//   * Release (unregister) backup node.
+//   * <p>
+//   * Find and remove the backup stream corresponding to the node.
+//   * @param registration
+//   * @throws IOException
+//   */
+//  void releaseBackupNode(NamenodeRegistration registration)
+//    throws IOException {
+//    writeLock();
+//    try {
+//      if(getFSImage().getStorage().getNamespaceID()
+//         != registration.getNamespaceID())
+//        throw new IOException("Incompatible namespaceIDs: "
+//            + " Namenode namespaceID = "
+//            + getFSImage().getStorage().getNamespaceID() + "; "
+//            + registration.getRole() +
+//            " node namespaceID = " + registration.getNamespaceID());
+//      //getEditLog().releaseBackupStream(registration);
+//    } finally {
+//      writeUnlock();
+//    }
+//  }
 
   static class CorruptFileBlockInfo {
     String path;
