@@ -55,25 +55,17 @@ public class TestLeaseHelper {
   public void disconnect() throws IOException {
   
   }
-
+  
   @Test
-  public void testAddLease() throws ClusterJException {
-	  String holder = "wmalik";
+  public void testAddDeleteLease() throws ClusterJException {
+          String holder = "wmalik";
 	  int holderID = DFSUtil.getRandom().nextInt();
 	  String src = "/home/wmalik/file"+holderID+".txt";
-	  Lease lease = leaseManager.addLease("wmalik", src);
-	  assertEquals("holder not persisted correctly", holder, lease.getHolder());
+	  Lease lease = leaseManager.addLease(holder, src);
+	  
+          assertEquals("holder not persisted correctly", holder, lease.getHolder());
 	  assertTrue("path not persisted correctly", lease.getPathsLocal().contains(src));
-  }
-  
-  
-  @Test
-  public void testDeleteLease() throws ClusterJException {
-	  int holderID = DFSUtil.getRandom().nextInt();
-	  String src = "/home/wmalik/file"+holderID+".txt";
-	 
-	  Lease lease = leaseManager.addLease("wmalik", src);
-	  System.out.println("Added lease: " + lease.toString());
+          
 	  leaseManager.removeLease(lease, src);
 	  
 	  Lease leaseByPath = leaseManager.getLeaseByPath(src);

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.mysql.clusterj.ClusterJException;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -613,18 +614,44 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;
     writeLock();
-    try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot set permission for " + src, safeMode);
-      }
-      checkOwner(src);
-      dir.setPermission(src, permission);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(src, false);
-      }
-    } finally {
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try
+    {
+        // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
+        while (!isDone && tries > 0)
+        {
+            try {
+              // the optimized place, to begin the transaction will be decided later.
+              DBConnector.beginTransaction();
+
+              if (isInSafeMode()) {
+                throw new SafeModeException("Cannot set permission for " + src, safeMode);
+              }
+              
+              checkOwner(src);
+              dir.setPermission(src, permission);
+              DBConnector.commit();
+              isDone = true;
+              
+              if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+                resultingStat = dir.getFileInfo(src, false);
+              }
+            }
+            catch(ClusterJException ex)
+            {
+                DBConnector.safeRollback();
+                tries--;
+                //For now, the ClusterJException are just catched here.
+                FSNamesystem.LOG.error(ex.getMessage(), ex);
+            }
+        }
+    }
+    finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
+    
     //getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
@@ -638,6 +665,71 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   void setOwner(String src, String username, String group)
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, IOException {
+    HdfsFileStatus resultingStat = null;
+    writeLock();
+    
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try
+    {
+        // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
+        while (!isDone && tries > 0)
+        {
+            try {
+              // the optimized place, to begin the transaction will be decided later.
+              DBConnector.beginTransaction();
+
+              if (isInSafeMode()) {
+                throw new SafeModeException("Cannot set owner for " + src, safeMode);
+              }
+              FSPermissionChecker pc = checkOwner(src);
+              if (!pc.isSuper) {
+                if (username != null && !pc.user.equals(username)) {
+                  throw new AccessControlException("Non-super user cannot change owner.");
+                }
+                if (group != null && !pc.containsGroup(group)) {
+                  throw new AccessControlException("User does not belong to " + group
+                    + " .");
+                }
+              }
+              
+              dir.setOwner(src, username, group);
+              DBConnector.commit();
+              isDone = true;
+              
+              if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+                resultingStat = dir.getFileInfo(src, false);
+              }
+            }
+            catch(ClusterJException ex)
+            {
+                DBConnector.safeRollback();
+                tries--;
+                //For now, the ClusterJException are just catched here.
+                FSNamesystem.LOG.error(ex.getMessage(), ex);
+            }
+        }
+    }
+    finally {
+      DBConnector.safeRollback();
+      writeUnlock();
+    }
+    
+    //getEditLog().logSync();
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    Server.getRemoteIp(),
+                    "setOwner", src, null, resultingStat);
+    }
+  }
+  
+  /**
+   * Set owner for an existing file.
+   * @throws IOException
+   */
+  void setOwnerOld(String src, String username, String group)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;

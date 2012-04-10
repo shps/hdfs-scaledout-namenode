@@ -907,8 +907,19 @@ public class FSDirectory implements Closeable {
     }
   }
 
+//  void setPermission(String src, FsPermission permission)
+//      throws FileNotFoundException, UnresolvedLinkException {
+//    writeLock();
+//    try {
+//      unprotectedSetPermission(src, permission);
+//    } finally {
+//      writeUnlock();
+//    }
+//    //fsImage.getEditLog().logSetPermissions(src, permission);
+//  }
+  
   void setPermission(String src, FsPermission permission)
-      throws FileNotFoundException, UnresolvedLinkException {
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
       unprotectedSetPermission(src, permission);
@@ -917,8 +928,20 @@ public class FSDirectory implements Closeable {
     }
     //fsImage.getEditLog().logSetPermissions(src, permission);
   }
-
+  
+  // Uses INodeHelper
   void unprotectedSetPermission(String src, FsPermission permissions) 
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
+    assert hasWriteLock();
+    INode inode = rootDir.getNode(src, true);
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    inode.setPermission(permissions);
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+  }
+
+  void unprotectedSetPermissionOld(String src, FsPermission permissions) 
       throws FileNotFoundException, UnresolvedLinkException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
@@ -929,7 +952,7 @@ public class FSDirectory implements Closeable {
   }
 
   void setOwner(String src, String username, String groupname)
-      throws FileNotFoundException, UnresolvedLinkException {
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
       unprotectedSetOwner(src, username, groupname);
@@ -940,6 +963,24 @@ public class FSDirectory implements Closeable {
   }
 
   void unprotectedSetOwner(String src, String username, String groupname) 
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
+    assert hasWriteLock();
+    INode inode = rootDir.getNode(src, true);
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    
+    if (username != null) {
+      inode.setUser(username);
+    }
+    if (groupname != null) {
+      inode.setGroup(groupname);
+    }
+    
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+  }
+  
+  void unprotectedSetOwnerOld(String src, String username, String groupname) 
       throws FileNotFoundException, UnresolvedLinkException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
