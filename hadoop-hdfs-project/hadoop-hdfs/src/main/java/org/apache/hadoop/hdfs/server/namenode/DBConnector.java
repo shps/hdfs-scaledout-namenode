@@ -9,8 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
+import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
+import com.mysql.clusterj.Transaction;
+import java.util.HashMap;
+import java.util.Hashtable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -39,6 +43,7 @@ public class DBConnector {
 	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
+        public static final int RETRY_COUNT = 3;
 	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
@@ -76,4 +81,38 @@ public class DBConnector {
 			return session;
 		}
 	}
+        
+        /**
+         * begin a transaction.
+         */
+        public static void beginTransaction()
+        {
+            Session session = obtainSession();
+            session.currentTransaction().begin();
+        }
+        
+        /**
+         * Commit a transaction.
+         */
+        public static void commit() throws ClusterJUserException
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            if (!tx.isActive())
+                throw new ClusterJUserException("The transaction is not began!");
+            
+            tx.commit();
+            // session.flush(); why?
+        }
+        
+        /**
+         * It rolls back only when the transaction is active.
+         */
+        public static void safeRollback() throws ClusterJUserException
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            if (tx.isActive())
+                tx.rollback();
+        }
 }
