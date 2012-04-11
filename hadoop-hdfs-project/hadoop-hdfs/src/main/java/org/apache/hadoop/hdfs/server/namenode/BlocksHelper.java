@@ -903,5 +903,33 @@ public class BlocksHelper {
 
 	}
 	
+	/** Returns a list of datanode addresses for a block
+	 * @param blockId
+	 * @return a list of ip:port pairs if they exist in NDB, and null otherwise
+	 */
+	public static List<String> getDatanodeAddr(long blockId) {
+		int tries = RETRY_COUNT;
+		boolean done = false;
+
+		Session session = DBConnector.obtainSession();
+		while (done == false && tries > 0) {
+			try {
+				List<TripletsTable> triplets = selectTriplet(session, blockId);
+				List<String> ret = new ArrayList<String>();
+				for(TripletsTable triplet : triplets) {
+					ret.add(triplet.getDatanodeName());
+				}
+				done=true;
+				if(ret.size() > 0)
+					return ret;
+			}
+			catch (ClusterJException e){
+				System.err.println("getDatanodeAddr failed " + e.getMessage());
+				tries--;
+			}
+		}
+		return null;
+	}
+	
 }
 

@@ -581,7 +581,65 @@ public class BlockManager {
 
   /** @return a LocatedBlock for the given block */
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos
-      ) throws IOException { //TODO: [thesis] make changes to this function
+	      ) throws IOException { //TODO: [thesis] make changes to this function
+	    if (blk instanceof BlockInfoUnderConstruction) {
+	      if (blk.isComplete()) {
+	        throw new IOException(
+	            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
+	            + ", blk=" + blk);
+	      }
+	      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
+	      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+	      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	      return new LocatedBlock(eb, locations, pos, false);
+	    }
+
+	    // get block locations
+//	    final int numCorruptNodes = countNodes(blk).corruptReplicas(); //TODO: [thesis] verify if countNodes works currently
+//	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk); //TODO: [thesis]
+//	    if (numCorruptNodes != numCorruptReplicas) {
+//	      LOG.warn("Inconsistent number of corrupt replicas for "
+//	          + blk + " blockMap has " + numCorruptNodes
+//	          + " but corrupt replicas map has " + numCorruptReplicas);
+//	    }
+
+	    final int numNodes = blocksMap.numNodes(blk); //[thesis] seems like this works currently
+	    //final boolean isCorrupt = numCorruptNodes == numNodes;
+	    //final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
+	    final int numMachines = numNodes; //[thesis] 
+	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+	    if (numMachines > 0) {
+	    	if(datanodeManager.getNumLiveDataNodes() <= 0) { //TODO: replace this with NN role check
+	    		List<String> ipPorts = BlocksHelper.getDatanodeAddr(blk.getBlockId());
+	    		int w = 0;
+	    		for(String ipPort : ipPorts) {
+	    			machines[w++] = new DatanodeDescriptor(
+	    					new DatanodeID(ipPort,"DUMMY-STORAGE-ID",-1,Integer.parseInt(ipPort.substring(ipPort.indexOf(":")+1))),
+	    					"",
+	    					ipPort);
+	    		}
+	    	}
+	    	else {
+
+	    		int j = 0;
+	    		for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk);
+	    				it.hasNext();) {
+	    			final DatanodeDescriptor d = it.next();
+	    			//final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
+	    			//if (isCorrupt || (!isCorrupt && !replicaCorrupt))
+	    			machines[j++] = d;
+	    		}
+	        }
+	    }
+	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	    //return new LocatedBlock(eb, machines, pos, isCorrupt);
+	    return new LocatedBlock(eb, machines, pos, false);
+	  }
+  
+  
+  @SuppressWarnings("unused")
+private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
+      ) throws IOException { 
     if (blk instanceof BlockInfoUnderConstruction) {
       if (blk.isComplete()) {
         throw new IOException(
@@ -595,15 +653,15 @@ public class BlockManager {
     }
 
     // get block locations
-    final int numCorruptNodes = countNodes(blk).corruptReplicas(); //TODO: [thesis] verify if countNodes works currently
-    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk); //TODO: [thesis]
+    final int numCorruptNodes = countNodes(blk).corruptReplicas();
+    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
           + blk + " blockMap has " + numCorruptNodes
           + " but corrupt replicas map has " + numCorruptReplicas);
     }
 
-    final int numNodes = blocksMap.numNodes(blk); //[thesis] seems like this works currently
+    final int numNodes = blocksMap.numNodes(blk);
     final boolean isCorrupt = numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
@@ -640,7 +698,7 @@ public class BlockManager {
       final AccessMode mode = needBlockToken? AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
-
+      System.out.println("");
       final BlockInfo last = blocks[blocks.length - 1];
       final long lastPos = last.isComplete()?
           fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
@@ -775,6 +833,8 @@ public class BlockManager {
   /** Remove the blocks associated to the given datanode. */
   void removeBlocksAssociatedTo(final DatanodeDescriptor node) {
     final Iterator<? extends Block> it = node.getBlockIterator();
+    
+    //TODO: [thesis] this should just remove all the triplets and shrink the indexes
     while(it.hasNext()) {
       removeStoredBlock(it.next(), node);
     }

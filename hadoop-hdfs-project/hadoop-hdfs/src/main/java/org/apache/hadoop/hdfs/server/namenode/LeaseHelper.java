@@ -17,6 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import se.sics.clusterj.*;
 
 import com.mysql.clusterj.ClusterJException;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;

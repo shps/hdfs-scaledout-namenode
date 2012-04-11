@@ -88,6 +88,8 @@ public class MiniDFSCluster {
 
   private static final String NAMESERVICE_ID_PREFIX = "nameserviceId";
   private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
+  
+  private static int nnIndex = 0; 
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -606,6 +608,7 @@ public class MiniDFSCluster {
     }
     
     if (format) {
+    	//DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
@@ -2036,4 +2039,5 @@ public class MiniDFSCluster {
       writer.close();
     }
   }
+
 }

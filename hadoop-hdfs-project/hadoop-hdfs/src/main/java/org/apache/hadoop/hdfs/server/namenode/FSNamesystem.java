@@ -693,13 +693,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long offset, long length) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
 	  
-	  LOG.info("[thesis] FSNamesystem.getBlockLocations() called");
-	  
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
-    if (blocks != null) {
-      blockManager.getDatanodeManager().sortLocatedBlocks(
-          clientMachine, blocks.getLocatedBlocks());
-    }
+//    if (blocks != null) {
+//    	LOG.debug("Sorting Located Blocks W:" + this.hashCode());
+//      blockManager.getDatanodeManager().sortLocatedBlocks(
+//          clientMachine, blocks.getLocatedBlocks());
+//    }
     return blocks;
   }
 

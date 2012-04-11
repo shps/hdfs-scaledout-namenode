@@ -89,7 +89,6 @@ public class TestBlockTokenWithDFS {
         totalRead += nRead;
       }
     } catch (IOException e) {
-    	System.err.println("[thesis] W: IOException");
     	e.printStackTrace(System.err);
       return false;
     }

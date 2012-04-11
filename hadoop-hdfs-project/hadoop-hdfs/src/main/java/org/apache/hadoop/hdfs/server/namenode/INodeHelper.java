@@ -584,7 +584,7 @@ public class INodeHelper {
 	/** Deletes an inode from the database
 	 * @param inodeid the inodeid to remove
 	 */
-	public static /*synchronized*/ void removeChild(long inodeid) {
+	public static void removeChild(long inodeid) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 

@@ -83,7 +83,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 
 	public DatanodeDescriptor getDatanode(int index) {
 		assert index >= 0;
-		DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index);
+		DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index); //[thesis] this should return a DND with ip:port
 		assert node == null || 
 				DatanodeDescriptor.class.getName().equals(node.getClass().getName()) : 
 					"DatanodeDescriptor is expected at " + index*3;

@@ -7,4 +7,7 @@
 .project
 .settings
 target
-build
+log4j.properties
+nbactions.xml
+build/
+doc/

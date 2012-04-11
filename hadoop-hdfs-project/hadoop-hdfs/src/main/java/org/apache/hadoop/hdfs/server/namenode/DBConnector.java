@@ -11,6 +11,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
@@ -76,6 +77,7 @@ public class DBConnector {
 			Random r = new Random();
 			System.err.println("NUM_SESS_FACTS: " + NUM_SESSION_FACTORIES);
 			Session session = sessionFactory[r.nextInt(NUM_SESSION_FACTORIES)].getSession();
+			session.setLockMode(LockMode.READ_COMMITTED); //TODO: [thesis]
 			sessionPool.put(threadId, session);
 			return session;
 		}
