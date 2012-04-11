@@ -601,7 +601,7 @@ public class MiniDFSCluster {
       }
       initFederationConf(wConf, nameserviceIds, numDataNodes, wNameNodePort);
       createFederationNamenodes(wConf, nameserviceIds, manageNameDfsDirs, format,
-          operation, clusterId);
+          StartupOption.READER, clusterId);
     }
     
     if (format) {

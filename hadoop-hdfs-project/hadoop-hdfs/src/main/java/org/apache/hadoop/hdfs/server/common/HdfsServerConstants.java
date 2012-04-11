@@ -49,8 +49,8 @@ public final class HdfsServerConstants {
     REGULAR ("-regular"),
     BACKUP  ("-backup"),
     CHECKPOINT("-checkpoint"),
-    READER ("Reader"),
-    WRITER ("Writer"),
+    READER ("-reader"),
+    WRITER ("-writer"),
     UPGRADE ("-upgrade"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
@@ -70,10 +70,10 @@ public final class HdfsServerConstants {
 //        return NamenodeRole.BACKUP;
 //      case CHECKPOINT: 
 //        return NamenodeRole.CHECKPOINT;
-      case WRITER: 
-        return NamenodeRole.WRITER;
-      default:
+      case READER: 
         return NamenodeRole.READER;
+      default:
+        return NamenodeRole.WRITER;
       }
     }
     

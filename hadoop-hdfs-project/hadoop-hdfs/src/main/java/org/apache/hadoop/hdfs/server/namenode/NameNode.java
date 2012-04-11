@@ -743,14 +743,13 @@ public class NameNode {
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case WRITER:
-        DefaultMetricsSystem.initialize("Writing NameNode");
-        return new NameNode(conf, NamenodeRole.WRITER);
-//TODO:kamal, backup node      case BACKUP:      
       case READER:
-      default:
         DefaultMetricsSystem.initialize("Reading NameNode");
         return new NameNode(conf, NamenodeRole.READER);
+//TODO:kamal, backup node      case BACKUP:      
+      default:
+        DefaultMetricsSystem.initialize("Writing NameNode");
+        return new NameNode(conf, NamenodeRole.WRITER);
     }
   }
 
