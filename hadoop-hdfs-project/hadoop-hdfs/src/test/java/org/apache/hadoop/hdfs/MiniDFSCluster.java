@@ -586,10 +586,11 @@ public class MiniDFSCluster {
       NameNode wNN = createWritingNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
       writingNameNodes[0] = new NameNodeInfo(wNN, conf);
-      FileSystem.setDefaultUri(conf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
-      
       NameNode rNN = createReadingNameNode(conf, operation);
       readingNameNodes[0][0] = new NameNodeInfo(rNN, conf);
+      
+      FileSystem.setDefaultUri(conf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
+      
       
     } else {
       if (nameserviceIds.isEmpty()) {
