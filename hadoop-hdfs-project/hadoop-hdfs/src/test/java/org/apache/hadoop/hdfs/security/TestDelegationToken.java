@@ -60,7 +60,7 @@ public class TestDelegationToken {
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
     config.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
-    FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
+    FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0", "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster.Builder(config).build();
     cluster.waitActive();
     dtSecretManager = NameNodeAdapter.getDtSecretManager(

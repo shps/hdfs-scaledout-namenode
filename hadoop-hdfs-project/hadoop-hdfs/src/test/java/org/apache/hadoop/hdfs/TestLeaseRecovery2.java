@@ -186,7 +186,7 @@ public class TestLeaseRecovery2 {
 
   private FileSystem getFSAsAnotherUser(final Configuration c)
   throws IOException, InterruptedException {
-    return FileSystem.get(FileSystem.getDefaultUri(c), c,
+    return FileSystem.get(FileSystem.getDefaultWritingUri(c), c,
       UserGroupInformation.createUserForTesting(fakeUsername, 
           new String [] {fakeGroup}).getUserName());
   }

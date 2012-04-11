@@ -198,13 +198,15 @@ public class NameNode {
     return getAddress(addr);
   }
 
+  //TODO:kamal, add for reading NN
   public static InetSocketAddress getAddress(Configuration conf) {
-    URI filesystemURI = FileSystem.getDefaultUri(conf);
+    URI filesystemURI = FileSystem.getDefaultWritingUri(conf);
     return getAddress(filesystemURI);
   }
 
 
   /**
+   * TODO:Kamal, reading NN
    * TODO:FEDERATION
    * @param filesystemURI
    * @return address of file system
@@ -214,13 +216,13 @@ public class NameNode {
     if (authority == null) {
       throw new IllegalArgumentException(String.format(
           "Invalid URI for NameNode address (check %s): %s has no authority.",
-          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
+          FileSystem.FS_DEFAULT_WRITING_NAME_KEY, filesystemURI.toString()));
     }
     if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
         filesystemURI.getScheme())) {
       throw new IllegalArgumentException(String.format(
           "Invalid URI for NameNode address (check %s): %s is not of scheme '%s'.",
-          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString(),
+          FileSystem.FS_DEFAULT_WRITING_NAME_KEY, filesystemURI.toString(),
           HdfsConstants.HDFS_URI_SCHEME));
     }
     return getAddress(authority);
@@ -276,9 +278,10 @@ public class NameNode {
     setServiceAddress(conf, getHostPortString(serviceRPCAddress));
   }
 
+  //TODO:kamal, add for readind NN
   protected void setRpcServerAddress(Configuration conf,
       InetSocketAddress rpcAddress) {
-    FileSystem.setDefaultUri(conf, getUri(rpcAddress));
+    FileSystem.setDefaultWritingUri(conf, getUri(rpcAddress));
   }
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {

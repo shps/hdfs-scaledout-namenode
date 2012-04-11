@@ -583,10 +583,14 @@ public class MiniDFSCluster {
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       
-      NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
+      NameNode wNN = createWritingNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
-      writingNameNodes[0] = new NameNodeInfo(nn, conf);
-      FileSystem.setDefaultUri(conf, getWritingURI(0));
+      writingNameNodes[0] = new NameNodeInfo(wNN, conf);
+      FileSystem.setDefaultUri(conf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
+      
+      NameNode rNN = createReadingNameNode(conf, operation);
+      readingNameNodes[0][0] = new NameNodeInfo(rNN, conf);
+      
     } else {
       if (nameserviceIds.isEmpty()) {
         for (int i = 0; i < writingNameNodes.length; i++) {
@@ -653,17 +657,17 @@ public class MiniDFSCluster {
     }
   }
   
-  private NameNode createNameNode(int nnIndex, Configuration conf,
+  private NameNode createWritingNameNode(int wNNIndex, Configuration conf,
       int numDataNodes, boolean manageNameDfsDirs, boolean format,
       StartupOption operation, String clusterId)
       throws IOException {
     if (manageNameDfsDirs) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-          fileAsURI(new File(base_dir, "name" + (2*nnIndex + 1)))+","+
-          fileAsURI(new File(base_dir, "name" + (2*nnIndex + 2))));
+          fileAsURI(new File(base_dir, "name" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "name" + (2*wNNIndex + 2))));
       conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
-          fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 1)))+","+
-          fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 2))));
+          fileAsURI(new File(base_dir, "namesecondary" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "namesecondary" + (2*wNNIndex + 2))));
     }
     
     // Format and clean out DataNode directories
@@ -682,12 +686,23 @@ public class MiniDFSCluster {
     return NameNode.createNameNode(args, conf);
   }
   
+  private NameNode createReadingNameNode(Configuration conf, StartupOption operation)
+      throws IOException {
+
+      // Start the NameNode
+    String[] args = (operation == null ||
+                     operation == StartupOption.FORMAT ||
+                     operation == StartupOption.REGULAR) ?
+      new String[] {} : new String[] {operation.getName()};
+    return NameNode.createNameNode(args, conf);
+  }
+  
   private void createFederatedNameNode(int nnIndex, Configuration conf,
       int numDataNodes, boolean manageNameDfsDirs, boolean format,
       StartupOption operation, String clusterId, String nameserviceId)
       throws IOException {
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
-    NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
+    NameNode nn = createWritingNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
         format, operation, clusterId);
     conf.set(DFSUtil.getNameServiceIdKey(
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode

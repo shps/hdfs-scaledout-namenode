@@ -102,7 +102,7 @@ public class TestHDFSServerPorts extends TestCase {
     config = new HdfsConfiguration();
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         fileAsURI(new File(hdfsDir, "name1")).toString());
-    FileSystem.setDefaultUri(config, "hdfs://" + THIS_HOST);
+    FileSystem.setDefaultUri(config, "hdfs://" + THIS_HOST, "hdfs://" + THIS_HOST);
     if (withService) {
       NameNode.setServiceAddress(config, THIS_HOST);      
     }
@@ -202,12 +202,12 @@ public class TestHDFSServerPorts extends TestCase {
       assertFalse(started); // should fail
 
       // start on a different main port
-      FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
+      FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST, "hdfs://" + THIS_HOST);
       started = canStartNameNode(conf2);
       assertFalse(started); // should fail again
 
       // reset conf2 since NameNode modifies it
-      FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
+      FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST, "hdfs://" + THIS_HOST);
       // different http port
       conf2.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
       started = canStartNameNode(conf2);
@@ -216,7 +216,7 @@ public class TestHDFSServerPorts extends TestCase {
         assertFalse("Should've failed on service port", started);
 
         // reset conf2 since NameNode modifies it
-        FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
+        FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST, "hdfs://" + THIS_HOST);
         conf2.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
         // Set Service address      
         conf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  THIS_HOST);
@@ -240,7 +240,7 @@ public class TestHDFSServerPorts extends TestCase {
       Configuration conf2 = new HdfsConfiguration(config);
       conf2.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, new File(hdfsDir, "data").getPath());
       conf2.set("dfs.datanode.address",
-                FileSystem.getDefaultUri(config).getAuthority());
+                FileSystem.getDefaultWritingUri(config).getAuthority());
       conf2.set("dfs.datanode.http.address", THIS_HOST);
       boolean started = canStartDataNode(conf2);
       assertFalse(started); // should fail

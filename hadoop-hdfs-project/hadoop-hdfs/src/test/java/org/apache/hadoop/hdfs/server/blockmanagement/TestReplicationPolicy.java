@@ -59,7 +59,7 @@ public class TestReplicationPolicy extends TestCase {
   
   static {
     try {
-      FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
+      FileSystem.setDefaultUri(CONF, "hdfs://localhost:0", "hdfs://localhost:" + "0");
       CONF.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
       DFSTestUtil.formatNameNode(CONF);
       namenode = new NameNode(CONF);

@@ -63,13 +63,14 @@ public class TestDistributedFileSystem {
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-    URI address = FileSystem.getDefaultUri(conf);
+    URI wAddress = FileSystem.getDefaultWritingUri(conf);
+    URI rAddress = FileSystem.getDefaultReadingUri(conf);
 
     try {
       FileSystem.closeAll();
 
       conf = getTestConfiguration();
-      FileSystem.setDefaultUri(conf, address);
+      FileSystem.setDefaultUri(conf, wAddress, rAddress);
       FileSystem.get(conf);
       FileSystem.get(conf);
       FileSystem.closeAll();

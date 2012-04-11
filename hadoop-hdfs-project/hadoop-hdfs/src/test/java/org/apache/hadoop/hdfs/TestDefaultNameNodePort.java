@@ -42,11 +42,11 @@ public class TestDefaultNameNodePort extends TestCase {
 
   public void testGetAddressFromConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    FileSystem.setDefaultUri(conf, "hdfs://foo/");
+    FileSystem.setDefaultUri(conf, "hdfs://foo/", "hdfs://foo/");
     assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
-    FileSystem.setDefaultUri(conf, "hdfs://foo:555/");
+    FileSystem.setDefaultUri(conf, "hdfs://foo:555/", "hdfs://foo:555/");
     assertEquals(NameNode.getAddress(conf).getPort(), 555);
-    FileSystem.setDefaultUri(conf, "foo");
+    FileSystem.setDefaultUri(conf, "foo", "foo");
     assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
   }
 
