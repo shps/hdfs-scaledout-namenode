@@ -75,7 +75,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured implements Closeable {
   public static final String FS_DEFAULT_NAME_KEY = 
-                   CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
+                   CommonConfigurationKeys.FS_DEFAULT_WRITING_NAME_KEY;
   public static final String DEFAULT_FS = 
                    CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_HOME_DIR_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_HOME_DIR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_WRITING_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
@@ -57,7 +57,7 @@ final class FsConfig {
   
   
   public static String getDefaultFsURI(final Configuration conf) {
-    return conf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT);
+    return conf.get(FS_DEFAULT_WRITING_NAME_KEY, FS_DEFAULT_NAME_DEFAULT);
   }
   
   public static String getHomeDir(final Configuration conf) {
@@ -92,7 +92,7 @@ final class FsConfig {
    */
 
   public static void setDefaultFS(final Configuration conf, String uri) {
-    conf.set(FS_DEFAULT_NAME_KEY, uri);
+    conf.set(FS_DEFAULT_WRITING_NAME_KEY, uri);
   }
   
   public static void setHomeDir(final Configuration conf, String path) {

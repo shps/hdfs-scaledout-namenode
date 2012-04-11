@@ -1829,6 +1829,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Configuration.addDeprecation("hadoop.native.lib", 
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
     Configuration.addDeprecation("fs.default.name", 
-               new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
+               new String[]{CommonConfigurationKeys.FS_DEFAULT_WRITING_NAME_KEY});
   }
 }
