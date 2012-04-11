@@ -184,7 +184,7 @@ public class TestFileAppend4 {
       LOG.info("Killing lease checker");
       client.leaserenewer.interruptAndJoin();
  
-      FileSystem fs1 = cluster.getFileSystem();
+      FileSystem fs1 = cluster.getWritingFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
         fs1.getConf());
  
@@ -256,7 +256,7 @@ public class TestFileAppend4 {
       LOG.info("Killing lease checker");
       client.leaserenewer.interruptAndJoin();
  
-      FileSystem fs1 = cluster.getFileSystem();
+      FileSystem fs1 = cluster.getWritingFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
         fs1.getConf());
  

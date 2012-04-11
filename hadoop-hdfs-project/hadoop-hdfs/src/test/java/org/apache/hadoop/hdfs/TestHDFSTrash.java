@@ -51,13 +51,13 @@ public class TestHDFSTrash extends TestTrash {
    * Tests Trash on HDFS
    */
   public void testTrash() throws IOException {
-    trashShell(cluster.getFileSystem(), new Path("/"));
+    trashShell(cluster.getWritingFileSystem(), new Path("/"));
   }
 
   public void testNonDefaultFS() throws IOException {
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Configuration conf = fs.getConf();
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
+    conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, fs.getUri().toString());
     trashNonDefaultFS(conf);
   }
 

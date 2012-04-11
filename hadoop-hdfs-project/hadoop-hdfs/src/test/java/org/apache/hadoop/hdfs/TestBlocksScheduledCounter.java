@@ -40,7 +40,7 @@ public class TestBlocksScheduledCounter extends TestCase {
                                                .build();
 
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     
     //open a file an write a few bytes:
     FSDataOutputStream out = fs.create(new Path("/testBlockScheduledCounter"));

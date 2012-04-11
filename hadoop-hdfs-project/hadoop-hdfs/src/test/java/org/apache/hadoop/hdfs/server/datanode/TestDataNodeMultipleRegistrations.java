@@ -57,8 +57,8 @@ public class TestDataNodeMultipleRegistrations {
    */
   @Test
   public void test2NNRegistration() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
-        .nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2)
+        .wNameNodePort(9928).build();
     try {
       cluster.waitActive();
       NameNode nn1 = cluster.getNameNode(0);
@@ -131,7 +131,7 @@ public class TestDataNodeMultipleRegistrations {
   @Test
   public void testFedSingleNN() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .nameNodePort(9927).build();
+        .wNameNodePort(9927).build();
     try {
       NameNode nn1 = cluster.getNameNode();
       assertNotNull("cannot create nn1", nn1);
@@ -181,8 +181,8 @@ public class TestDataNodeMultipleRegistrations {
   
   @Test
   public void testClusterIdMismatch() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2).
+    wNameNodePort(9928).build();
     try {
       cluster.waitActive();
 
@@ -217,8 +217,8 @@ public class TestDataNodeMultipleRegistrations {
 
     Configuration conf = new HdfsConfiguration();
     // start Federated cluster and add a node.
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2).
+    wNameNodePort(9928).build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
     
@@ -230,7 +230,7 @@ public class TestDataNodeMultipleRegistrations {
     // 2. start with Federation flag set
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).federation(true).
-    nameNodePort(9928).build();
+    wNameNodePort(9928).build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
     

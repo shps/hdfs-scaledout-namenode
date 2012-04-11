@@ -77,7 +77,7 @@ public class TestTransferRbw {
         ).numDataNodes(REPLICATION).build();
     try {
       cluster.waitActive();
-      final DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+      final DistributedFileSystem fs = (DistributedFileSystem)cluster.getWritingFileSystem();
 
       //create a file, write some data and leave it open. 
       final Path p = new Path("/foo");

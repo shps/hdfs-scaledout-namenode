@@ -111,7 +111,7 @@ public class TestFileAppend{
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                    cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
@@ -183,7 +183,7 @@ public class TestFileAppend{
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     try {
 
       // create a new file.
@@ -239,7 +239,7 @@ public class TestFileAppend{
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     try {
 
       // create a new file.
@@ -287,7 +287,7 @@ public class TestFileAppend{
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     try {
       Path file1 = new Path("/nonexistingfile.dat");
       fs.append(file1);

@@ -47,8 +47,8 @@ public class TestDataNodeExit {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 100);
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(3)
-        .nameNodePort(BASEPORT).build();
+    cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(3)
+        .wNameNodePort(BASEPORT).build();
     for (int i = 0; i < 3; i++) {
       cluster.waitActive(i);
     }

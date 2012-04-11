@@ -62,7 +62,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -103,7 +103,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -112,11 +112,11 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       Path newfile = new Path("/user/dir3/dir1", "file1");
       assertTrue(!fs.exists(file1));
@@ -148,7 +148,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -177,7 +177,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -186,11 +186,11 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       Path newfile = new Path("/user/dir3", "file1");
       assertTrue(!fs.exists(file1));
@@ -223,7 +223,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -244,7 +244,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -253,11 +253,11 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       Path newfile = new Path("/user/dir2", "file1");
       assertTrue(!fs.exists(file1));
@@ -288,7 +288,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -308,7 +308,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -317,11 +317,11 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       Path newfile = new Path("/user", "dir2");
       assertTrue(!fs.exists(file1));

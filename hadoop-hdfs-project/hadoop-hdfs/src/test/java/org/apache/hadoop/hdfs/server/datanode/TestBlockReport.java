@@ -87,7 +87,7 @@ public class TestBlockReport {
   public void startUpCluster() throws IOException {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
-    fs = (DistributedFileSystem) cluster.getFileSystem();
+    fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     bpid = cluster.getNamesystem().getBlockPoolId();
   }
 

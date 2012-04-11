@@ -102,7 +102,7 @@ public class TestDataNodeVolumeFailure {
    */
   @Test
   public void testVolumeFailure() throws IOException {
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     dataDir = new File(cluster.getDataDirectory());
     System.out.println("Data dir: is " +  dataDir.getPath());
    

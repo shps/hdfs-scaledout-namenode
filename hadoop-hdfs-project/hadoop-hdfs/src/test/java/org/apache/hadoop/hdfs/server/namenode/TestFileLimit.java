@@ -86,7 +86,7 @@ public class TestFileLimit extends TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     FSNamesystem namesys = cluster.getNamesystem();
     try {
 

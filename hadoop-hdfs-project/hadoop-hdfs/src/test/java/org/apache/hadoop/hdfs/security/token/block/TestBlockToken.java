@@ -365,12 +365,12 @@ public class TestBlockToken {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(1)
         .numDataNodes(1).build();
     cluster.waitActive();
 
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       String fileName = "/testBlockTokenInLastLocatedBlock";
       Path filePath = new Path(fileName);
       FSDataOutputStream out = fs.create(filePath, (short) 1);

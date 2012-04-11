@@ -45,7 +45,7 @@ public class TestClientProtocolForPipelineRecovery {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
-      FileSystem fileSys = cluster.getFileSystem();
+      FileSystem fileSys = cluster.getWritingFileSystem();
       NamenodeProtocols namenode = cluster.getNameNodeRpc();
 
       /* Test writing to finalized replicas */

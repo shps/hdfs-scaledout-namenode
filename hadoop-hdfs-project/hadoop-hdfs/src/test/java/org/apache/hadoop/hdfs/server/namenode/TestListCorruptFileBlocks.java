@@ -65,7 +65,7 @@ public class TestListCorruptFileBlocks {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
 
       // create two files with one block each
       DFSTestUtil util = new DFSTestUtil("testCorruptFilesCorruptedBlock", 2, 1, 512);
@@ -149,7 +149,7 @@ public class TestListCorruptFileBlocks {
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
       cluster.getNameNodeRpc().
         setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
 
       // create two files with one block each
       DFSTestUtil util = new DFSTestUtil("testListCorruptFileBlocksInSafeMode",
@@ -210,7 +210,7 @@ public class TestListCorruptFileBlocks {
  
       // restart namenode
       cluster.restartNameNode(0);
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       // wait until replication queues have been initialized
       while (!cluster.getNameNode().namesystem.isPopulatingReplQueues()) {
@@ -271,7 +271,7 @@ public class TestListCorruptFileBlocks {
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
       util.createFiles(fs, "/corruptData");
 
@@ -378,7 +378,7 @@ public class TestListCorruptFileBlocks {
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
       DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
       util.createFiles(fs, "/corruptData");
@@ -445,7 +445,7 @@ public class TestListCorruptFileBlocks {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 15); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       final int maxCorruptFileBlocks = 
         FSNamesystem.DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED;
 

@@ -54,7 +54,7 @@ public class TestDFSRemove extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       assertTrue(fs.mkdirs(dir));
       
       long dfsUsedStart = getTotalDfsUsed(cluster);

@@ -98,7 +98,7 @@ public class TestBalancerWithMultipleNameNodes {
   /* create a file with a length of <code>fileLen</code> */
   private static void createFile(Suite s, int index, long len
       ) throws IOException {
-    final FileSystem fs = s.cluster.getFileSystem(index);
+    final FileSystem fs = s.cluster.getWritingFileSystem(index);
     DFSTestUtil.createFile(fs, FILE_PATH, len, s.replication, RANDOM.nextLong());
     DFSTestUtil.waitReplication(fs, FILE_PATH, s.replication);
   }
@@ -253,7 +253,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 1");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+          .numWNameNodes(nNameNodes)
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -274,7 +274,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+          .numWNameNodes(nNameNodes)
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -328,7 +328,7 @@ public class TestBalancerWithMultipleNameNodes {
 
     LOG.info("RUN_TEST -1");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numNameNodes(nNameNodes)
+        .numWNameNodes(nNameNodes)
         .numDataNodes(nDataNodes)
         .racks(racks)
         .simulatedCapacities(capacities)

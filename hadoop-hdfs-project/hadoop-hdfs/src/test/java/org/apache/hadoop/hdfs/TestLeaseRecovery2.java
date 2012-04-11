@@ -88,7 +88,7 @@ public class TestLeaseRecovery2 {
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     cluster.waitActive();
-    dfs = (DistributedFileSystem)cluster.getFileSystem();
+    dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
   }
   
   /**

@@ -71,7 +71,7 @@ public class HdfsConfiguration extends Configuration {
     deprecate("dfs.backup.http.address", DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY);
     deprecate("dfs.balance.bandwidthPerSec", DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY);
     deprecate("dfs.data.dir", DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
-    deprecate("dfs.http.address", DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    deprecate("dfs.http.address", DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
     deprecate("dfs.https.address", DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY);
     deprecate("dfs.max.objects", DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY);
     deprecate("dfs.name.dir", DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);

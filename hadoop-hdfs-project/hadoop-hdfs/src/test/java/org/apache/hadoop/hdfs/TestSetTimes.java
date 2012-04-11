@@ -94,7 +94,7 @@ public class TestSetTimes extends TestCase {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     int replicas = 1;
     assertTrue(fileSys instanceof DistributedFileSystem);
 
@@ -161,11 +161,11 @@ public class TestSetTimes extends TestCase {
       // shutdown cluster and restart
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fileSys = cluster.getFileSystem();
+      fileSys = cluster.getWritingFileSystem();
 
       // verify that access times and modification times persist after a
       // cluster restart.
@@ -208,7 +208,7 @@ public class TestSetTimes extends TestCase {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     assertTrue(fileSys instanceof DistributedFileSystem);
 
     try {

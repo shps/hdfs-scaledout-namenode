@@ -88,7 +88,7 @@ public class TestFileAppend2 extends TestCase {
     conf.setBoolean("dfs.support.append", true);
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     try {
       { // test appending to a file.
 
@@ -257,7 +257,7 @@ public class TestFileAppend2 extends TestCase {
         long len = 0;
         int sizeToAppend = 0;
         try {
-          FileSystem fs = cluster.getFileSystem();
+          FileSystem fs = cluster.getWritingFileSystem();
 
           // add a random number of bytes to file
           len = fs.getFileStatus(testfile).getLen();
@@ -344,7 +344,7 @@ public class TestFileAppend2 extends TestCase {
                                                .numDataNodes(numDatanodes)
                                                .build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
 
     try {
       // create a bunch of test files with random replication factors.

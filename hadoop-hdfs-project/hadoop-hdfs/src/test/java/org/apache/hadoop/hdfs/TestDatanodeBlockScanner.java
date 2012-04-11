@@ -123,7 +123,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Path file1 = new Path("/tmp/testBlockVerification/file1");
     Path file2 = new Path("/tmp/testBlockVerification/file2");
     
@@ -140,7 +140,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     DFSClient dfsClient =  new DFSClient(new InetSocketAddress("localhost", 
                                          cluster.getNameNodePort()), conf);
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
     DatanodeInfo dn = dfsClient.datanodeReport(DatanodeReportType.LIVE)[0];
     
     /*
@@ -175,7 +175,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
     Path file1 = new Path("/tmp/testBlockVerification/file1");
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
@@ -254,7 +254,7 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Path file1 = new Path("/tmp/testBlockCorruptRecovery/file");
     DFSTestUtil.createFile(fs, file1, 1024, numReplicas, 0);
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
@@ -318,7 +318,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     ExtendedBlock block;
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       DFSTestUtil.createFile(fs, fileName, 1, REPLICATION_FACTOR, 0);
       DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
       block = DFSTestUtil.getFirstBlock(fs, fileName);
@@ -334,7 +334,7 @@ public class TestDatanodeBlockScanner extends TestCase {
                                 .build();
     cluster.waitActive();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       int infoPort = cluster.getDataNodes().get(0).getInfoPort();
       assertTrue(waitForVerification(infoPort, fs, fileName, 1, startTime, TIMEOUT) >= startTime);
       
@@ -366,7 +366,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       // wait for truncated block be detected by block scanner,
       // and the block to be replicated
       DFSTestUtil.waitReplication(
-          cluster.getFileSystem(), fileName, REPLICATION_FACTOR);
+          cluster.getWritingFileSystem(), fileName, REPLICATION_FACTOR);
       
       // Make sure that truncated block will be deleted
       waitForBlockDeleted(block, 0, TIMEOUT);

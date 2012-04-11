@@ -61,7 +61,7 @@ public class TestNodeCount extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       
       // populate the cluster with a one block file
       final Path FILE_PATH = new Path("/testfile");

@@ -106,7 +106,7 @@ public class TestHDFSServerPorts extends TestCase {
     if (withService) {
       NameNode.setServiceAddress(config, THIS_HOST);      
     }
-    config.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
+    config.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
     DFSTestUtil.formatNameNode(config);
 
     String[] args = new String[] {};
@@ -209,7 +209,7 @@ public class TestHDFSServerPorts extends TestCase {
       // reset conf2 since NameNode modifies it
       FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
       // different http port
-      conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
       started = canStartNameNode(conf2);
 
       if (withService) {
@@ -217,7 +217,7 @@ public class TestHDFSServerPorts extends TestCase {
 
         // reset conf2 since NameNode modifies it
         FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
-        conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
+        conf2.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, THIS_HOST);
         // Set Service address      
         conf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  THIS_HOST);
         started = canStartNameNode(conf2);        
@@ -248,7 +248,7 @@ public class TestHDFSServerPorts extends TestCase {
       // bind http server to the same port as name-node
       conf2.set("dfs.datanode.address", THIS_HOST);
       conf2.set("dfs.datanode.http.address", 
-                config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
+                config.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY));
       started = canStartDataNode(conf2);
       assertFalse(started); // should fail
     

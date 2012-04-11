@@ -43,7 +43,7 @@ public class TestLease {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       Assert.assertTrue(fs.mkdirs(dir));
       
       Path a = new Path(dir, "a");

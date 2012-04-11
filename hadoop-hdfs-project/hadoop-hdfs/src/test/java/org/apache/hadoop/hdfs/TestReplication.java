@@ -155,7 +155,7 @@ public class TestReplication extends TestCase {
     short replFactor = 1;
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
     dfsClient = new DFSClient(new InetSocketAddress("localhost",
                               cluster.getNameNodePort()), conf);
   
@@ -212,7 +212,7 @@ public class TestReplication extends TestCase {
     
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     try {
       Path file1 = new Path("/smallblocktest.dat");
       writeFile(fileSys, file1, 3);
@@ -317,7 +317,7 @@ public class TestReplication extends TestCase {
                                             cluster.getNameNodePort()),
                                             conf);
       
-      OutputStream out = cluster.getFileSystem().create(testPath);
+      OutputStream out = cluster.getWritingFileSystem().create(testPath);
       out.write(buffer);
       out.close();
       
@@ -414,7 +414,7 @@ public class TestReplication extends TestCase {
       int lenDelta) throws IOException, InterruptedException {
     final Path fileName = new Path("/file1");
     final short REPLICATION_FACTOR = (short)1;
-    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem fs = cluster.getWritingFileSystem();
     final int fileLen = fs.getConf().getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
     DFSTestUtil.createFile(fs, fileName, fileLen, REPLICATION_FACTOR, 0);
     DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);

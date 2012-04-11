@@ -278,7 +278,7 @@ public class TestDecommission {
    * @throws IOException */
   private void startCluster(int numNameNodes, int numDatanodes,
       Configuration conf) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
+    cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(numNameNodes)
         .numDataNodes(numDatanodes).build();
     cluster.waitActive();
     for (int i = 0; i < numNameNodes; i++) {
@@ -359,7 +359,7 @@ public class TestDecommission {
       // Start decommissioning one namenode at a time
       for (int i = 0; i < numNamenodes; i++) {
         ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
-        FileSystem fileSys = cluster.getFileSystem(i);
+        FileSystem fileSys = cluster.getWritingFileSystem(i);
         writeFile(fileSys, file1, replicas);
         
         // Decommission one node. Verify that node is decommissioned.
@@ -400,7 +400,7 @@ public class TestDecommission {
       
     for (int i = 0; i < numNamenodes; i++) {
       ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
-      FileSystem fileSys = cluster.getFileSystem(i);
+      FileSystem fileSys = cluster.getWritingFileSystem(i);
       writeFile(fileSys, file1, replicas);
         
       // Decommission one node. Verify that node is decommissioned.
@@ -460,7 +460,7 @@ public class TestDecommission {
     startCluster(numNameNodes, numDatanodes, conf);
     
     for (int i = 0; i < numNameNodes; i++) {
-      FileSystem fileSys = cluster.getFileSystem(i);
+      FileSystem fileSys = cluster.getWritingFileSystem(i);
       Path file = new Path("testClusterStats.dat");
       writeFile(fileSys, file, 1);
       
@@ -506,7 +506,7 @@ public class TestDecommission {
       InterruptedException {
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     int numDatanodes = 1;
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
+    cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(numNameNodes)
         .numDataNodes(numDatanodes).setupHostsFile(true).build();
     cluster.waitActive();
     

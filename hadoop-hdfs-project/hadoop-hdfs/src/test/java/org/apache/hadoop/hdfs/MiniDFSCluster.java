@@ -95,10 +95,13 @@ public class MiniDFSCluster {
    * Class to construct instances of MiniDFSClusters with specific options.
    */
   public static class Builder {
-    private int nameNodePort = 0;
-    private int nameNodeHttpPort = 0;
+    private int wNameNodePort = 0;
+    private int wNameNodeHttpPort = 0;
+    private int rNameNodePort = 0;
+    private int rNameNodeHttpPort = 0;
     private final Configuration conf;
-    private int numNameNodes = 1;
+    private int numWNameNodes = 1;
+    private int numRNameNodes = 1;
     private int numDataNodes = 1;
     private boolean format = true;
     private boolean manageNameDfsDirs = true;
@@ -128,24 +131,48 @@ public class MiniDFSCluster {
     /**
      * Default: 0
      */
-    public Builder nameNodePort(int val) {
-      this.nameNodePort = val;
+    public Builder wNameNodePort(int val) {
+      this.wNameNodePort = val;
       return this;
     }
     
     /**
      * Default: 0
      */
-    public Builder nameNodeHttpPort(int val) {
-      this.nameNodeHttpPort = val;
+    public Builder wNameNodeHttpPort(int val) {
+      this.wNameNodeHttpPort = val;
+      return this;
+    }
+
+    /**
+     * Default: 0
+     */
+    public Builder rNameNodePort(int val) {
+      this.rNameNodePort = val;
+      return this;
+    }
+    
+    /**
+     * Default: 0
+     */
+    public Builder rNameNodeHttpPort(int val) {
+      this.rNameNodeHttpPort = val;
       return this;
     }
 
     /**
      * Default: 1
      */
-    public Builder numNameNodes(int val) {
-      this.numNameNodes = val;
+    public Builder numWNameNodes(int val) {
+      this.numWNameNodes = val;
+      return this;
+    }
+
+    /**
+     * Default: 1
+     */
+    public Builder numRNameNodes(int val) {
+      this.numRNameNodes = val;
       return this;
     }
 
@@ -250,14 +277,17 @@ public class MiniDFSCluster {
    * Used by builder to create and return an instance of MiniDFSCluster
    */
   private MiniDFSCluster(Builder builder) throws IOException {
-    LOG.info("starting cluster with " + builder.numNameNodes + " namenodes.");
-    nameNodes = new NameNodeInfo[builder.numNameNodes];
+    LOG.info("starting cluster with " + builder.numWNameNodes + " writing namenodes and "+ builder.numRNameNodes+ " reading namenodes for each.");
+    writingNameNodes = new NameNodeInfo[builder.numWNameNodes];
+    readingNameNodes = new NameNodeInfo[builder.numWNameNodes][builder.numRNameNodes];
     // try to determine if in federation mode
-    if(builder.numNameNodes > 1)
+    if(builder.numWNameNodes > 1)
       builder.federation = true;
       
-    initMiniDFSCluster(builder.nameNodePort,
-                       builder.nameNodeHttpPort,
+    initMiniDFSCluster(builder.wNameNodePort,
+                       builder.wNameNodeHttpPort,
+                       builder.rNameNodePort,
+                       builder.rNameNodeHttpPort,
                        builder.conf,
                        builder.numDataNodes,
                        builder.format,
@@ -286,7 +316,8 @@ public class MiniDFSCluster {
   }
 
   private Configuration conf;
-  private NameNodeInfo[] nameNodes;
+  private NameNodeInfo[] writingNameNodes;
+  private NameNodeInfo[][] readingNameNodes;
   private int numDataNodes;
   private ArrayList<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
@@ -312,7 +343,8 @@ public class MiniDFSCluster {
    * without a name node (ie when the name node is started elsewhere).
    */
   public MiniDFSCluster() {
-    nameNodes = new NameNodeInfo[0]; // No namenode in the cluster
+    writingNameNodes = new NameNodeInfo[0]; // No namenode in the cluster
+    readingNameNodes = new NameNodeInfo[0][0];
   }
   
   /**
@@ -333,7 +365,7 @@ public class MiniDFSCluster {
   public MiniDFSCluster(Configuration conf,
                         int numDataNodes,
                         StartupOption nameNodeOperation) throws IOException {
-    this(0, conf, numDataNodes, false, false, false,  nameNodeOperation, 
+    this(0, 0, conf, numDataNodes, false, false, false,  nameNodeOperation, 
           null, null, null);
   }
   
@@ -355,7 +387,7 @@ public class MiniDFSCluster {
                         int numDataNodes,
                         boolean format,
                         String[] racks) throws IOException {
-    this(0, conf, numDataNodes, format, true, true,  null, racks, null, null);
+    this(0, 0, conf, numDataNodes, format, true, true,  null, racks, null, null);
   }
   
   /**
@@ -377,7 +409,7 @@ public class MiniDFSCluster {
                         int numDataNodes,
                         boolean format,
                         String[] racks, String[] hosts) throws IOException {
-    this(0, conf, numDataNodes, format, true, true, null, racks, hosts, null);
+    this(0, 0, conf, numDataNodes, format, true, true, null, racks, hosts, null);
   }
   
   /**
@@ -403,14 +435,14 @@ public class MiniDFSCluster {
    * @param racks array of strings indicating the rack that each DataNode is on
    */
   @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
-  public MiniDFSCluster(int nameNodePort, 
+  public MiniDFSCluster(int wNameNodePort, int rNameNodePort,
                         Configuration conf,
                         int numDataNodes,
                         boolean format,
                         boolean manageDfsDirs,
                         StartupOption operation,
                         String[] racks) throws IOException {
-    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
+    this(wNameNodePort, rNameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
          operation, racks, null, null);
   }
 
@@ -436,7 +468,7 @@ public class MiniDFSCluster {
    * @param simulatedCapacities array of capacities of the simulated data nodes
    */
   @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
-  public MiniDFSCluster(int nameNodePort, 
+  public MiniDFSCluster(int wNameNodePort, int rNameNodePort, 
                         Configuration conf,
                         int numDataNodes,
                         boolean format,
@@ -444,7 +476,7 @@ public class MiniDFSCluster {
                         StartupOption operation,
                         String[] racks,
                         long[] simulatedCapacities) throws IOException {
-    this(nameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
+    this(wNameNodePort, rNameNodePort, conf, numDataNodes, format, manageDfsDirs, manageDfsDirs,
           operation, racks, null, simulatedCapacities);
   }
   
@@ -474,7 +506,7 @@ public class MiniDFSCluster {
    * @param simulatedCapacities array of capacities of the simulated data nodes
    */
   @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
-  public MiniDFSCluster(int nameNodePort, 
+  public MiniDFSCluster(int wNameNodePort, int rNameNodePort, 
                         Configuration conf,
                         int numDataNodes,
                         boolean format,
@@ -483,13 +515,15 @@ public class MiniDFSCluster {
                         StartupOption operation,
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
-    this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
-    initMiniDFSCluster(nameNodePort, 0, conf, numDataNodes, format,
+    this.writingNameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
+    this.readingNameNodes = new NameNodeInfo[1][1];
+    initMiniDFSCluster(wNameNodePort, 0, rNameNodePort, 0, conf, numDataNodes, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
         simulatedCapacities, null, true, false, false);
   }
 
-  private void initMiniDFSCluster(int nameNodePort, int nameNodeHttpPort,
+  private void initMiniDFSCluster(int wNameNodePort, int wNameNodeHttpPort,
+          int rNameNodePort, int rNameNodeHttpPort,
       Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
@@ -537,9 +571,12 @@ public class MiniDFSCluster {
       federation = true;
   
     if (!federation) {
-      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
-          + nameNodeHttpPort);
+      conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, "127.0.0.1:" + wNameNodePort);
+      conf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+          + wNameNodeHttpPort);
+      conf.set(DFSConfigKeys.FS_DEFAULT_READING_NAME_KEY, "127.0.0.1:" + rNameNodePort);
+      conf.set(DFSConfigKeys.DFS_READING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+          + rNameNodeHttpPort);
       
       /*[thesis] For testing*/
       DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
@@ -548,15 +585,15 @@ public class MiniDFSCluster {
       
       NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
-      nameNodes[0] = new NameNodeInfo(nn, conf);
-      FileSystem.setDefaultUri(conf, getURI(0));
+      writingNameNodes[0] = new NameNodeInfo(nn, conf);
+      FileSystem.setDefaultUri(conf, getWritingURI(0));
     } else {
       if (nameserviceIds.isEmpty()) {
-        for (int i = 0; i < nameNodes.length; i++) {
+        for (int i = 0; i < writingNameNodes.length; i++) {
           nameserviceIds.add(NAMESERVICE_ID_PREFIX + i);
         }
       }
-      initFederationConf(conf, nameserviceIds, numDataNodes, nameNodePort);
+      initFederationConf(conf, nameserviceIds, numDataNodes, wNameNodePort);
       createFederationNamenodes(conf, nameserviceIds, manageNameDfsDirs, format,
           operation, clusterId);
     }
@@ -596,7 +633,7 @@ public class MiniDFSCluster {
       String nameserviceId, int nnPort) {
     // Set nameserviceId specific key
     String key = DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
+        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:0");
 
     key = DFSUtil.getNameServiceIdKey(
@@ -656,11 +693,11 @@ public class MiniDFSCluster {
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getNameNodeAddress()));
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
+        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, 
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    nameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
+        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+    writingNameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
   }
 
   private void setRpcEngine(Configuration conf, Class<?> protocol, Class<?> engine) {
@@ -668,18 +705,41 @@ public class MiniDFSCluster {
   }
 
   /**
-   * @return URI of the namenode from a single namenode MiniDFSCluster
+   * @return URI of the namenode from a single writing namenode MiniDFSCluster
    */
-  public URI getURI() {
-    checkSingleNameNode();
-    return getURI(0);
+  public URI getWritingURI() {
+    checkSingleWNameNode();
+    return getWritingURI(0);
   }
   
   /**
-   * @return URI of the given namenode in MiniDFSCluster
+   * @return URI of the given writing namenode in MiniDFSCluster
    */
-  public URI getURI(int nnIndex) {
-    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getNameNodeAddress();
+  public URI getWritingURI(int nnIndex) {
+    InetSocketAddress addr = writingNameNodes[nnIndex].nameNode.getNameNodeAddress();
+    String hostPort = NameNode.getHostPortString(addr);
+    URI uri = null;
+    try {
+      uri = new URI("hdfs://" + hostPort);
+    } catch (URISyntaxException e) {
+      NameNode.LOG.warn("unexpected URISyntaxException: " + e );
+    }
+    return uri;
+  }
+
+  /**
+   * @return URI of the namenode from a single reading namenode MiniDFSCluster
+   */
+  public URI getReadingURI() {
+    checkSingleRNameNode(0);
+    return getReadingURI(0, 0);
+  }
+  
+  /**
+   * @return URI of the given reading namenode in MiniDFSCluster
+   */
+  public URI getReadingURI(int wIndex, int rIndex) {
+    InetSocketAddress addr = readingNameNodes[wIndex][rIndex].nameNode.getNameNodeAddress();
     String hostPort = NameNode.getHostPortString(addr);
     URI uri = null;
     try {
@@ -694,7 +754,7 @@ public class MiniDFSCluster {
    * @return Configuration of for the given namenode
    */
   public Configuration getConfiguration(int nnIndex) {
-    return nameNodes[nnIndex].conf;
+    return writingNameNodes[nnIndex].conf;
   }
 
   /**
@@ -1001,7 +1061,7 @@ public class MiniDFSCluster {
    * @throws Exception
    */
   public void finalizeCluster(int nnIndex, Configuration conf) throws Exception {
-    finalizeNamenode(nameNodes[nnIndex].nameNode, nameNodes[nnIndex].conf);
+    finalizeNamenode(writingNameNodes[nnIndex].nameNode, writingNameNodes[nnIndex].conf);
   }
 
   /**
@@ -1012,7 +1072,7 @@ public class MiniDFSCluster {
    * @throws IllegalStateException if the Namenode is not running.
    */
   public void finalizeCluster(Configuration conf) throws Exception {
-    for (NameNodeInfo nnInfo : nameNodes) {
+    for (NameNodeInfo nnInfo : writingNameNodes) {
       if (nnInfo == null) {
         throw new IllegalStateException("Attempting to finalize "
             + "Namenode but it is not running");
@@ -1022,14 +1082,14 @@ public class MiniDFSCluster {
   }
   
   public int getNumNameNodes() {
-    return nameNodes.length;
+    return writingNameNodes.length;
   }
   
   /**
    * Gets the started NameNode.  May be null.
    */
   public NameNode getNameNode() {
-    checkSingleNameNode();
+    checkSingleWNameNode();
     return getNameNode(0);
   }
   
@@ -1037,7 +1097,7 @@ public class MiniDFSCluster {
    * Get an instance of the NameNode's RPC handler.
    */
   public NamenodeProtocols getNameNodeRpc() {
-    checkSingleNameNode();
+    checkSingleWNameNode();
     return getNameNode(0).getRpcServer();
   }
   
@@ -1045,7 +1105,7 @@ public class MiniDFSCluster {
    * Gets the NameNode for the index.  May be null.
    */
   public NameNode getNameNode(int nnIndex) {
-    return nameNodes[nnIndex].nameNode;
+    return writingNameNodes[nnIndex].nameNode;
   }
   
   /**
@@ -1053,12 +1113,12 @@ public class MiniDFSCluster {
    * @return {@link FSNamesystem} object.
    */
   public FSNamesystem getNamesystem() {
-    checkSingleNameNode();
-    return NameNodeAdapter.getNamesystem(nameNodes[0].nameNode);
+    checkSingleWNameNode();
+    return NameNodeAdapter.getNamesystem(writingNameNodes[0].nameNode);
   }
   
   public FSNamesystem getNamesystem(int nnIndex) {
-    return NameNodeAdapter.getNamesystem(nameNodes[nnIndex].nameNode);
+    return NameNodeAdapter.getNamesystem(writingNameNodes[nnIndex].nameNode);
   }
 
   /**
@@ -1089,7 +1149,7 @@ public class MiniDFSCluster {
    * Assumption: cluster has a single namenode
    */     
   public int getNameNodePort() {
-    checkSingleNameNode();
+    checkSingleWNameNode();
     return getNameNodePort(0);
   }
     
@@ -1098,7 +1158,7 @@ public class MiniDFSCluster {
    * caller supplied port is not necessarily the actual port used.
    */     
   public int getNameNodePort(int nnIndex) {
-    return nameNodes[nnIndex].nameNode.getNameNodeAddress().getPort();
+    return writingNameNodes[nnIndex].nameNode.getNameNodeAddress().getPort();
   }
     
   /**
@@ -1107,7 +1167,7 @@ public class MiniDFSCluster {
   public void shutdown() {
     System.out.println("Shutting down the Mini HDFS Cluster");
     shutdownDataNodes();
-    for (NameNodeInfo nnInfo : nameNodes) {
+    for (NameNodeInfo nnInfo : writingNameNodes) {
       NameNode nameNode = nnInfo.nameNode;
       if (nameNode != null) {
         nameNode.stop();
@@ -1134,7 +1194,7 @@ public class MiniDFSCluster {
    * Shutdown all the namenodes.
    */
   public synchronized void shutdownNameNodes() {
-    for (int i = 0; i < nameNodes.length; i++) {
+    for (int i = 0; i < writingNameNodes.length; i++) {
       shutdownNameNode(i);
     }
   }
@@ -1143,13 +1203,13 @@ public class MiniDFSCluster {
    * Shutdown the namenode at a given index.
    */
   public synchronized void shutdownNameNode(int nnIndex) {
-    NameNode nn = nameNodes[nnIndex].nameNode;
+    NameNode nn = writingNameNodes[nnIndex].nameNode;
     if (nn != null) {
       System.out.println("Shutting down the namenode");
       nn.stop();
       nn.join();
-      Configuration conf = nameNodes[nnIndex].conf;
-      nameNodes[nnIndex] = new NameNodeInfo(null, conf);
+      Configuration conf = writingNameNodes[nnIndex].conf;
+      writingNameNodes[nnIndex] = new NameNodeInfo(null, conf);
     }
   }
   
@@ -1157,7 +1217,7 @@ public class MiniDFSCluster {
    * Restart the namenode.
    */
   public synchronized void restartNameNode() throws IOException {
-    checkSingleNameNode();
+    checkSingleWNameNode();
     restartNameNode(true);
   }
   
@@ -1166,7 +1226,7 @@ public class MiniDFSCluster {
    */
   public synchronized void restartNameNode(boolean waitActive)
       throws IOException {
-    checkSingleNameNode();
+    checkSingleWNameNode();
     restartNameNode(0, waitActive);
   }
   
@@ -1183,10 +1243,10 @@ public class MiniDFSCluster {
    */
   public synchronized void restartNameNode(int nnIndex, boolean waitActive)
       throws IOException {
-    Configuration conf = nameNodes[nnIndex].conf;
+    Configuration conf = writingNameNodes[nnIndex].conf;
     shutdownNameNode(nnIndex);
     NameNode nn = NameNode.createNameNode(new String[] {}, conf);
-    nameNodes[nnIndex] = new NameNodeInfo(nn, conf);
+    writingNameNodes[nnIndex] = new NameNodeInfo(nn, conf);
     if (waitActive) {
       waitClusterUp();
       System.out.println("Restarted the namenode");
@@ -1373,7 +1433,7 @@ public class MiniDFSCluster {
    * or if waiting for safe mode is disabled.
    */
   public boolean isNameNodeUp(int nnIndex) {
-    NameNode nameNode = nameNodes[nnIndex].nameNode;
+    NameNode nameNode = writingNameNodes[nnIndex].nameNode;
     if (nameNode == null) {
       return false;
     }
@@ -1397,7 +1457,7 @@ public class MiniDFSCluster {
    * Returns true if all the NameNodes are running and is out of Safe Mode.
    */
   public boolean isClusterUp() {
-    for (int index = 0; index < nameNodes.length; index++) {
+    for (int index = 0; index < writingNameNodes.length; index++) {
       if (!isNameNodeUp(index)) {
         return false;
       }
@@ -1423,33 +1483,49 @@ public class MiniDFSCluster {
   /**
    * Get a client handle to the DFS cluster with a single namenode.
    */
-  public FileSystem getFileSystem() throws IOException {
-    checkSingleNameNode();
-    return getFileSystem(0);
+  public FileSystem getWritingFileSystem() throws IOException {
+    checkSingleWNameNode();
+    return getWritingFileSystem(0);
   }
   
   /**
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
-  public FileSystem getFileSystem(int nnIndex) throws IOException {
-    return FileSystem.get(getURI(nnIndex), nameNodes[nnIndex].conf);
+  public FileSystem getWritingFileSystem(int nnIndex) throws IOException {
+    return FileSystem.get(getWritingURI(nnIndex), writingNameNodes[nnIndex].conf);
   }
 
   /**
-   * Get another FileSystem instance that is different from FileSystem.get(conf).
-   * This simulating different threads working on different FileSystem instances.
+   * Get a client handle to the DFS cluster with a single namenode.
    */
-  public FileSystem getNewFileSystemInstance(int nnIndex) throws IOException {
-    return FileSystem.newInstance(getURI(nnIndex), nameNodes[nnIndex].conf);
+  public FileSystem getReadingFileSystem() throws IOException {
+    checkSingleRNameNode(0);
+    return getReadingFileSystem(0, 0);
   }
+  
+  /**
+   * Get a client handle to the DFS cluster for the namenode at given index.
+   */
+  public FileSystem getReadingFileSystem(int wIndex, int rIndex) throws IOException {
+    return FileSystem.get(getReadingURI(wIndex, rIndex), readingNameNodes[wIndex][rIndex].conf);
+  }
+
+  //TODO:kamal, extra file system creation
+//  /**
+//   * Get another FileSystem instance that is different from FileSystem.get(conf).
+//   * This simulating different threads working on different FileSystem instances.
+//   */
+//  public FileSystem getNewFileSystemInstance(int nnIndex) throws IOException {
+//    return FileSystem.newInstance(getWritingURI(nnIndex), readingNameNodes[nnIndex].conf);
+//  }
   
   /**
    * @return a http URL
    */
   public String getHttpUri(int nnIndex) throws IOException {
     return "http://"
-        + nameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+        + writingNameNodes[nnIndex].conf
+            .get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
   }
   
   /**
@@ -1457,8 +1533,8 @@ public class MiniDFSCluster {
    */
   public HftpFileSystem getHftpFileSystem(int nnIndex) throws IOException {
     String uri = "hftp://"
-        + nameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+        + writingNameNodes[nnIndex].conf
+            .get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
     try {
       return (HftpFileSystem)FileSystem.get(new URI(uri), conf);
     } catch (URISyntaxException e) {
@@ -1486,22 +1562,22 @@ public class MiniDFSCluster {
    * Get the directories where the namenode stores its image.
    */
   public Collection<URI> getNameDirs(int nnIndex) {
-    return FSNamesystem.getNamespaceDirs(nameNodes[nnIndex].conf);
+    return FSNamesystem.getNamespaceDirs(writingNameNodes[nnIndex].conf);
   }
 
   /**
    * Get the directories where the namenode stores its edits.
    */
   public Collection<URI> getNameEditsDirs(int nnIndex) {
-    return FSNamesystem.getNamespaceEditsDirs(nameNodes[nnIndex].conf);
+    return FSNamesystem.getNamespaceEditsDirs(writingNameNodes[nnIndex].conf);
   }
 
   /** Wait until the given namenode gets registration from all the datanodes */
   public void waitActive(int nnIndex) throws IOException {
-    if (nameNodes.length == 0 || nameNodes[nnIndex] == null) {
+    if (writingNameNodes.length == 0 || writingNameNodes[nnIndex] == null) {
       return;
     }
-    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getServiceRpcAddress();
+    InetSocketAddress addr = writingNameNodes[nnIndex].nameNode.getServiceRpcAddress();
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
@@ -1520,7 +1596,7 @@ public class MiniDFSCluster {
    * Wait until the cluster is active and running.
    */
   public void waitActive() throws IOException {
-    for (int index = 0; index < nameNodes.length; index++) {
+    for (int index = 0; index < writingNameNodes.length; index++) {
       int failedCount = 0;
       while (true) {
         try {
@@ -1819,14 +1895,24 @@ public class MiniDFSCluster {
   
   /**
    * Throw an exception if the MiniDFSCluster is not started with a single
-   * namenode
+   * writing namenode
    */
-  private void checkSingleNameNode() {
-    if (nameNodes.length != 1) {
-      throw new IllegalArgumentException("Namenode index is needed");
+  private void checkSingleWNameNode() {
+    if (writingNameNodes.length != 1) {
+      throw new IllegalArgumentException("WritingNamenode index is needed");
     }
   }
 
+  /**
+   * Throw an exception if the MiniDFSCluster is not started with a single
+   * reading  namenode
+   */
+  private void checkSingleRNameNode(int wIndex) {
+    if (readingNameNodes[wIndex].length != 1) {
+      throw new IllegalArgumentException("ReadingNamenode index is needed");
+    }
+  }
+  
   /**
    * Add a namenode to a federated cluster and start it. Configuration of
    * datanodes in the cluster is refreshed to register with the new namenode.
@@ -1838,11 +1924,11 @@ public class MiniDFSCluster {
     if(!federation)
       throw new IOException("cannot add namenode to non-federated cluster");
     
-    int nnIndex = nameNodes.length;
-    int numNameNodes = nameNodes.length + 1;
+    int nnIndex = writingNameNodes.length;
+    int numNameNodes = writingNameNodes.length + 1;
     NameNodeInfo[] newlist = new NameNodeInfo[numNameNodes];
-    System.arraycopy(nameNodes, 0, newlist, 0, nameNodes.length);
-    nameNodes = newlist;
+    System.arraycopy(writingNameNodes, 0, newlist, 0, writingNameNodes.length);
+    writingNameNodes = newlist;
     String nameserviceId = NAMESERVICE_ID_PREFIX + (nnIndex + 1);
     
     String nameserviceIds = conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES);
@@ -1861,7 +1947,7 @@ public class MiniDFSCluster {
 
     // Wait for new namenode to get registrations from all the datanodes
     waitActive(nnIndex);
-    return nameNodes[nnIndex].nameNode;
+    return writingNameNodes[nnIndex].nameNode;
   }
   
   private int getFreeSocketPort() {

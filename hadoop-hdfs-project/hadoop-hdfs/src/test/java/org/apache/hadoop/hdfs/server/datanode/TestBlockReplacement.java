@@ -101,7 +101,7 @@ public class TestBlockReplacement extends TestCase {
     try {
       cluster.waitActive();
       
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       Path fileName = new Path("/tmp.txt");
       
       // create a file with one block

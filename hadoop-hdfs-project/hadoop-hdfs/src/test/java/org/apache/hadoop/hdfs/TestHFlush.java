@@ -105,7 +105,7 @@ public class TestHFlush {
                                                .numDataNodes(replicas).build();
     // Make sure we work with DFS in order to utilize all its functionality
     DistributedFileSystem fileSystem =
-        (DistributedFileSystem)cluster.getFileSystem();
+        (DistributedFileSystem)cluster.getWritingFileSystem();
 
     FSDataInputStream is;
     try {
@@ -174,7 +174,7 @@ public class TestHFlush {
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
-      DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+      DistributedFileSystem fs = (DistributedFileSystem)cluster.getWritingFileSystem();
 
       byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
 
@@ -224,7 +224,7 @@ public class TestHFlush {
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
-      DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+      DistributedFileSystem fs = (DistributedFileSystem)cluster.getWritingFileSystem();
 
       // create a new file.
       FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);

@@ -51,7 +51,7 @@ public class TestSafeMode {
       // bring up a cluster with no datanodes
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
       cluster.waitActive();
-      fs = (DistributedFileSystem)cluster.getFileSystem();
+      fs = (DistributedFileSystem)cluster.getWritingFileSystem();
 
       assertTrue("No datanode started, but we require one - safemode expected",
                  fs.setSafeMode(SafeModeAction.SAFEMODE_GET));

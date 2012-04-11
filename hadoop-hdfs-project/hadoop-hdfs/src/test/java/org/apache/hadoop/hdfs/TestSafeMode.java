@@ -45,7 +45,7 @@ public class TestSafeMode {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();      
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
     dfs = (DistributedFileSystem)fs;
   }
 
@@ -77,7 +77,7 @@ public class TestSafeMode {
    */
   @Test
   public void testManualSafeMode() throws IOException {      
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = (DistributedFileSystem)cluster.getWritingFileSystem();
     Path file1 = new Path("/tmp/testManualSafeMode/file1");
     Path file2 = new Path("/tmp/testManualSafeMode/file2");
     
@@ -90,7 +90,7 @@ public class TestSafeMode {
     // now bring up just the NameNode.
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
     cluster.waitActive();
-    dfs = (DistributedFileSystem)cluster.getFileSystem();
+    dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
     
     assertTrue("No datanode is started. Should be in SafeMode", 
                dfs.setSafeMode(SafeModeAction.SAFEMODE_GET));

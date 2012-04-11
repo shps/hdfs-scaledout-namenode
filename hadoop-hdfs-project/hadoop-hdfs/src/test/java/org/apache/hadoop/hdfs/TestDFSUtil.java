@@ -176,7 +176,7 @@ public class TestDFSUtil {
   public void testDefaultNamenode() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     final String hdfs_default = "hdfs://localhost:9999/";
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, hdfs_default);
+    conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, hdfs_default);
     // If DFSConfigKeys.DFS_FEDERATION_NAMESERVICES is not set, verify that 
     // default namenode address is returned.
     List<InetSocketAddress> addrList = DFSUtil.getNNServiceRpcAddresses(conf);

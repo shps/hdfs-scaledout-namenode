@@ -111,7 +111,7 @@ public class NameNode {
     DFS_NAMENODE_CHECKPOINT_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
     DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-    DFS_NAMENODE_HTTP_ADDRESS_KEY,
+    DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_HTTPS_ADDRESS_KEY,
     DFS_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
@@ -283,11 +283,11 @@ public class NameNode {
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
-        conf.get(DFS_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
+        conf.get(DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
   }
   
   protected void setHttpServerAddress(Configuration conf) {
-    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY,
+    conf.set(DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY,
         getHostPortString(getHttpAddress()));
   }
 
@@ -774,7 +774,7 @@ public class NameNode {
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
-      conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      conf.set(FS_DEFAULT_WRITING_NAME_KEY, defaultUri.toString());
     }
   }
     

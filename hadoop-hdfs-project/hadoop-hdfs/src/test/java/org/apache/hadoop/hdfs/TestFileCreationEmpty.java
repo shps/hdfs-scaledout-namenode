@@ -58,7 +58,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
       cluster.waitActive();
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
 
       // create a new file.
       TestFileCreation.createFile(dfs, new Path("/foo"), DATANODE_NUM);

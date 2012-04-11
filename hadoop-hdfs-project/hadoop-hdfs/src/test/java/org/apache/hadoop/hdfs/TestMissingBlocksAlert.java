@@ -59,7 +59,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       DistributedFileSystem dfs = 
-                            (DistributedFileSystem) cluster.getFileSystem();
+                            (DistributedFileSystem) cluster.getWritingFileSystem();
 
       // create a normal file
       DFSTestUtil.createFile(dfs, new Path("/testMissingBlocksAlert/file1"), 
@@ -92,7 +92,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
 
       // Now verify that it shows up on webui
-      URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY) + 
+      URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY) + 
                         "/dfshealth.jsp");
       String dfsFrontPage = DFSTestUtil.urlGet(url);
       String warnStr = "WARNING : There are ";

@@ -51,7 +51,8 @@ public class TestUrlStreamHandler extends TestCase {
 
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem wfs = cluster.getWritingFileSystem();
+    FileSystem rfs = cluster.getReadingFileSystem();
 
     // Setup our own factory
     // setURLSteramHandlerFactor is can be set at most once in the JVM
@@ -69,12 +70,12 @@ public class TestUrlStreamHandler extends TestCase {
         fileContent[i] = (byte) i;
 
       // First create the file through the FileSystem API
-      OutputStream os = fs.create(filePath);
+      OutputStream os = wfs.create(filePath);
       os.write(fileContent);
       os.close();
 
       // Second, open and read the file content through the URL API
-      URI uri = fs.getUri();
+      URI uri = wfs.getUri();
       URL fileURL =
           new URL(uri.getScheme(), uri.getHost(), uri.getPort(), filePath
               .toString());
@@ -90,10 +91,10 @@ public class TestUrlStreamHandler extends TestCase {
         assertEquals(fileContent[i], bytes[i]);
 
       // Cleanup: delete the file
-      fs.delete(filePath, false);
+      wfs.delete(filePath, false);
 
     } finally {
-      fs.close();
+      wfs.close();
       cluster.shutdown();
     }
 

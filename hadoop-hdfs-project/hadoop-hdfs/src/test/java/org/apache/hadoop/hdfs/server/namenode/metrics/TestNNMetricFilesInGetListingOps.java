@@ -54,7 +54,7 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
     cluster.getNameNode();
-    fs = (DistributedFileSystem) cluster.getFileSystem();
+    fs = (DistributedFileSystem) cluster.getWritingFileSystem();
   }
 
   @Override
