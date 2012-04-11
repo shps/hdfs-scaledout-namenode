@@ -524,13 +524,13 @@ public class MiniDFSCluster {
 
   private void initMiniDFSCluster(int wNameNodePort, int wNameNodeHttpPort,
           int rNameNodePort, int rNameNodeHttpPort,
-      Configuration conf,
+      Configuration wConf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
       boolean waitSafeMode, boolean setupHostsFile, boolean federation) 
   throws IOException {
-    this.conf = conf;
+    this.conf = wConf;
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
     this.federation = federation;
@@ -542,54 +542,55 @@ public class MiniDFSCluster {
       
       System.out.println("HDFS using RPCEngine: "+rpcEngineName);
       try {
-        Class<?> rpcEngine = conf.getClassByName(rpcEngineName);
-        setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
-        setRpcEngine(conf, NamenodeProtocol.class, rpcEngine);
-        setRpcEngine(conf, ClientProtocol.class, rpcEngine);
-        setRpcEngine(conf, DatanodeProtocol.class, rpcEngine);
-        setRpcEngine(conf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
-        setRpcEngine(conf, RefreshUserMappingsProtocol.class, rpcEngine);
-        setRpcEngine(conf, GetUserMappingsProtocol.class, rpcEngine);
+        Class<?> rpcEngine = wConf.getClassByName(rpcEngineName);
+        setRpcEngine(wConf, NamenodeProtocols.class, rpcEngine);
+        setRpcEngine(wConf, NamenodeProtocol.class, rpcEngine);
+        setRpcEngine(wConf, ClientProtocol.class, rpcEngine);
+        setRpcEngine(wConf, DatanodeProtocol.class, rpcEngine);
+        setRpcEngine(wConf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
+        setRpcEngine(wConf, RefreshUserMappingsProtocol.class, rpcEngine);
+        setRpcEngine(wConf, GetUserMappingsProtocol.class, rpcEngine);
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
       }
 
       // disable service authorization, as it does not work with tunnelled RPC
-      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+      wConf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
                       false);
     }
     
-    int replication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-    conf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+    int replication = wConf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
+    wConf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+    wConf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    wConf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+    wConf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
                    StaticMapping.class, DNSToSwitchMapping.class);
     
-    Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
+    Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(wConf);
     if(nameserviceIds.size() > 1)  
       federation = true;
   
     if (!federation) {
-      conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, "127.0.0.1:" + wNameNodePort);
-      conf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+      wConf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, "127.0.0.1:" + wNameNodePort);
+      wConf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
           + wNameNodeHttpPort);
-      conf.set(DFSConfigKeys.FS_DEFAULT_READING_NAME_KEY, "127.0.0.1:" + rNameNodePort);
-      conf.set(DFSConfigKeys.DFS_READING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+      wConf.set(DFSConfigKeys.FS_DEFAULT_READING_NAME_KEY, "127.0.0.1:" + rNameNodePort);
+      wConf.set(DFSConfigKeys.DFS_READING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
           + rNameNodeHttpPort);
       
       /*[thesis] For testing*/
-      DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+      DBAdmin.truncateAllTables(wConf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       
-      NameNode wNN = createWritingNameNode(0, conf, numDataNodes, manageNameDfsDirs,
+      Configuration rConf = new Configuration(wConf);
+      NameNode wNN = createWritingNameNode(0, wConf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
-      writingNameNodes[0] = new NameNodeInfo(wNN, conf);
-      NameNode rNN = createReadingNameNode(conf, operation);
-      readingNameNodes[0][0] = new NameNodeInfo(rNN, conf);
+      writingNameNodes[0] = new NameNodeInfo(wNN, wConf);
+      NameNode rNN = createReadingNameNode(0, rConf, manageDataDfsDirs, format, operation, clusterId);
+      readingNameNodes[0][0] = new NameNodeInfo(rNN, rConf);
       
-      FileSystem.setDefaultUri(conf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
+      FileSystem.setDefaultUri(wConf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
       
       
     } else {
@@ -598,8 +599,8 @@ public class MiniDFSCluster {
           nameserviceIds.add(NAMESERVICE_ID_PREFIX + i);
         }
       }
-      initFederationConf(conf, nameserviceIds, numDataNodes, wNameNodePort);
-      createFederationNamenodes(conf, nameserviceIds, manageNameDfsDirs, format,
+      initFederationConf(wConf, nameserviceIds, numDataNodes, wNameNodePort);
+      createFederationNamenodes(wConf, nameserviceIds, manageNameDfsDirs, format,
           operation, clusterId);
     }
     
@@ -607,14 +608,15 @@ public class MiniDFSCluster {
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
+      
     }
     
     // Start the DataNodes
-    startDataNodes(conf, numDataNodes, manageDataDfsDirs, operation, racks,
+    startDataNodes(wConf, numDataNodes, manageDataDfsDirs, operation, racks,
         hosts, simulatedCapacities, setupHostsFile);
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(wConf);
   }
   
   /** Initialize configuration for federated cluster */
@@ -664,11 +666,11 @@ public class MiniDFSCluster {
       throws IOException {
     if (manageNameDfsDirs) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-          fileAsURI(new File(base_dir, "name" + (2*wNNIndex + 1)))+","+
-          fileAsURI(new File(base_dir, "name" + (2*wNNIndex + 2))));
+          fileAsURI(new File(base_dir, "wName" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "wName" + (2*wNNIndex + 2))));
       conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
-          fileAsURI(new File(base_dir, "namesecondary" + (2*wNNIndex + 1)))+","+
-          fileAsURI(new File(base_dir, "namesecondary" + (2*wNNIndex + 2))));
+          fileAsURI(new File(base_dir, "wNamesecondary" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "wNamesecondary" + (2*wNNIndex + 2))));
     }
     
     // Format and clean out DataNode directories
@@ -687,9 +689,28 @@ public class MiniDFSCluster {
     return NameNode.createNameNode(args, conf);
   }
   
-  private NameNode createReadingNameNode(Configuration conf, StartupOption operation)
+  private NameNode createReadingNameNode(int wNNIndex, Configuration conf, 
+          boolean manageNameDfsDirs, boolean format, 
+          StartupOption operation, String clusterId)
       throws IOException {
 
+    if (manageNameDfsDirs) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          fileAsURI(new File(base_dir, "rName" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "rName" + (2*wNNIndex + 2))));
+      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+          fileAsURI(new File(base_dir, "rNamesecondary" + (2*wNNIndex + 1)))+","+
+          fileAsURI(new File(base_dir, "rNamesecondary" + (2*wNNIndex + 2))));
+    }
+    
+    // Format and clean out DataNode directories
+    if (format) {
+      DFSTestUtil.formatNameNode(conf);
+    }
+    if (operation == StartupOption.UPGRADE){
+      operation.setClusterId(clusterId);
+    }
+    
       // Start the NameNode
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
