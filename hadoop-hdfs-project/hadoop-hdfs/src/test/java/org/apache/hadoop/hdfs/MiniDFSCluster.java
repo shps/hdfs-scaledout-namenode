@@ -583,12 +583,12 @@ public class MiniDFSCluster {
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       
-      Configuration rConf = new Configuration(wConf);
+//      Configuration rConf = new Configuration(wConf);
       NameNode wNN = createWritingNameNode(0, wConf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
       writingNameNodes[0] = new NameNodeInfo(wNN, wConf);
-      NameNode rNN = createReadingNameNode(0, rConf, manageDataDfsDirs, format, operation, clusterId);
-      readingNameNodes[0][0] = new NameNodeInfo(rNN, rConf);
+//      NameNode rNN = createReadingNameNode(0, rConf, manageDataDfsDirs, format, operation, clusterId);
+//      readingNameNodes[0][0] = new NameNodeInfo(rNN, rConf);
       
       FileSystem.setDefaultUri(wConf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
       
