@@ -363,6 +363,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
+  public boolean isWritingNN() {
+      return nameNode.isWritingNN();
+  }
+  
   /**
    * Activate FSNamesystem daemons.
    */
@@ -372,7 +376,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       setBlockTotal();
       blockManager.activate(conf);
 
-      if(nameNode.isWritingNN()) {
+      if(isWritingNN()) {
           this.lmthread = new Daemon(leaseManager.new Monitor());
           lmthread.start();
       }
@@ -1158,7 +1162,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long blockSize) throws SafeModeException, FileAlreadyExistsException,
       AccessControlException, UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
@@ -1293,7 +1297,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException, ImproperUsageException{
-      if (!nameNode.isWritingNN())
+      if (!isWritingNN())
           throw new ImproperUsageException();
       
     writeLock();
@@ -1328,7 +1332,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void recoverLeaseInternal(INode fileInode, 
       String src, String holder, String clientMachine, boolean force)
       throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) fileInode;
@@ -1412,7 +1416,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, ImproperUsageException, IOException {
       
-    if(!nameNode.isWritingNN())
+    if(!isWritingNN())
         throw new ImproperUsageException();
     
     if (supportAppends == false) {
@@ -1472,7 +1476,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
       ImproperUsageException, IOException {
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
     
     checkBlock(previous);
@@ -1639,7 +1643,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void checkLease(String src, String holder, INode file)
       throws LeaseExpiredException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasReadOrWriteLock();
     if (file == null || file.isDirectory()) {
       Lease lease = leaseManager.getLease(holder);
@@ -1688,7 +1692,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private boolean completeFileInternal(String src, 
       String holder, Block last) throws SafeModeException,
       UnresolvedLinkException, IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " +
@@ -1806,7 +1810,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Deprecated
   boolean renameTo(String src, String dst) 
     throws IOException, UnresolvedLinkException, ImproperUsageException {
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
     boolean status = false;
     HdfsFileStatus resultingStat = null;
@@ -1836,7 +1840,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Deprecated
   private boolean renameToInternal(String src, String dst)
     throws IOException, UnresolvedLinkException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -1892,7 +1896,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void renameToInternal(String src, String dst,
       Options.Rename... options) throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -2008,7 +2012,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   void removePathAndBlocks(String src, List<Block> blocks) {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src);
     if (blocks == null) {
@@ -2186,7 +2190,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String recoveryLeaseHolder) throws AlreadyBeingCreatedException, 
       IOException, UnresolvedLinkException, ImproperUsageException {
     LOG.info("Recovering lease=" + lease + ", src=" + src);
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
         
     assert !isInSafeMode();
@@ -2312,7 +2316,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private Lease reassignLease(Lease lease, String src, String newHolder,
       INodeFileUnderConstruction pendingFile) throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if(newHolder == null)
       return lease;
@@ -2322,7 +2326,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
       INodeFileUnderConstruction pendingFile) throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     pendingFile.setClientName(newHolder);
     return leaseManager.reassignLease(lease, src, newHolder);
@@ -2330,7 +2334,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void commitOrCompleteLastBlock(final INodeFileUnderConstruction fileINode,
       final Block commitBlock) throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
       return;
@@ -2351,7 +2355,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void finalizeINodeFileUnderConstruction(String src, 
       INodeFileUnderConstruction pendingFile) 
       throws IOException, UnresolvedLinkException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
 
@@ -2370,7 +2374,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException, UnresolvedLinkException, ImproperUsageException {
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
     String src = "";
     writeLock();
@@ -2473,7 +2477,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Renew the lease(s) held by the given client
    */
   void renewLease(String holder) throws ImproperUsageException, IOException {
-    if (nameNode.isWritingNN())
+    if (isWritingNN())
         throw new ImproperUsageException();
     writeLock();
     try {
@@ -3772,7 +3776,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void updatePipeline(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException, ImproperUsageException {
-    if(!nameNode.isWritingNN())
+    if(!isWritingNN())
         throw new ImproperUsageException();
     writeLock();
     try {
@@ -3801,7 +3805,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
-    assert nameNode.isWritingNN();
+    assert isWritingNN();
     assert hasWriteLock();
     // check the vadility of the block and lease holder name
     final INodeFileUnderConstruction pendingFile = 
@@ -3844,7 +3848,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // files that were being written to, update with new filename.
   void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo) 
           throws ImproperUsageException{
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
     
     String overwrite;
@@ -3876,7 +3880,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
       
-    if (!nameNode.isWritingNN())
+    if (!isWritingNN())
         throw new ImproperUsageException();
     
     synchronized (leaseManager) {
