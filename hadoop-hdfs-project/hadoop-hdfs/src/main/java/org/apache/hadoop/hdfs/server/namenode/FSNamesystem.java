@@ -1109,7 +1109,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // add symbolic link to namespace
     dir.addSymlink(link, target, dirPerms, createParent);
   }
-
+  
   /**
    * Set replication for an existing file.
    * 
@@ -1126,7 +1126,73 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean setReplication(final String src, final short replication
       ) throws IOException {
     blockManager.verifyReplication(src, replication, null);
+    
+    boolean isFile = false;
+    writeLock();
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try {
+                // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
+        while (!isDone && tries > 0)
+        {
+            try {
+              // the optimized place, to begin the transaction will be decided later.
+              DBConnector.beginTransaction();
+              
+              if (isInSafeMode()) {
+                throw new SafeModeException("Cannot set replication for " + src, safeMode);
+              }
+              if (isPermissionEnabled) {
+                checkPathAccess(src, FsAction.WRITE);
+              }
 
+              final short[] oldReplication = new short[1];
+              final Block[] blocks = dir.setReplication(src, replication, oldReplication);
+              isFile = blocks != null;
+              if (isFile) {
+                blockManager.setReplication(oldReplication[0], replication, src, blocks);
+              }
+              DBConnector.commit();
+              isDone = true;
+            }
+            catch(ClusterJException ex)
+            {
+                DBConnector.safeRollback();
+                tries--;
+                //For now, the ClusterJException are just catched here.
+                FSNamesystem.LOG.error(ex.getMessage(), ex);
+            }
+        }
+    } finally {
+        DBConnector.safeRollback();
+        writeUnlock();
+    }
+                  //getEditLog().logSync();
+  if (isFile && auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setReplication", src, null, null);
+      }
+    return isFile;
+  }
+
+  /**
+   * Set replication for an existing file.
+   * 
+   * The NameNode sets new replication and schedules either replication of 
+   * under-replicated data blocks or removal of the excessive block copies 
+   * if the blocks are over-replicated.
+   * 
+   * @see ClientProtocol#setReplication(String, short)
+   * @param src file name
+   * @param replication new replication
+   * @return true if successful; 
+   *         false if file does not exist or is a directory
+   */
+  boolean setReplicationOld(final String src, final short replication
+      ) throws IOException {
+    blockManager.verifyReplication(src, replication, null);
+    
     final boolean isFile;
     writeLock();
     try {
@@ -3127,6 +3193,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return;
       }
       // the threshold is reached
+
+
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
         this.leave(true); // leave safe mode

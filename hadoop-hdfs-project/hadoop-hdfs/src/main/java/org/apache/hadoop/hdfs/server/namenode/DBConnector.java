@@ -42,13 +42,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 public class DBConnector {
 	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
-	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
+	static Map<Long, Session> sessionPool;
         public static final int RETRY_COUNT = 3;
 	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
 		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
-		
+		sessionPool = new ConcurrentHashMap<Long, Session>();
+                
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
 			Properties p = new Properties();
@@ -102,7 +103,7 @@ public class DBConnector {
                 throw new ClusterJUserException("The transaction is not began!");
             
             tx.commit();
-            // session.flush(); why?
+            session.flush();
         }
         
         /**

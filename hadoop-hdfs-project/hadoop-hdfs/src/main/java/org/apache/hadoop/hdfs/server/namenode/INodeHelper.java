@@ -477,6 +477,17 @@ public class INodeHelper {
             }
         }
     }
+    
+    /**
+     * Updates number of items and diskspace of the inode directory in DB.
+     * @param inodeId
+     * @param nsDelta
+     * @param dsDelta 
+     */
+    public static void updateNumItemsInTree(long inodeId, long nsDelta, long dsDelta)
+    {
+        updateNumItemsInTreeInternal(DBConnector.obtainSession(), inodeId, nsDelta, dsDelta);
+    }
 
     /**
      * Uses DB to set the permission.
@@ -614,39 +625,49 @@ public class INodeHelper {
 
     }
 
+//    /** Updates the header of an inode in database
+//     * @param inodeid
+//     * @param header
+//     * @return
+//     * @throws IOException
+//     */
+//    public static boolean updateHeader(long inodeid, long header) throws IOException {
+//        boolean done = false;
+//        int tries = RETRY_COUNT;
+//
+//        Session session = DBConnector.obtainSession();
+//        INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
+////        assert inode == null : "INodeTableSimple object not found";
+//
+//        Transaction tx = session.currentTransaction();
+//        while (done == false && tries > 0) {
+//            try {
+//                tx.begin();
+//                updateHeaderInternal(session, inodeid, header);
+//                tx.commit();
+//                done = true;
+//                session.flush();
+//                return done;
+//            } catch (ClusterJException e) {
+//                tx.rollback();
+//                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+//                tries--;
+//            }
+//        }
+//
+//        return false;
+//    }
+
     /** Updates the header of an inode in database
      * @param inodeid
      * @param header
      * @return
      * @throws IOException
      */
-    public static boolean updateHeader(long inodeid, long header) throws IOException {
-        boolean done = false;
-        int tries = RETRY_COUNT;
-
-        Session session = DBConnector.obtainSession();
-        INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
-//        assert inode == null : "INodeTableSimple object not found";
-
-        Transaction tx = session.currentTransaction();
-        while (done == false && tries > 0) {
-            try {
-                tx.begin();
-                updateHeaderInternal(session, inodeid, header);
-                tx.commit();
-                done = true;
-                session.flush();
-                return done;
-            } catch (ClusterJException e) {
-                tx.rollback();
-                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
-                tries--;
-            }
-        }
-
-        return false;
+    public static void updateHeader(long inodeid, long header){
+        updateHeaderInternal(DBConnector.obtainSession(), inodeid, header);
     }
-
+    
     /** Updates the header of an inode in database
      * @param session
      * @param inodeid
@@ -781,6 +802,20 @@ public class INodeHelper {
             count++;
         }
         return inodetSorted;
+    }
+
+    /**
+     * Updates number of items and diskspace of the inode directory in DB.
+     * @param session
+     * @param inodeId
+     * @param nsDelta
+     * @param dsDelta 
+     */
+    private static void updateNumItemsInTreeInternal(Session session, long inodeId, long nsDelta, long dsDelta) {
+        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
+        inodet.setNSCount(nsDelta);
+        inodet.setDSCount(dsDelta);
+        session.updatePersistent(inodet);
     }
 }
 

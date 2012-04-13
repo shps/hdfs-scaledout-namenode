@@ -860,9 +860,9 @@ public class FSDirectory implements Closeable {
 
     // check disk quota
     long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
-    updateCount(inodes, inodes.length-1, 0, dsDelta, true);
+    updateCount(inodes, inodes.length-1, 0, dsDelta, true); 
 
-    fileNode.setReplicationDB(replication);
+    fileNode.setReplication(replication);
     if (oldReplication != null) {
       oldReplication[0] = oldRepl;
     }
@@ -1431,7 +1431,7 @@ public class FSDirectory implements Closeable {
     }
   }
   
-  /** update count of each inode with quota
+   /** update count of each inode with quota
    * 
    * @param inodes an array of inodes on a path
    * @param numOfINodes the number of inodes to update starting from index 0
@@ -1441,6 +1441,39 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    */
   private void updateCount(INode[] inodes, int numOfINodes, 
+                           long nsDelta, long dsDelta, boolean checkQuota)
+                           throws QuotaExceededException {
+    assert hasWriteLock();
+    if (!ready) {
+      //still initializing. do not check or update quotas.
+      return;
+    }
+    if (numOfINodes>inodes.length) {
+      numOfINodes = inodes.length;
+    }
+    if (checkQuota) {
+      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+    }
+    
+    for(int i = 0; i < numOfINodes; i++) {
+      if (inodes[i].isQuotaSet()) { // a directory with quota
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        node.updateNumItemsInTree(nsDelta, dsDelta);
+        INodeHelper.updateNumItemsInTree(node.getID(), node.getNsCount(), node.getDsCount());
+      }
+    }
+  }
+  
+  /** update count of each inode with quota
+   * 
+   * @param inodes an array of inodes on a path
+   * @param numOfINodes the number of inodes to update starting from index 0
+   * @param nsDelta the delta change of namespace
+   * @param dsDelta the delta change of diskspace
+   * @param checkQuota if true then check if quota is exceeded
+   * @throws QuotaExceededException if the new count violates any quota limit
+   */
+  private void updateCountOld(INode[] inodes, int numOfINodes, 
                            long nsDelta, long dsDelta, boolean checkQuota)
                            throws QuotaExceededException {
     assert hasWriteLock();
