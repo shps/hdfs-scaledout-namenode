@@ -1,77 +1,40 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockReader;
-import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
-import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.io.EnumSetWritable;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
+/**
+ * Test to validate the getBlockLocations functionality in the readerNN
+ * 
+ * Tests the following functionality:
+ * 1. Start a writerNN with datanodes
+ * 2. Start a readerNN without datanodes
+ * 3. Write a file (with blocks) on the writerNN and the datanodes
+ * 4. Read that file from the readerNN (with tokens disabled)
+ * 5. Read that file from the readerNN (with tokens enabled)
+ * 
+ * @author wmalik
+ */
 public class TestGetBlockLocations {
 
   private static final int BLOCK_SIZE = 1024;
   private static final int FILE_SIZE = 2 * BLOCK_SIZE;
-  private static final String FILE_TO_READ = "/fileToRead.dat";
   private final byte[] rawData = new byte[FILE_SIZE];
 
   {
@@ -129,7 +92,13 @@ public class TestGetBlockLocations {
 
 
   // get a conf for testing
-  private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
+  /**
+ * @param numDataNodes
+ * @param tokens enable tokens?
+ * @return
+ * @throws IOException
+ */
+private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
     Configuration conf = new Configuration();
     if(tokens)
     	conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
@@ -142,7 +111,7 @@ public class TestGetBlockLocations {
     return conf;
   }
   
-  private MiniDFSCluster startWriteCluster(boolean tokens) throws IOException {
+  private MiniDFSCluster startCluster(boolean tokens) throws IOException {
 	    MiniDFSCluster cluster = null;
 	    int numDataNodes = 2;
 	    Configuration conf = getConf(numDataNodes, tokens);
@@ -150,41 +119,19 @@ public class TestGetBlockLocations {
 	    cluster.waitActive();
 	    assertEquals(numDataNodes, cluster.getDataNodes().size());
 	    return cluster;
-  }
+}
   
-  private MiniDFSCluster startReadCluster(boolean tokens) throws IOException {
-	  MiniDFSCluster readCluster = null;
-	  int numDataNodes = 0;
-	  Configuration conf = getConf(numDataNodes, tokens);
-	  readCluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
-	  readCluster.waitActive();
-	  assertEquals(numDataNodes, readCluster.getDataNodes().size());
-	  return readCluster;
-  }
-  
-  /**
-   * Tests the following functionality:
-   * 1. Start a writerNN with datanodes
-   * 2. Start a readerNN without datanodes
-   * 3. Write a file (with blocks) on the writerNN and the datanodes
-   * 4. Read that file from the readerNN (with tokens disabled)
-   * 5. Read that file from the readerNN (with tokens enabled)
- * @throws Exception
- */
-@SuppressWarnings("unused")
+   
   @Test
   public void testReadNnWithoutTokens() throws Exception{
 	  
-	  MiniDFSCluster readCluster = null;
-	  MiniDFSCluster writeCluster = null;
+	  MiniDFSCluster cluster = null;
 	  try {
-	  
-      
-      writeCluster = startWriteCluster(false);
-      final NameNode writeNn = writeCluster.getNameNode();
-      final NamenodeProtocols writeNnProto = writeNn.getRpcServer();
-      FileSystem writeFs = writeCluster.getNewFileSystemInstance(0);
+      cluster = startCluster(false);
+      FileSystem writeFs = cluster.getWritingFileSystem();
+      FileSystem readFs = cluster.getReadingFileSystem();
 
+      //create some directories
       Path filePath1 = new Path("/testDir1");
       Path filePath2 = new Path("/testDir2");
       Path filePath3 = new Path("/testDir3");
@@ -192,45 +139,70 @@ public class TestGetBlockLocations {
       assertTrue(writeFs.mkdirs(filePath2));
       assertTrue(writeFs.mkdirs(filePath3));
       
-      byte[] b = new byte[1];
-      DirectoryListing dl = writeNnProto.getListing("/", b, false);
-      HdfsFileStatus[] hfs = dl.getPartialListing();
-      assertEquals(3, hfs.length);
-      
+      //check if the directories were created successfully
+      FileStatus lfs = writeFs.getFileStatus(filePath1);
+      assertTrue(lfs.getPath().getName().equals("testDir1"));
       
       //write a new file on the writeNn and confirm if it can be read
       Path fileTxt = new Path("/file.txt");
       createFile(writeFs, fileTxt);
       FSDataInputStream in1 = writeFs.open(fileTxt);
       assertTrue(checkFile1(in1)); 
-      
-      //closing writeFs to make sure writeNn doesnt exist (paranoia)
-      writeFs.close();
-      //FileSystem.closeAll(); //not required
-      writeCluster.shutdown();
-      //readCluster.shutdown();
-      Thread.sleep(2000);
 
-      //starting the readNn
-      readCluster = startReadCluster(false);
-	  final NameNode readNn = readCluster.getNameNode();
-      final NamenodeProtocols readNnProto = readNn.getRpcServer();
-      FileSystem readFs = readCluster.getFileSystem();
-      
-
-      //try to read the file from the readNn (currently fails because datanodes are already dead) 
+      //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = readFs.open(fileTxt);
 	  assertTrue(checkFile1(in2));
+	  
+	  readFs.close();
+	  writeFs.close();
+	  } finally {
+		  if (cluster != null) {
+			  cluster.shutdown();
+		  }
+	  }
+
+
+  }
+  
+  //TODO: Currently, it is not possible to start a MiniDFSCluster after a shutdown
+  //      because of the following error:
+  //      java.io.IOException: Cannot lock storage 
+  //      /home/wmalik/hadoopnn/kthfs/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs/rName1. 
+  //      The directory is already locked.
+  //@Test
+  public void testReadNnWithTokens() throws Exception{
+	  
+	  MiniDFSCluster cluster = null;
+	  try {
+      cluster = startCluster(true); //use tokens
+      FileSystem writeFs = cluster.getWritingFileSystem();
+      FileSystem readFs = cluster.getReadingFileSystem();
+
+      //create some directories
+      Path filePath1 = new Path("/testDir1");
+      Path filePath2 = new Path("/testDir2");
+      Path filePath3 = new Path("/testDir3");
+      assertTrue(writeFs.mkdirs(filePath1));
+      assertTrue(writeFs.mkdirs(filePath2));
+      assertTrue(writeFs.mkdirs(filePath3));
       
-      //shutting down read cluster
-      //readFs.close();
+      //check if the directories were created successfully
+      FileStatus lfs = writeFs.getFileStatus(filePath1);
+      assertTrue(lfs.getPath().getName().equals("testDir1"));
+      
+      //write a new file on the writeNn and confirm if it can be read
+      Path fileTxt = new Path("/file.txt");
+      createFile(writeFs, fileTxt);
+      FSDataInputStream in1 = writeFs.open(fileTxt);
+      assertTrue(checkFile1(in1)); 
+
+      //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
+      FSDataInputStream in2 = readFs.open(fileTxt);
+	  assertTrue(checkFile1(in2));
 
 	  } finally {
-		  if (writeCluster != null) {
-			  writeCluster.shutdown();
-		  }
-		  if (readCluster != null) {
-			  readCluster.shutdown();
+		  if (cluster != null) {
+			  cluster.shutdown();
 		  }
 	  }
 
