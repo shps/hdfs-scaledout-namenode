@@ -321,7 +321,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
-	DBConnector.setConfiguration(conf);
+    DBConnector.setConfiguration(conf);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
