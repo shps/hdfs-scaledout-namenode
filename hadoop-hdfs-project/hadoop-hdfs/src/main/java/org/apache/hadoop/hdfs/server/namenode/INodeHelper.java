@@ -495,8 +495,49 @@ public class INodeHelper {
      * @param permissions
      * @throws ClusterJException 
      */
-    public static void setPermission(long inodeId, PermissionStatus permissionStatus) throws IOException {
-        setPermissionInternal(DBConnector.obtainSession(), inodeId, permissionStatus);
+    public static void setPermission(long inodeId, PermissionStatus permissionStatus, boolean isTransactional) throws IOException {
+        Session session = DBConnector.obtainSession();
+        boolean isActive = session.currentTransaction().isActive();
+        assert isActive == isTransactional : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+        
+        if (isTransactional)
+            setPermissionInternal(session, inodeId, permissionStatus);
+        else
+            setPermissionWithTransaction(inodeId, permissionStatus);
+    }
+    
+    /**
+     * Update the permission in DB using a transaction.
+     * @param inodeId
+     * @param permissionStatus
+     * @return
+     * @throws IOException 
+     */
+    private static boolean setPermissionWithTransaction(long inodeId, PermissionStatus permissionStatus) throws IOException{
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                setPermissionInternal(session, inodeId, permissionStatus);
+                tx.commit();
+                done = true;
+                session.flush();
+                return done;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                LOG.error(e.getMessage(), e);
+                tries--;
+            }
+        }
+
+        return false;
     }
     
     /**
@@ -625,47 +666,56 @@ public class INodeHelper {
 
     }
 
-//    /** Updates the header of an inode in database
-//     * @param inodeid
-//     * @param header
-//     * @return
-//     * @throws IOException
-//     */
-//    public static boolean updateHeader(long inodeid, long header) throws IOException {
-//        boolean done = false;
-//        int tries = RETRY_COUNT;
-//
-//        Session session = DBConnector.obtainSession();
-//        INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
-////        assert inode == null : "INodeTableSimple object not found";
-//
-//        Transaction tx = session.currentTransaction();
-//        while (done == false && tries > 0) {
-//            try {
-//                tx.begin();
-//                updateHeaderInternal(session, inodeid, header);
-//                tx.commit();
-//                done = true;
-//                session.flush();
-//                return done;
-//            } catch (ClusterJException e) {
-//                tx.rollback();
-//                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
-//                tries--;
-//            }
-//        }
-//
-//        return false;
-//    }
-
     /** Updates the header of an inode in database
      * @param inodeid
      * @param header
      * @return
      * @throws IOException
      */
-    public static void updateHeader(long inodeid, long header){
-        updateHeaderInternal(DBConnector.obtainSession(), inodeid, header);
+    public static boolean updateHeaderOld(long inodeid, long header) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
+//        assert inode == null : "INodeTableSimple object not found";
+
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                updateHeaderInternal(session, inodeid, header);
+                tx.commit();
+                done = true;
+                session.flush();
+                return done;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Updates the header of an inode in database
+     * @param inodeid
+     * @param header
+     * @param isTransactional This operation is a part of a transaction.
+     */
+    public static void updateHeader(long inodeid, long header, boolean isTransactional){
+        Session session = DBConnector.obtainSession();
+        boolean isActive = session.currentTransaction().isActive();
+        assert isActive == isTransactional : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+        
+        if (isTransactional)
+            updateHeaderInternal(session, inodeid, header);
+        else
+            updateHeaderOld(inodeid, header);
     }
     
     /** Updates the header of an inode in database

@@ -78,17 +78,10 @@ public class INodeFile extends INode {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
   
-  public void setReplicationOld(short replication) {
-	  if(replication <= 0)
-		  throw new IllegalArgumentException("Unexpected value for the replication");
-	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
-  }
-  
   public void setReplication(short replication) {
 	  if(replication <= 0)
 		  throw new IllegalArgumentException("Unexpected value for the replication");
 	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
-          INodeHelper.updateHeader(this.id, header);
   }
 
 //  public void setReplicationDB(short replication) {

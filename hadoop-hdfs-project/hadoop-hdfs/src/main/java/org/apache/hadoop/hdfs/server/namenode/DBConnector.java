@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import com.mysql.clusterj.ClusterJException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -15,6 +16,13 @@ import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
 import java.util.HashMap;
 import java.util.Hashtable;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.INodeTableSimple;
+import se.sics.clusterj.LeasePathsTable;
+import se.sics.clusterj.LeaseTable;
+import se.sics.clusterj.TripletsTable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -44,11 +52,12 @@ public class DBConnector {
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool;
         public static final int RETRY_COUNT = 3;
+        public static final Log LOG = LogFactory.getLog(DBConnector.class);
 	
 	public static void setConfiguration (Configuration conf){
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
-		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
-		sessionPool = new ConcurrentHashMap<Long, Session>();
+                sessionPool = new ConcurrentHashMap<Long, Session>();
+                sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
                 
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
@@ -115,5 +124,33 @@ public class DBConnector {
             Transaction tx = session.currentTransaction();
             if (tx.isActive())
                 tx.rollback();
+        }
+        
+        /**
+         * This is called only when MiniDFSCluster wants to format the Namenode.
+         */
+        public static boolean formatDB()
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            try
+            {
+                tx.begin();
+                session.deletePersistentAll(INodeTableSimple.class);
+                session.deletePersistentAll(BlockInfoTable.class);
+                session.deletePersistentAll(LeaseTable.class);
+                session.deletePersistentAll(LeasePathsTable.class);
+                session.deletePersistentAll(TripletsTable.class);
+                tx.commit();
+                session.flush();
+                return true;
+            }
+            catch(ClusterJException ex)
+            {
+                LOG.error(ex.getMessage(), ex);
+                tx.rollback();
+            }
+            
+            return false;
         }
 }

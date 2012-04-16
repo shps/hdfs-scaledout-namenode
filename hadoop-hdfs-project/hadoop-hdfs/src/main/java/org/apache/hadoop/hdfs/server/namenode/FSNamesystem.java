@@ -630,7 +630,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
               
               checkOwner(src);
-              dir.setPermission(src, permission);
+              dir.setPermission(src, permission, true);
               DBConnector.commit();
               isDone = true;
               
@@ -695,7 +695,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 }
               }
               
-              dir.setOwner(src, username, group);
+              dir.setOwner(src, username, group, true);
               DBConnector.commit();
               isDone = true;
               
@@ -748,7 +748,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             + " .");
         }
       }
-      dir.setOwner(src, username, group);
+      dir.setOwner(src, username, group, false);
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         resultingStat = dir.getFileInfo(src, false);
       }
@@ -1147,7 +1147,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
 
               final short[] oldReplication = new short[1];
-              final Block[] blocks = dir.setReplication(src, replication, oldReplication);
+              final Block[] blocks = dir.setReplication(src, replication, oldReplication, true);
               isFile = blocks != null;
               if (isFile) {
                 blockManager.setReplication(oldReplication[0], replication, src, blocks);
@@ -1204,7 +1204,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       final short[] oldReplication = new short[1];
-      final Block[] blocks = dir.setReplication(src, replication, oldReplication);
+      final Block[] blocks = dir.setReplication(src, replication, oldReplication, false);
       isFile = blocks != null;
       if (isFile) {
         blockManager.setReplication(oldReplication[0], replication, src, blocks);

@@ -149,7 +149,7 @@ public class TestReplication extends TestCase {
   /* 
    * Test if Datanode reports bad blocks during replication request
    */
-  public void NtestBadBlockReportOnTransfer() throws Exception {
+  public void testBadBlockReportOnTransfer() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem fs = null;
     DFSClient dfsClient = null;

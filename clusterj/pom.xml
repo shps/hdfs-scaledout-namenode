@@ -18,7 +18,7 @@
     <dependencies>
         <dependency>
             <groupId>se.sics.ndb</groupId>
-            <artifactId>clusterj-linux64</artifactId>
+            <artifactId>clusterj-linux32</artifactId>
             <version>7.1.15a</version>
         </dependency>
         <dependency>
@@ -65,7 +65,7 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>se.sics.ndb</groupId>
-                                    <artifactId>clusterj-linux64</artifactId>
+                                    <artifactId>clusterj-linux32</artifactId>
                                     <version>7.1.15a</version>
                                     <classifier>${build.type}</classifier>
                                     <type>jar</type>

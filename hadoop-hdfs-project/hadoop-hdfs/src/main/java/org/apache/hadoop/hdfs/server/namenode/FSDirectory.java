@@ -824,13 +824,13 @@ public class FSDirectory implements Closeable {
    * @return array of file blocks
    * @throws QuotaExceededException
    */
-  Block[] setReplication(String src, short replication, short[] oldReplication)
+  Block[] setReplication(String src, short replication, short[] oldReplication, boolean isTransactional)
       throws QuotaExceededException, UnresolvedLinkException {
     waitForReady();
     Block[] fileBlocks = null;
     writeLock();
     try {
-      fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
+      fileBlocks = unprotectedSetReplication(src, replication, oldReplication, isTransactional);
       //if (fileBlocks != null)  // log replication change
         //fsImage.getEditLog().logSetReplication(src, replication);
       return fileBlocks;
@@ -841,7 +841,8 @@ public class FSDirectory implements Closeable {
 
   Block[] unprotectedSetReplication(String src, 
                                     short replication,
-                                    short[] oldReplication
+                                    short[] oldReplication,
+                                    boolean isTransactional
                                     ) throws QuotaExceededException, 
                                     UnresolvedLinkException {
     assert hasWriteLock();
@@ -863,6 +864,8 @@ public class FSDirectory implements Closeable {
     updateCount(inodes, inodes.length-1, 0, dsDelta, true); 
 
     fileNode.setReplication(replication);
+    INodeHelper.updateHeader(fileNode.getID(), fileNode.getHeader(), isTransactional);
+    
     if (oldReplication != null) {
       oldReplication[0] = oldRepl;
     }
@@ -918,11 +921,11 @@ public class FSDirectory implements Closeable {
 //    //fsImage.getEditLog().logSetPermissions(src, permission);
 //  }
   
-  void setPermission(String src, FsPermission permission)
+  void setPermission(String src, FsPermission permission, boolean isTransactional)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
-      unprotectedSetPermission(src, permission);
+      unprotectedSetPermission(src, permission, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -930,7 +933,7 @@ public class FSDirectory implements Closeable {
   }
   
   // Uses INodeHelper
-  void unprotectedSetPermission(String src, FsPermission permissions) 
+  void unprotectedSetPermission(String src, FsPermission permissions, boolean isTransactional) 
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
@@ -938,7 +941,7 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException("File does not exist: " + src);
     }
     inode.setPermission(permissions);
-    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus(), isTransactional);
   }
 
   void unprotectedSetPermissionOld(String src, FsPermission permissions) 
@@ -951,18 +954,18 @@ public class FSDirectory implements Closeable {
     inode.setPermission(permissions);
   }
 
-  void setOwner(String src, String username, String groupname)
+  void setOwner(String src, String username, String groupname, boolean isTransactional)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
-      unprotectedSetOwner(src, username, groupname);
+      unprotectedSetOwner(src, username, groupname, isTransactional);
     } finally {
       writeUnlock();
     }
     //fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
-  void unprotectedSetOwner(String src, String username, String groupname) 
+  void unprotectedSetOwner(String src, String username, String groupname, boolean isTransactional) 
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
@@ -977,7 +980,7 @@ public class FSDirectory implements Closeable {
       inode.setGroup(groupname);
     }
     
-    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus(), isTransactional);
   }
   
   void unprotectedSetOwnerOld(String src, String username, String groupname) 
