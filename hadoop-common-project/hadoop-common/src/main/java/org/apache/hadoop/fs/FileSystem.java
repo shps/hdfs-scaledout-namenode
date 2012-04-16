@@ -74,10 +74,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured implements Closeable {
-  public static final String FS_DEFAULT_WRITING_NAME_KEY = 
-                   CommonConfigurationKeys.FS_DEFAULT_WRITING_NAME_KEY;
-  public static final String FS_DEFAULT_READING_NAME_KEY = 
-                   CommonConfigurationKeys.FS_DEFAULT_READING_NAME_KEY;
+  public static final String FS_DEFAULT_NAME_KEY = 
+                   CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS = 
                    CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 
@@ -148,55 +146,33 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param conf the configuration to use
    */
   public static FileSystem get(Configuration conf) throws IOException {
-    return get(getDefaultWritingUri(conf), conf);
+    return get(getDefaultUri(conf), conf);
   }
   
-  /** Get the default writing filesystem URI from a configuration.
+  /** Get the default filesystem URI from a configuration.
    * @param conf the configuration to use
    * @return the uri of the default filesystem
    */
-  public static URI getDefaultWritingUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_WRITING_NAME_KEY, DEFAULT_FS)));
-  }
-
-  /** Get the default writing filesystem URI from a configuration.
-   * @param conf the configuration to use
-   * @return the uri of the default filesystem
-   */
-  public static URI getDefaultReadingUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_READING_NAME_KEY, DEFAULT_FS)));
-  }
-
-  /** Set the default writing filesystem URI in a configuration.
-   * @param conf the configuration to alter
-   * @param uri the new default filesystem uri
-   */
-  public static void setDefaultWritingUri(Configuration conf, URI uri) {
-    conf.set(FS_DEFAULT_WRITING_NAME_KEY, uri.toString());
-  }
-
-  /** Set the default reading filesystem URI in a configuration.
-   * @param conf the configuration to alter
-   * @param uri the new default filesystem uri
-   */
-  public static void setDefaultReadingUri(Configuration conf, URI uri) {
-    conf.set(FS_DEFAULT_READING_NAME_KEY, uri.toString());
+  public static URI getDefaultUri(Configuration conf) {
+    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
   }
 
   /** Set the default filesystem URI in a configuration.
    * @param conf the configuration to alter
    * @param uri the new default filesystem uri
    */
-  public static void setDefaultUri(Configuration conf, String writingUri, String readingUri) {
-    setDefaultWritingUri(conf, URI.create(fixName(writingUri)));
-    setDefaultReadingUri(conf, URI.create(fixName(readingUri)));
+  public static void setDefaultUri(Configuration conf, URI uri) {
+    conf.set(FS_DEFAULT_NAME_KEY, uri.toString());
   }
 
-  public static void setDefaultUri(Configuration conf, URI writingUri, URI readingUri) {
-    setDefaultWritingUri(conf, writingUri);
-    setDefaultReadingUri(conf, readingUri);
+  /** Set the default filesystem URI in a configuration.
+   * @param conf the configuration to alter
+   * @param uri the new default filesystem uri
+   */
+  public static void setDefaultUri(Configuration conf, String uri) {
+    setDefaultUri(conf, URI.create(fixName(uri)));
   }
-  
+
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem
@@ -277,7 +253,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     if (authority == null) {                       // no authority
-      URI defaultUri = getDefaultWritingUri(conf);
+      URI defaultUri = getDefaultUri(conf);
       if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
           && defaultUri.getAuthority() != null) {  // & default has authority
         return get(defaultUri, conf);              // return default
@@ -331,7 +307,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     if (authority == null) {                       // no authority
-      URI defaultUri = getDefaultWritingUri(conf);
+      URI defaultUri = getDefaultUri(conf);
       if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
           && defaultUri.getAuthority() != null) {  // & default has authority
         return newInstance(defaultUri, conf);              // return default
@@ -345,7 +321,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param conf the configuration to use
    */
   public static FileSystem newInstance(Configuration conf) throws IOException {
-    return newInstance(getDefaultWritingUri(conf), conf);
+    return newInstance(getDefaultUri(conf), conf);
   }
 
   /**
@@ -491,7 +467,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       if (thatAuthority == null &&                // path's authority is null
           thisAuthority != null) {                // fs has an authority
-        URI defaultUri = getDefaultWritingUri(getConf()); // & is the conf default 
+        URI defaultUri = getDefaultUri(getConf()); // & is the conf default 
         if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
             thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
           return;

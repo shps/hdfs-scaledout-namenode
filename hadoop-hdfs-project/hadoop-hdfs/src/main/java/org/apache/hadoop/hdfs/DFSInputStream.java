@@ -537,7 +537,7 @@ public class DFSInputStream extends FSInputStream {
       while (retries > 0) {
         try {
           if (pos > blockEnd) {
-            currentNode = blockSeekTo(pos);
+            currentNode = blockSeekTo(pos); //[thesis] creates a block reader object too
           }
           int realLen = (int) Math.min((long) len, (blockEnd - pos + 1L));
           int result = readBuffer(buf, off, realLen, corruptedBlockMap);

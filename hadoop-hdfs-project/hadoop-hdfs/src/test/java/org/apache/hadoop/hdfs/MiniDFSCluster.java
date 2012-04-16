@@ -95,9 +95,9 @@ public class MiniDFSCluster {
    * Class to construct instances of MiniDFSClusters with specific options.
    */
   public static class Builder {
-    private int wNameNodePort = 0;
+    private int wNameNodePort = 5555;
     private int wNameNodeHttpPort = 0;
-    private int rNameNodePort = 0;
+    private int rNameNodePort = 5556;
     private int rNameNodeHttpPort = 0;
     private final Configuration conf;
     private int numWNameNodes = 1;
@@ -571,27 +571,28 @@ public class MiniDFSCluster {
       federation = true;
   
     if (!federation) {
-      wConf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, "127.0.0.1:" + wNameNodePort);
-      wConf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
-          + wNameNodeHttpPort);
-      wConf.set(DFSConfigKeys.FS_DEFAULT_READING_NAME_KEY, "127.0.0.1:" + rNameNodePort);
-      wConf.set(DFSConfigKeys.DFS_READING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
-          + rNameNodeHttpPort);
-      
       /*[thesis] For testing*/
       DBAdmin.truncateAllTables(wConf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
+            
+      Configuration rConf = new Configuration(wConf);
       
-//      Configuration rConf = new Configuration(wConf);
+      wConf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + wNameNodePort);
+      wConf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+          + wNameNodeHttpPort);      
       NameNode wNN = createWritingNameNode(0, wConf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
       writingNameNodes[0] = new NameNodeInfo(wNN, wConf);
-//      NameNode rNN = createReadingNameNode(0, rConf, manageDataDfsDirs, format, operation, clusterId);
-//      readingNameNodes[0][0] = new NameNodeInfo(rNN, rConf);
+      FileSystem.setDefaultUri(wConf, getWritingURI(0).toString());
       
-      FileSystem.setDefaultUri(wConf, getWritingURI(0).toString(), getReadingURI(0, 0).toString());
-      
+      rConf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + rNameNodePort);
+      rConf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+          + rNameNodeHttpPort);            
+      NameNode rNN = createReadingNameNode(0, rConf, manageDataDfsDirs, format, operation, clusterId);
+      readingNameNodes[0][0] = new NameNodeInfo(rNN, rConf);
+      FileSystem.setDefaultUri(rConf, getReadingURI(0, 0).toString());
+
       
     } else {
       if (nameserviceIds.isEmpty()) {
@@ -640,7 +641,7 @@ public class MiniDFSCluster {
       String nameserviceId, int nnPort) {
     // Set nameserviceId specific key
     String key = DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:0");
 
     key = DFSUtil.getNameServiceIdKey(
@@ -711,11 +712,7 @@ public class MiniDFSCluster {
       operation.setClusterId(clusterId);
     }
     
-      // Start the NameNode
-    String[] args = (operation == null ||
-                     operation == StartupOption.FORMAT ||
-                     operation == StartupOption.REGULAR) ?
-      new String[] {} : new String[] {operation.getName()};
+    String[] args = new String[] {StartupOption.READER.getName()};
     return NameNode.createNameNode(args, conf);
   }
   
@@ -730,10 +727,10 @@ public class MiniDFSCluster {
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getNameNodeAddress()));
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, 
-        DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     writingNameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
   }
 
@@ -1562,7 +1559,7 @@ public class MiniDFSCluster {
   public String getHttpUri(int nnIndex) throws IOException {
     return "http://"
         + writingNameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
   }
   
   /**
@@ -1571,7 +1568,7 @@ public class MiniDFSCluster {
   public HftpFileSystem getHftpFileSystem(int nnIndex) throws IOException {
     String uri = "hftp://"
         + writingNameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     try {
       return (HftpFileSystem)FileSystem.get(new URI(uri), conf);
     } catch (URISyntaxException e) {

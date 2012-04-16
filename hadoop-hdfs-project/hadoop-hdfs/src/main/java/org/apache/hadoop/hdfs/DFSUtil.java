@@ -492,7 +492,7 @@ public class DFSUtil {
     
     String httpAddressKey = (UserGroupInformation.isSecurityEnabled() 
         && httpsAddress) ? DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY
-        : DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY;
+        : DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
     String httpAddressDefault = (UserGroupInformation.isSecurityEnabled() 
         && httpsAddress) ? DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT
         : DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;

@@ -30,6 +30,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
 /**
  * This class provides the CRUD operations for inodes stored in database. 
@@ -39,14 +40,14 @@ import com.mysql.clusterj.query.QueryDomainType;
  */
 public class INodeHelper {
 	static final Log LOG = LogFactory.getLog(INodeHelper.class);
-	private static FSNamesystem ns = null;
+	private static DatanodeManager dnm = null;
 	static final int RETRY_COUNT = 3; 
 
 	/**Sets the FSNamesystem object. This method should be called before using any of the helper functions in this class.
 	 * @param fsns an already initialized FSNamesystem object
 	 */
-	public static void initialize(FSNamesystem fsns) {
-		ns = fsns;
+	public static void initialize(DatanodeManager dnm) {
+		INodeHelper.dnm = dnm;
 	}
 
 	public static void replaceChild (INode thisInode, INode newChild){
@@ -153,7 +154,7 @@ public class INodeHelper {
 					ps,
 					inodetable.getClientName(),
 					inodetable.getClientMachine(),
-					ns.getBlockManager().getDatanodeManager().getDatanodeByHost(inodetable.getClientNode()));
+					dnm.getDatanodeByHost(inodetable.getClientNode()));
 
 			((INodeFile)(inode)).setID(inodetable.getId()); 
 
@@ -203,13 +204,9 @@ public class INodeHelper {
 	}
 
 
-
-
 	/////////////////////////////////////////////////////
 	//Basic functions, added for Simple
 	/////////////////////////////////////////////////////
-
-
 
 	/** Fetch a tuple from database using primary key inodeid
 	 * @param session

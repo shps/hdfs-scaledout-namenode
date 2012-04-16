@@ -39,7 +39,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     try {
       Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).build();
-      namenode = FileSystem.getDefaultWritingUri(conf).toString();
+      namenode = FileSystem.getDefaultUri(conf).toString();
       String [] args = new String[4];
       args[2] = "-mkdir";
       args[3] = "/data";

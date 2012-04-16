@@ -57,7 +57,7 @@ public class TestHDFSTrash extends TestTrash {
   public void testNonDefaultFS() throws IOException {
     FileSystem fs = cluster.getWritingFileSystem();
     Configuration conf = fs.getConf();
-    conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, fs.getUri().toString());
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
     trashNonDefaultFS(conf);
   }
 

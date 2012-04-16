@@ -75,7 +75,7 @@ public class TestCorruptFilesJsp  {
 
       // Check if webui agrees
       URL url = new URL("http://"
-          + conf.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY)
+          + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY)
           + "/corrupt_files.jsp");
       String corruptFilesPage = DFSTestUtil.urlGet(url);
       assertTrue("Corrupt files page is not showing a healthy filesystem",
@@ -102,7 +102,7 @@ public class TestCorruptFilesJsp  {
 
       // Check if webui agrees
       url = new URL("http://"
-          + conf.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY)
+          + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY)
           + "/corrupt_files.jsp");
       corruptFilesPage = DFSTestUtil.urlGet(url);
       assertTrue("'/audiobook' should be corrupt", corruptFilesPage

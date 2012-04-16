@@ -63,14 +63,13 @@ public class TestDistributedFileSystem {
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-    URI wAddress = FileSystem.getDefaultWritingUri(conf);
-    URI rAddress = FileSystem.getDefaultReadingUri(conf);
-
+    URI address = FileSystem.getDefaultUri(conf);
+    
     try {
       FileSystem.closeAll();
 
       conf = getTestConfiguration();
-      FileSystem.setDefaultUri(conf, wAddress, rAddress);
+      FileSystem.setDefaultUri(conf, address);
       FileSystem.get(conf);
       FileSystem.get(conf);
       FileSystem.closeAll();
@@ -404,7 +403,7 @@ public class TestDistributedFileSystem {
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem hdfs = cluster.getWritingFileSystem();
-    final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+    final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     System.out.println("hftpuri=" + hftpuri);
     final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
 

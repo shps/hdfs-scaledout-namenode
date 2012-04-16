@@ -47,8 +47,7 @@ public class CommonConfigurationKeysPublic {
 
   //FS keys
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
-  public static final String  FS_DEFAULT_WRITING_NAME_KEY = "fs.defaultWFS";
-  public static final String  FS_DEFAULT_READING_NAME_KEY = "fs.defaultRFS";
+  public static final String  FS_DEFAULT_NAME_KEY = "fs.defaultFS";
   /** Default value for FS_DEFAULT_NAME_KEY */
   public static final String  FS_DEFAULT_NAME_DEFAULT = "file:///";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */

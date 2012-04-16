@@ -45,7 +45,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       Configuration conf, String supportedScheme, boolean authorityRequired)
       throws IOException, URISyntaxException {
     super(theUri, supportedScheme, authorityRequired, 
-        FileSystem.getDefaultWritingUri(conf).getPort());
+        FileSystem.getDefaultUri(conf).getPort());
     fsImpl = theFsImpl;
     fsImpl.initialize(theUri, conf);
     fsImpl.statistics = getStatistics();

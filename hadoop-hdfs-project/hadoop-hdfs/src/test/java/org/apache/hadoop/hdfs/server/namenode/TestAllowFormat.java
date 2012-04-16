@@ -80,7 +80,7 @@ public class TestAllowFormat {
 
     config.set(DFS_NAMENODE_CHECKPOINT_DIR_KEY,new File(hdfsDir, "secondary").getPath());
 
-    FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0", "hdfs://"+NAME_NODE_HOST + "0");
+    FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
   }
 
   /**

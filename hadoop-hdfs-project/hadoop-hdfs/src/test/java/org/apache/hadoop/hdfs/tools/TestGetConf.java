@@ -28,7 +28,7 @@ import java.util.StringTokenizer;
 
 import static org.junit.Assert.*;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_WRITING_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -246,7 +246,7 @@ public class TestGetConf {
     HdfsConfiguration conf = new HdfsConfiguration(false);
   
     // Returned namenode address should match default address
-    conf.set(FS_DEFAULT_WRITING_NAME_KEY, "hdfs://localhost:1000");
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:1000");
     verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1000");
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1000");
   

@@ -331,9 +331,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     if(NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
       DBConnector.setConfiguration(conf);
-      INodeHelper.initialize(this);
-      BlocksHelper.initialize(this);
-      LeaseHelper.initialize(leaseManager);
+      if (isWritingNN()) {
+        INodeHelper.initialize(blockManager.getDatanodeManager());
+        BlocksHelper.initialize(blockManager.getDatanodeManager());
+        LeaseHelper.initialize(leaseManager);
+      }
     }
     //TODO: truncate the DB tables when StartupOption.FORMAT
     if(fsImage == null) {

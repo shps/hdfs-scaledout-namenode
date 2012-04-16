@@ -112,7 +112,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
    * @return the size of the subtree rooted at this directory
    */
   long numItemsInTree() {
-    return nsCount;
+    return nsCount; //TODO: [thesis] should fetch from DB
   }
   
   long diskspaceConsumed() {

@@ -96,7 +96,7 @@ public class TestDelegationTokenForProxyUser {
     config.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER),
         "group1");
     configureSuperUserIPAddresses(config, REAL_USER);
-    FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0", "hdfs://localhost:" + "0");
+    FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster.Builder(config).build();
     cluster.waitActive();
     NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();

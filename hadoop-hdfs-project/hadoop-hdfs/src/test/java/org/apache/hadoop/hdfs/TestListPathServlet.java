@@ -60,7 +60,7 @@ public class TestListPathServlet {
     fs = cluster.getWritingFileSystem();
 
     final String str = "hftp://"
-        + CONF.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY);
+        + CONF.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     hftpURI = new URI(str);
     hftpFs = cluster.getHftpFileSystem(0);
   }

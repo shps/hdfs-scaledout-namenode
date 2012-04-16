@@ -264,7 +264,7 @@ public class GenericOptionsParser {
   private void processGeneralOptions(Configuration conf,
       CommandLine line) throws IOException {
     if (line.hasOption("fs")) {
-      FileSystem.setDefaultUri(conf, line.getOptionValue("wfs"), line.getOptionValue("rfs"));
+      FileSystem.setDefaultUri(conf, line.getOptionValue("fs"));
     }
 
     if (line.hasOption("jt")) {

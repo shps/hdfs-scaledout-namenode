@@ -271,7 +271,6 @@ public class INodeFile extends INode {
 	/** Compute file size.
 	 * May or may not include BlockInfoUnderConstruction.
 	 */
-	//FIXME: KTHFSBLOCKS
 	long computeFileSize(boolean includesBlockInfoUnderConstruction) {
 		if (blocks == null || blocks.length == 0) {
 			return 0;

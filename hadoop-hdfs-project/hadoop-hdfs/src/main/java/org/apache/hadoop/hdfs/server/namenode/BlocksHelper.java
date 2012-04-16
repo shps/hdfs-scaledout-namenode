@@ -36,14 +36,14 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 public class BlocksHelper {
 
 	private static Log LOG = LogFactory.getLog(BlocksHelper.class);
-	private static FSNamesystem ns = null;
+	private static DatanodeManager dnm = null;
 	static final int RETRY_COUNT = 3; 
 
 	/**Sets the FSNamesystem object. This method should be called before using any of the helper functions in this class.
 	 * @param fsns an already initialized FSNamesystem object
 	 */
-	public static void initialize(FSNamesystem fsns) {
-		ns = fsns;
+	public static void initialize(DatanodeManager dnm) {
+		BlocksHelper.dnm = dnm;
 	}
 	
 	/**
@@ -452,7 +452,7 @@ public class BlocksHelper {
 		TripletsTable triplet = selectTriplet(session, blockId, index);
 
 		if (triplet != null && triplet.getDatanodeName() != null) {
-			DatanodeDescriptor ret = ns.getBlockManager().getDatanodeManager().getDatanodeByName(triplet.getDatanodeName());
+			DatanodeDescriptor ret = dnm.getDatanodeByName(triplet.getDatanodeName());
 			return ret;
 		}
 		return null;

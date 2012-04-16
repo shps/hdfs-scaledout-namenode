@@ -44,8 +44,8 @@ public class TestValidateConfigurationSettings {
 
     Configuration conf = new HdfsConfiguration();
     // set both of these to port 9000, should fail
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:9000", "hdfs://localhost:9000"); 
-    conf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:9000"); 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
     DFSTestUtil.formatNameNode(conf);
     try {
       NameNode nameNode = new NameNode(conf);
@@ -66,8 +66,8 @@ public class TestValidateConfigurationSettings {
       throws IOException {
 
     Configuration conf = new HdfsConfiguration();
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:8000", "hdfs://localhost:8000");
-    conf.set(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:8000");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
     DFSTestUtil.formatNameNode(conf);
     NameNode nameNode = new NameNode(conf); // should be OK!
   }

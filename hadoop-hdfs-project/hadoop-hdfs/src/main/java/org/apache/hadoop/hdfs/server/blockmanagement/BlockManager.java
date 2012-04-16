@@ -595,15 +595,15 @@ public class BlockManager {
     }
 
     // get block locations
-    final int numCorruptNodes = countNodes(blk).corruptReplicas();
-    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
+    final int numCorruptNodes = countNodes(blk).corruptReplicas(); //TODO: [thesis] verify if countNodes works currently
+    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk); //TODO: [thesis]
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
           + blk + " blockMap has " + numCorruptNodes
           + " but corrupt replicas map has " + numCorruptReplicas);
     }
 
-    final int numNodes = blocksMap.numNodes(blk);
+    final int numNodes = blocksMap.numNodes(blk); //[thesis] seems like this works currently
     final boolean isCorrupt = numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];

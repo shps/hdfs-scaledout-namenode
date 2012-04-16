@@ -92,7 +92,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
 
       // Now verify that it shows up on webui
-      URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_WRITING_NAMENODE_HTTP_ADDRESS_KEY) + 
+      URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY) + 
                         "/dfshealth.jsp");
       String dfsFrontPage = DFSTestUtil.urlGet(url);
       String warnStr = "WARNING : There are ";

@@ -66,7 +66,7 @@ public class TestJspHelper {
 
   @Test
   public void testGetUgi() throws IOException {
-    conf.set(DFSConfigKeys.FS_DEFAULT_WRITING_NAME_KEY, "hdfs://localhost:4321/");
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ServletContext context = mock(ServletContext.class);
     String user = "TheDoctor";
