@@ -363,6 +363,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
+  @Override
   public boolean isWritingNN() {
       return nameNode.isWritingNN();
   }

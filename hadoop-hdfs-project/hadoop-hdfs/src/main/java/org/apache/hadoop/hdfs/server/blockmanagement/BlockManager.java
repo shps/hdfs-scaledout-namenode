@@ -603,13 +603,13 @@ public class BlockManager {
 //	          + " but corrupt replicas map has " + numCorruptReplicas);
 //	    }
 
-	    final int numNodes = blocksMap.numNodes(blk); //[thesis] seems like this works currently
+	    final int numNodes = blocksMap.numNodes(blk);
 	    //final boolean isCorrupt = numCorruptNodes == numNodes;
 	    //final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
 	    final int numMachines = numNodes; //[thesis] 
 	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
 	    if (numMachines > 0) {
-	    	if(datanodeManager.getNumLiveDataNodes() <= 0) { //TODO: replace this with NN role check
+	    	if(!namesystem.isWritingNN()) {
 	    		List<String> ipPorts = BlocksHelper.getDatanodeAddr(blk.getBlockId());
 	    		int w = 0;
 	    		for(String ipPort : ipPorts) {
