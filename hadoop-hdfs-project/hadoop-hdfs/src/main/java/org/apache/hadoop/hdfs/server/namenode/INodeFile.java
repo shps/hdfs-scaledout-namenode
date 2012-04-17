@@ -230,7 +230,7 @@ public class INodeFile extends INode {
 		}
 	}
 
-	int collectSubtreeBlocksAndClear(List<Block> v) {
+	int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
 		
 		parent = null;
 		if(blocks != null && v != null) { //TODO: [thesis] blocks should be fetched from DB here
@@ -242,7 +242,7 @@ public class INodeFile extends INode {
 		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
 		blocks = null;
 
-		INodeHelper.removeChild(super.id); //TODO, why super.id?
+		INodeHelper.removeChild(super.id, isTransactional); //TODO, why super.id?
 		return 1;
 	}
 	

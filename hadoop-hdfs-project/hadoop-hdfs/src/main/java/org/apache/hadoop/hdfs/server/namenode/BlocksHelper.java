@@ -771,7 +771,7 @@ public class BlocksHelper {
 		binfot.setGenerationStamp(genStamp);
 		binfot.setReplication(replication);
 		binfot.setTimestamp(timestamp);
-		insertBlockInfo(session, binfot, update);
+                                                                                                insertBlockInfo(session, binfot, update);
 	}
 	
 	/** Fetch all blocks of an inode from BlockInfo table

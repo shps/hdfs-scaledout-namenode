@@ -422,7 +422,7 @@ public class BlockManager {
     
     //KTHFSBLOCKS
     BlockInfo lastBlock = fileINode.getLastBlock();
-        
+    
     if(lastBlock == null) {
       return false; // no blocks in file yet
       
@@ -1326,45 +1326,54 @@ public class BlockManager {
    * The given datanode is reporting all its blocks.
    * Update the (machine-->blocklist) and (block-->machinelist) maps.
    */
-  public void processReport(final DatanodeID nodeID, final String poolId,
-      final BlockListAsLongs newReport) throws IOException {
-    namesystem.writeLock();
-    final long startTime = Util.now(); //after acquiring write lock
-    final long endTime;
-    try {
-      final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
-      if (node == null || !node.isAlive) {
-        throw new IOException("ProcessReport from dead or unregistered node: "
-                              + nodeID.getName());
-      }
+        public void processReport(final DatanodeID nodeID, final String poolId,
+                                  final BlockListAsLongs newReport) throws IOException
+        {
+                namesystem.writeLock();
+                final long startTime = Util.now(); //after acquiring write lock
+                final long endTime;
+                try
+                {
+                        final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+                        if (node == null || !node.isAlive)
+                        {
+                                throw new IOException("ProcessReport from dead or unregistered node: "
+                                                      + nodeID.getName());
+                        }
 
-      // To minimize startup time, we discard any second (or later) block reports
-      // that we receive while still in startup phase.
-      if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
-        NameNode.stateChangeLog.info("BLOCK* processReport: "
-            + "discarded non-initial block report from " + nodeID.getName()
-            + " because namenode still in startup phase");
-        return;
-      }
+                        // To minimize startup time, we discard any second (or later) block reports
+                        // that we receive while still in startup phase.
+                        if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0)
+                        {
+                                NameNode.stateChangeLog.info("BLOCK* processReport: "
+                                                             + "discarded non-initial block report from " + nodeID.getName()
+                                                             + " because namenode still in startup phase");
+                                return;
+                        }
 
-      if (node.numBlocks() == 0) {
-        // The first block report can be processed a lot more efficiently than
-        // ordinary block reports.  This shortens restart times.
-        processFirstBlockReport(node, newReport);
-      } else {
-        processReport(node, newReport);
-      }
-    } finally {
-      endTime = Util.now();
-      namesystem.writeUnlock();
-    }
+                        if (node.numBlocks() == 0)
+                        {
+                                // The first block report can be processed a lot more efficiently than
+                                // ordinary block reports.  This shortens restart times.
+                                processFirstBlockReport(node, newReport);
+                        }
+                        else
+                        {
+                                processReport(node, newReport);
+                        }
+                }
+                finally
+                {
+                        endTime = Util.now();
+                        namesystem.writeUnlock();
+                }
 
-    // Log the block report processing stats from Namenode perspective
-    NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
-    NameNode.stateChangeLog.info("BLOCK* processReport: from "
-        + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
-        + ", processing time: " + (endTime - startTime) + " msecs");
-  }
+                // Log the block report processing stats from Namenode perspective
+                NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
+                NameNode.stateChangeLog.info("BLOCK* processReport: from "
+                                             + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
+                                             + ", processing time: " + (endTime - startTime) + " msecs");
+        }
 
   private void processReport(final DatanodeDescriptor node,
       final BlockListAsLongs report) throws IOException {

@@ -242,7 +242,7 @@ public class INodeHelper {
      * @param session
      * @param inodeid
      */
-    private static void deleteINodeTableInternal(Session session, long inodeid) {
+    private static void deleteINodeTableInternal(Session session, long inodeid){
         LOG.debug("Removing " + inodeid);
         INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
         session.deletePersistent(inodet);
@@ -415,6 +415,30 @@ public class INodeHelper {
      * @param inodeid
      * @param modTime
      */
+        public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException
+        {
+                Session session = DBConnector.obtainSession();
+                Transaction tx = session.currentTransaction();
+                
+                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+
+                // do directly
+                if (isTransactional)
+                {
+                        updateModificationTimeInternal(session, inodeid, modTime);
+                        session.flush();
+                }
+                else
+                {
+                        // open a transaction and then commit
+                        updateModificationTime(inodeid, modTime);
+                }
+        }
+
+    /**Updates the modification time of an inode in the database
+     * @param inodeid
+     * @param modTime
+     */
     public static void updateModificationTime(long inodeid, long modTime) {
         boolean done = false;
         int tries = RETRY_COUNT;
@@ -444,7 +468,7 @@ public class INodeHelper {
      * @param inodeid
      * @param modTime
      */
-    private static void updateModificationTimeInternal(Session session, long inodeid, long modTime) {
+    private static void updateModificationTimeInternal(Session session, long inodeid, long modTime) throws ClusterJException{
         INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
         inodet.setModificationTime(modTime);
         session.updatePersistent(inodet);
@@ -454,29 +478,45 @@ public class INodeHelper {
      * @param node
      * @param parentid
      */
-    public static void addChild(INode node, boolean isRoot, long parentid) {
-        boolean done = false;
-        int tries = RETRY_COUNT;
+        public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional)
+        {
+                boolean done = false;
+                int tries = RETRY_COUNT;
 
-        Session session = DBConnector.obtainSession();
-        Transaction tx = session.currentTransaction();
+                Session session = DBConnector.obtainSession();
+                Transaction tx = session.currentTransaction();
 
-        while (done == false && tries > 0) {
-            try {
-                tx.begin();
+                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                
+                if(isTransactional)
+                {
+                        // do directly
+                        addChildInternal(session, node, isRoot, parentid);
+                }
+                else
+                {
+                        // open a transaction
+                        while (done == false && tries > 0)
+                        {
+                                try
+                                {
+                                        tx.begin();
 
-                addChildInternal(session, node, isRoot, parentid);
-                done = true;
+                                        addChildInternal(session, node, isRoot, parentid);
+                                        done = true;
 
-                tx.commit();
-                session.flush();
-            } catch (ClusterJException e) {
-                tx.rollback();
-                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
-                tries--;
-            }
+                                        tx.commit();
+                                        session.flush();
+                                }
+                                catch (ClusterJException e)
+                                {
+                                        tx.rollback();
+                                        System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                                        tries--;
+                                }
+                        }
+                }
         }
-    }
 
     /**
      * Uses DB to set the permission.
@@ -584,17 +624,59 @@ public class INodeHelper {
         }
 
     }
+    /** Deletes an inode from the database 
+     * @param inodeid the inodeid to remove
+     */
+        public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional)
+        {
+                boolean done = false;
+                int tries = RETRY_COUNT;
 
+                Session session = DBConnector.obtainSession();
+                Transaction tx = session.currentTransaction();
+                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+
+                if (isTransactional)
+                {
+                        // delete directly
+                        deleteINodeTableInternal(session, inodeid);
+                        session.flush();
+                }
+                else
+                {
+                        while (done == false && tries > 0)
+                        {
+                                try
+                                {
+                                        tx.begin();
+                                        deleteINodeTableInternal(session, inodeid);
+                                        done = true;
+
+                                        tx.commit();
+                                        session.flush();
+                                }
+                                catch (ClusterJException e)
+                                {
+                                        if (tx.isActive())
+                                        {
+                                                tx.rollback();
+                                        }
+                                        LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+                                        tries--;
+                                }
+                        }
+                }
+        }
     /** Deletes an inode from the database
      * @param inodeid the inodeid to remove
      */
-    public static /*synchronized*/ void removeChild(long inodeid) {
+    public static /*synchronized*/ void removeChildOld(long inodeid) {
         boolean done = false;
         int tries = RETRY_COUNT;
 
         Session session = DBConnector.obtainSession();
         Transaction tx = session.currentTransaction();
-
+        
         while (done == false && tries > 0) {
             try {
                 tx.begin();

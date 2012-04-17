@@ -1,6 +1,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import com.mysql.clusterj.ClusterJException;
+import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.INodeTableSimple;
+import se.sics.clusterj.LeasePathsTable;
+import se.sics.clusterj.LeaseTable;
+import se.sics.clusterj.TripletsTable;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -13,8 +19,6 @@ import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
-import java.util.HashMap;
-import java.util.Hashtable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -85,10 +89,19 @@ public class DBConnector {
         /**
          * begin a transaction.
          */
-        public static void beginTransaction()
+        public static void beginTransaction() throws ClusterJUserException
         {
             Session session = obtainSession();
-            session.currentTransaction().begin();
+            Transaction tx = session.currentTransaction();
+            if(tx.isActive())
+            {
+                    throw new ClusterJUserException("Transaction is already active");
+            }
+            else
+            {
+                    tx.begin();
+            }
+                            
         }
         
         /**
@@ -99,7 +112,7 @@ public class DBConnector {
             Session session = obtainSession();
             Transaction tx = session.currentTransaction();
             if (!tx.isActive())
-                throw new ClusterJUserException("The transaction is not began!");
+                throw new ClusterJUserException("The transaction is not started!");
             
             tx.commit();
             // session.flush(); why?
@@ -115,4 +128,61 @@ public class DBConnector {
             if (tx.isActive())
                 tx.rollback();
         }
+        /**
+         * Returns the current Transaction.
+         */
+        public static Transaction getTransaction() throws ClusterJUserException
+        {
+            Session session = obtainSession();
+            return session.currentTransaction();
+        }
+        
+        /**
+        
+         * This is called only when MiniDFSCluster wants to format the Namenode.
+        
+         */
+        public static boolean formatDB()
+        {
+
+                Session session = obtainSession();
+
+                Transaction tx = session.currentTransaction();
+
+                try
+                {
+
+                        tx.begin();
+
+                        session.deletePersistentAll(INodeTableSimple.class);
+
+                        session.deletePersistentAll(BlockInfoTable.class);
+
+                        session.deletePersistentAll(LeaseTable.class);
+
+                        session.deletePersistentAll(LeasePathsTable.class);
+
+                        session.deletePersistentAll(TripletsTable.class);
+
+                        tx.commit();
+
+                        session.flush();
+
+                        return true;
+
+                }
+                catch (ClusterJException ex)
+                {
+
+                        //LOG.error(ex.getMessage(), ex);
+                        System.err.println(ex.getMessage());
+                        ex.printStackTrace();
+                        
+                        tx.rollback();
+
+                }
+
+                return false;
+
+        }        
 }

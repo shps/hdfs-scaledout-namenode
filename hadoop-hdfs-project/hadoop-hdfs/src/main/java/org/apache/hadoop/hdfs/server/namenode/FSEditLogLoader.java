@@ -187,13 +187,15 @@ public class FSEditLogLoader {
                   " clientMachine " + addCloseOp.clientMachine);
             }
 
-            fsDir.unprotectedDelete(addCloseOp.path, addCloseOp.mtime);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            fsDir.unprotectedDelete(addCloseOp.path, addCloseOp.mtime, false);
 
             // add to the file tree
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
                 addCloseOp.path, permissions,
                 blocks, replication,
-                addCloseOp.mtime, addCloseOp.atime, blockSize);
+                addCloseOp.mtime, addCloseOp.atime, blockSize, false);
             if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
               //
               // Replace current node with a INodeUnderConstruction.
@@ -209,7 +211,8 @@ public class FSEditLogLoader {
                                         addCloseOp.clientName,
                                         addCloseOp.clientMachine,
                                         null);
-              fsDir.replaceNode(addCloseOp.path, node, cons);
+              // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+              fsDir.replaceNode(addCloseOp.path, node, cons, false);
               fsNamesys.leaseManager.addLease(cons.getClientName(),
                                               addCloseOp.path);
             }
@@ -225,21 +228,25 @@ public class FSEditLogLoader {
           }
           case OP_CONCAT_DELETE: {
             ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
-                concatDeleteOp.timestamp);
+                concatDeleteOp.timestamp, false);
             break;
           }
           case OP_RENAME_OLD: {
             RenameOldOp renameOp = (RenameOldOp)op;
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
-                                      renameOp.timestamp);
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
+                                      renameOp.timestamp, false);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo, false);
             break;
           }
           case OP_DELETE: {
             DeleteOp deleteOp = (DeleteOp)op;
-            fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp,false);
             break;
           }
           case OP_MKDIR: {
@@ -249,8 +256,9 @@ public class FSEditLogLoader {
               permissions = mkdirOp.permissions;
             }
 
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedMkdir(mkdirOp.path, permissions,
-                                   mkdirOp.timestamp);
+                                   mkdirOp.timestamp, false);
             break;
           }
           case OP_SET_GENSTAMP: {
@@ -302,18 +310,21 @@ public class FSEditLogLoader {
           }
           case OP_SYMLINK: {
             SymlinkOp symlinkOp = (SymlinkOp)op;
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
                                      symlinkOp.mtime, symlinkOp.atime,
-                                     symlinkOp.permissionStatus);
+                                     symlinkOp.permissionStatus, false);
             break;
           }
           case OP_RENAME: {
             RenameOp renameOp = (RenameOp)op;
 
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
-                                      renameOp.timestamp, renameOp.options);
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
+                                      renameOp.timestamp, false, renameOp.options);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo, false);
             break;
           }
           case OP_GET_DELEGATION_TOKEN: {

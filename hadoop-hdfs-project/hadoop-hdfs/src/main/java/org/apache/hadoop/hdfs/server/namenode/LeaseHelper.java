@@ -259,26 +259,38 @@ public class LeaseHelper {
 	 * @param oldpath
 	 * @param newpath
 	 */
-	public static void replacePath(int holderID, String oldpath, String newpath) {
-		int tries = RETRY_COUNT;
-		boolean done = false;
+	public static void replacePath(int holderID, String oldpath, String newpath, boolean isTransactional) {
+                                                                                                
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		while(done == false && tries > 0) {
-			try{
-				tx.begin();
-				deleteLeasePathsInternal(session, holderID, oldpath);
-				insertLeasePathsInternal(session, holderID, newpath);
-				done = true;
-				tx.commit();
-			}
-			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
-				tries--;
-			}
-		}
+                                                                                                // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                assert tx.isActive() == isTransactional;       
+                                                                                                
+                                                                                                if (isTransactional){
+                                                                                                
+                                                                                                        deleteLeasePathsInternal(session, holderID, oldpath);
+                                                                                                        insertLeasePathsInternal(session, holderID, newpath);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                        int tries = RETRY_COUNT;
+                                                                                                        boolean done = false;
+                                                                                                        while(done == false && tries > 0) {
+                                                                                                                        try{
+                                                                                                                                        tx.begin();
+                                                                                                                                        deleteLeasePathsInternal(session, holderID, oldpath);
+                                                                                                                                        insertLeasePathsInternal(session, holderID, newpath);
+                                                                                                                                        done = true;
+                                                                                                                                        tx.commit();
+                                                                                                                        }
+                                                                                                                        catch(ClusterJException e) {
+                                                                                                                                        tx.rollback();
+                                                                                                                                        LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
+                                                                                                                                        tries--;
+                                                                                                                        }
+                                                                                                        }
+                                                                                                }
 
 	}
 

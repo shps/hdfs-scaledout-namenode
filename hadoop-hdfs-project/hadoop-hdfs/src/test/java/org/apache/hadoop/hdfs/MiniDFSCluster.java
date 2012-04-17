@@ -76,6 +76,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -542,7 +543,12 @@ public class MiniDFSCluster {
           + nameNodeHttpPort);
       
       /*[thesis] For testing*/
-      DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+      if(format)
+      {
+        //DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+              DBConnector.setConfiguration(conf);
+              assert DBConnector.formatDB();
+      }
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       

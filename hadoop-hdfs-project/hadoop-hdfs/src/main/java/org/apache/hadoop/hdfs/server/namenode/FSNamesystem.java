@@ -346,7 +346,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           this.dir = new FSDirectory(fsImage, this, conf);
 
     }
-    INodeHelper.addChild(this.dir.rootDir, true, -1L);
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
     INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
     cache.putRoot(this.dir.rootDir); //added for magic cache
     
@@ -1015,7 +1016,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           Arrays.toString(srcs) + " to " + target);
     }
 
-    dir.concat(target,srcs);
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    dir.concat(target,srcs, false);
   }
   
   /**
@@ -1107,7 +1109,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkFsObjectLimit();
 
     // add symbolic link to namespace
-    dir.addSymlink(link, target, dirPerms, createParent);
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    dir.addSymlink(link, target, dirPerms, createParent, false);
   }
 
   /**
@@ -1326,7 +1329,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         cons.setParentIDLocal(node.getParentIDLocal()); //for simple
         cons.setID(node.getID()); //for simple
         
-        dir.replaceNode(src, node, cons);
+        // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+        dir.replaceNode(src, node, cons, false);
         leaseManager.addLease(cons.getClientName(), src);
 
         // convert last block to under-construction
@@ -1339,8 +1343,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
        
         // increment global generation stamp
         long genstamp = nextGenerationStamp();
+        
+        // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
         INodeFileUnderConstruction newNode = dir.addFile(src, permissions,
-            replication, blockSize, holder, clientMachine, clientNode, genstamp);
+            replication, blockSize, holder, clientMachine, clientNode, genstamp, false);
         
         if (newNode == null) {
           throw new IOException("DIR* NameSystem.startFile: " +
@@ -1897,34 +1903,76 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return status;
   }
 
-  /** @deprecated See {@link #renameTo(String, String)} */
-  @Deprecated
-  private boolean renameToInternal(String src, String dst)
-    throws IOException, UnresolvedLinkException {
-    assert hasWriteLock();
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot rename " + src, safeMode);
-    }
-    if (!DFSUtil.isValidName(dst)) {
-      throw new IOException("Invalid name: " + dst);
-    }
-    if (isPermissionEnabled) {
-      //We should not be doing this.  This is move() not renameTo().
-      //but for now,
-      String actualdst = dir.isDir(dst)?
-          dst + Path.SEPARATOR + new Path(src).getName(): dst;
-      checkParentAccess(src, FsAction.WRITE);
-      checkAncestorAccess(actualdst, FsAction.WRITE);
-    }
+        /** @deprecated See {@link #renameTo(String, String)} */
+        @Deprecated
+        private boolean renameToInternal(String src, String dst)
+                throws IOException, UnresolvedLinkException
+        {
+                assert hasWriteLock();
+                if (isInSafeMode())
+                {
+                        throw new SafeModeException("Cannot rename " + src, safeMode);
+                }
+                if (!DFSUtil.isValidName(dst))
+                {
+                        throw new IOException("Invalid name: " + dst);
+                }
+                if (isPermissionEnabled)
+                {
+                        //We should not be doing this.  This is move() not renameTo().
+                        //but for now,
+                        String actualdst = dir.isDir(dst)
+                                           ? dst + Path.SEPARATOR + new Path(src).getName() : dst;
+                        checkParentAccess(src, FsAction.WRITE);
+                        checkAncestorAccess(actualdst, FsAction.WRITE);
+                }
 
-    HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
-    if (dir.renameTo(src, dst)) {
-      unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
-      return true;
-    }
-    return false;
-  }
-  
+                HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
+                
+                // Starting the DB transaction
+                boolean isDone = false;
+                boolean isRenameDone = false;
+                int tries = DBConnector.RETRY_COUNT;
+                try
+                {
+                        while (!isDone && tries > 0)
+                        {
+                                try
+                                {
+                                        DBConnector.beginTransaction();
+                                        if (dir.renameTo(src, dst, true))
+                                        {
+                                                unprotectedChangeLease(src, dst, dinfo, true);     // update lease with new filename
+                                                DBConnector.commit();
+                                                isDone = true;
+                                                isRenameDone = true;
+                                        }
+                                        else
+                                        {
+                                                isRenameDone = false;
+                                        }
+                                }
+                                catch(ClusterJException ex)
+                                {
+                                        if(!isDone)
+                                        {
+                                                DBConnector.safeRollback();
+                                                tries--;
+                                                FSNamesystem.LOG.error("renameToInternal() :: failed to rename "+src+" to "+dst+". Exception: "+ex.getMessage(), ex);
+                                        }
+                                }
+                        }
+                }
+                finally
+                {
+                        if(!isDone)
+                        {
+                                DBConnector.safeRollback();
+                        }
+                }
+                return isRenameDone;
+        }
+
 
   /** Rename src to dst */
   void renameTo(String src, String dst, Options.Rename... options)
@@ -1969,8 +2017,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
-    dir.renameTo(src, dst, options);
-    unprotectedChangeLease(src, dst, dinfo); // update lease with new filename
+    
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    dir.renameTo(src, dst, false, options);
+    unprotectedChangeLease(src, dst, dinfo, false); // update lease with new filename
   }
   
   /**
@@ -2024,8 +2074,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
       }
       // Unlink the target directory from directory tree
-      
-      if (!dir.delete(src, collectedBlocks)) { //[thesis] only the inode is deleted at this point, the blocks are still there
+      // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+      if (!dir.delete(src, collectedBlocks, false)) { //[thesis] only the inode is deleted at this point, the blocks are still there
     	  return false;
       }
       deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
@@ -2168,7 +2218,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // create multiple inodes.
     checkFsObjectLimit();
 
-    if (!dir.mkdirs(src, permissions, false, now())) {
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    if (!dir.mkdirs(src, permissions, false, now(), false)) {
       throw new IOException("Failed to create directory: " + src);
     }
     return true;
@@ -2413,7 +2464,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // The file is no longer pending.
     // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile();
-    dir.replaceNode(src, pendingFile, newFile);
+    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+    dir.replaceNode(src, pendingFile, newFile, false);
     
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
@@ -2996,6 +3048,36 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized boolean isOn() {
       try {
+              
+              // KTHFS: Check for files underconstruction that were under construction when there was a restart of NN
+              /*
+              String srcFile[] = {"/hardLeaseRecovery.renamed", "/user/a+b/dir1/file1", "/user/dir2/file2", "/user/dir3/$"};
+              for(int i = 0; i<srcFile.length; i++)
+              {
+                      if(dir.exists(srcFile[i]))
+                      {
+                              String leaseHolder = leaseManager.getLeaseByPath(srcFile[i]).getHolder();
+
+                              INode myFile = dir.getFileINode(srcFile[i]);
+                              INodeFile node = (INodeFile) myFile;
+                              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                                node.getLocalNameBytes(),
+                                                node.getReplication(),
+                                                node.getModificationTime(),
+                                                node.getPreferredBlockSize(),
+                                                node.getBlocks(),
+                                                node.getPermissionStatus(),
+                                                leaseHolder,
+                                                "127.0.0.1",
+                                                null);
+                              System.out.println("LeaseHolder for  "+srcFile[i]+" renamed: "+leaseHolder);
+                              //INodeFileUnderConstruction cons = checkLease(srcFile, leaseHolder);
+                              //blockManager.commitOrCompleteLastBlock(cons, cons.getLastBlock());
+                              System.out.println(srcFile[i] + "committed or completed..");
+                              finalizeINodeFileUnderConstruction(srcFile[i], cons);
+                      }
+              }
+               */
         assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
           + "Total num of blocks, active blocks, or "
           + "total safe blocks don't match.";
@@ -3299,10 +3381,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * This is costly and currently called only in assert.
      */
     private boolean isConsistent() throws IOException {
+            
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
       int activeBlocks = blockManager.getActiveBlockCount();
+      
+      LOG.debug("safeBlocks: "+blockSafe+", blockTotal: "+blockTotal+", blocksActive: "+activeBlocks);
       return (blockTotal == activeBlocks) ||
         (blockSafe >= 0 && blockSafe <= blockTotal);
     }
@@ -3462,7 +3547,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
+      
       return getBlocksTotal() - numUCBlocks;
+      // FIXME: We should remove all files 'under construction' on restart of NN
+      //                 As per HDFS semantics, the file is lost when it was opened and NN crashed/restarted
+      //return getBlocksTotal();
+      
     } finally {
       readUnlock();
     }
@@ -3888,7 +3978,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
-  void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo) {
+  void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo, boolean isTransactional) {
     String overwrite;
     String replaceBy;
     assert hasWriteLock();
@@ -3907,7 +3997,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       replaceBy = dst;
     }
 
-    leaseManager.changeLease(src, dst, overwrite, replaceBy);
+    leaseManager.changeLease(src, dst, overwrite, replaceBy, isTransactional);
   }
            
   /**

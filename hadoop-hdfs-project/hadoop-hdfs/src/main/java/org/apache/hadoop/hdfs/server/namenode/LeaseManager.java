@@ -411,8 +411,8 @@ public class LeaseManager {
 			return holder;
 		}
 
-		void replacePath(String oldpath, String newpath) {
-			LeaseHelper.replacePath(this.holderID, oldpath, newpath);
+		void replacePath(String oldpath, String newpath, boolean isTransactional) {
+			LeaseHelper.replacePath(this.holderID, oldpath, newpath, isTransactional);
 		}
 		
 		void replacePathOld(String oldpath, String newpath) {
@@ -422,7 +422,7 @@ public class LeaseManager {
 	}
 
 	synchronized void changeLease(String src, String dst,
-			String overwrite, String replaceBy) {
+			String overwrite, String replaceBy, boolean isTransactional) {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug(getClass().getSimpleName() + ".changelease: " +
 					" src=" + src + ", dest=" + dst + 
@@ -441,12 +441,12 @@ public class LeaseManager {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
 			}
-			lease.replacePath(oldpath, newpath);
+			lease.replacePath(oldpath, newpath, isTransactional);
 		}
 	}
 	@Deprecated
 	synchronized void changeLeaseOld(String src, String dst,
-			String overwrite, String replaceBy) {
+			String overwrite, String replaceBy, boolean isTransactional) {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug(getClass().getSimpleName() + ".changelease: " +
 					" src=" + src + ", dest=" + dst + 
@@ -463,7 +463,7 @@ public class LeaseManager {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
 			}
-			lease.replacePath(oldpath, newpath);
+			lease.replacePath(oldpath, newpath, isTransactional);
 			sortedLeasesByPath.remove(oldpath);
 			sortedLeasesByPath.put(newpath, lease);
 		}
