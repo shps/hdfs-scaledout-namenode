@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
@@ -205,7 +206,7 @@ public class TestBlockTokenWithDFS {
 
       final NameNode nn = cluster.getNameNode();
       final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
+      final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
 
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
@@ -266,7 +267,7 @@ public class TestBlockTokenWithDFS {
 
       final NameNode nn = cluster.getNameNode();
       final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
+      final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
 
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
@@ -320,7 +321,7 @@ public class TestBlockTokenWithDFS {
       final NameNode nn = cluster.getNameNode();
       final NamenodeProtocols nnProto = nn.getRpcServer();
       final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
+      final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
 
       // set a short token lifetime (1 second) initially
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);

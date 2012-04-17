@@ -1555,7 +1555,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Create next block
     LocatedBlock b = new LocatedBlock(getExtendedBlock(newBlock), targets, fileLength);
-    LOG.debug("about to call BTSM.setBlockToken from FSNamesystem.getAdditionalBlock()");
     blockManager.setBlockToken(b, BlockTokenSecretManager.AccessMode.WRITE);
     return b;
   }

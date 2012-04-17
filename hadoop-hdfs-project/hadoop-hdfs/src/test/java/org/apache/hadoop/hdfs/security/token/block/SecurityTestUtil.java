@@ -33,13 +33,13 @@ public class SecurityTestUtil {
    */
   public static boolean isBlockTokenExpired(Token<BlockTokenIdentifier> token)
       throws IOException {
-    return BlockTokenSecretManager.isTokenExpired(token);
+    return BlockTokenSecretManagerNN.isTokenExpired(token);
   }
 
   /**
    * set access token lifetime.
    */
-  public static void setBlockTokenLifetime(BlockTokenSecretManager handler,
+  public static void setBlockTokenLifetime(BlockTokenSecretManagerNN handler,
       long tokenLifetime) {
     handler.setTokenLifetime(tokenLifetime);
   }

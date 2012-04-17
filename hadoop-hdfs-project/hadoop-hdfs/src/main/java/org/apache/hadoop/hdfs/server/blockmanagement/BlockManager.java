@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -87,7 +87,7 @@ public class BlockManager {
 
   private final DatanodeManager datanodeManager;
   private final HeartbeatManager heartbeatManager;
-  private final BlockTokenSecretManager blockTokenSecretManager;
+  private final BlockTokenSecretManagerNN blockTokenSecretManager;
 
   private volatile long pendingReplicationBlocksCount = 0L;
   private volatile long corruptReplicaBlocksCount = 0L;
@@ -190,7 +190,7 @@ public class BlockManager {
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
 
-    blockTokenSecretManager = createBlockTokenSecretManager(conf);
+    blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
 
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
@@ -235,7 +235,8 @@ public class BlockManager {
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
   }
 
-  private static BlockTokenSecretManager createBlockTokenSecretManager(
+  private static BlockTokenSecretManagerNN createBlockTokenSecretManager(
+      FSNamesystem fsns,
       final Configuration conf) throws IOException {
     final boolean isEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
@@ -256,12 +257,16 @@ public class BlockManager {
         + "=" + updateMin + " min(s), "
         + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY
         + "=" + lifetimeMin + " min(s)");
-    return new BlockTokenSecretManager(true,
+    if(fsns.isWritingNN())
+        return new BlockTokenSecretManagerNN(true,
         updateMin*60*1000L, lifetimeMin*60*1000L);
+    else
+    	return new BlockTokenSecretManagerNN(false, 
+    	updateMin*60*1000L, lifetimeMin*60*1000L);
   }
 
   /** get the BlockTokenSecretManager */
-  BlockTokenSecretManager getBlockTokenSecretManager() {
+  BlockTokenSecretManagerNN getBlockTokenSecretManager() {
     return blockTokenSecretManager;
   }
 
@@ -520,7 +525,7 @@ public class BlockManager {
 
     final long fileLength = fileINode.computeContentSummary().getLength();
     final long pos = fileLength - ucBlock.getNumBytes();
-    return createLocatedBlock(ucBlock, pos, AccessMode.WRITE);
+    return createLocatedBlock(ucBlock, pos, BlockTokenSecretManager.AccessMode.WRITE);
   }
 
   /**
@@ -542,7 +547,7 @@ public class BlockManager {
 
   private List<LocatedBlock> createLocatedBlockList(final BlockInfo[] blocks,
       final long offset, final long length, final int nrBlocksToReturn,
-      final AccessMode mode) throws IOException {
+      final BlockTokenSecretManager.AccessMode mode) throws IOException {
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
     int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
@@ -695,7 +700,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
       }
-      final AccessMode mode = needBlockToken? AccessMode.READ: null;
+      final BlockTokenSecretManager.AccessMode mode = needBlockToken? BlockTokenSecretManager.AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
       System.out.println("");

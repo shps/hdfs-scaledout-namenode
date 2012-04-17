@@ -4,7 +4,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -13,11 +15,14 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import se.sics.clusterj.DelegationKeyTable;
+import se.sics.clusterj.INodeTableSimple;
 
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
+import com.mysql.clusterj.query.Predicate;
+import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
@@ -25,16 +30,20 @@ import com.mysql.clusterj.query.QueryDomainType;
  * @author wmalik
  *
  */
-class SecretHelper {
+public class SecretHelper {
 	
 	private static final Log LOG = LogFactory.getLog(SecretHelper.class);
 	private static final int RETRY_COUNT = 3;
+	
+	public static final short CURR_KEY = 0;
+	public static final short NEXT_KEY = 1;
+	public static final short SIMPLE_KEY = -1;
 	
 	/** Puts a blockKey in the database (handles the serialization of blockKey)
 	 * @param keyId
 	 * @param blockKey
 	 */
-	public static void put(int keyId, BlockKey blockKey) {
+	public static void put(int keyId, BlockKey blockKey, short KEY_TYPE) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -53,7 +62,7 @@ class SecretHelper {
 		while(done == false && tries > 0) {
 			try {	
 				tx.begin();
-				insert(session, keyId, blockKey.getExpiryDate(), keyBytes.getData(), (short)1337);
+				insert(session, keyId, blockKey.getExpiryDate(), keyBytes.getData(), KEY_TYPE);
 				tx.commit();
 				session.flush();
 				done = true;
@@ -79,6 +88,8 @@ class SecretHelper {
 		while(done == false && tries > 0) {
 			try {	
 				DelegationKeyTable dkt = select(session, keyId);
+				if(dkt == null)
+					return null; //BlockTokenSecretManager.retrivePassword expects this
 				BlockKey blockKey = convertToBlockKey(dkt);
 				done = true;
 				return blockKey;
@@ -89,11 +100,164 @@ class SecretHelper {
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());
 				e.printStackTrace();
+				tries--;
 			}
 		}
 		
 		return null;
 	}
+	
+	/** Fetch all keys from database
+	 * @return An array of BlockKey objects
+	 */
+	public static BlockKey[] getAllKeys() {
+		int tries = RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+		while(done == false && tries > 0) {
+			try {	
+				List<DelegationKeyTable> dktList = selectAll(session);
+				if(dktList == null || dktList.size() == 0)
+					throw new NullPointerException("No key found in database");
+				BlockKey[] blockKeys = new BlockKey[dktList.size()];
+				for(int i=0;i<dktList.size(); i++) {
+					blockKeys[i] = convertToBlockKey(dktList.get(i));
+				}
+				done = true;
+				return blockKeys;
+			}
+			catch(ClusterJException e) {
+				LOG.error("ClusterJException in get(): " + e.getMessage());
+				tries--;
+			} catch (IOException e) {
+				LOG.error("IOException in get(): " + e.getMessage());
+				e.printStackTrace();
+				tries--;
+			}
+		}
+		
+		return null;
+		
+	}
+	
+	public static Map<Integer, BlockKey> getAllKeysMap() {
+		Map<Integer, BlockKey> allKeys = new HashMap<Integer, BlockKey>();
+		int tries = RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+		while(done == false && tries > 0) {
+			try {	
+				List<DelegationKeyTable> dktList = selectAll(session);
+				if(dktList == null || dktList.size() == 0)
+					break;
+				for(int i=0;i<dktList.size(); i++) {
+					allKeys.put(dktList.get(i).getKeyId(), convertToBlockKey(dktList.get(i)));
+				}
+				done = true;
+				return allKeys;
+			}
+			catch(ClusterJException e) {
+				LOG.error("ClusterJException in get(): " + e.getMessage());
+				tries--;
+			} catch (IOException e) {
+				LOG.error("IOException in get(): " + e.getMessage());
+				e.printStackTrace();
+				tries--;
+			}
+		}
+		
+		return new HashMap<Integer, BlockKey>();
+	}
+	
+	
+	/** Removes a key from the database
+	 * @param keyId
+	 */
+	public static void removeKey(int keyId) {
+		int tries = RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+		Transaction tx = session.currentTransaction();
+		
+		while(done == false && tries > 0) {
+			try {	
+				tx.begin();
+				delete(session, keyId);
+				tx.commit();
+				session.flush();
+				done = true;
+				return;
+			}
+			catch(ClusterJException e) {
+				if(tx.isActive())
+					tx.rollback();
+				LOG.error(tries + " ClusterJException in removeKey(): " + e.getMessage());
+				tries--;
+			}
+		}
+		
+		throw new RuntimeException("Unable to perform operation in NDB");
+	}
+	
+	
+	/** Fetches the current key from the database
+	 * @return The current key
+	 */
+	public static BlockKey getCurrentKey() {
+		int tries = RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+
+		while(done == false && tries > 0) {
+			try {	
+				DelegationKeyTable dkt = select(session, CURR_KEY);
+				if(dkt == null)
+					return null; //BlockTokenSecretManager.createPassword expects this
+				BlockKey blockKey = convertToBlockKey(dkt);
+				done = true;
+				return blockKey;
+			}
+			catch(ClusterJException e) {
+				LOG.error("ClusterJException in get(): " + e.getMessage());
+				tries--;
+			} catch (IOException e) {
+				LOG.error("IOException in get(): " + e.getMessage());
+				e.printStackTrace();
+				tries--;
+			}
+		}
+		
+		return null;
+	}
+	
+	/** Fetches the next key from the database
+	 * @return the next key
+	 */
+	public static BlockKey getNextKey() {
+		int tries = RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+
+		while(done == false && tries > 0) {
+			try {	
+				DelegationKeyTable dkt = select(session, NEXT_KEY);
+				BlockKey blockKey = convertToBlockKey(dkt);
+				done = true;
+				return blockKey;
+			}
+			catch(ClusterJException e) {
+				LOG.error("ClusterJException in get(): " + e.getMessage());
+				tries--;
+			} catch (IOException e) {
+				LOG.error("IOException in get(): " + e.getMessage());
+				e.printStackTrace();
+				tries--;
+			}
+		}
+		
+		return null;
+	}
+	
 	
 	/** Converts a DelegationKey tuple from NDB into a BlockKey
 	 * @param dkt
@@ -120,6 +284,25 @@ class SecretHelper {
 	 */
 	private static DelegationKeyTable select(Session session, int keyId){
 		return session.find(DelegationKeyTable.class, keyId);
+	}
+	
+	private static DelegationKeyTable select(Session session, short KEY_TYPE){
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<DelegationKeyTable> dobj = qb.createQueryDefinition(DelegationKeyTable.class);
+		PredicateOperand field = dobj.get("keyType");
+		Predicate predicate = field.equal(dobj.param("param1"));
+		dobj.where(predicate);
+		Query<DelegationKeyTable> query = session.createQuery(dobj);
+		query.setParameter("param1", KEY_TYPE);
+		List<DelegationKeyTable> results = query.getResultList();
+		if(results == null || results.size() == 0)
+			return null;
+		else if (results.size() > 1) 
+			throw new RuntimeException("More than 1 keys found for KeyType " 
+									+ KEY_TYPE + " - This should never happen or the world will end" );
+		else {
+			return results.get(0);
+		}
 	}
 	
 	/** Fetches all the rows from DelegationKey table

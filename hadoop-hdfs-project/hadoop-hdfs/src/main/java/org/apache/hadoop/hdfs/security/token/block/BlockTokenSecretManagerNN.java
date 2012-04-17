@@ -36,8 +36,12 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.hdfs.server.namenode.SecretHelper;
 
 /**
+ * This class persists the secret keys (used for Token generation) in NDB 
+ * It should only be used by KTHFS Namenodes 
+ * 
  * BlockTokenSecretManager can be instantiated in 2 modes, master mode and slave
  * mode. Master can generate new block keys and export block keys to slaves,
  * while slaves can only import and use block keys received from master. Both
@@ -45,10 +49,10 @@ import org.apache.hadoop.security.token.Token;
  * is used by NN and slave mode is used by DN.
  */
 @InterfaceAudience.Private
-public class BlockTokenSecretManager extends
+public class BlockTokenSecretManagerNN extends
     SecretManager<BlockTokenIdentifier> {
   public static final Log LOG = LogFactory
-      .getLog(BlockTokenSecretManager.class);
+      .getLog(BlockTokenSecretManagerNN.class);
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
   private final boolean isMaster;
@@ -76,7 +80,7 @@ public class BlockTokenSecretManager extends
    * @param tokenLifetime
    * @throws IOException
    */
-  public BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
+  public BlockTokenSecretManagerNN(boolean isMaster, long keyUpdateInterval,
       long tokenLifetime) throws IOException {
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
@@ -86,7 +90,7 @@ public class BlockTokenSecretManager extends
   }
 
   /** Initialize block keys */
-  private synchronized void generateKeys() {
+  private synchronized void generateKeys() { //CHANGED
     if (!isMaster)
       return;
     /*
@@ -107,35 +111,46 @@ public class BlockTokenSecretManager extends
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
-    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
+    //allKeys.put(currentKey.getKeyId(), currentKey); //TODO: [thesis] write a test for this
+    SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
+    
+    //allKeys.put(nextKey.getKeyId(), nextKey); //TODO: [thesis] write a test for this
+    SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
+    
   }
 
   /** Export block keys, only to be used in master mode */
-  public synchronized ExportedBlockKeys exportKeys() {
+  public synchronized ExportedBlockKeys exportKeys() { //CHANGED
     if (!isMaster)
       return null;
     if (LOG.isDebugEnabled())
       LOG.debug("Exporting access keys");
     return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
-        currentKey, allKeys.values().toArray(new BlockKey[0])); //TODO: fetch from NDB
+            SecretHelper.getCurrentKey(), SecretHelper.getAllKeys()); //TODO: [thesis ]write a test for this //RESUME FROM HERE!
+    //return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
+    //    currentKey, allKeys.values().toArray(new BlockKey[0]));
   }
 
-  private synchronized void removeExpiredKeys() {
+  private synchronized void removeExpiredKeys() { //CHANGED
     long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO: fetch from NDB
+    //for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO: [thesis] write a test
+    Map<Integer, BlockKey> allKeysMap = SecretHelper.getAllKeysMap();
+    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeysMap.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, BlockKey> e = it.next();
       if (e.getValue().getExpiryDate() < now) {
         it.remove();
+        SecretHelper.removeKey(e.getKey().intValue()); //TODO: write a test
       }
     }
+    
   }
 
-  /**
+  /** SHOULD NOT BE USED BY NAMENODE
    * Set block keys, only to be used in slave mode
    */
-  public synchronized void setKeys(ExportedBlockKeys exportedKeys)
+  @Deprecated
+  public synchronized void setKeys(ExportedBlockKeys exportedKeys) //NOT USED by NameNode - REMOVEME
       throws IOException {
     if (isMaster || exportedKeys == null)
       return;
@@ -164,31 +179,39 @@ public class BlockTokenSecretManager extends
   /**
    * Update block keys, only to be used in master mode
    */
-  synchronized boolean updateKeys() throws IOException {
+  synchronized boolean updateKeys() throws IOException { //CHANGED
     if (!isMaster)
       return false;
 
     LOG.info("Updating block keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
-    allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO: send to NDB
+    //allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO: send to NDB
+    //    System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
+    //    currentKey.getKey()));
+    BlockKey currentKeyFromDB = SecretHelper.getCurrentKey();
+    SecretHelper.put(currentKeyFromDB.getKeyId(), new BlockKey(currentKeyFromDB.getKeyId(),
         System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
-        currentKey.getKey()));
+        currentKeyFromDB.getKey()), SecretHelper.SIMPLE_KEY);
+    
     // update the estimated expiry date of new currentKey
-    currentKey = new BlockKey(nextKey.getKeyId(), System.currentTimeMillis()
-        + 2 * keyUpdateInterval + tokenLifetime, nextKey.getKey());
-    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
+    BlockKey nextKeyFromDB = SecretHelper.getNextKey();
+    currentKey = new BlockKey(nextKeyFromDB.getKeyId(), System.currentTimeMillis()
+        + 2 * keyUpdateInterval + tokenLifetime, nextKeyFromDB.getKey());
+    //allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
+    SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY);
     // generate a new nextKey
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3 
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
+    //allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
+    SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
     return true;
   }
 
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
-      EnumSet<AccessMode> modes) throws IOException {
+      EnumSet<BlockTokenSecretManager.AccessMode> modes) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
     return generateToken(userID, block, modes); 
@@ -196,7 +219,7 @@ public class BlockTokenSecretManager extends
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
-      ExtendedBlock block, EnumSet<AccessMode> modes) throws IOException {
+      ExtendedBlock block, EnumSet<BlockTokenSecretManager.AccessMode> modes) throws IOException {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
@@ -296,7 +319,8 @@ public class BlockTokenSecretManager extends
   protected byte[] createPassword(BlockTokenIdentifier identifier) {
     BlockKey key = null;
     synchronized (this) {
-      key = currentKey;
+      //key = currentKey; //TODO: send to NDB
+    	key = SecretHelper.getCurrentKey();
     }
     if (key == null)
       throw new IllegalStateException("currentKey hasn't been initialized.");
@@ -326,7 +350,8 @@ public class BlockTokenSecretManager extends
     
     BlockKey key = null;
     synchronized (this) {
-      key = allKeys.get(identifier.getKeyId()); //TODO: get from NDB
+      //key = allKeys.get(identifier.getKeyId()); //TODO: get from NDB
+    	key = SecretHelper.get(identifier.getKeyId());
     }
     if (key == null) {
       throw new InvalidToken("Can't re-compute password for "

@@ -53,7 +53,6 @@ public class BlockPoolTokenSecretManager extends
   }
 
   synchronized BlockTokenSecretManager get(String bpid) {
-	  LOG.debug("get() BPTSM");
     BlockTokenSecretManager secretMgr = map.get(bpid);
     if (secretMgr == null) {
       throw new IllegalArgumentException("Block pool " + bpid
