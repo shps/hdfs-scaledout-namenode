@@ -66,7 +66,6 @@ public class BlockTokenSecretManagerNN extends
   private int serialNo = new SecureRandom().nextInt();
   private BlockKey currentKey;
   private BlockKey nextKey;
-  private Map<Integer, BlockKey> allKeys;
 
   public static enum AccessMode {
     READ, WRITE, COPY, REPLACE
@@ -85,7 +84,6 @@ public class BlockTokenSecretManagerNN extends
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
-    this.allKeys = new HashMap<Integer, BlockKey>();
     generateKeys();
   }
 
@@ -111,10 +109,7 @@ public class BlockTokenSecretManagerNN extends
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    //allKeys.put(currentKey.getKeyId(), currentKey); //TODO: [thesis] write a test for this
     SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
-    
-    //allKeys.put(nextKey.getKeyId(), nextKey); //TODO: [thesis] write a test for this
     SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
     
   }
@@ -126,43 +121,21 @@ public class BlockTokenSecretManagerNN extends
     if (LOG.isDebugEnabled())
       LOG.debug("Exporting access keys");
     return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
-            SecretHelper.getCurrentKey(), SecretHelper.getAllKeys()); //TODO: [thesis ]write a test for this //RESUME FROM HERE!
-    //return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
-    //    currentKey, allKeys.values().toArray(new BlockKey[0]));
+            SecretHelper.getCurrentKey(), SecretHelper.getAllKeys());
   }
 
   private synchronized void removeExpiredKeys() { //CHANGED
     long now = System.currentTimeMillis();
-    //for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO: [thesis] write a test
     Map<Integer, BlockKey> allKeysMap = SecretHelper.getAllKeysMap();
     for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeysMap.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, BlockKey> e = it.next();
       if (e.getValue().getExpiryDate() < now) {
         it.remove();
-        SecretHelper.removeKey(e.getKey().intValue()); //TODO: write a test
+        SecretHelper.removeKey(e.getKey().intValue());
       }
     }
     
-  }
-
-  /** SHOULD NOT BE USED BY NAMENODE
-   * Set block keys, only to be used in slave mode
-   */
-  @Deprecated
-  public synchronized void setKeys(ExportedBlockKeys exportedKeys) //NOT USED by NameNode - REMOVEME
-      throws IOException {
-    if (isMaster || exportedKeys == null)
-      return;
-    LOG.info("Setting block keys");
-    removeExpiredKeys();
-    this.currentKey = exportedKeys.getCurrentKey();
-    BlockKey[] receivedKeys = exportedKeys.getAllKeys();
-    for (int i = 0; i < receivedKeys.length; i++) {
-      if (receivedKeys[i] == null)
-        continue;
-      this.allKeys.put(receivedKeys[i].getKeyId(), receivedKeys[i]); //[thesis] should be local only
-    }
   }
 
   /**
@@ -186,9 +159,6 @@ public class BlockTokenSecretManagerNN extends
     LOG.info("Updating block keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
-    //allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO: send to NDB
-    //    System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
-    //    currentKey.getKey()));
     BlockKey currentKeyFromDB = SecretHelper.getCurrentKey();
     SecretHelper.put(currentKeyFromDB.getKeyId(), new BlockKey(currentKeyFromDB.getKeyId(),
         System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
@@ -198,13 +168,11 @@ public class BlockTokenSecretManagerNN extends
     BlockKey nextKeyFromDB = SecretHelper.getNextKey();
     currentKey = new BlockKey(nextKeyFromDB.getKeyId(), System.currentTimeMillis()
         + 2 * keyUpdateInterval + tokenLifetime, nextKeyFromDB.getKey());
-    //allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
     SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY);
     // generate a new nextKey
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3 
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    //allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
     SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
     return true;
   }
@@ -319,7 +287,6 @@ public class BlockTokenSecretManagerNN extends
   protected byte[] createPassword(BlockTokenIdentifier identifier) {
     BlockKey key = null;
     synchronized (this) {
-      //key = currentKey; //TODO: send to NDB
     	key = SecretHelper.getCurrentKey();
     }
     if (key == null)
@@ -350,7 +317,6 @@ public class BlockTokenSecretManagerNN extends
     
     BlockKey key = null;
     synchronized (this) {
-      //key = allKeys.get(identifier.getKeyId()); //TODO: get from NDB
     	key = SecretHelper.get(identifier.getKeyId());
     }
     if (key == null) {

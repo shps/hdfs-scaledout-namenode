@@ -3,6 +3,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -265,10 +267,11 @@ public class SecretHelper {
 	 * @throws IOException
 	 */
 	private static BlockKey convertToBlockKey(DelegationKeyTable dkt) throws IOException {
-		DataInputBuffer keyBytes = new DataInputBuffer();
-		keyBytes.read(dkt.getKeyBytes());
+		byte[] keyBytes = dkt.getKeyBytes();
+		DataInputStream dis =
+		        new DataInputStream(new ByteArrayInputStream(keyBytes));
 		BlockKey bKey = new BlockKey();
-		bKey.readFields(keyBytes);
+		bKey.readFields(dis);
 		return bKey;
 	}
 	

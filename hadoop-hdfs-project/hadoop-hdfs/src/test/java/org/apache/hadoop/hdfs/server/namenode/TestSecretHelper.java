@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +58,7 @@ public class TestSecretHelper {
 
   
   @Test
-  public void testCrudOperationsForKeys() throws ClusterJException, IOException {
+  public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
 	  BlockTokenSecretManagerNN tokenMgr = 
 			  new BlockTokenSecretManagerNN(true, 60*60*1000L, 60*60*1000L); //60 minutes
 	  

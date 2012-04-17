@@ -108,6 +108,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
     conf.setBoolean("dfs.support.append", true);
+    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, "kthfs-getblocks");
     return conf;
   }
   
@@ -122,7 +123,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
 }
   
    
-  @Test
+  //@Test
   public void testReadNnWithoutTokens() throws Exception{
 	  
 	  MiniDFSCluster cluster = null;
@@ -169,7 +170,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
   //      java.io.IOException: Cannot lock storage 
   //      /home/wmalik/hadoopnn/kthfs/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs/rName1. 
   //      The directory is already locked.
-  //@Test
+  @Test
   public void testReadNnWithTokens() throws Exception{
 	  
 	  MiniDFSCluster cluster = null;

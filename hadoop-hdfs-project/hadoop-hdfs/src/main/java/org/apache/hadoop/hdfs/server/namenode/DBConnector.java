@@ -38,13 +38,17 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
  *    and the read/write locks in FSNamesystem and 
  *    FSDirectory will make sure this stays safe. * 
  */
-public class DBConnector {
+public class DBConnector { //TODO: [W] the methods and variables in this class should not be static
 	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
 	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
 	static final Log LOG = LogFactory.getLog(DBConnector.class);
 	
 	public static void setConfiguration (Configuration conf){
+		if(sessionFactory != null) {
+			LOG.warn("SessionFactory is already initialized");
+			return; //[W] workaround to prevent recreation of SessionFactory for the time being
+		}
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
 		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
 		LOG.info("Database connect string: "+ conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));

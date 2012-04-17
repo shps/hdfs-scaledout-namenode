@@ -321,6 +321,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
+	DBConnector.setConfiguration(conf);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
@@ -330,7 +331,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.registerMBean(); // register the MBean for the FSNamesystemState
     
     if(NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
-      DBConnector.setConfiguration(conf);
       if (isWritingNN()) {
         INodeHelper.initialize(blockManager.getDatanodeManager());
         BlocksHelper.initialize(blockManager.getDatanodeManager());
@@ -365,7 +365,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   @Override
   public boolean isWritingNN() {
-      return nameNode.isWritingNN();
+      return nameNode == null ? false : nameNode.isWritingNN(); //FIXME: find out a better way of handling namenode format
   }
   
   /**
