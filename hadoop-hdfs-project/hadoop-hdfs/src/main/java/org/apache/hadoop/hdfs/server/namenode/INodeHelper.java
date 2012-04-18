@@ -415,7 +415,21 @@ public class INodeHelper {
      * @param inodeid
      * @param modTime
      */
-    public static void updateModificationTime(long inodeid, long modTime) {
+    public static void updateModificationTime(long inodeid, long modTime, 
+            boolean isTransactional) {
+        DBConnector.checkTransactionState(isTransactional);
+        
+        if (isTransactional)
+            updateModificationTimeInternal(DBConnector.obtainSession(), inodeid, modTime);
+        else
+            updateModificationTimeWithTransaction(inodeid, modTime);
+    }
+    
+    /**Updates the modification time of an inode in the database
+     * @param inodeid
+     * @param modTime
+     */
+    public static void updateModificationTimeWithTransaction(long inodeid, long modTime) {
         boolean done = false;
         int tries = RETRY_COUNT;
 
@@ -436,7 +450,6 @@ public class INodeHelper {
                 tries--;
             }
         }
-
     }
 
     /**Internal function for updating the modification time of an inode in the database
@@ -484,11 +497,58 @@ public class INodeHelper {
      * @param nsDelta
      * @param dsDelta 
      */
-    public static void updateNumItemsInTree(long inodeId, long nsDelta, long dsDelta)
+    public static void updateNumItemsInTree(INodeDirectoryWithQuota inode, long nsDelta, long dsDelta, boolean isTransactional)
     {
-        updateNumItemsInTreeInternal(DBConnector.obtainSession(), inodeId, nsDelta, dsDelta);
+        DBConnector.checkTransactionState(isTransactional);
+        inode.updateNumItemsInTree(nsDelta, dsDelta);
+        if (isTransactional)
+            updateNumItemsInTreeInternal(DBConnector.obtainSession(),
+                    inode.getID(), inode.getNsCount(), inode.getDsCount());
+        else
+            updateNumItemsInTreeWithTransaction(inode.getID(), 
+                    inode.getNsCount(), inode.getDsCount());
+    }
+    
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    private static void updateNumItemsInTreeWithTransaction(long inodeId, long nsDelta, long dsDelta) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                updateNumItemsInTreeInternal(session, inodeId, nsDelta, dsDelta);
+                tx.commit();
+                session.flush();
+                done = true;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
     }
 
+    /**
+     * Updates number of items and diskspace of the inode directory in DB.
+     * @param session
+     * @param inodeId
+     * @param nsDelta
+     * @param dsDelta 
+     */
+    private static void updateNumItemsInTreeInternal(Session session, long inodeId, long nsDelta, long dsDelta) {
+        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
+        inodet.setNSCount(nsDelta);
+        inodet.setDSCount(dsDelta);
+        session.updatePersistent(inodet);
+    }
+    
     /**
      * Uses DB to set the permission.
      * @param inode
@@ -640,7 +700,23 @@ public class INodeHelper {
     /** Deletes an inode from the database
      * @param inodeid the inodeid to remove
      */
-    public static /*synchronized*/ void removeChild(long inodeid) {
+    public static void removeChild(long inodeid, boolean isTransactional) {
+        Session session = DBConnector.obtainSession();
+        boolean isActive = session.currentTransaction().isActive();
+        assert isActive == isTransactional : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+        
+        if (isTransactional)
+           deleteINodeTableInternal(session, inodeid);
+        else
+           removeChildWithTransaction(inodeid);
+    }
+    
+    /** Deletes an inode from the database
+     * @param inodeid the inodeid to remove
+     */
+    private static void removeChildWithTransaction(long inodeid) {
         boolean done = false;
         int tries = RETRY_COUNT;
 
@@ -663,7 +739,6 @@ public class INodeHelper {
                 tries--;
             }
         }
-
     }
 
     /** Updates the header of an inode in database
@@ -853,20 +928,7 @@ public class INodeHelper {
         }
         return inodetSorted;
     }
-
-    /**
-     * Updates number of items and diskspace of the inode directory in DB.
-     * @param session
-     * @param inodeId
-     * @param nsDelta
-     * @param dsDelta 
-     */
-    private static void updateNumItemsInTreeInternal(Session session, long inodeId, long nsDelta, long dsDelta) {
-        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
-        inodet.setNSCount(nsDelta);
-        inodet.setDSCount(dsDelta);
-        session.updatePersistent(inodet);
-    }
+    
 }
 
 //TODO: replace all syserr with LOG.error

@@ -281,6 +281,28 @@ public class LeaseHelper {
 		}
 
 	}
+        
+        /**
+	 * Removes a path with holderID=holderID and path=src
+	 * @param holderID
+	 * @param src
+	 * @return true if a row was deleted, false if row was not found, or if the database is down
+	 */
+	public static boolean removePath(int holderID, String src, boolean isTransactional) {
+                boolean found = false;
+                Session session = DBConnector.obtainSession();
+                boolean isActive = session.currentTransaction().isActive();
+                assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+
+                if (isTransactional)
+                    found = deleteLeasePathsInternal(session, holderID, src);
+                else
+                    found = removePathWithTransaction(holderID, src);
+
+                return found;
+	}
 
 	/**
 	 * Removes a path with holderID=holderID and path=src
@@ -288,7 +310,7 @@ public class LeaseHelper {
 	 * @param src
 	 * @return true if a row was deleted, false if row was not found, or if the database is down
 	 */
-	public static boolean removePath(int holderID, String src) {
+	public static boolean removePathWithTransaction(int holderID, String src) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		boolean found = false;
@@ -545,6 +567,7 @@ public class LeaseHelper {
 	 * @return true if a row was deleted, false if row was not found
 	 */
 	private static boolean deleteLeasePathsInternal(Session session, int holderID, String src) {
+            //[Hooman]: Is this necessary to get the leasePathTables first and then delete?
 		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
 		for(LeasePathsTable leasePath : leasePathTables) {
 			if(leasePath.getPath().equals(src)) {

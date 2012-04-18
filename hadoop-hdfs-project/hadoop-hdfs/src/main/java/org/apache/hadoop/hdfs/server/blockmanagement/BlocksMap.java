@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.GSet;
+import org.apache.hadoop.hdfs.util.GSetDB;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 import org.mortbay.log.Log;
 
@@ -60,7 +62,7 @@ class BlocksMap {
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
   
-  private GSet<Block, BlockInfo> blocks;
+  private GSetDB<Block, BlockInfo> blocks;
 
   BlocksMap(final float loadFactor) {
     this.capacity = computeCapacity();
@@ -212,17 +214,17 @@ class BlocksMap {
    * @param newBlock - block for replacement
    * @return new block
    */
-  BlockInfo replaceBlock(BlockInfo newBlock) {
+  BlockInfo replaceBlock(BlockInfo newBlock, boolean isTransactional) {
 	  
     BlockInfo currentBlock = blocks.get(newBlock);
     assert currentBlock != null : "the block if not in blocksMap";
     // replace block in data-node lists
     for(int idx = currentBlock.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = currentBlock.getDatanode(idx);
-      dn.replaceBlock(currentBlock, newBlock);
+      dn.replaceBlock(currentBlock, newBlock, isTransactional);
     }
     // replace block in the map itself
-    blocks.put(newBlock);
+    blocks.put(newBlock, isTransactional);
     return newBlock;
   }
 }

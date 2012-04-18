@@ -153,4 +153,19 @@ public class DBConnector {
             
             return false;
         }
+        
+        public static boolean checkTransactionState(boolean isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            boolean isValid = isActive == isTransactional;
+            assert isValid : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+            if (!isValid)
+                LOG.error("Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional);
+            
+            return isValid;
+        }
 }

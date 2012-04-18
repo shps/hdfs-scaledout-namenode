@@ -47,7 +47,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
  *       (2) implementing {@link LinkedElement} interface.
  */
 @InterfaceAudience.Private
-public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
+public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
+
 	/**
 	 * Elements of {@link LightWeightGSet}.
 	 */
@@ -151,7 +152,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 		return get(key) != null;
 	}
 
-	@Override
+
 	/*public E put_old(final E element) {
 		//validate element
 		if (element == null) {
@@ -180,13 +181,13 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 	}*/
 
 	/*KTHFS method for putting a BlockInfo into the database*/
-	public E put(final E element) {
+	public E putOld(final E element) {
 		
 		//TODO: use functions from BlocksHelper
 		BlockInfo binfo = (BlockInfo)element;
 		
 		BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
-		BlocksHelper.putBlockInfo(binfo);
+		BlocksHelper.putBlockInfo(binfo, false);
 		if(existing == null) {
 			return null;
 		}
@@ -194,7 +195,26 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 			return (E)existing;
 		}
 	}
+        
+        @Override
+        public E put(E element, boolean isTransactional) {
+            BlockInfo binfo = (BlockInfo)element;
+            E existing = put(element);
+            BlocksHelper.putBlockInfo(binfo, isTransactional);
+            return existing;
+        }
 
+        @Override
+        public E put(final E element) {
+                BlockInfo binfo = (BlockInfo)element;
+		BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
+		if(existing == null) {
+			return null;
+		}
+		else {
+			return (E)existing;
+		}
+	}
 
 	/**
 	 * Remove the element corresponding to the key,

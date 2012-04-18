@@ -151,9 +151,9 @@ public class LeaseManager {
 	/**
 	 * Remove the specified lease and src
 	 */
-	synchronized void removeLease(Lease lease, String src) {
+	synchronized void removeLease(Lease lease, String src, boolean isTransactional) {
 		//sortedLeasesByPath.remove(src);
-		if (!lease.removePath(src)) {
+		if (!lease.removePath(src, isTransactional)) {
 			LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
 		}
 
@@ -164,7 +164,7 @@ public class LeaseManager {
 	@Deprecated
 	synchronized void removeLeaseOld(Lease lease, String src) {
 		sortedLeasesByPath.remove(src);
-		if (!lease.removePath(src)) {
+		if (!lease.removePath(src, false)) {
 			LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
 		}
 
@@ -179,10 +179,10 @@ public class LeaseManager {
 	/**
 	 * Remove the lease for the specified holder and src
 	 */
-	synchronized void removeLease(String holder, String src) {
+	synchronized void removeLease(String holder, String src, boolean isTransactional) {
 		Lease lease = getLease(holder);
 		if (lease != null) {
-			removeLease(lease, src);
+			removeLease(lease, src, isTransactional);
 		}
 	}
 
@@ -192,7 +192,8 @@ public class LeaseManager {
 	synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
 		assert newHolder != null : "new lease holder is null";
 		if (lease != null) {
-			removeLease(lease, src);
+                    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+			removeLease(lease, src, false);
 		}
 		return addLease(newHolder, src);
 	}
@@ -346,8 +347,8 @@ public class LeaseManager {
 		@Deprecated
 		boolean hasPathOld() {return !paths.isEmpty();}
 
-		boolean removePath(String src) {
-			return LeaseHelper.removePath(this.holderID, src);
+		boolean removePath(String src, boolean isTransactional) {
+			return LeaseHelper.removePath(this.holderID, src, isTransactional);
 		}
 		@Deprecated
 		boolean removePathOld(String src) {
@@ -476,7 +477,8 @@ public class LeaseManager {
 				LOG.debug(LeaseManager.class.getSimpleName()
 						+ ".removeLeaseWithPrefixPath: entry=" + entry);
 			}
-			removeLease(entry.getValue(), entry.getKey());    
+                        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+			removeLease(entry.getValue(), entry.getKey(), false);    
 		}
 	}
 	@Deprecated
@@ -486,7 +488,7 @@ public class LeaseManager {
 				LOG.debug(LeaseManager.class.getSimpleName()
 						+ ".removeLeaseWithPrefixPath: entry=" + entry);
 			}
-			removeLease(entry.getValue(), entry.getKey());    
+			removeLease(entry.getValue(), entry.getKey(), false);    
 		}
 	}
 
@@ -584,7 +586,8 @@ public class LeaseManager {
 			}
 
 			for(String p : removing) {
-				removeLease(oldest, p);
+                            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+				removeLease(oldest, p, false);
 			}
 		}
 	}
@@ -623,7 +626,7 @@ public class LeaseManager {
 			}
 
 			for(String p : removing) {
-				removeLease(oldest, p);
+				removeLease(oldest, p, false);
 			}
 		}
 	}

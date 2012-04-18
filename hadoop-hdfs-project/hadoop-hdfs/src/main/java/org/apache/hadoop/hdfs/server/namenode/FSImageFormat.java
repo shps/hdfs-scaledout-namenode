@@ -423,7 +423,8 @@ class FSImageFormat {
           throw new IOException("Found lease for directory " + path);
         }
         INodeFile oldnode = (INodeFile) old;
-        fsDir.replaceNode(path, oldnode, cons);
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        fsDir.replaceNode(path, oldnode, cons, false);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }

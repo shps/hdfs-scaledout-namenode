@@ -414,8 +414,8 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 		return buf.toString();
 	}
 
-	boolean removeNode() {
-		INodeHelper.removeChild(getID());
+	boolean removeNode(boolean isTransactional) {
+		INodeHelper.removeChild(getID(), isTransactional);
 		return true;		
 	}
 

@@ -89,7 +89,8 @@ class INodeDirectory extends INode {
 		assert getChildrenFromDB() != null;
 
 			INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
-			INodeHelper.removeChild(node.getID());
+                        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+			INodeHelper.removeChild(node.getID(), false);
 			return removedNode;
 	}
 
@@ -399,7 +400,8 @@ class INodeDirectory extends INode {
 	 */
 	<T extends INode> T addChild(final T node, boolean inheritPermission,
 			boolean setModTime,
-			boolean reuseID/*[W] added to reuse the same ID for move operations*/) {
+			boolean reuseID/*[W] added to reuse the same ID for move operations*/,
+                        boolean isTransactional) {
 		if (inheritPermission) {
 			FsPermission p = getFsPermission();
 			//make sure the  permission has wx for the user
@@ -416,7 +418,8 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeHelper.updateModificationTime(this.id, node.getModificationTime());
+		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), 
+                        isTransactional);
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
@@ -434,9 +437,9 @@ class INodeDirectory extends INode {
 	 * Equivalent to addNode(path, newNode, false).
 	 * @see #addNode(String, INode, boolean)
 	 */
-	<T extends INode> T addNode(String path, T newNode) 
+	<T extends INode> T addNode(String path, T newNode, boolean isTransactional) 
 			throws FileNotFoundException, UnresolvedLinkException {
-		return addNode(path, newNode, false);
+		return addNode(path, newNode, false, isTransactional);
 	}
 	/**
 	 * Add new INode to the file tree.
@@ -451,11 +454,11 @@ class INodeDirectory extends INode {
 	 * is not a directory.
 	 */
 	<T extends INode> T addNode(String path, T newNode, boolean inheritPermission
-			) throws FileNotFoundException, UnresolvedLinkException  {
+			, boolean isTransactional) throws FileNotFoundException, UnresolvedLinkException  {
 		byte[][] pathComponents = getPathComponents(path);
 
 		if(addToParent(pathComponents, newNode,
-				inheritPermission, true) == null)
+				inheritPermission, true, isTransactional) == null)
 			return null;
 		return newNode;
 	}
@@ -478,8 +481,8 @@ class INodeDirectory extends INode {
 			UnresolvedLinkException {
 		// insert into the parent children list
 		newNode.name = localname;
-
-		if(parent.addChild(newNode, inheritPermission, propagateModTime, false) == null)
+                //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, false, false) == null)
 			return null;
 		return parent;
 	}
@@ -516,7 +519,8 @@ class INodeDirectory extends INode {
 	INodeDirectory addToParent( byte[][] pathComponents,
 			INode newNode,
 			boolean inheritPermission,
-			boolean propagateModTime
+			boolean propagateModTime, 
+                        boolean isTransactional
 			) throws FileNotFoundException, 
 			UnresolvedLinkException {
 
@@ -527,7 +531,8 @@ class INodeDirectory extends INode {
 		// insert into the parent children list
 		INodeDirectory parent = getParent(pathComponents);
 
-		if(parent.addChild(newNode, inheritPermission, propagateModTime, true) == null)
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, true,
+                        isTransactional) == null)
 			return null;
 		return parent;
 	}

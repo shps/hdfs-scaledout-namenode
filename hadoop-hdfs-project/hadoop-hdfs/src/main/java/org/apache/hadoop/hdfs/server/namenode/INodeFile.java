@@ -217,8 +217,8 @@ public class INodeFile extends INode {
 	 * Set file block - KTHFS
 	 */
 
-	public void setBlock(int idx, BlockInfo blk) {
-		BlocksHelper.updateIndex(idx, blk);
+	public void setBlock(int idx, BlockInfo blk, boolean isTransactional) {
+		BlocksHelper.updateIndex(idx, blk, isTransactional);
 	}
 
 	public void setBlocksList(BlockInfo[] blklist) {
@@ -238,8 +238,8 @@ public class INodeFile extends INode {
 		}
 		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
 		blocks = null;
-
-		INodeHelper.removeChild(super.id); //TODO, why super.id?
+                //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+		INodeHelper.removeChild(super.id, false); //TODO, why super.id?
 		return 1;
 	}
 	

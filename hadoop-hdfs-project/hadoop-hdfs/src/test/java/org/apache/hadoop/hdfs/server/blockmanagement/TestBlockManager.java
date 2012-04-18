@@ -326,7 +326,7 @@ public class TestBlockManager {
     BlockInfo blockInfo = new BlockInfo(block, 3);
 
     for (DatanodeDescriptor dn : nodes) {
-      blockInfo.addNode(dn);
+      blockInfo.addNode(dn, false);
     }
     return blockInfo;
   }

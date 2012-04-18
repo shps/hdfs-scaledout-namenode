@@ -51,6 +51,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		super(blk);
 		this.inode = null;
 
+                //[Hooman]: What does these four lines mean to do?!!
 		this.getBlockId(); 
 		this.getBlockName();
 		this.getNumBytes(); 
@@ -74,7 +75,8 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	public void setINode(INodeFile inode) {
 		this.inode = inode;
 		if(inode!=null) //FIXME: W: no need for this check 
-			BlocksHelper.updateBlockInfoInDB(inode.getID(), this);
+                    //[Hooman]TODO: add isTransactional param whenever you reach this method from the callers.
+			BlocksHelper.updateBlockInfoInDB(inode.getID(), this, false); 
 	}
 	
 	public void setINodeWithoutTransaction(INodeFile inode) {	
@@ -90,10 +92,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 				return node;
 	}
 
-	void setDatanode(int index, DatanodeDescriptor node) {
+	void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
 		assert index >= 0;
 		if(node != null)
-			BlocksHelper.setDatanode(this.getBlockId(), index, node.name);
+			BlocksHelper.setDatanode(this.getBlockId(), index, node.name, isTransactional);
 	}
 
 	/** Checks the size of the triplets and how many more, we can add (in theory) */
@@ -122,13 +124,13 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	  /**
 	* Add data-node this block belongs to.
 	*/
-	  public boolean addNode(DatanodeDescriptor node) {
+	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
 	    if(findDatanode(node) >= 0) // the node is already there
 	      return false;
 
 	    // find the last available datanode index
 	    int lastNode = ensureCapacity(1);
-	    setDatanode(lastNode, node);
+	    setDatanode(lastNode, node, isTransactional);
 	    
 	    return true;
 	  }

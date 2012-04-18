@@ -66,7 +66,8 @@ public class INodeSymlink extends INode {
   int collectSubtreeBlocksAndClear(List<Block> v) {
 	// [Stateless] Remove me from DB
 	//INodeHelper.removeChild(this);
-	  INodeHelper.removeChild(this.id);
+      //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+	  INodeHelper.removeChild(this.id, false);
     return 1;
   }
 

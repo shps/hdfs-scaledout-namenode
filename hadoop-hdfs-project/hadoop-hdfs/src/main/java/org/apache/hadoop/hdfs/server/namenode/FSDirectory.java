@@ -311,7 +311,8 @@ public class FSDirectory implements Closeable {
           // Add file->block mapping
           INodeFile newF = (INodeFile)newNode;
           for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
+            //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF), false);
           }
         }
       } catch (IOException e) {
@@ -344,7 +345,8 @@ public class FSDirectory implements Closeable {
         INodeFile newF = (INodeFile)newNode;
         BlockInfo[] blocks = newF.getBlocks();
         for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
+            //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF), false);
         }
       }
     } finally {
@@ -371,8 +373,9 @@ public class FSDirectory implements Closeable {
         (INodeFileUnderConstruction)inodes[inodes.length-1];
 
       // check quota limits and updated space consumed
+      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(inodes, inodes.length-1, 0,
-          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true);
+          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, false);
 
       // associate new last block for the file
       BlockInfoUnderConstruction blockInfo =
@@ -419,13 +422,14 @@ public class FSDirectory implements Closeable {
   /**
    * Close file.
    */
-  void closeFile(String path, INodeFile file) {
+  void closeFile(String path, INodeFile file, boolean isTransactional) {
     waitForReady();
     long now = now();
     writeLock();
     try {
       // file is closed
       file.setModificationTimeForce(now);
+      INodeHelper.updateModificationTime(file.getID(), now, isTransactional);
       //fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
@@ -460,8 +464,9 @@ public class FSDirectory implements Closeable {
 
       // update space consumed
       INode[] pathINodes = getExistingPathINodes(path);
+      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(pathINodes, pathINodes.length-1, 0,
-          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
+          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true, false);
     } finally {
       writeUnlock();
     }
@@ -861,7 +866,7 @@ public class FSDirectory implements Closeable {
 
     // check disk quota
     long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
-    updateCount(inodes, inodes.length-1, 0, dsDelta, true); 
+    updateCount(inodes, inodes.length-1, 0, dsDelta, true, isTransactional); 
 
     fileNode.setReplication(replication);
     INodeHelper.updateHeader(fileNode.getID(), fileNode.getHeader(), isTransactional);
@@ -1200,14 +1205,15 @@ public class FSDirectory implements Closeable {
    /**
    * Replaces the specified inode with the specified one.
    */
-  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
+  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode,
+          boolean isTransactional)
       throws IOException, UnresolvedLinkException {    
     writeLock();
     try {
       //
       // Remove the node from the namespace 
       //
-      if (!oldnode.removeNode()) {
+      if (!oldnode.removeNode(isTransactional)) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
                                      "failed to remove " + path);
         throw new IOException("FSDirectory.replaceNode: " +
@@ -1217,7 +1223,7 @@ public class FSDirectory implements Closeable {
        //Currently oldnode and newnode are assumed to contain the same
        //* blocks. Otherwise, blocks need to be removed from the blocksMap.
        
-      rootDir.addNode(path, newnode); 
+      rootDir.addNode(path, newnode, isTransactional); 
 
       /* [W] No need to patch the blocks in the db because we are resuing the inodeid
       int index = 0;
@@ -1416,7 +1422,7 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    * @throws FileNotFound if path does not exist.
    */
-  void updateSpaceConsumed(String path, long nsDelta, long dsDelta)
+  void updateSpaceConsumed(String path, long nsDelta, long dsDelta, boolean isTransactional)
                                          throws QuotaExceededException,
                                                 FileNotFoundException,
                                                 UnresolvedLinkException {
@@ -1428,7 +1434,7 @@ public class FSDirectory implements Closeable {
         throw new FileNotFoundException(path + 
                                         " does not exist under rootDir.");
       }
-      updateCount(inodes, len-1, nsDelta, dsDelta, true);
+      updateCount(inodes, len-1, nsDelta, dsDelta, true, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -1444,7 +1450,8 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    */
   private void updateCount(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta, boolean checkQuota)
+                           long nsDelta, long dsDelta, boolean checkQuota, 
+                           boolean isTransactional)
                            throws QuotaExceededException {
     assert hasWriteLock();
     if (!ready) {
@@ -1460,9 +1467,8 @@ public class FSDirectory implements Closeable {
     
     for(int i = 0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.updateNumItemsInTree(nsDelta, dsDelta);
-        INodeHelper.updateNumItemsInTree(node.getID(), node.getNsCount(), node.getDsCount());
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i];
+        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
       }
     }
   }
@@ -1507,7 +1513,8 @@ public class FSDirectory implements Closeable {
                            long nsDelta, long dsDelta) {
     assert hasWriteLock();
     try {
-      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false);
+        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
     }
@@ -1832,18 +1839,19 @@ public class FSDirectory implements Closeable {
     if (childDiskspace < 0) {
       childDiskspace = counts.getDsCount();
     }
-    
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
     updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace,
-        checkQuota);
+        checkQuota, false);
     if (pathComponents[pos-1] == null) {
       throw new NullPointerException("Panic: parent does not exist");
     }
-    
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
-        child, inheritPermission, true, reuseID);
+        child, inheritPermission, true, reuseID, false);
     if (addedNode == null) {
+        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(pathComponents, pos, -counts.getNsCount(), 
-          -childDiskspace, true);
+          -childDiskspace, true, false);
     }
     
     return addedNode;

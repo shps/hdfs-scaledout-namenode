@@ -66,7 +66,7 @@ public class TestLeaseHelper {
           assertEquals("holder not persisted correctly", holder, lease.getHolder());
 	  assertTrue("path not persisted correctly", lease.getPathsLocal().contains(src));
           
-	  leaseManager.removeLease(lease, src);
+	  leaseManager.removeLease(lease, src, false);
 	  
 	  Lease leaseByPath = leaseManager.getLeaseByPath(src);
 	  assertNull("lease not removed from database", leaseByPath);

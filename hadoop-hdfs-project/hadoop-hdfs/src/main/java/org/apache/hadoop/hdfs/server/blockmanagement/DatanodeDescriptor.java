@@ -220,8 +220,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Add datanode to the block.
    * Add block to the head of the list of blocks belonging to the data-node.
    */
-  public boolean addBlock(BlockInfo b) {
-    if(!b.addNode(this))
+  public boolean addBlock(BlockInfo b, boolean isTransactional) {
+    if(!b.addNode(this, isTransactional))
       return false;
     // add to the head of the data-node list
     //blockList = b.listInsert(blockList, this);
@@ -258,10 +258,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param newBlock - a replacement block
    * @return the new block
    */
-  public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
+  public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock, boolean isTransactional) {
     boolean done = removeBlock(oldBlock);
     assert done : "Old block should belong to the data-node when replacing";
-    done = addBlock(newBlock);
+    done = addBlock(newBlock, isTransactional);
     assert done : "New block should not belong to the data-node when replacing";
     return newBlock;
   }

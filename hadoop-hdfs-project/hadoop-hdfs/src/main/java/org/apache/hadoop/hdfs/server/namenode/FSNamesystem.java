@@ -1391,8 +1391,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         cons.setLocalName(node.getLocalName()); //for simple
         cons.setParentIDLocal(node.getParentIDLocal()); //for simple
         cons.setID(node.getID()); //for simple
-        
-        dir.replaceNode(src, node, cons);
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        dir.replaceNode(src, node, cons, false);
         leaseManager.addLease(cons.getClientName(), src);
 
         // convert last block to under-construction
@@ -1634,7 +1634,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
       // commit the last block and complete it if it has minimum replicas
-      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous));
+      //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous), false);
 
       //
       // If we fail this, bad things happen!
@@ -1805,22 +1806,66 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *         (e.g if not all blocks have reached minimum replication yet)
    * @throws IOException on error (eg lease mismatch, file not open, file deleted)
    */
-  boolean completeFile(String src, String holder, ExtendedBlock last) 
+  boolean completeFileOld(String src, String holder, ExtendedBlock last) 
     throws SafeModeException, UnresolvedLinkException, IOException {
     checkBlock(last);
     boolean success = false;
     writeLock();
     try {
       success = completeFileInternal(src, holder, 
-        ExtendedBlock.getLocalBlock(last));
+        ExtendedBlock.getLocalBlock(last), false);
     } finally {
       writeUnlock();
     }
     return success;
   }
 
+    /**
+   * Complete in-progress write to the given file.
+   * @return true if successful, false if the client should continue to retry
+   *         (e.g if not all blocks have reached minimum replication yet)
+   * @throws IOException on error (eg lease mismatch, file not open, file deleted)
+   */
+  boolean completeFile(String src, String holder, ExtendedBlock last) 
+    throws SafeModeException, UnresolvedLinkException, IOException {
+    checkBlock(last);
+    boolean success = false;
+    
+    writeLock();
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;    
+    try {
+        // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
+        while (!isDone && tries > 0)
+        {
+            try {
+                DBConnector.beginTransaction();
+                success = completeFileInternal(src, holder,
+                        ExtendedBlock.getLocalBlock(last), true);
+                DBConnector.commit();
+                isDone = true;
+                if (success)
+                    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
+                                      + " is closed by " + holder);
+            }
+            catch(ClusterJException ex)
+            {
+                DBConnector.safeRollback();
+                tries--;
+                success = false;
+                //For now, the ClusterJException are just catched here.
+                FSNamesystem.LOG.error(ex.getMessage(), ex);
+            }
+        }
+    } finally {
+      DBConnector.safeRollback();
+      writeUnlock();
+    }
+    return success;
+  }
+  
   private boolean completeFileInternal(String src, 
-      String holder, Block last) throws SafeModeException,
+      String holder, Block last, boolean isTransactional) throws SafeModeException,
       UnresolvedLinkException, IOException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1833,16 +1878,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     INodeFileUnderConstruction pendingFile = checkLease(src, holder);
     // commit the last block and complete it if it has minimum replicas
-    commitOrCompleteLastBlock(pendingFile, last);
+    commitOrCompleteLastBlock(pendingFile, last, isTransactional);
 
     if (!checkFileProgress(pendingFile, true)) {
       return false;
     }
     
-    finalizeINodeFileUnderConstruction(src, pendingFile);
+    finalizeINodeFileUnderConstruction(src, pendingFile, isTransactional);
 
-    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
-                                  + " is closed by " + holder);
+    //[Hooman] moved this log to the caller method completeFile
+//    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
+//                                  + " is closed by " + holder);
     return true;
   }
 
@@ -2349,7 +2395,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // If there are no incomplete blocks associated with this file,
     // then reap lease immediately and close the file.
     if(nrCompleteBlocks == nrBlocks) {
-      finalizeINodeFileUnderConstruction(src, pendingFile);
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+      finalizeINodeFileUnderConstruction(src, pendingFile, false);
       NameNode.stateChangeLog.warn("BLOCK*"
         + " internalReleaseLease: All existing blocks are COMPLETE,"
         + " lease removed, file closed.");
@@ -2396,7 +2443,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Close file if committed blocks are minimally replicated
       if(penultimateBlockMinReplication &&
           blockManager.checkMinReplication(lastBlock)) {
-        finalizeINodeFileUnderConstruction(src, pendingFile);
+          //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        finalizeINodeFileUnderConstruction(src, pendingFile, false);
         NameNode.stateChangeLog.warn("BLOCK*"
           + " internalReleaseLease: Committed blocks are minimally replicated,"
           + " lease removed, file closed.");
@@ -2452,9 +2500,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void commitOrCompleteLastBlock(final INodeFileUnderConstruction fileINode,
-      final Block commitBlock) throws IOException {
+      final Block commitBlock, boolean isTransactional) throws IOException {
     assert hasWriteLock();
-    if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
+    if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock, isTransactional)) {
       return;
     }
 
@@ -2463,7 +2511,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (diff > 0) {
       try {
         String path = leaseManager.findPath(fileINode);
-        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication());
+        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication(), isTransactional);
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }
@@ -2471,18 +2519,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void finalizeINodeFileUnderConstruction(String src, 
-      INodeFileUnderConstruction pendingFile) 
+      INodeFileUnderConstruction pendingFile, boolean isTransactional) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
-    leaseManager.removeLease(pendingFile.getClientName(), src);
+    leaseManager.removeLease(pendingFile.getClientName(), src, isTransactional);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile();
-    dir.replaceNode(src, pendingFile, newFile);
+    dir.replaceNode(src, pendingFile, newFile, isTransactional);
     
+    //TODO[Hooman]: Is this closeFile method necessary anymore? it only updates
+    //modification time which is modified in replaceNode().
     // close file and persist block allocations for this file
-    dir.closeFile(src, newFile);
+    dir.closeFile(src, newFile, isTransactional);
     
     checkReplicationFactor(newFile);
   }
@@ -2553,7 +2603,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
           for (int i = 0; i < descriptors.length; i++) {
-            descriptors[i].addBlock(storedBlock);
+              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+            descriptors[i].addBlock(storedBlock, false);
           }
         }
         // add pipeline locations into the INodeUnderConstruction
@@ -2563,10 +2614,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = leaseManager.findPath(pendingFile);
       if (closeFile) {
         // commit the last block and complete it if it has minimum replicas
-        commitOrCompleteLastBlock(pendingFile, storedBlock);
+          //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        commitOrCompleteLastBlock(pendingFile, storedBlock, false);
 
         //remove lease, close file
-        finalizeINodeFileUnderConstruction(src, pendingFile);
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        finalizeINodeFileUnderConstruction(src, pendingFile, false);
       } else if (supportAppends) {
         // If this commit does not want to close the file, persist
         // blocks only if append is supported 

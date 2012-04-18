@@ -393,13 +393,13 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   private boolean commitBlock(final BlockInfoUnderConstruction block,
-      final Block commitBlock) throws IOException {
+      final Block commitBlock, boolean isTransactional) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
       return false;
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
-    block.commitBlock(commitBlock);
+    block.commitBlock(commitBlock, isTransactional);
     return true;
   }
   
@@ -414,9 +414,9 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
-      Block commitBlock) throws IOException {
+      Block commitBlock, boolean isTransactional) throws IOException {
 
-	 ;
+	 
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
     
@@ -432,9 +432,9 @@ public class BlockManager {
     }
     
     //KTHFSBLOCKS
-    final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
+    final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock, isTransactional);
     if(countNodes(lastBlock).liveReplicas() >= minReplication) {
-      completeBlock(fileINode,fileINode.numBlocks()-1);
+      completeBlock(fileINode,fileINode.numBlocks()-1, isTransactional);
     }
     
     return b;
@@ -448,7 +448,7 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   private BlockInfo completeBlock(final INodeFile fileINode,
-      final int blkIndex) throws IOException {
+      final int blkIndex, boolean isTransactional) throws IOException {
 	  
     if(blkIndex < 0)
       return null;
@@ -462,9 +462,9 @@ public class BlockManager {
     BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
     
     // replace penultimate block in file
-    fileINode.setBlock(blkIndex, completeBlock);
+    fileINode.setBlock(blkIndex, completeBlock, isTransactional);
     // replace block in the blocksMap
-    return blocksMap.replaceBlock(completeBlock);
+    return blocksMap.replaceBlock(completeBlock, isTransactional);
   }
 
   private BlockInfo completeBlock(final INodeFile fileINode,
@@ -472,7 +472,8 @@ public class BlockManager {
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
       if(fileBlocks[idx] == block) {
-        return completeBlock(fileINode, idx);
+          //TODO[Hooman]: add isTransactional param when you reach here from the caller.
+        return completeBlock(fileINode, idx, false);
       }
     return block;
   }
@@ -507,7 +508,8 @@ public class BlockManager {
 
     BlockInfoUnderConstruction ucBlock =
       fileINode.setLastBlock(oldBlock, targets);
-    blocksMap.replaceBlock(ucBlock);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+    blocksMap.replaceBlock(ucBlock, false);
 
     // Remove block from replication queue.
     updateNeededReplications(oldBlock, 0, 0);
@@ -857,7 +859,8 @@ public class BlockManager {
     } 
 
     // Add replica to the data-node if it is not already there
-    node.addBlock(storedBlock);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+    node.addBlock(storedBlock, false);
 
     // Add this replica to corruptReplicas Map
     corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
@@ -1653,7 +1656,8 @@ public class BlockManager {
     }
 
     // just add it
-    node.addBlock(storedBlock);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+    node.addBlock(storedBlock, false);
 
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
@@ -1700,7 +1704,8 @@ public class BlockManager {
     assert fileINode != null : "Block must belong to a file";
 
     // add block to the datanode
-    boolean added = node.addBlock(storedBlock);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+    boolean added = node.addBlock(storedBlock, false);
 
     int curReplicaDelta;
     if (added) {

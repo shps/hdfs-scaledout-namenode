@@ -141,7 +141,8 @@ public class INodeFileUnderConstruction extends INodeFile {
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, targets);
     ucBlock.setINode(this);
-    setBlock(numBlocks()-1, ucBlock);
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+    setBlock(numBlocks()-1, ucBlock, false);
     return ucBlock;
   }
 }

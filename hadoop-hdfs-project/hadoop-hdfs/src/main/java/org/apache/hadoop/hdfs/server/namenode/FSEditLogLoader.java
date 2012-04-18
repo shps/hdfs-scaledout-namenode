@@ -209,7 +209,8 @@ public class FSEditLogLoader {
                                         addCloseOp.clientName,
                                         addCloseOp.clientMachine,
                                         null);
-              fsDir.replaceNode(addCloseOp.path, node, cons);
+              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+              fsDir.replaceNode(addCloseOp.path, node, cons, false);
               fsNamesys.leaseManager.addLease(cons.getClientName(),
                                               addCloseOp.path);
             }

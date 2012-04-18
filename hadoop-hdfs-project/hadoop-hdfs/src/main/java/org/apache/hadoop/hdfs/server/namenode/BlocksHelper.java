@@ -87,7 +87,8 @@ public class BlocksHelper {
 	 * Replacement for INodeFile.addBlock
 	 * */
 	public static void addBlock(BlockInfo newblock) {
-		putBlockInfo(newblock);
+            //TODO[Hooman]: Add isTransactional param when you reach here from the caller.
+		putBlockInfo(newblock, false);
 	}
 
 	/**Helper function for creating a BlockInfoTable object, no DB access */
@@ -194,7 +195,24 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static void putBlockInfo(BlockInfo binfo) {
+        /**
+         * 
+         * @param binfo 
+         */
+        public static void putBlockInfo(BlockInfo binfo, boolean isTransactional) {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+            
+            if (isTransactional)
+                putBlockInfo(binfo, session);
+            else
+                putBlockInfoWithTransaction(binfo);
+	}
+        
+	private static void putBlockInfoWithTransaction(BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -233,11 +251,28 @@ public class BlocksHelper {
 	}
 
 
-	/** Update index for a BlockInfo object in the DB
+        /** Update index for a BlockInfo object in the DB
 	 * @param idx index of the BlockInfo
 	 * @param binfo BlockInfo object that already exists in the database
 	 */
-	public static void updateIndex(int idx, BlockInfo binfo) {
+	public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+            
+            if (isTransactional)
+                updateIndex(idx, binfo, session);
+            else
+                updateIndexWithTransaction(idx, binfo);
+        }
+        
+	/** Update index for a BlockInfo object in the DB. Begins a new transaction.
+	 * @param idx index of the BlockInfo
+	 * @param binfo BlockInfo object that already exists in the database
+	 */
+	private static void updateIndexWithTransaction(int idx, BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -271,13 +306,25 @@ public class BlocksHelper {
 
 	}
 	
-	
-	
+        
 	/** Updates an already existing BlockInfo object in DB
 	 * @param iNodeID
 	 * @param binfo
 	 */
-	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo){ 
+	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional){
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+                updateBlockInfoTable(iNodeID, binfo, DBConnector.obtainSession());
+            else
+                updateBlockInfoInDBWithTransaction(iNodeID, binfo);
+        }
+	
+	/** Updates an already existing BlockInfo object in DB. Begins a new transaction.
+	 * @param iNodeID
+	 * @param binfo
+	 */
+	private static void updateBlockInfoInDBWithTransaction(long iNodeID, BlockInfo binfo){ 
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -293,8 +340,9 @@ public class BlocksHelper {
 				done=true;
 			}
 			catch (ClusterJException e){
-				tx.rollback();
-				System.err.println("updateINodeID failed " + e.getMessage());
+                                LOG.error(e.getMessage(), e);
+                                if (tx.isActive())
+                                    tx.rollback();
 				tries--;
 			}
 		}
@@ -388,8 +436,27 @@ public class BlocksHelper {
 
 	}
 
-	/** Update the DataNode in the triplets table.*/
-	public static void setDatanode(long blockId, int index, String name) {
+        /**
+         * Update the DataNode in the triplets table.
+         * @param blockId
+         * @param index
+         * @param name 
+         */
+	public static void setDatanode(long blockId, int index, String name, boolean isTransactional) {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+            
+            if (isTransactional)
+                setDatanodeInternal(blockId, index, name, session);
+            else
+                setDatanodeWithTransaction(blockId, index, name);
+        }
+        
+	/** Update the DataNode in the triplets table. This begins a new transaction.*/
+	private static void setDatanodeWithTransaction(long blockId, int index, String name) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
