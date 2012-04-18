@@ -475,7 +475,7 @@ public class TestLeaseRecovery2 {
       DataNodeAdapter.setHeartbeatsDisabledForTests(dn, false);
     }
 
-    cluster.waitActive();
+    //cluster.waitActive();
 
     // set the hard limit to be 1 second, to initiate lease recovery. 
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);

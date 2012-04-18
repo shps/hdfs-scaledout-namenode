@@ -27,6 +27,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
@@ -38,6 +39,7 @@ public class BlocksHelper {
 	private static Log LOG = LogFactory.getLog(BlocksHelper.class);
 	private static FSNamesystem ns = null;
 	static final int RETRY_COUNT = 3; 
+                                                private final static int BLOCKTOTAL_ID = 1;
 
 	/**Sets the FSNamesystem object. This method should be called before using any of the helper functions in this class.
 	 * @param fsns an already initialized FSNamesystem object
@@ -88,7 +90,30 @@ public class BlocksHelper {
 	 * */
 	public static void addBlock(BlockInfo newblock) {
 		putBlockInfo(newblock);
+
+                                                                                                // ADDED: To keep update of total blocks in the system
+                                                                                                updateTotalBlocks(true);
 	}
+                                                /**
+                                                 * Updates total blocks in block table
+                                                 * @param session
+                                                 * @param toAdd - If true, we increment total blocks else we decrement
+                                                 */
+                                                private static void updateTotalBlocks(boolean toAdd)
+                                                {
+                                                        Session session = DBConnector.obtainSession();
+                                                        BlockTotalTable blkTotal = session.find(BlockTotalTable.class, BLOCKTOTAL_ID);
+                                                        if(toAdd == true)
+                                                        {
+                                                                blkTotal.setTotal(blkTotal.getTotal() + 1);
+                                                        }
+                                                        else
+                                                        {
+                                                                blkTotal.setTotal(blkTotal.getTotal() - 1);
+                                                        }
+                                                        updateTotalBlocksInternal(session, blkTotal);
+                                                }
+                
 
 	/**Helper function for creating a BlockInfoTable object, no DB access */
 	private static BlockInfoTable createBlockInfoTable(BlockInfo newblock, Session session) {
@@ -205,6 +230,7 @@ public class BlocksHelper {
 				tx.begin();
 				putBlockInfo(binfo, session);
 				tx.commit();
+                                                                                                
 				session.flush();
 				done=true;
 			}
@@ -520,6 +546,7 @@ public class BlocksHelper {
 			try {
 				tx.begin();
 				BlockInfo ret = removeBlocksInternal(key, session);
+                                                                                                                                                                                                updateTotalBlocks( false);
 				tx.commit();
 				session.flush();
 				done=true;
@@ -710,6 +737,75 @@ public class BlocksHelper {
 		return ret;
 	}
 	
+
+        /** Return total blocks in BlockInfo table
+         * @param isTransactional - If its already part of a transaction (true) or not (false)
+         * @return total blocks
+         * @throws ClusterJException 
+         */
+        public static int getTotalBlocks()
+        {
+                Session session = DBConnector.obtainSession();
+                int tries = RETRY_COUNT;
+                boolean done = false;
+
+                while (done == false && tries > 0)
+                {
+                        try
+                        {
+                                int totalBlocks = (int) getTotalBlocksInternal(session);
+                                done = true;
+                                return totalBlocks;
+                        }
+                        catch (ClusterJException e)
+                        {
+                                System.err.println("getTotalBlocks failed " + e.getMessage());
+                                tries--;
+                        }
+                }
+                return 0;
+        }
+        
+        /**
+         * Reset the value of total blocks - Maybe required at startup or fresh cluster setup
+         */
+        public static void resetTotalBlocks(boolean isTransactional)
+        {
+                Session session = DBConnector.obtainSession();
+                Transaction tx = session.currentTransaction();
+                
+                assert tx.isActive() == isTransactional;
+                
+                if(isTransactional)
+                {
+                        resetTotalBlocksInternal(session);
+                }
+                else
+                {
+                        int tries = RETRY_COUNT;
+                        boolean done = false;
+
+                        while (done == false && tries > 0)
+                        {
+                                try
+                                {
+                                        tx.begin();
+                                        resetTotalBlocksInternal(session);
+                                        tx.commit();
+                                        session.flush();
+                                        done = true;
+                                }
+                                catch (ClusterJException e)
+                                {
+                                        tx.rollback();
+                                        System.err.println("Reset of total blocks failed " + e.getMessage());
+                                        tries--;
+                                }
+                        }
+                }
+        }
+        
+                
 	/////////////////////////////////////////////////////////////////////////////
 	// Internal Functions
 	/////////////////////////////////////////////////////////////////////////////
@@ -737,12 +833,38 @@ public class BlocksHelper {
 	 */
 	private static void insertBlockInfo(Session session, BlockInfoTable binfot, boolean update) {
 		if(update)
+                                                                                                {
 			session.savePersistent(binfot);
+                                                                                                }
 		else
+                                                                                                {
 			session.makePersistent(binfot);
+                                                                                                }
 	}
 	
-	/** Insert a row in the BlockInfo table
+                                                /**
+                                                 * Updates total blocks in block table
+                                                 * @param session
+                                                 * @param toAdd - If true, we increment total blocks else we decrement
+                                                 */
+                                                private static void updateTotalBlocksInternal(Session session, BlockTotalTable blkTotal)
+                                                {
+                                                        session.updatePersistent(blkTotal);
+                                                        session.flush();
+                                                }
+                                                /**
+                                                 * Reset the value of total blocks - Maybe required at startup or fresh cluster setup
+                                                 */
+                                                private static void resetTotalBlocksInternal(Session session)
+                                                {
+                                                        BlockTotalTable blkTotal = session.newInstance(BlockTotalTable.class);
+                                                        blkTotal.setId(BLOCKTOTAL_ID);
+                                                        blkTotal.setTotal(0);
+                                                        session.makePersistent(blkTotal);
+                                                }
+                                                
+
+                                                /** Insert a row in the BlockInfo table
 	 * @param session
 	 * @param blockID
 	 * @param index
@@ -899,5 +1021,15 @@ public class BlocksHelper {
 
 	}
 	
+
+        /** Return total blocks in BlockInfo table
+         * @param isTransactional - If its already part of a transaction (true) or not (false)
+         * @throws ClusterJException 
+         */
+        private static long getTotalBlocksInternal(Session session) throws ClusterJException
+        {
+                BlockTotalTable blkTable = session.find(BlockTotalTable.class, BLOCKTOTAL_ID);
+                return blkTable.getTotal();
+        }
 }
 

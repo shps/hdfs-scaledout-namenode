@@ -3048,36 +3048,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized boolean isOn() {
       try {
-              
-              // KTHFS: Check for files underconstruction that were under construction when there was a restart of NN
-              /*
-              String srcFile[] = {"/hardLeaseRecovery.renamed", "/user/a+b/dir1/file1", "/user/dir2/file2", "/user/dir3/$"};
-              for(int i = 0; i<srcFile.length; i++)
-              {
-                      if(dir.exists(srcFile[i]))
-                      {
-                              String leaseHolder = leaseManager.getLeaseByPath(srcFile[i]).getHolder();
-
-                              INode myFile = dir.getFileINode(srcFile[i]);
-                              INodeFile node = (INodeFile) myFile;
-                              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                                node.getLocalNameBytes(),
-                                                node.getReplication(),
-                                                node.getModificationTime(),
-                                                node.getPreferredBlockSize(),
-                                                node.getBlocks(),
-                                                node.getPermissionStatus(),
-                                                leaseHolder,
-                                                "127.0.0.1",
-                                                null);
-                              System.out.println("LeaseHolder for  "+srcFile[i]+" renamed: "+leaseHolder);
-                              //INodeFileUnderConstruction cons = checkLease(srcFile, leaseHolder);
-                              //blockManager.commitOrCompleteLastBlock(cons, cons.getLastBlock());
-                              System.out.println(srcFile[i] + "committed or completed..");
-                              finalizeINodeFileUnderConstruction(srcFile[i], cons);
-                      }
-              }
-               */
         assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
           + "Total num of blocks, active blocks, or "
           + "total safe blocks don't match.";
@@ -3247,7 +3217,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      */
     private synchronized void incrementSafeBlockCount(short replication) {
-      if ((int)replication == safeReplication)
+            if ((int)replication == safeReplication)
         this.blockSafe++;
       checkMode();
     }
@@ -3546,7 +3516,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         }
       }
-      LOG.info("Number of blocks under construction: " + numUCBlocks);
+       LOG.info("Number of blocks under construction: " + numUCBlocks);
       
       return getBlocksTotal() - numUCBlocks;
       // FIXME: We should remove all files 'under construction' on restart of NN

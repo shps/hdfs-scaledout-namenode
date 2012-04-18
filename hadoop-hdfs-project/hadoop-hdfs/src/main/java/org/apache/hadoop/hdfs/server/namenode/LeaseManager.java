@@ -419,6 +419,11 @@ public class LeaseManager {
 			paths.remove(oldpath);
 			paths.add(newpath);
 		}
+                                                                
+		
+		boolean doesExists() {
+			return LeaseHelper.exists(holder);
+		}
 	}
 
 	synchronized void changeLease(String src, String dst,
@@ -526,7 +531,7 @@ public class LeaseManager {
 		/** Check leases periodically. */
 		public void run() {
 			for(; fsnamesystem.isRunning(); ) {
-				fsnamesystem.writeLock();
+                                                                                                                                                        	fsnamesystem.writeLock();
 				try {
 					if (!fsnamesystem.isInSafeMode()) {
 						checkLeases();
@@ -550,11 +555,11 @@ public class LeaseManager {
 	/** Check the leases beginning from the oldest. */
 	private synchronized void checkLeases() {
 		assert fsnamesystem.hasWriteLock();
-		
 		SortedSet<Lease> sortedLeasesFromDB = LeaseHelper.getSortedLeases();
 		for(; sortedLeasesFromDB.size() > 0; ) {
 			final Lease oldest = sortedLeasesFromDB.first();
-			if (!oldest.expiredHardLimit()) {
+                                                                                                                                               //System.out.println("holder: "+oldest.holder+", exists: "+oldest.doesExists());
+			if (!oldest.expiredHardLimit() /*&& oldest.doesExists() == false*/) {
 				return;
 			}
 

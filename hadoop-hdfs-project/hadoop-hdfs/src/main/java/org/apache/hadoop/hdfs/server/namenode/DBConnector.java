@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import se.sics.clusterj.BlockTotalTable;
 import com.mysql.clusterj.ClusterJException;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.INodeTableSimple;
@@ -163,6 +164,10 @@ public class DBConnector {
                         session.deletePersistentAll(LeasePathsTable.class);
 
                         session.deletePersistentAll(TripletsTable.class);
+                        
+                        // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+                        session.deletePersistentAll(BlockTotalTable.class);
+                        BlocksHelper.resetTotalBlocks(true);
 
                         tx.commit();
 

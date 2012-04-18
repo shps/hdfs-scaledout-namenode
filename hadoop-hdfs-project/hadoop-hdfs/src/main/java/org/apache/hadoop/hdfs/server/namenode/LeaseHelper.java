@@ -87,9 +87,13 @@ public class LeaseHelper {
 		while (done == false && tries > 0 ){
 			try {
 				//First roundtrip
+                                                                                                                                                                                                System.out.println("1..");
 				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+                                                                                                                                                                                                System.out.println("2..LeaseTable: null?: "+leaseTable);
 				//Second roundtrip
+                                                                                                                                                                                                System.out.println("LeaseTable Holder: "+leaseTable.getHolderID());
 				List<LeasePathsTable> pathList =selectLeasePathsTableInternal(session, "holderID", leaseTable.getHolderID());
+                                                                                                                                                                                                System.out.println("3..");
 				done = true;
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
@@ -102,6 +106,39 @@ public class LeaseHelper {
 		return null; 
 	}
 
+	/**
+	 * Checks to see if lease exists
+	 * @param holder
+	 * @return boolean true: if exists and false: if it doesn't
+	 */
+	public static boolean exists(String holder) {
+		int tries=RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+
+		while (done == false && tries > 0 ){
+			try {
+				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+				done = true;
+                                                                                                                                                                                                if(leaseTable == null)
+                                                                                                                                                                                                {
+                                                                                                                                                                                                        return false;
+                                                                                                                                                                                                }
+                                                                                                                                                                                                else
+                                                                                                                                                                                                {
+                                                                                                                                                                                                        return true;
+                                                                                                                                                                                                }
+				//return leaseTable != null ? true : false;
+			}
+			catch (ClusterJException e){
+				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
+				tries--;
+			}
+		}
+
+		return false; 
+	}
+                
 	/**
 	 * Adds a lease to the database with a path. This method should ONLY be called if the lease does not exist in database already
 	 * Roundtrips: 3
@@ -490,7 +527,8 @@ public class LeaseHelper {
 		LeasePathsTable leasePathsTable = session.newInstance(LeasePathsTable.class);
 		leasePathsTable.setHolderID(holderID);
 		leasePathsTable.setPath(path);
-		session.makePersistent(leasePathsTable);
+		//session.makePersistent(leasePathsTable);
+                                                                                                session.savePersistent(leasePathsTable);
 	}
 
 	/**

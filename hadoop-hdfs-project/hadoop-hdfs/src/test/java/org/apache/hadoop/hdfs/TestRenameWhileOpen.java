@@ -52,16 +52,19 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
         public void testWhileOpenRenameParent() throws IOException
         {
                 Configuration conf = new HdfsConfiguration();
+                
                 final int MAX_IDLE_TIME = 2000; // 2s
                 conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
                 conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
+                System.out.println("Min replication: "+conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, -1));
                 conf.setBoolean("dfs.support.append", true);
 
                 // create cluster
                 System.out.println("Test 1*****************************");
-                MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+                MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+                System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
                 FileSystem fs = null;
                 try
                 {
@@ -131,7 +134,8 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         {
                         }
                         System.out.println("Creating New miniDFS Cluster instance[1]...");
-                        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
                         System.out.println("New miniDFS Cluster instance created[1]...");
                         cluster.waitActive();
                         System.out.println("Wait time over[1]...");
@@ -142,12 +146,14 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         cluster.shutdown();
                         try
                         {
-                                Thread.sleep(5000);
+                                Thread.sleep(2000);
                         }
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
+                        
                         cluster.waitActive();
                         fs = cluster.getFileSystem();
 

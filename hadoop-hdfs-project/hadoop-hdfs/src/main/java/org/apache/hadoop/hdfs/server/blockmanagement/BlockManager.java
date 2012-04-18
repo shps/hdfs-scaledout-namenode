@@ -70,6 +70,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
+import se.sics.clusterj.BlockTotalTable;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -2199,10 +2200,44 @@ public class BlockManager {
     }
   }
 
-  /**
+    /**
    * Return the number of nodes that are live and decommissioned.
    */
   public NumberReplicas countNodes(Block b) {
+    int count = 0;
+    int live = 0;
+    int corrupt = 0;
+    int excess = 0;
+    
+    
+    //Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(b);
+    DatanodeDescriptor[] dnDescriptors = BlocksHelper.getDataNodesFromBlock(b.getBlockId());
+    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
+    //while (nodeIter.hasNext()) {
+    for(int i=0; i < dnDescriptors.length; i++){
+      //DatanodeDescriptor node = nodeIter.next();
+           DatanodeDescriptor node = dnDescriptors[i];
+      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+        corrupt++;
+      } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+        count++;
+      } else {
+        Collection<Block> blocksExcess =
+          excessReplicateMap.get(node.getStorageID());
+        if (blocksExcess != null && blocksExcess.contains(b)) {
+          excess++;
+        } else {
+          live++;
+        }
+      }
+    }
+    return new NumberReplicas(live, count, corrupt, excess);
+  }
+
+  /**
+   * Return the number of nodes that are live and decommissioned.
+   */
+  public NumberReplicas countNodesOld(Block b) {
     int count = 0;
     int live = 0;
     int corrupt = 0;
@@ -2230,17 +2265,55 @@ public class BlockManager {
     return new NumberReplicas(live, count, corrupt, excess);
   }
 
-  /** 
+
+/**     KTHFS Change: Count live nodes for a block via NDB from Triplets table
+   * 
    * Simpler, faster form of {@link countNodes()} that only returns the number
    * of live nodes.  If in startup safemode (or its 30-sec extension period),
    * then it gains speed by ignoring issues of excess replicas or nodes
    * that are decommissioned or in process of becoming decommissioned.
    * If not in startup, then it calls {@link countNodes()} instead.
    * 
+   * Original HDFS version: {@link countLiveNodesOld()}
+   * 
    * @param b - the block being tested
    * @return count of live nodes for this block
    */
-  int countLiveNodes(BlockInfo b) {
+          int countLiveNodes(BlockInfo b) {
+    if (!namesystem.isInStartupSafeMode()) {
+      return countNodes(b).liveReplicas();
+    }
+    // else proceed with fast case
+    int live = 0;
+    DatanodeDescriptor[] dnDescriptors = BlocksHelper.getDataNodesFromBlock(b.getBlockId());
+    //Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(b);
+    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
+    for(int i=0; i<dnDescriptors.length; i++){
+      DatanodeDescriptor node = dnDescriptors[i];
+      if ((nodesCorrupt == null) || (!nodesCorrupt.contains(node)))
+        live++;
+    }
+    
+    // FIXME: When datanode restarts, it is assigned with another port and identified as a new replica (which is false)
+    //                  and then its added to triplets as another replica (duplicate)
+    //return live;
+    return live/2; // (temporary fix) remove this when bug is fixed
+  }
+
+/** 
+   * Simpler, faster form of {@link countNodes()} that only returns the number
+   * of live nodes.  If in startup safemode (or its 30-sec extension period),
+   * then it gains speed by ignoring issues of excess replicas or nodes
+   * that are decommissioned or in process of becoming decommissioned.
+   * If not in startup, then it calls {@link countNodes()} instead.
+   * 
+   * KTHFS version: {@link countLiveNodes()}
+   * 
+   * @param b - the block being tested
+   * @return count of live nodes for this block
+   */
+          @Deprecated
+   int countLiveNodesOld(BlockInfo b) {
     if (!namesystem.isInStartupSafeMode()) {
       return countNodes(b).liveReplicas();
     }
@@ -2354,7 +2427,8 @@ public class BlockManager {
   }
 
   public int getActiveBlockCount() {
-    return blocksMap.size() - (int)invalidateBlocks.numBlocks();
+    //return blocksMap.size() - (int)invalidateBlocks.numBlocks();
+          return BlocksHelper.getTotalBlocks() - (int)invalidateBlocks.numBlocks();
   }
 
   public DatanodeDescriptor[] getNodes(BlockInfo block) {
@@ -2368,7 +2442,8 @@ public class BlockManager {
   }
 
   public int getTotalBlocks() {
-    return blocksMap.size();
+    //return blocksMap.size();
+          return BlocksHelper.getTotalBlocks();
   }
 
   public void removeBlock(Block block) {
