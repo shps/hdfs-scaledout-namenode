@@ -57,7 +57,7 @@ public class TestDatanodeDescriptor extends TestCase {
     assertTrue(dd.addBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
-    assertFalse(dd.removeBlock(blk1));
+    assertFalse(dd.removeBlock(blk1, false));
     assertEquals(1, dd.numBlocks());
     // add an existent block
     assertFalse(dd.addBlock(blk, false));
@@ -66,10 +66,10 @@ public class TestDatanodeDescriptor extends TestCase {
     assertTrue(dd.addBlock(blk1, false));
     assertEquals(2, dd.numBlocks());
     // remove first block
-    assertTrue(dd.removeBlock(blk));
+    assertTrue(dd.removeBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove second block
-    assertTrue(dd.removeBlock(blk1));
+    assertTrue(dd.removeBlock(blk1, false));
     assertEquals(0, dd.numBlocks());    
   }
 }

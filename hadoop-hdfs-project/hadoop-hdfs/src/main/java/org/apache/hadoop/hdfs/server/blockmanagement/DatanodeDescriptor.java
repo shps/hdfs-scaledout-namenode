@@ -233,9 +233,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Remove block from the list of blocks belonging to the data-node.
    * Remove datanode from the block.
    */
-  public boolean removeBlock(BlockInfo b) {
+  public boolean removeBlock(BlockInfo b, boolean isTransactional) {
     //blockList = b.listRemove(blockList, this);
-    if ( b.removeNode(this) ) {	
+    if ( b.removeNode(this, isTransactional) ) {	
       numBlocks--;
       return true;
     } else {
@@ -259,7 +259,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the new block
    */
   public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock, boolean isTransactional) {
-    boolean done = removeBlock(oldBlock);
+      
+    boolean done = removeBlock(oldBlock, isTransactional);
     assert done : "Old block should belong to the data-node when replacing";
     done = addBlock(newBlock, isTransactional);
     assert done : "New block should not belong to the data-node when replacing";

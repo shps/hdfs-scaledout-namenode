@@ -181,6 +181,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	}*/
 
 	/*KTHFS method for putting a BlockInfo into the database*/
+        @Deprecated
 	public E putOld(final E element) {
 		
 		//TODO: use functions from BlocksHelper
@@ -199,21 +200,20 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
         @Override
         public E put(E element, boolean isTransactional) {
             BlockInfo binfo = (BlockInfo)element;
-            E existing = put(element);
+            BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
             BlocksHelper.putBlockInfo(binfo, isTransactional);
-            return existing;
+            if(existing == null) {
+		return null;
+            }
+            else {
+		return (E)existing;
+            }
         }
 
         @Override
+        @Deprecated
         public E put(final E element) {
-                BlockInfo binfo = (BlockInfo)element;
-		BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
-		if(existing == null) {
-			return null;
-		}
-		else {
-			return (E)existing;
-		}
+            return put(element, false);    
 	}
 
 	/**

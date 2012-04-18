@@ -162,6 +162,7 @@ public class DBConnector {
             assert isValid : 
                 "Current transaction's isActive value is " + isActive + 
                 " but isTransactional's value is " + isTransactional;
+            //TODO[Hooman]: An exception should bubble up from here..
             if (!isValid)
                 LOG.error("Current transaction's isActive value is " + isActive + 
                 " but isTransactional's value is " + isTransactional);

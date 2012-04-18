@@ -158,7 +158,7 @@ public class LeaseManager {
 		}
 
 		if (!lease.hasPath()) {
-			LeaseHelper.deleteLease(lease.getHolder());
+			LeaseHelper.deleteLease(lease.getHolder(), isTransactional);
 		}
 	}
 	@Deprecated

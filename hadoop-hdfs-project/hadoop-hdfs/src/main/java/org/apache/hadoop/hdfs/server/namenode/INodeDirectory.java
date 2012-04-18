@@ -428,7 +428,7 @@ class INodeDirectory extends INode {
 		if(!reuseID)
 			node.setID(DFSUtil.getRandom().nextLong()); //added for simple
 		// Invoke addChild to DB
-		INodeHelper.addChild(node, false, this.id);
+		INodeHelper.addChild(node, false, this.id, isTransactional);
 
 		return node;
 	}

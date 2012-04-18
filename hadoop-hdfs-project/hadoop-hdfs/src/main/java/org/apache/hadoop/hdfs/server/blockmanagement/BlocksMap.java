@@ -144,7 +144,8 @@ class BlocksMap {
     System.out.println("numNodes() for block: "+blockInfo.numNodes());
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
-      dn.removeBlock(blockInfo); // remove from the list and wipe the location
+      //TODO[Hooman]: add isTransactional param when you reach here from the caller.
+      dn.removeBlock(blockInfo, false); // remove from the list and wipe the location
     }
   }
   
@@ -186,7 +187,8 @@ class BlocksMap {
       return false;
 
     // remove block from the data-node list and the node from the block info
-    boolean removed = node.removeBlock(info);
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller.
+    boolean removed = node.removeBlock(info, false);
 
     if (info.getDatanode(0) == null     // no datanodes left
               && info.getINode() == null) {  // does not belong to a file

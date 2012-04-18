@@ -346,7 +346,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           this.dir = new FSDirectory(fsImage, this, conf);
 
     }
-    INodeHelper.addChild(this.dir.rootDir, true, -1L);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+    INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
     INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
     cache.putRoot(this.dir.rootDir); //added for magic cache
     

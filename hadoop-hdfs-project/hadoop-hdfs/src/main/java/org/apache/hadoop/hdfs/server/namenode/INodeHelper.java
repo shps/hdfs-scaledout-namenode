@@ -420,7 +420,11 @@ public class INodeHelper {
         DBConnector.checkTransactionState(isTransactional);
         
         if (isTransactional)
-            updateModificationTimeInternal(DBConnector.obtainSession(), inodeid, modTime);
+        {
+            Session session = DBConnector.obtainSession();
+            updateModificationTimeInternal(session, inodeid, modTime);
+            session.flush();
+        }
         else
             updateModificationTimeWithTransaction(inodeid, modTime);
     }
@@ -467,7 +471,25 @@ public class INodeHelper {
      * @param node
      * @param parentid
      */
-    public static void addChild(INode node, boolean isRoot, long parentid) {
+    public static void addChild(INode node, boolean isRoot, long parentid, 
+            boolean isTransactional) {
+        DBConnector.checkTransactionState(isTransactional);
+        
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            addChildInternal(session, node, isRoot, parentid);
+            session.flush();
+        }
+        else
+            addChildWithTransaction(node, isRoot, parentid);
+    }
+    
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    private static void addChildWithTransaction(INode node, boolean isRoot, long parentid) {
         boolean done = false;
         int tries = RETRY_COUNT;
 
@@ -484,8 +506,9 @@ public class INodeHelper {
                 tx.commit();
                 session.flush();
             } catch (ClusterJException e) {
-                tx.rollback();
-                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                LOG.error(e.getMessage(), e);
+                if (tx.isActive())
+                    tx.rollback();
                 tries--;
             }
         }
@@ -701,14 +724,14 @@ public class INodeHelper {
      * @param inodeid the inodeid to remove
      */
     public static void removeChild(long inodeid, boolean isTransactional) {
-        Session session = DBConnector.obtainSession();
-        boolean isActive = session.currentTransaction().isActive();
-        assert isActive == isTransactional : 
-                "Current transaction's isActive value is " + isActive + 
-                " but isTransactional's value is " + isTransactional;
+        DBConnector.checkTransactionState(isTransactional);
         
         if (isTransactional)
+        {
+           Session session = DBConnector.obtainSession();
            deleteINodeTableInternal(session, inodeid);
+           session.flush();
+        }
         else
            removeChildWithTransaction(inodeid);
     }
