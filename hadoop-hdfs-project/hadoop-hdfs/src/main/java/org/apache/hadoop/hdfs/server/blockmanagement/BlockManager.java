@@ -420,26 +420,27 @@ public class BlockManager {
    */
   public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
       Block commitBlock) throws IOException {
-
-	 ;
+	  
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
     
-    //KTHFSBLOCKS
+    //BlockInfo lastBlock = fileINode.getLastBlockCompleted(); //UC and COMMITTED
     BlockInfo lastBlock = fileINode.getLastBlock();
         
     if(lastBlock == null) {
       return false; // no blocks in file yet
-      
     }
+    
     if(lastBlock.isComplete()) {
     	return false; // already completed (e.g. by syncBlock) 
     }
     
     //KTHFSBLOCKS
     final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
+    NumberReplicas nr = countNodes(lastBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication) {
       completeBlock(fileINode,fileINode.numBlocks()-1);
+      //completeBlock(fileINode, lastBlock);
     }
     
     return b;
@@ -454,7 +455,7 @@ public class BlockManager {
    */
   private BlockInfo completeBlock(final INodeFile fileINode,
       final int blkIndex) throws IOException {
-	  
+	BlockManager.LOG.debug("(stderr) WASIF inside BM.completeBlock for blkIndex " + blkIndex);
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
@@ -476,7 +477,8 @@ public class BlockManager {
       final BlockInfo block) throws IOException {
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
-      if(fileBlocks[idx] == block) {
+      //if(fileBlocks[idx] == block) { 
+      if(fileBlocks[idx].getBlockId() == block.getBlockId()) {
         return completeBlock(fileINode, idx);
       }
     return block;
@@ -901,6 +903,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
   private void markBlockAsCorrupt(BlockInfo storedBlock,
                                   DatanodeInfo dn) throws IOException {
+	  LOG.debug("WASIF entered BM.markBlockAsCorrupt " + storedBlock.getBlockId());
     assert storedBlock != null : "storedBlock should not be null";
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
@@ -1709,6 +1712,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   private void addStoredBlockImmediate(BlockInfo storedBlock,
                                DatanodeDescriptor node)
   throws IOException {
+	  BlockManager.LOG.debug("WASIF inside BM.addStoredBlockImmediate " + storedBlock.getBlockId());  
     assert (storedBlock != null && namesystem.hasWriteLock());
     if (!namesystem.isInStartupSafeMode() 
         || namesystem.isPopulatingReplQueues()) {
@@ -1741,6 +1745,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                                DatanodeDescriptor delNodeHint,
                                boolean logEveryBlock)
   throws IOException {
+	LOG.debug("WASIF entered BM.addStoredBlock " + block.getBlockId());
     assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
     if (block instanceof BlockInfoUnderConstruction) {

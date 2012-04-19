@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -116,6 +117,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
 	    MiniDFSCluster cluster = null;
 	    int numDataNodes = 2;
 	    Configuration conf = getConf(numDataNodes, tokens);
+	    DBConnector.setConfiguration(conf);
 	    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
 	    cluster.waitActive();
 	    assertEquals(numDataNodes, cluster.getDataNodes().size());
@@ -123,7 +125,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
 }
   
    
-  //@Test
+  @Test
   public void testReadNnWithoutTokens() throws Exception{
 	  
 	  MiniDFSCluster cluster = null;
@@ -170,7 +172,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
   //      java.io.IOException: Cannot lock storage 
   //      /home/wmalik/hadoopnn/kthfs/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs/rName1. 
   //      The directory is already locked.
-  @Test
+  //@Test
   public void testReadNnWithTokens() throws Exception{
 	  
 	  MiniDFSCluster cluster = null;

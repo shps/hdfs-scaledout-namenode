@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.mortbay.log.Log;
 
 /**************************************************
  * DatanodeDescriptor tracks stats on a given DataNode, such as
@@ -221,6 +222,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Add block to the head of the list of blocks belonging to the data-node.
    */
   public boolean addBlock(BlockInfo b) {
+    BlockManager.LOG.debug("WASIF inside DND.addBlock " + b.getBlockId());
     if(!b.addNode(this))
       return false;
     // add to the head of the data-node list
@@ -259,6 +261,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the new block
    */
   public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
+	BlockManager.LOG.debug("WASIF inside DND.replaceBlock " + newBlock.getBlockId());
     boolean done = removeBlock(oldBlock);
     assert done : "Old block should belong to the data-node when replacing";
     done = addBlock(newBlock);

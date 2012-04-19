@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
+import org.mortbay.log.Log;
 
 /**
  * Internal class for block metadata.
@@ -91,6 +93,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	}
 
 	void setDatanode(int index, DatanodeDescriptor node) {
+		NameNode.LOG.debug("WASIF inside binfo.setDatanode " + getBlockId());
 		assert index >= 0;
 		if(node != null)
 			BlocksHelper.setDatanode(this.getBlockId(), index, node.name);
@@ -123,13 +126,16 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	* Add data-node this block belongs to.
 	*/
 	  public boolean addNode(DatanodeDescriptor node) {
-	    if(findDatanode(node) >= 0) // the node is already there
+		NameNode.LOG.debug("WASIF entered binfo.addNode " + getBlockId());  
+	    if(findDatanode(node) >= 0) {// the node is already there
+	    	NameNode.LOG.debug("WASIF inside if of binfo.addNode " + getBlockId());	
 	      return false;
-
+	    }
+	    
 	    // find the last available datanode index
 	    int lastNode = ensureCapacity(1);
 	    setDatanode(lastNode, node);
-	    
+	    NameNode.LOG.debug("WASIF returning true from binfo.addNode " + getBlockId());
 	    return true;
 	  }
 

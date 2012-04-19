@@ -1506,6 +1506,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
+      LOG.debug("WASIF inside getAdditionalBlock - about to commitOrCompleteLastblock " + ExtendedBlock.getLocalBlock(previous));
       // commit the last block and complete it if it has minimum replicas
       commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous));
 
@@ -2378,6 +2379,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException, UnresolvedLinkException, ImproperUsageException {
+	  LOG.debug("WASIF entered fsns.commitBlockSynch " + lastblock.getBlockId());
     if (!isWritingNN())
         throw new ImproperUsageException();
     String src = "";

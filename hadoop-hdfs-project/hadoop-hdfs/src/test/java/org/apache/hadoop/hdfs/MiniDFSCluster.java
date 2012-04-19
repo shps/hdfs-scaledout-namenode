@@ -574,7 +574,7 @@ public class MiniDFSCluster {
   
     if (!federation) {
       /*[thesis] For testing*/
-      DBAdmin.truncateAllTables(wConf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+      //DBAdmin.truncateAllTables(wConf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
             
@@ -1212,6 +1212,15 @@ public class MiniDFSCluster {
         nameNode = null;
       }
     }
+    
+    for (NameNodeInfo nnInfo : readingNameNodes[0]) {
+        NameNode nameNode = nnInfo.nameNode;
+        if (nameNode != null) {
+          nameNode.stop();
+          nameNode.join();
+          nameNode = null;
+        }
+      }
   }
   
   /**

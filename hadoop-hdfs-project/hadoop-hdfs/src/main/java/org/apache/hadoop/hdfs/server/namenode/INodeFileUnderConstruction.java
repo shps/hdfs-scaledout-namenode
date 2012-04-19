@@ -137,6 +137,7 @@ public class INodeFileUnderConstruction extends INodeFile {
       throw new IOException("Trying to update non-existant block. " +
           "File is empty.");
     }
+    NameNode.LOG.debug("W: setLastBlock lastBlock"+lastBlock.getBlockId());
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, targets);

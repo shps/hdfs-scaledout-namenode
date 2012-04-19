@@ -213,7 +213,8 @@ class BlocksMap {
    * @return new block
    */
   BlockInfo replaceBlock(BlockInfo newBlock) {
-	  
+	BlockManager.LOG.debug("WASIF entertered BlocksMap.replaceBlock " + newBlock.getBlockId());
+	System.err.println("(stderr) WASIF entertered BlocksMap.replaceBlock " + newBlock.getBlockId());
     BlockInfo currentBlock = blocks.get(newBlock);
     assert currentBlock != null : "the block if not in blocksMap";
     // replace block in data-node lists

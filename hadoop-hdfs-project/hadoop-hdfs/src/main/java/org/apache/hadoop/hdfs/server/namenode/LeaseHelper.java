@@ -89,6 +89,8 @@ public class LeaseHelper {
 			try {
 				//First roundtrip
 				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+				if (leaseTable == null)
+					return null;
 				//Second roundtrip
 				List<LeasePathsTable> pathList =selectLeasePathsTableInternal(session, "holderID", leaseTable.getHolderID());
 				done = true;

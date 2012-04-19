@@ -24,11 +24,13 @@ import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.Predicate;
+import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /** This class provides the CRUD methods for Blocks and Triplets
  *  It also provides helper methods for conversion to/from HDFS data structures to ClusterJ data structures
@@ -77,7 +79,7 @@ public class BlocksHelper {
 			BlockInfo[] inBlocks = in.getBlocks();
 			for(int i=0;i<inBlocks.length;i++) {
 				BlockInfoTable bInfoTable = createBlockInfoTable(inBlocks[i], session);
-				insertBlockInfo(session, bInfoTable, false);
+				insertBlockInfo(session, bInfoTable);
 			}
 		}
 	}
@@ -216,11 +218,21 @@ public class BlocksHelper {
 		}
 	}
 	private static void putBlockInfo(BlockInfo binfo, Session s){
-		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
+		
+		BlockInfoTable bit = selectBlockInfo(s, binfo.getBlockId());
+		boolean doUpdate = true;
+		
+		if(bit == null) { //we want to generate a timestamp only if it doesnt exist in NDB
+			doUpdate = false;
+			bit =  s.newInstance(BlockInfoTable.class);
+			bit.setTimestamp(System.currentTimeMillis());
+		}
+		
 		bit.setBlockId(binfo.getBlockId());
 		bit.setGenerationStamp(binfo.getGenerationStamp());
 		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
-		bit.setTimestamp(System.currentTimeMillis()); //for sorting the blocks properly
+		//Don't generate a new timestamp everytime!
+		//bit.setTimestamp(System.currentTimeMillis()); //for sorting the blocks properly
 
 		if(binfo.isComplete()) {
 			INodeFile ifile = binfo.getINode();
@@ -228,8 +240,7 @@ public class BlocksHelper {
 			bit.setINodeID(nodeID); 
 		}
 		bit.setNumBytes(binfo.getNumBytes());
-		//FIXME: KTHFS: Ying and Wasif: replication is null at the moment - remove the column if not required later on
-		insertBlockInfo(s, bit, true);
+		insertBlockInfo(s, bit);
 	}
 
 
@@ -265,6 +276,7 @@ public class BlocksHelper {
 		bit.setGenerationStamp(binfo.getGenerationStamp());
 		bit.setINodeID(binfo.getINode().getID());
 		bit.setBlockIndex(idx); //setting the index in the table
+		LOG.debug("W: blockId"+binfo.getBlockId()+ " Index updated to" + idx );
 		bit.setNumBytes(binfo.getNumBytes());
 		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
 		updateBlockInfoTableInternal(s, bit);
@@ -405,7 +417,7 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("setDataNode failed " + e.getMessage());
+				LOG.error("setDataNode failed " + e.getMessage());
 				tries--;
 			}
 		}
@@ -414,18 +426,20 @@ public class BlocksHelper {
 	private  static void setDatanodeInternal(long blockId, int index, String name, Session session) {
 
 		TripletsTable triplet = selectTriplet(session, blockId, index);
-		//TODO: [thesis] this update can be done in one shot
+		//TODO: [thesis] this update can be done in one shot TODO TODO TODO
 		if (triplet != null) {
+			LOG.debug("WASIF triplet exists for blkid:"+blockId + "index:" + index);
 			triplet.setDatanodeName(name);
 			triplet.setIndex(index);
 			insertTriplet(session, triplet, true);
 		}
 		else {
+			LOG.debug("WASIF new triplet being created for blkid:"+blockId + "index:" + index);
 			TripletsTable newTriplet = session.newInstance(TripletsTable.class);
 			newTriplet.setBlockId(blockId);
 			newTriplet.setDatanodeName(name);
 			newTriplet.setIndex(index);
-			insertTriplet(session, newTriplet, true);
+			insertTriplet(session, newTriplet, true); //TODO: this should be false rite?
 		}
 	}
 
@@ -739,11 +753,8 @@ public class BlocksHelper {
 	 * @param session
 	 * @param binfot
 	 */
-	private static void insertBlockInfo(Session session, BlockInfoTable binfot, boolean update) {
-		if(update)
+	private static void insertBlockInfo(Session session, BlockInfoTable binfot) {
 			session.savePersistent(binfot);
-		else
-			session.makePersistent(binfot);
 	}
 	
 	/** Insert a row in the BlockInfo table
@@ -775,7 +786,7 @@ public class BlocksHelper {
 		binfot.setGenerationStamp(genStamp);
 		binfot.setReplication(replication);
 		binfot.setTimestamp(timestamp);
-		insertBlockInfo(session, binfot, update);
+		insertBlockInfo(session, binfot);
 	}
 	
 	/** Fetch all blocks of an inode from BlockInfo table
@@ -820,10 +831,15 @@ public class BlocksHelper {
 	}
 	
 	private static void insertTriplet(Session session, TripletsTable tt, boolean update) {
-		if(update)
+		
+		if(update) {
 			session.savePersistent(tt);
-		else
+			LOG.debug("W: Triplet about to be updated: " + tt.getBlockId() + " DN: " + tt.getDatanodeName());
+		}
+		else {
 			session.makePersistent(tt);
+			LOG.debug("W: Triplet about to be inserted: " + tt.getBlockId() + " DN: " + tt.getDatanodeName());
+		}
 	}
 	
 	@SuppressWarnings("unused")

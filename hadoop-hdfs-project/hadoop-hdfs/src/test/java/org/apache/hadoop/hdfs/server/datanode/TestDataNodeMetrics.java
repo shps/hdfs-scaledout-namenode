@@ -38,7 +38,7 @@ public class TestDataNodeMetrics extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getWritingFileSystem();
-      final long LONG_FILE_LEN = Integer.MAX_VALUE+1L; 
+      final long LONG_FILE_LEN = (Integer.MAX_VALUE)+1L; 
       DFSTestUtil.createFile(fs, new Path("/tmp.txt"),
           LONG_FILE_LEN, (short)1, 1L);
       List<DataNode> datanodes = cluster.getDataNodes();

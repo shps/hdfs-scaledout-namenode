@@ -364,6 +364,7 @@ public class INodeFile extends INode {
 		}
 		return returnBlock;
 	}
+	
 
 	/** @return the number of blocks */ 
 	//FIXME: KTHFSBLOCKS
