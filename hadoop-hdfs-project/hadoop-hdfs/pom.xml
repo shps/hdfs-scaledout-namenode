@@ -372,59 +372,24 @@
 		<version>2.6</version>
 		<configuration>
 	  <includes>
-		<include>**/TestUrlStreamHandler.java</include>
-		<include>**/TestFcHdfsCreateMkdir.java</include>
-		<include>**/TestFileCreationEmpty.java</include>
-		<include>**/TestBlockToken.java</include>
-		<include>**/TestListFilesInDFS.java</include>
-		<include>**/TestDFSRollback.java</include>
-		<include>**/TestLargeBlock.java</include>
 		<include>**/TestFileAppend3.java</include>
 		<include>**/TestDFSClientRetries.java</include>
-		<include>**/TestUrlStreamHandler.java</include>
-		<include>**/TestFcHdfsCreateMkdir.java</include>
-		<include>**/TestFileCreationEmpty.java</include>
-		<include>**/TestBlockToken.java</include>
-		<include>**/TestDFSClientExcludedNodes.java</include>
-		<include>**/TestLeaseRecovery2.java</include>
-		<include>**/TestListFilesInDFS.java</include>
-		<include>**/TestDFSRollback.java</include>
-		<include>**/TestLargeBlock.java</include>
-		<include>**/TestDFSFinalize.java</include>
-		<include>**/TestFileAppend3.java</include>
 		<include>**/TestDFSClientRetries.java</include>
-		<include>**/TestFSInputChecker.java</include>
-		<include>**/TestPipelines.java</include>
-		<include>**/TestConnCache.java</include>
-		<include>**/TestBlockMissingException.java</include>
 		<include>**/TestNameNodeResourceChecker.java</include>
-		<include>**/TestBlockUnderConstruction.java</include>
-		<include>**/TestCorruptFilesJsp.java</include>
-		<include>**/TestTransferRbw.java</include>
-		<include>**/TestDataNodeVolumeFailure.java</include>
-		<include>**/TestBlockReplacement.java</include>
 		<include>**/TestDataNodeMetrics.java</include>
-		<include>**/TestHftpFileSystem.java</include>
-		<include>**/TestFileCreationClient.java</include>
-		<include>**/TestMissingBlocksAlert.java</include>
-		<include>**/TestParallelRead.java</include>
 		<include>**/TestHDFSTrash.java</include>
-		<include>**/TestLease.java</include>
-		<include>**/TestFSOutputSummer.java</include>
-		<include>**/TestDFSRename.java</include>
-		<include>**/TestSeekBug.java</include>
-		<include>**/TestDFSRemove.java</include>
-		<include>**/TestClientBlockVerification.java</include>
-		<include>**/TestListPathServlet.java</include>
 		<include>**/TestReplaceDatanodeOnFailure.java</include>
-		<include>**/TestDFSStartupVersions.java</include>
-		<include>**/TestBlocksScheduledCounter.java</include>
-		<include>**/TestLocalDFS.java</include>
 	</includes>
           <excludes>
-			<exclude>**/org/apache/hadoop/fs/loadGenerator/TestLoadGenerator.java</exclude>
-			<exclude>**/TestLeaseRecovery2.java</exclude>
+			<!-- DFS Upgrade Unit tests that we don't mind-->
 			<exclude>**/TestDFSFinalize.java</exclude>
+			<exclude>**/TestDFSRollback.java</exclude>
+			<exclude>**/TestDFSStartupVersions.java</exclude>
+			
+			<!-- Hooman told it fails anyway-->
+			<exclude>**/TestLeaseRecovery2.java</exclude>
+
+			<exclude>**/org/apache/hadoop/fs/loadGenerator/TestLoadGenerator.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend3.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestLeaseRecovery.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/util/TestGSet.java</exclude>

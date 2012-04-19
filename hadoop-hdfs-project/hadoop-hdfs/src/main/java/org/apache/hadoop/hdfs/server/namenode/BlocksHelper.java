@@ -271,6 +271,7 @@ public class BlocksHelper {
 		}
 	}
 	private static void updateIndex(int idx, BlockInfo binfo, Session s){
+                LOG.debug("Block persistance: ID:" + binfo.getBlockId() + "    index:" + idx + ", status:" + binfo.getBlockUCState() );
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
 		bit.setBlockId(binfo.getBlockId());
 		bit.setGenerationStamp(binfo.getGenerationStamp());
@@ -895,9 +896,10 @@ public class BlocksHelper {
 	
 	/** Updates a row in BlockInfoTable
 	 * @param session
-	 * @param bit
+	 * @param bitd
 	 */
 	private static void updateBlockInfoTableInternal(Session session, BlockInfoTable bit) {
+                LOG.debug("Block persistance: ID:" + bit.getBlockId() + "    index:" + bit.getBlockIndex() + ", status:" + bit.getBlockUCState() );
 		session.updatePersistent(bit);
 	}
 	
