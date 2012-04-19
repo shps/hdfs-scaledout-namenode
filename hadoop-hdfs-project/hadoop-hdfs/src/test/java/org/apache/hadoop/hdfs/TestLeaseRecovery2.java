@@ -86,7 +86,7 @@ public class TestLeaseRecovery2 {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     cluster.waitActive();
     dfs = (DistributedFileSystem)cluster.getFileSystem();
   }
@@ -426,7 +426,8 @@ public class TestLeaseRecovery2 {
     // write bytes into the file.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
     AppendTestUtil.LOG.info("size=" + size);
-    stm.write(buffer, 0, size);
+    //stm.write(buffer, 0, size);
+    TestFileCreation.writeFile(stm);
     
     String originalLeaseHolder = NameNodeAdapter.getLeaseHolderForPath(
         cluster.getNameNode(), fileStr);
@@ -475,7 +476,7 @@ public class TestLeaseRecovery2 {
       DataNodeAdapter.setHeartbeatsDisabledForTests(dn, false);
     }
 
-    //cluster.waitActive();
+    cluster.waitActive();
 
     // set the hard limit to be 1 second, to initiate lease recovery. 
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
@@ -486,7 +487,7 @@ public class TestLeaseRecovery2 {
       Thread.sleep(SHORT_LEASE_PERIOD);
       locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
         fileStr, 0L, size);
-    } while (locatedBlocks.isUnderConstruction());
+    } while (locatedBlocks.isUnderConstruction());              // This doesn't work and loops continuously, maybe because of DN new port no. assigned issue 
     assertEquals(size, locatedBlocks.getFileLength());
 
     // make sure that the client can't write data anymore.

@@ -139,7 +139,6 @@ class BlocksMap {
       return;
     }
     blockInfo.setINode(null);
-    System.out.println("numNodes() for block: "+blockInfo.numNodes());
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo); // remove from the list and wipe the location

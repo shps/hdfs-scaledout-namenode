@@ -356,7 +356,7 @@ public class INodeFile extends INode {
 			return null;
 		T returnBlock = null;
 		try {
-			@SuppressWarnings("unchecked")  // ClassCastException is caught below
+                                                                                                                                                @SuppressWarnings("unchecked")  // ClassCastException is caught below
 			T tBlock = (T)tempblocks[tempblocks.length - 1];
 			returnBlock = tBlock;
 		} catch(ClassCastException cce) {
@@ -369,7 +369,7 @@ public class INodeFile extends INode {
 	/** @return the number of blocks */ 
 	//FIXME: KTHFSBLOCKS
 	public int numBlocks() {
-		return blocks == null ? 0 : blocks.length;
+                                                                                                return blocks == null ? 0 : blocks.length;
 	}
 
 

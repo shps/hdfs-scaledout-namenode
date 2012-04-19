@@ -87,14 +87,20 @@ public class LeaseHelper {
 		while (done == false && tries > 0 ){
 			try {
 				//First roundtrip
-                                                                                                                                                                                                System.out.println("1..");
-				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
-                                                                                                                                                                                                System.out.println("2..LeaseTable: null?: "+leaseTable);
-				//Second roundtrip
-                                                                                                                                                                                                System.out.println("LeaseTable Holder: "+leaseTable.getHolderID());
-				List<LeasePathsTable> pathList =selectLeasePathsTableInternal(session, "holderID", leaseTable.getHolderID());
-                                                                                                                                                                                                System.out.println("3..");
-				done = true;
+                                                                                                                                                                                                LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+                                                                                                                                                                                                if(leaseTable == null)
+                                                                                                                                                                                                {
+                                                                                                                                                                                                        LOG.warn("Lease done not exist for holder: "+holder);
+                                                                                                                                                                                                        return null;
+                                                                                                                                                                                                }
+                                                                                                                                                                                                //Second roundtrip
+                                                                                                                                                                                                List<LeasePathsTable> pathList =selectLeasePathsTableInternal(session, "holderID", leaseTable.getHolderID());
+                                                                                                                                                                                                if(pathList == null)
+                                                                                                                                                                                                {
+                                                                                                                                                                                                        LOG.warn("Lease paths does not exist for lease: "+ leaseTable.toString()+", holder: "+leaseTable.getHolder());
+                                                                                                                                                                                                        return null;
+                                                                                                                                                                                                }
+                                                                                                                                                                                                done = true;
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
 			catch (ClusterJException e){

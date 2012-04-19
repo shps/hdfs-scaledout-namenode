@@ -558,8 +558,7 @@ public class LeaseManager {
 		SortedSet<Lease> sortedLeasesFromDB = LeaseHelper.getSortedLeases();
 		for(; sortedLeasesFromDB.size() > 0; ) {
 			final Lease oldest = sortedLeasesFromDB.first();
-                                                                                                                                               //System.out.println("holder: "+oldest.holder+", exists: "+oldest.doesExists());
-			if (!oldest.expiredHardLimit() /*&& oldest.doesExists() == false*/) {
+                                                                                                                                               if (!oldest.expiredHardLimit()) {
 				return;
 			}
 
@@ -570,8 +569,13 @@ public class LeaseManager {
 			// internalReleaseLease() removes paths corresponding to empty files,
 			// i.e. it needs to modify the collection being iterated over
 			// causing ConcurrentModificationException
-			String[] leasePaths = new String[oldest.getPaths().size()];
-			oldest.getPaths().toArray(leasePaths);
+                                                                                                                                                Collection<String> paths = oldest.getPaths();
+                                                                                                                                                if(paths == null)
+                                                                                                                                                {
+                                                                                                                                                        return;
+                                                                                                                                                }
+			String[] leasePaths = new String[paths.size()];
+			paths.toArray(leasePaths);
 			for(String p : leasePaths) {
 				try {
 					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {

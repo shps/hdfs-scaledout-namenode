@@ -55,6 +55,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		this.getBlockName();
 		this.getNumBytes(); 
 		this.getGenerationStamp();
+                                
 	}
 
 	/**

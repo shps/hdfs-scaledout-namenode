@@ -79,7 +79,7 @@ public class BlocksHelper {
 			BlockInfo[] inBlocks = in.getBlocks();
 			for(int i=0;i<inBlocks.length;i++) {
 				BlockInfoTable bInfoTable = createBlockInfoTable(inBlocks[i], session);
-				insertBlockInfo(session, bInfoTable, false);
+				insertBlockInfo(session, bInfoTable);
 			}
 		}
 	}
@@ -242,11 +242,20 @@ public class BlocksHelper {
 		}
 	}
 	private static void putBlockInfo(BlockInfo binfo, Session s){
-		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
+                                                                                                
+                                                                                                BlockInfoTable bit = selectBlockInfo(s, binfo.getBlockId());
+                                                                                                
+                                                                                                if(bit == null)
+                                                                                                {
+                                                                                                        // Inserting a new block
+                                                                                                        bit =  s.newInstance(BlockInfoTable.class);
+                                                                                                        // Add timestamp only at block creation time
+                                                                                                        bit.setTimestamp(System.currentTimeMillis()); //for sorting the blocks properly
+                                                                                                }
 		bit.setBlockId(binfo.getBlockId());
 		bit.setGenerationStamp(binfo.getGenerationStamp());
 		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
-		bit.setTimestamp(System.currentTimeMillis()); //for sorting the blocks properly
+		
 
 		if(binfo.isComplete()) {
 			INodeFile ifile = binfo.getINode();
@@ -255,7 +264,7 @@ public class BlocksHelper {
 		}
 		bit.setNumBytes(binfo.getNumBytes());
 		//FIXME: KTHFS: Ying and Wasif: replication is null at the moment - remove the column if not required later on
-		insertBlockInfo(s, bit, true);
+		insertBlockInfo(s, bit);
 	}
 
 
@@ -399,7 +408,6 @@ public class BlocksHelper {
 		Arrays.sort(blocksArray, new BlockInfoComparator());
 		return blocksArray;
 	}
-
 
 	/**
 	 * A Comparator to sort BlockInfo according to timestamp
@@ -831,15 +839,8 @@ public class BlocksHelper {
 	 * @param session
 	 * @param binfot
 	 */
-	private static void insertBlockInfo(Session session, BlockInfoTable binfot, boolean update) {
-		if(update)
-                                                                                                {
-			session.savePersistent(binfot);
-                                                                                                }
-		else
-                                                                                                {
-			session.makePersistent(binfot);
-                                                                                                }
+	private static void insertBlockInfo(Session session, BlockInfoTable binfot) {
+                                                                                                session.savePersistent(binfot);
 	}
 	
                                                 /**
@@ -893,7 +894,7 @@ public class BlocksHelper {
 		binfot.setGenerationStamp(genStamp);
 		binfot.setReplication(replication);
 		binfot.setTimestamp(timestamp);
-                                                                                                insertBlockInfo(session, binfot, update);
+                                                                                                insertBlockInfo(session, binfot);
 	}
 	
 	/** Fetch all blocks of an inode from BlockInfo table
@@ -909,8 +910,6 @@ public class BlocksHelper {
 		query.setParameter("param", iNodeID);
 		return 	query.getResultList();
 	}
-	
-
 	
 	/** Fetch a row from the Triplets table using blockId and index
 	 * @param session

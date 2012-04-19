@@ -403,43 +403,47 @@ public class BlockManager {
     block.commitBlock(commitBlock);
     return true;
   }
-  
-  /**
-   * Commit the last block of the file and mark it as complete if it has
-   * meets the minimum replication requirement
-   * 
-   * @param fileINode file inode
-   * @param commitBlock - contains client reported block length and generation
-   * @return true if the last block is changed to committed state.
-   * @throws IOException if the block does not have at least a minimal number
-   * of replicas reported from data-nodes.
-   */
-  public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
-      Block commitBlock) throws IOException {
 
-	 ;
-    if(commitBlock == null)
-      return false; // not committing, this is a block allocation retry
-    
-    //KTHFSBLOCKS
-    BlockInfo lastBlock = fileINode.getLastBlock();
-    
-    if(lastBlock == null) {
-      return false; // no blocks in file yet
-      
-    }
-    if(lastBlock.isComplete()) {
-    	return false; // already completed (e.g. by syncBlock) 
-    }
-    
-    //KTHFSBLOCKS
-    final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
-    if(countNodes(lastBlock).liveReplicas() >= minReplication) {
-      completeBlock(fileINode,fileINode.numBlocks()-1);
-    }
-    
-    return b;
-  }
+        /**
+         * Commit the last block of the file and mark it as complete if it has
+         * meets the minimum replication requirement
+         * 
+         * @param fileINode file inode
+         * @param commitBlock - contains client reported block length and generation
+         * @return true if the last block is changed to committed state.
+         * @throws IOException if the block does not have at least a minimal number
+         * of replicas reported from data-nodes.
+         */
+        @Deprecated
+        public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode,
+                                                    Block commitBlock) throws IOException
+        {
+                ;
+                if (commitBlock == null)
+                {
+                        return false; // not committing, this is a block allocation retry
+                }
+                //KTHFSBLOCKS
+                BlockInfo lastBlock = fileINode.getLastBlock();
+
+                if (lastBlock == null)
+                {
+                        return false; // no blocks in file yet
+                }
+
+                if (lastBlock.isComplete())
+                {
+                        return false; // already completed (e.g. by syncBlock) 
+                }
+
+                //KTHFSBLOCKS
+                final boolean b = commitBlock((BlockInfoUnderConstruction) lastBlock, commitBlock);
+                if (countNodes(lastBlock).liveReplicas() >= minReplication)
+                {
+                        completeBlock(fileINode, fileINode.numBlocks() - 1);
+                }
+                return b;
+        }
 
   /**
    * Convert a specified block of the file to a complete block.
@@ -450,7 +454,7 @@ public class BlockManager {
    */
   private BlockInfo completeBlock(final INodeFile fileINode,
       final int blkIndex) throws IOException {
-	  
+                
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
@@ -465,14 +469,17 @@ public class BlockManager {
     // replace penultimate block in file
     fileINode.setBlock(blkIndex, completeBlock);
     // replace block in the blocksMap
+    
     return blocksMap.replaceBlock(completeBlock);
   }
 
   private BlockInfo completeBlock(final INodeFile fileINode,
       final BlockInfo block) throws IOException {
+          
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
-      if(fileBlocks[idx] == block) {
+      //if(fileBlocks[idx] == block) {
+          if(fileBlocks[idx].getBlockId() == block.getBlockId()) {
         return completeBlock(fileINode, idx);
       }
     return block;
