@@ -622,7 +622,7 @@ public class INodeHelper {
 
 		Session session = DBConnector.obtainSession();
 		INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
-		assert inode == null : "INodeTableSimple object not found";
+		//assert inode == null : "INodeTableSimple object not found";
 
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {

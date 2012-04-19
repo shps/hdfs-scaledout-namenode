@@ -90,6 +90,7 @@ public class StructureGenerator {
       return exitCode;
     }
     genDirStructure();
+    System.out.println("WASIF " + DEFAULT_STRUCTURE_DIRECTORY);
     output(new File(outDir, DIR_STRUCTURE_FILE_NAME));
     genFileStructure();
     outputFiles(new File(outDir, FILE_STRUCTURE_FILE_NAME));
