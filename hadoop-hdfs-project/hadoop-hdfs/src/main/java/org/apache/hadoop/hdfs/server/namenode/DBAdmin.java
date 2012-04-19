@@ -8,7 +8,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.DelegationKeyTable;

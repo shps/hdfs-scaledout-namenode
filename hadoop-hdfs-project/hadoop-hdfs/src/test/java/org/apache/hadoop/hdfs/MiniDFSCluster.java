@@ -56,10 +56,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.namenode.DBAdmin;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -580,11 +577,8 @@ public class MiniDFSCluster {
   
     if (!federation) {
       /*[thesis] For testing*/
-<<<<<<< HEAD
-      //DBAdmin.truncateAllTables(wConf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
-=======
-      DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
->>>>>>> Pending on new getBlockLocations functionality
+        DBConnector.setConfiguration(conf);
+          DBAdmin.deleteAllTables(DBConnector.obtainSession(), conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       
