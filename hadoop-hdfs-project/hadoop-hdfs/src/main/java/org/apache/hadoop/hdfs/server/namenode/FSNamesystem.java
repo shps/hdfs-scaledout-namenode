@@ -324,7 +324,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     DBConnector.setConfiguration(conf);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
-    this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
     this.fsLock = new ReentrantReadWriteLock(true); // fair locking
     setConfigurationParameters(conf);
     dtSecretManager = createDelegationTokenSecretManager(conf);
@@ -332,6 +331,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     if(NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
       if (isWritingNN()) {
+        this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
         INodeHelper.initialize(blockManager.getDatanodeManager());
         BlocksHelper.initialize(blockManager.getDatanodeManager());
         LeaseHelper.initialize(leaseManager);
@@ -374,10 +374,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void activate(Configuration conf) throws IOException {
     writeLock();
     try {
-      setBlockTotal();
-      blockManager.activate(conf);
 
       if(isWritingNN()) {
+          setBlockTotal();
+          blockManager.activate(conf);
           this.lmthread = new Daemon(leaseManager.new Monitor());
           lmthread.start();
       }
@@ -2700,6 +2700,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"MissingBlocks", "Number of missing blocks"})
   public long getMissingBlocksCount() {
     // not locking
+    if (!isWritingNN())
+        return -1;
     return blockManager.getMissingBlocksCount();
   }
   
@@ -2727,7 +2729,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityTotalGB() {
-    return DFSUtil.roundBytesToGB(getCapacityTotal());
+    return isWritingNN()? DFSUtil.roundBytesToGB(getCapacityTotal()) : -1;
   }
 
   /**
@@ -2740,7 +2742,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityUsedGB() {
-    return DFSUtil.roundBytesToGB(getCapacityUsed());
+    return isWritingNN()? DFSUtil.roundBytesToGB(getCapacityUsed()) : -1;
   }
 
   @Override
@@ -2750,7 +2752,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityRemainingGB() {
-    return DFSUtil.roundBytesToGB(getCapacityRemaining());
+    return isWritingNN()? DFSUtil.roundBytesToGB(getCapacityRemaining()) : -1;
   }
 
   /**
@@ -2759,7 +2761,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public int getTotalLoad() {
-    return datanodeStatistics.getXceiverCount();
+    return isWritingNN()? datanodeStatistics.getXceiverCount() : -1;
   }
 
   int getNumberOfDatanodes(DatanodeReportType type) {
@@ -3261,6 +3263,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * This is costly and currently called only in assert.
      */
     private boolean isConsistent() throws IOException {
+      if (!isWritingNN())
+          return true;
+      
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
@@ -3390,7 +3395,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getBlocksTotal() {
-    return blockManager.getTotalBlocks();
+    return isWritingNN() ? blockManager.getTotalBlocks() : -1;
   }
 
   /**
@@ -3588,6 +3593,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getFilesTotal() {
+    if (!isWritingNN())
+        return -1;
     readLock();
     try {
       return this.dir.totalInodes();
@@ -3599,40 +3606,40 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getPendingReplicationBlocks() {
-    return blockManager.getPendingReplicationBlocksCount();
+    return isWritingNN() ? blockManager.getPendingReplicationBlocksCount() : -1;
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getUnderReplicatedBlocks() {
-    return blockManager.getUnderReplicatedBlocksCount();
+    return isWritingNN() ? blockManager.getUnderReplicatedBlocksCount() : -1;
   }
 
   /** Returns number of blocks with corrupt replicas */
   @Metric({"CorruptBlocks", "Number of blocks with corrupt replicas"})
   public long getCorruptReplicaBlocks() {
-    return blockManager.getCorruptReplicaBlocksCount();
+    return isWritingNN() ? blockManager.getCorruptReplicaBlocksCount() : -1;
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getScheduledReplicationBlocks() {
-    return blockManager.getScheduledReplicationBlocksCount();
+    return isWritingNN() ? blockManager.getScheduledReplicationBlocksCount() : -1;
   }
 
   @Metric
   public long getPendingDeletionBlocks() {
-    return blockManager.getPendingDeletionBlocksCount();
+    return isWritingNN() ? blockManager.getPendingDeletionBlocksCount() : -1;
   }
 
   @Metric
   public long getExcessBlocks() {
-    return blockManager.getExcessBlocksCount();
+    return isWritingNN() ? blockManager.getExcessBlocksCount() : -1;
   }
   
   @Metric
   public int getBlockCapacity() {
-    return blockManager.getCapacity();
+    return isWritingNN() ? blockManager.getCapacity() : -1;
   }
 
   @Override // FSNamesystemMBean
@@ -4319,7 +4326,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // NameNodeMXBean
   @Metric
   public long getTotalFiles() {
-    return getFilesTotal();
+    return isWritingNN() ? getFilesTotal() : -1;
   }
 
   @Override // NameNodeMXBean

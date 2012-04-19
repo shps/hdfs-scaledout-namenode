@@ -85,9 +85,9 @@ public class BlockManager {
 
   private final Namesystem namesystem;
 
-  private final DatanodeManager datanodeManager;
-  private final HeartbeatManager heartbeatManager;
-  private final BlockTokenSecretManagerNN blockTokenSecretManager;
+  private DatanodeManager datanodeManager = null;
+  private HeartbeatManager heartbeatManager = null;
+  private BlockTokenSecretManagerNN blockTokenSecretManager;
 
   private volatile long pendingReplicationBlocksCount = 0L;
   private volatile long corruptReplicaBlocksCount = 0L;
@@ -130,13 +130,13 @@ public class BlockManager {
   final BlocksMap blocksMap;
 
   /** Replication thread. */
-  final Daemon replicationThread = new Daemon(new ReplicationMonitor());
+   Daemon replicationThread;
   
   /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   /** Blocks to be invalidated. */
-  private final InvalidateBlocks invalidateBlocks;
+  private InvalidateBlocks invalidateBlocks = null;
 
   //
   // Keeps a TreeSet for every named node. Each treeset contains
@@ -151,9 +151,9 @@ public class BlockManager {
   // Store set of Blocks that need to be replicated 1 or more times.
   // We also store pending replication-orders.
   //
-  public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
+  public UnderReplicatedBlocks neededReplications  = null;
   @VisibleForTesting
-  final PendingReplicationBlocks pendingReplications;
+  PendingReplicationBlocks pendingReplications = null;
 
   /** The maximum number of replicas allowed for a block */
   public final short maxReplication;
@@ -179,18 +179,23 @@ public class BlockManager {
   
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
-    datanodeManager = new DatanodeManager(this, fsn, conf);
-    heartbeatManager = datanodeManager.getHeartbeatManager();
-    invalidateBlocks = new InvalidateBlocks(datanodeManager);
-
+    
+    if (namesystem.isWritingNN()) {
+        datanodeManager = new DatanodeManager(this, fsn, conf);
+        heartbeatManager = datanodeManager.getHeartbeatManager();
+        invalidateBlocks = new InvalidateBlocks(datanodeManager);
+        neededReplications = new UnderReplicatedBlocks();
+        blockplacement = BlockPlacementPolicy.getInstance(
+            conf, fsn, datanodeManager.getNetworkTopology());
+        pendingReplications = new PendingReplicationBlocks(conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
+        replicationThread = new Daemon(new ReplicationMonitor());
+    }
+    
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
-    blockplacement = BlockPlacementPolicy.getInstance(
-        conf, fsn, datanodeManager.getNetworkTopology());
-    pendingReplications = new PendingReplicationBlocks(conf.getInt(
-      DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
-      DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
-
     blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
+
 
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
@@ -281,9 +286,11 @@ public class BlockManager {
   }
 
   public void activate(Configuration conf) {
-    pendingReplications.start();
-    datanodeManager.activate(conf);
-    this.replicationThread.start();
+    if (namesystem.isWritingNN()) {
+        pendingReplications.start();
+        datanodeManager.activate(conf);
+        this.replicationThread.start();
+    }
   }
 
   public void close() {
