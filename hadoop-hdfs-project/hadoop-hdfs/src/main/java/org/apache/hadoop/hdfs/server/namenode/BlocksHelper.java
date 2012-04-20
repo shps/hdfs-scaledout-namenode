@@ -913,7 +913,6 @@ public class BlocksHelper {
 	 * @param bitd
 	 */
 	private static void updateBlockInfoTableInternal(Session session, BlockInfoTable bit) {
-                LOG.debug("Block persistance: ID:" + bit.getBlockId() + "    index:" + bit.getBlockIndex() + ", status:" + bit.getBlockUCState() );
 		session.updatePersistent(bit);
 	}
 	

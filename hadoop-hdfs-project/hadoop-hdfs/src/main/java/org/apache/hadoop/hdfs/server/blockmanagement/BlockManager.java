@@ -586,7 +586,12 @@ public class BlockManager {
 
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos,
     final BlockTokenSecretManager.AccessMode mode) throws IOException {
-    final LocatedBlock lb = createLocatedBlock(blk, pos);
+    //final LocatedBlock lb = createLocatedBlock(blk, pos);
+	  final LocatedBlock lb;
+    if(namesystem.isWritingNN())
+    	lb = createLocatedBlockWriteNN(blk, pos);
+    else
+    	lb = createLocatedBlockReadNN(blk, pos);
     if (mode != null) {
       setBlockToken(lb, mode);
     }
@@ -594,7 +599,50 @@ public class BlockManager {
   }
 
   /** @return a LocatedBlock for the given block */
-  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos
+  private LocatedBlock createLocatedBlockWriteNN(final BlockInfo blk, final long pos
+	      ) throws IOException { 
+	    if (blk instanceof BlockInfoUnderConstruction) {
+	      if (blk.isComplete()) {
+	        throw new IOException(
+	            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
+	            + ", blk=" + blk);
+	      }
+	      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
+	      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+	      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	      return new LocatedBlock(eb, locations, pos, false);
+	    }
+
+	    // get block locations
+	    final int numCorruptNodes = countNodes(blk).corruptReplicas();
+	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
+	    if (numCorruptNodes != numCorruptReplicas) {
+	      LOG.warn("Inconsistent number of corrupt replicas for "
+	          + blk + " blockMap has " + numCorruptNodes
+	          + " but corrupt replicas map has " + numCorruptReplicas);
+	    }
+
+	    final int numNodes = blocksMap.numNodes(blk);
+	    final boolean isCorrupt = numCorruptNodes == numNodes;
+	    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
+	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+	    if (numMachines > 0) {
+	      int j = 0;
+	      for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk);
+	          it.hasNext();) {
+	        final DatanodeDescriptor d = it.next();
+	        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
+	        if (isCorrupt || (!isCorrupt && !replicaCorrupt))
+	          machines[j++] = d;
+	      }
+	    }
+	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	    return new LocatedBlock(eb, machines, pos, isCorrupt);
+	  }
+
+  
+  /** @return a LocatedBlock for the given block */
+  private LocatedBlock createLocatedBlockReadNN(final BlockInfo blk, final long pos
 	      ) throws IOException { //TODO: [thesis] make changes to this function
 	    if (blk instanceof BlockInfoUnderConstruction) {
 	      if (blk.isComplete()) {

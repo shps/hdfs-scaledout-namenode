@@ -711,6 +711,9 @@
 			<exclude>**/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureToleration.java</exclude>
 			<exclude>**/org/apache/hadoop/cli/TestHDFSCLI.java</exclude>
+			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
+			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
+			<exclude>**/org/apache/hadoop/hdfs/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN -->
           </excludes>
         </configuration>
       </plugin>
