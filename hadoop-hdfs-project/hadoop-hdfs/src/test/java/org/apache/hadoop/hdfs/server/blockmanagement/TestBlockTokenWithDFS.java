@@ -193,7 +193,7 @@ public class TestBlockTokenWithDFS {
    * testing that APPEND operation can handle token expiration when
    * re-establishing pipeline is needed
    */
-  //@Test
+  @Test
   public void testAppend() throws Exception {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
@@ -254,7 +254,7 @@ public class TestBlockTokenWithDFS {
    * testing that WRITE operation can handle token expiration when
    * re-establishing pipeline is needed
    */
-  //@Test
+  @Test
   public void testWrite() throws Exception {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
@@ -532,7 +532,7 @@ public class TestBlockTokenWithDFS {
        */
 
       // restart datanodes on newly assigned ports
-      assertTrue(cluster.restartDataNodes(false));
+      assertTrue(cluster.restartDataNodes(true)); //FIXME: W
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
       // verify blockSeekTo() is able to re-fetch token transparently

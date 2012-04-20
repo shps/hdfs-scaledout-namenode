@@ -319,14 +319,22 @@ public class SecretHelper {
 		return 	query.getResultList();
 	}
 	
-	/** Insert a new row in DelegationKey table. If the row already
-	 *  exists, it will be updated
+	/** Insert a new row in DelegationKey table. If the row with the same key
+	 * exists in NDB, it will be updated. If a row with <param>keyType</param>
+	 * exists in NDB, it will deleted and a new row will be inserted
 	 * @param session
 	 * @param keyId
 	 * @param expiryDate
 	 * @param keyBytes
 	 */
 	private static void insert(Session session, int keyId, long expiryDate, byte[] keyBytes, short keyType){
+		if(keyType == CURR_KEY || keyType == NEXT_KEY) {
+			DelegationKeyTable dkte = select(session, keyType);
+			if(dkte != null) {
+				delete(session,dkte.getKeyId());
+			}
+		}
+		
 		DelegationKeyTable dkt = session.newInstance(DelegationKeyTable.class, keyId);
 		dkt.setExpiryDate(expiryDate);
 		dkt.setKeyBytes(keyBytes);
