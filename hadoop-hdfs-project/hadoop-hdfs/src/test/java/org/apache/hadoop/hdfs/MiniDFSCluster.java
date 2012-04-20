@@ -94,9 +94,9 @@ public class MiniDFSCluster {
    * Class to construct instances of MiniDFSClusters with specific options.
    */
   public static class Builder {
-    private int wNameNodePort = 5555;
+    private int wNameNodePort = 0;
     private int wNameNodeHttpPort = 0;
-    private int rNameNodePort = 5556;
+    private int rNameNodePort = 0;
     private int rNameNodeHttpPort = 0;
     private final Configuration conf;
     private int numWNameNodes = 1;

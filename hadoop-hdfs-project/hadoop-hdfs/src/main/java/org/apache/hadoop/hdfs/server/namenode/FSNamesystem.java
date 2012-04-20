@@ -327,10 +327,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.fsLock = new ReentrantReadWriteLock(true); // fair locking
     setConfigurationParameters(conf);
     dtSecretManager = createDelegationTokenSecretManager(conf);
-    this.registerMBean(); // register the MBean for the FSNamesystemState
     
     if(NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
       if (isWritingNN()) {
+        this.registerMBean(); // register the MBean for the FSNamesystemState
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
         INodeHelper.initialize(blockManager.getDatanodeManager());
         BlocksHelper.initialize(blockManager.getDatanodeManager());
@@ -388,7 +388,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     
-    registerMXBean();
+    if (isWritingNN())
+        registerMXBean();
     DefaultMetricsSystem.instance().register(this);
   }
 

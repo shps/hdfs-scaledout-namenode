@@ -541,7 +541,7 @@ public class TestDFSClientRetries extends TestCase {
     
     public void run() {
       try {
-        fs = cluster.getReadingFileSystem();
+        fs = cluster.getWritingFileSystem();
         
         int bufferSize = len;
         byte[] buf = new byte[bufferSize];

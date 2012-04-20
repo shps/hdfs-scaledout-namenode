@@ -296,7 +296,7 @@ public class BlockManager {
   public void close() {
     if (pendingReplications != null) pendingReplications.stop();
     blocksMap.close();
-    datanodeManager.close();
+    if(datanodeManager != null) datanodeManager.close();
     if (replicationThread != null) replicationThread.interrupt();
   }
 

@@ -376,9 +376,7 @@
 		<include>**/TestDFSClientRetries.java</include>
 		<include>**/TestDFSClientRetries.java</include>
 		<include>**/TestNameNodeResourceChecker.java</include>
-		<include>**/TestDataNodeMetrics.java</include>
 		<include>**/TestHDFSTrash.java</include>
-		<include>**/TestReplaceDatanodeOnFailure.java</include>
 	</includes>
           <excludes>
 			<!-- DFS Upgrade Unit tests that we don't mind-->
