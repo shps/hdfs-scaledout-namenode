@@ -69,7 +69,8 @@ public class INodeHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("INodeTableSimpleHelper.replaceChild() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.replaceChild() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -333,7 +334,8 @@ public class INodeHelper {
 				return null;
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeTableSimpleHelper.getChildINode() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.getChildINode() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} 
 		}
@@ -362,12 +364,13 @@ public class INodeHelper {
 				return null;
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeHelper.getINode() threw error " + e.getMessage());
+				//System.err.println("INodeHelper.getINode() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} 
 			catch (IOException io) {
 				tries--;
-				LOG.debug("INodeHelper.getINode()" + io.getMessage());
+				//LOG.debug("INodeHelper.getINode()" + io.getMessage());
 				io.printStackTrace();
 			}
 		}
@@ -400,8 +403,9 @@ public class INodeHelper {
 				return null;
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeTableSimpleHelper.getChildren() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.getChildren() threw error " + e.getMessage());
 				tries--;
+				e.printStackTrace();
 			}
 		}
 
@@ -447,7 +451,8 @@ public class INodeHelper {
 			catch (ClusterJException e){
 				if(tx.isActive()) 
 					tx.rollback();
-				System.err.println("updateModificationTime threw error " + e.getMessage());
+				//System.err.println("updateModificationTime threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -488,7 +493,8 @@ public class INodeHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -565,7 +571,7 @@ public class INodeHelper {
 			try {
 				inode.setClientNode(((INodeFileUnderConstruction) node).getClientNode().getName());
 			} catch (NullPointerException e) { // Can trigger when NN is also the client
-
+				
 			}
 		}
 		if (node instanceof INodeSymlink)
@@ -603,7 +609,8 @@ public class INodeHelper {
 			catch (ClusterJException e){
 				if(tx.isActive())
 					tx.rollback();
-				LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+				//LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -636,7 +643,8 @@ public class INodeHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -669,11 +677,13 @@ public class INodeHelper {
 				return parentDir;
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeTableSimpleHelper.getParent() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.getParent() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 			catch (IOException e){
-				LOG.error("INodeTableSimpleHelper.getParent() threw error " + e.getMessage());
+				//LOG.error("INodeTableSimpleHelper.getParent() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -707,12 +717,13 @@ public class INodeHelper {
 				}
 			}
 			catch (ClusterJException e){
-				System.err.println("INodeTableSimpleHelper.getINodes() threw error " + e.getMessage());
+				//System.err.println("INodeTableSimpleHelper.getINodes() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 			catch (IOException io) {
 				tries--;
-				LOG.error("INodeHelper.getINode()" + io.getMessage());
+				//LOG.error("INodeHelper.getINode()" + io.getMessage());
 				io.printStackTrace();
 			}
 		}

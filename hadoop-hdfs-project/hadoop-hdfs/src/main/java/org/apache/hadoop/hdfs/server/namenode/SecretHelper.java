@@ -72,7 +72,8 @@ public class SecretHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LOG.error("ClusterJException in put(): " + e.getMessage());
+				//LOG.error("ClusterJException in put(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -97,7 +98,8 @@ public class SecretHelper {
 				return blockKey;
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in get(): " + e.getMessage());
+				//LOG.error("ClusterJException in get(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());
@@ -129,7 +131,8 @@ public class SecretHelper {
 				return blockKeys;
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in get(): " + e.getMessage());
+				//LOG.error("ClusterJException in get(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());
@@ -159,7 +162,8 @@ public class SecretHelper {
 				return allKeys;
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in get(): " + e.getMessage());
+				//LOG.error("ClusterJException in get(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());
@@ -193,7 +197,8 @@ public class SecretHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LOG.error(tries + " ClusterJException in removeKey(): " + e.getMessage());
+				//LOG.error(tries + " ClusterJException in removeKey(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -220,7 +225,8 @@ public class SecretHelper {
 				return blockKey;
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in get(): " + e.getMessage());
+				//LOG.error("ClusterJException in get(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());
@@ -248,7 +254,8 @@ public class SecretHelper {
 				return blockKey;
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in get(): " + e.getMessage());
+				//LOG.error("ClusterJException in get(): " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			} catch (IOException e) {
 				LOG.error("IOException in get(): " + e.getMessage());

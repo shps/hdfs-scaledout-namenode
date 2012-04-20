@@ -97,7 +97,8 @@ public class LeaseHelper {
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
 			catch (ClusterJException e){
-				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -134,7 +135,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in addLease: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in addLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -164,7 +166,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in renewLease: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in renewLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -194,7 +197,8 @@ public class LeaseHelper {
 				return lease;
 
 			} catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getLease: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -220,7 +224,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -254,7 +259,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in renewLeaseAndAddPath: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in renewLeaseAndAddPath: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -283,7 +289,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -314,7 +321,8 @@ public class LeaseHelper {
 			catch(ClusterJException e) {
 				if(tx.isActive())
 					tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in removePath: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in removePath: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -355,7 +363,8 @@ public class LeaseHelper {
 				return sortedLeases;
 			}
 			catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -378,7 +387,8 @@ public class LeaseHelper {
 				return sortedLeases;
 			}
 			catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -414,7 +424,8 @@ public class LeaseHelper {
 				}
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in getLeaseByPath: " + e.getMessage());
+				//LOG.error("ClusterJException in getLeaseByPath: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -439,7 +450,8 @@ public class LeaseHelper {
 			tx.commit();
 			} catch(ClusterJException e) {
 				tx.rollback();
-				LOG.error("ClusterJException in deleteLease: " + e.getMessage());
+				//LOG.error("ClusterJException in deleteLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 			

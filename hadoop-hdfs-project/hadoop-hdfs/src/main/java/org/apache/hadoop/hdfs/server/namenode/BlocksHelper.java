@@ -68,7 +68,8 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("BlocksHelper.appendBlocks() threw error " + e.getMessage());
+				//System.err.println("BlocksHelper.appendBlocks() threw error " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -121,7 +122,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getBlockInfo failed " + e.getMessage());
+				//System.err.println("getBlockInfo failed " + e.getMessage());
+				e.printStackTrace();	
 				tries--;
 			}
 
@@ -189,7 +191,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getBlockInfoSingle failed " + e.getMessage());
+				//System.err.println("getBlockInfoSingle failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -212,7 +215,8 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("putBlockInfo failed " + e.getMessage());
+				//System.err.println("putBlockInfo failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -265,7 +269,8 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("updateIndex failed " + e.getMessage());
+				//System.err.println("updateIndex failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -307,7 +312,8 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				System.err.println("updateINodeID failed " + e.getMessage());
+				//System.err.println("updateINodeID failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -337,7 +343,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("updateIndex failed " + e.getMessage());
+				//System.err.println("updateIndex failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -356,7 +363,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getBlocksArray failed " + e.getMessage());
+				//System.err.println("getBlocksArray failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 
@@ -418,7 +426,8 @@ public class BlocksHelper {
 			}
 			catch (ClusterJException e){
 				tx.rollback();
-				LOG.error("setDataNode failed " + e.getMessage());
+				//LOG.error("setDataNode failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -456,7 +465,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("setDataNode failed " + e.getMessage());
+				//System.err.println("setDataNode failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -485,7 +495,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getDataNodesFromBlock failed " + e.getMessage());
+				//System.err.println("getDataNodesFromBlock failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -543,7 +554,8 @@ public class BlocksHelper {
 			catch (ClusterJException e){
 				if(tx.isActive())
 					tx.rollback();
-				System.err.println("removeBlocks failed " + e.getMessage());
+				//System.err.println("removeBlocks failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -614,7 +626,8 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getTripletsForBlockLength failed " + e.getMessage());
+				//System.err.println("getTripletsForBlockLength failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -652,7 +665,8 @@ public class BlocksHelper {
 					return -1;
 			}
 			catch (ClusterJException e){
-				System.err.println("getTripletsIndex failed " + e.getMessage());
+				//System.err.println("getTripletsIndex failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 			finally {
@@ -942,7 +956,8 @@ public class BlocksHelper {
 					return ret;
 			}
 			catch (ClusterJException e){
-				System.err.println("getDatanodeAddr failed " + e.getMessage());
+				//System.err.println("getDatanodeAddr failed " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
