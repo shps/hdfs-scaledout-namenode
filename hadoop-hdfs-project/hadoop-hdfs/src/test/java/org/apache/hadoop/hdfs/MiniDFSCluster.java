@@ -578,8 +578,12 @@ public class MiniDFSCluster {
   
     if (!federation) {
       /*[thesis] For testing*/
-        DBConnector.setConfiguration(conf);
-          DBAdmin.deleteAllTables(DBConnector.obtainSession(), conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+      if (format)
+      {
+//        DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
+          DBConnector.setConfiguration(conf);
+          assert(DBConnector.formatDB());
+      }
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
       

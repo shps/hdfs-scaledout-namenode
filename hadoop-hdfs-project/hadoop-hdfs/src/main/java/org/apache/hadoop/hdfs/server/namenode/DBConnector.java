@@ -18,7 +18,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
-import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;

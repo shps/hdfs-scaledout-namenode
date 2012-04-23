@@ -843,13 +843,13 @@ public class FSDirectory implements Closeable {
    * @return array of file blocks
    * @throws QuotaExceededException
    */
-  Block[] setReplication(String src, short replication, short[] oldReplication)
+  Block[] setReplication(String src, short replication, short[] oldReplication, boolean isTransactional)
       throws QuotaExceededException, UnresolvedLinkException {
     waitForReady();
     Block[] fileBlocks = null;
     writeLock();
     try {
-      fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
+      fileBlocks = unprotectedSetReplication(src, replication, oldReplication, isTransactional);
       //if (fileBlocks != null)  // log replication change
         //fsImage.getEditLog().logSetReplication(src, replication);
       return fileBlocks;
@@ -860,7 +860,8 @@ public class FSDirectory implements Closeable {
 
   Block[] unprotectedSetReplication(String src, 
                                     short replication,
-                                    short[] oldReplication
+                                    short[] oldReplication,
+                                    boolean isTransactional
                                     ) throws QuotaExceededException, 
                                     UnresolvedLinkException {
     assert hasWriteLock();
@@ -879,9 +880,11 @@ public class FSDirectory implements Closeable {
 
     // check disk quota
     long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
-    updateCount(inodes, inodes.length-1, 0, dsDelta, true);
+    updateCount(inodes, inodes.length-1, 0, dsDelta, true); 
 
-    fileNode.setReplicationDB(replication);
+    fileNode.setReplication(replication);
+    INodeHelper.updateHeader(fileNode.getID(), fileNode.getHeader(), isTransactional);
+    
     if (oldReplication != null) {
       oldReplication[0] = oldRepl;
     }
@@ -937,11 +940,11 @@ public class FSDirectory implements Closeable {
 //    //fsImage.getEditLog().logSetPermissions(src, permission);
 //  }
   
-  void setPermission(String src, FsPermission permission)
+  void setPermission(String src, FsPermission permission, boolean isTransactional)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
-      unprotectedSetPermission(src, permission);
+      unprotectedSetPermission(src, permission, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -949,7 +952,7 @@ public class FSDirectory implements Closeable {
   }
   
   // Uses INodeHelper
-  void unprotectedSetPermission(String src, FsPermission permissions) 
+  void unprotectedSetPermission(String src, FsPermission permissions, boolean isTransactional) 
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
@@ -957,7 +960,7 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException("File does not exist: " + src);
     }
     inode.setPermission(permissions);
-    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus(), isTransactional);
   }
 
   void unprotectedSetPermissionOld(String src, FsPermission permissions) 
@@ -970,18 +973,18 @@ public class FSDirectory implements Closeable {
     inode.setPermission(permissions);
   }
 
-  void setOwner(String src, String username, String groupname)
+  void setOwner(String src, String username, String groupname, boolean isTransactional)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     writeLock();
     try {
-      unprotectedSetOwner(src, username, groupname);
+      unprotectedSetOwner(src, username, groupname, isTransactional);
     } finally {
       writeUnlock();
     }
     //fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
-  void unprotectedSetOwner(String src, String username, String groupname) 
+  void unprotectedSetOwner(String src, String username, String groupname, boolean isTransactional) 
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     assert hasWriteLock();
     INode inode = rootDir.getNode(src, true);
@@ -996,7 +999,7 @@ public class FSDirectory implements Closeable {
       inode.setGroup(groupname);
     }
     
-    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus());
+    INodeHelper.setPermission(inode.getID(), inode.getPermissionStatus(), isTransactional);
   }
   
   void unprotectedSetOwnerOld(String src, String username, String groupname) 
@@ -1453,7 +1456,7 @@ public class FSDirectory implements Closeable {
     }
   }
   
-  /** update count of each inode with quota
+   /** update count of each inode with quota
    * 
    * @param inodes an array of inodes on a path
    * @param numOfINodes the number of inodes to update starting from index 0
@@ -1463,6 +1466,39 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    */
   private void updateCount(INode[] inodes, int numOfINodes, 
+                           long nsDelta, long dsDelta, boolean checkQuota)
+                           throws QuotaExceededException {
+    assert hasWriteLock();
+    if (!ready) {
+      //still initializing. do not check or update quotas.
+      return;
+    }
+    if (numOfINodes>inodes.length) {
+      numOfINodes = inodes.length;
+    }
+    if (checkQuota) {
+      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+    }
+    
+    for(int i = 0; i < numOfINodes; i++) {
+      if (inodes[i].isQuotaSet()) { // a directory with quota
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
+        node.updateNumItemsInTree(nsDelta, dsDelta);
+        INodeHelper.updateNumItemsInTree(node.getID(), node.getNsCount(), node.getDsCount());
+      }
+    }
+  }
+  
+  /** update count of each inode with quota
+   * 
+   * @param inodes an array of inodes on a path
+   * @param numOfINodes the number of inodes to update starting from index 0
+   * @param nsDelta the delta change of namespace
+   * @param dsDelta the delta change of diskspace
+   * @param checkQuota if true then check if quota is exceeded
+   * @throws QuotaExceededException if the new count violates any quota limit
+   */
+  private void updateCountOld(INode[] inodes, int numOfINodes, 
                            long nsDelta, long dsDelta, boolean checkQuota)
                            throws QuotaExceededException {
     assert hasWriteLock();

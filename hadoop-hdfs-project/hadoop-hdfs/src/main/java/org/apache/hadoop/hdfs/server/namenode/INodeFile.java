@@ -85,21 +85,18 @@ public class INodeFile extends INode {
 	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
   }
 
-  public void setReplicationDB(short replication) {
-	  if(replication <= 0)
-		  throw new IllegalArgumentException("Unexpected value for the replication");
-	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
-	  //[KTHFS] Call for update in replication
-	  try {
-		  INodeHelper.updateHeader(this.id, header);
-	  } catch (IOException e) {
-		  // TODO Auto-generated catch block
-		  e.printStackTrace();
-	  }
-  }
-
-
-  
+//  public void setReplicationDB(short replication) {
+//	  if(replication <= 0)
+//		  throw new IllegalArgumentException("Unexpected value for the replication");
+//	  header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
+//	  //[KTHFS] Call for update in replication
+//	  try {
+//		  INodeHelper.updateHeader(this.id, header);
+//	  } catch (IOException e) {
+//		  // TODO Auto-generated catch block
+//		  e.printStackTrace();
+//	  }
+//  }
 
   /**
    * [STATELESS] get header

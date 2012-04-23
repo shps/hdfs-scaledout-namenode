@@ -40,6 +40,8 @@ public class DBAdmin {
 			   Connection conn = DriverManager.getConnection(ConnectionString);
 			   Statement stmt=conn.createStatement();
 			   stmt.execute("call trunc_kthfs()");
+                           stmt.close();
+                           conn.close();
 			}
 			catch(SQLException SQLEx) {
 			   System.out.println("MySQL error: "+SQLEx.getErrorCode()+

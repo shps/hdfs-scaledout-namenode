@@ -519,32 +519,7 @@ public class INodeHelper {
 		}
 	}
 
-	/**
-	 * Uses DB to set the permission.
-	 * @param inode
-	 * @param permissions
-	 * @throws ClusterJException 
-	 */
-	public static void setPermission(long inodeId, PermissionStatus permissionStatus) throws IOException {
-		setPermissionInternal(DBConnector.obtainSession(), inodeId, permissionStatus);
-	}
-
-	/**
-	 * Internal operation to set permission.
-	 * @param session
-	 * @param inodeId
-	 * @param permissionStatus
-	 * @throws IOException 
-	 */
-	private static void setPermissionInternal(Session session, long inodeId, PermissionStatus permissionStatus) throws IOException {
-
-		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
-		DataOutputBuffer permissionString = new DataOutputBuffer();
-		permissionStatus.write(permissionString);
-		inodet.setPermission(permissionString.getData());
-		session.updatePersistent(inodet);
-	}
-
+	
 	/** Internal function to add a child to a directory after doing all the required casting
 	 * @param session
 	 * @param node
@@ -697,38 +672,25 @@ public class INodeHelper {
 
 	}
 
-	/** Updates the header of an inode in database
-	 * @param inodeid
-	 * @param header
-	 * @return
-	 * @throws IOException
-	 */
-	public static boolean updateHeader(long inodeid, long header) throws IOException {
-		boolean done = false;
-		int tries = RETRY_COUNT;
+	 /**
+     * Updates the header of an inode in database
+     * @param inodeid
+     * @param header
+     * @param isTransactional This operation is a part of a transaction.
+     */
+    public static void updateHeader(long inodeid, long header, boolean isTransactional){
+        Session session = DBConnector.obtainSession();
+        boolean isActive = session.currentTransaction().isActive();
+        assert isActive == isTransactional :
+                "Current transaction's isActive value is " + isActive +
+                " but isTransactional's value is " + isTransactional;
 
-		Session session = DBConnector.obtainSession();
-		INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
-		//        assert inode == null : "INodeTableSimple object not found";
+        if (isTransactional)
+            updateHeaderInternal(session, inodeid, header);
+        else
+            updateHeaderOld(inodeid, header);
+    }
 
-		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				updateHeaderInternal(session, inodeid, header);
-				tx.commit();
-				done = true;
-				session.flush();
-				return done;
-			} catch (ClusterJException e) {
-				tx.rollback();
-				System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
-				tries--;
-			}
-		}
-
-		return false;
-	}
 
 	/** Updates the header of an inode in database
 	 * @param session
@@ -740,6 +702,40 @@ public class INodeHelper {
 		inodet.setHeader(header);
 		session.updatePersistent(inodet);
 	}
+	
+    /** Updates the header of an inode in database
+     * @param inodeid
+     * @param header
+     * @return
+     * @throws IOException
+     */
+    public static boolean updateHeaderOld(long inodeid, long header) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        INodeTableSimple inode = selectINodeTableInternal(session, inodeid);
+//        assert inode == null : "INodeTableSimple object not found";
+
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                updateHeaderInternal(session, inodeid, header);
+                tx.commit();
+                done = true;
+                session.flush();
+                return done;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
+
+        return false;
+    }
+
 
 	public static INodeDirectory getParent(long parentid) {
 		boolean done = false;
@@ -865,6 +861,101 @@ public class INodeHelper {
 		}
 		return inodetSorted;
 	}
+	
+	 /**
+     * Updates number of items and diskspace of the inode directory in DB.
+     * @param inodeId
+     * @param nsDelta
+     * @param dsDelta 
+     */
+    public static void updateNumItemsInTree(long inodeId, long nsDelta, long dsDelta)
+    {
+        updateNumItemsInTreeInternal(DBConnector.obtainSession(), inodeId, nsDelta, dsDelta);
+    }
+    
+    /**
+     * Updates number of items and diskspace of the inode directory in DB.
+     * @param session
+     * @param inodeId
+     * @param nsDelta
+     * @param dsDelta 
+     */
+    private static void updateNumItemsInTreeInternal(Session session, long inodeId, long nsDelta, long dsDelta) {
+        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
+        inodet.setNSCount(nsDelta);
+        inodet.setDSCount(dsDelta);
+        session.updatePersistent(inodet);
+    }
+
+
+     /**
+     * Uses DB to set the permission.
+     * @param inode
+     * @param permissions
+     * @throws ClusterJException 
+     */
+    public static void setPermission(long inodeId, PermissionStatus permissionStatus, boolean isTransactional) throws IOException {
+        Session session = DBConnector.obtainSession();
+        boolean isActive = session.currentTransaction().isActive();
+        assert isActive == isTransactional : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+        
+        if (isTransactional)
+            setPermissionInternal(session, inodeId, permissionStatus);
+        else
+            setPermissionWithTransaction(inodeId, permissionStatus);
+    }
+    
+    /**
+     * Update the permission in DB using a transaction.
+     * @param inodeId
+     * @param permissionStatus
+     * @return
+     * @throws IOException 
+     */
+    private static boolean setPermissionWithTransaction(long inodeId, PermissionStatus permissionStatus) throws IOException{
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                setPermissionInternal(session, inodeId, permissionStatus);
+                tx.commit();
+                done = true;
+                session.flush();
+                return done;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                LOG.error(e.getMessage(), e);
+                tries--;
+            }
+        }
+
+        return false;
+    }
+    
+    /**
+     * Internal operation to set permission.
+     * @param session
+     * @param inodeId
+     * @param permissionStatus
+     * @throws IOException 
+     */
+    private static void setPermissionInternal(Session session, long inodeId, PermissionStatus permissionStatus) throws IOException {
+
+        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
+        DataOutputBuffer permissionString = new DataOutputBuffer();
+        permissionStatus.write(permissionString);
+        inodet.setPermission(permissionString.getData());
+        session.updatePersistent(inodet);
+    }
+
+
 }
 
 //TODO: replace all syserr with LOG.error

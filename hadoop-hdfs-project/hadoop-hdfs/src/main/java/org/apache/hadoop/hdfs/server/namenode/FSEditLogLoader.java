@@ -222,8 +222,10 @@ public class FSEditLogLoader {
             SetReplicationOp setReplicationOp = (SetReplicationOp)op;
             short replication = fsNamesys.getBlockManager().adjustReplication(
                 setReplicationOp.replication);
+            //[Hooman]TODO: the whole loadEditLog operations should be done in one transaction?
+            //For now, these operations are done in separate transactions.
             fsDir.unprotectedSetReplication(setReplicationOp.path,
-                                            replication, null);
+                                            replication, null, false); 
             break;
           }
           case OP_CONCAT_DELETE: {
@@ -268,14 +270,16 @@ public class FSEditLogLoader {
           }
           case OP_SET_PERMISSIONS: {
             SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
+            //[Hooman]TODO: This is done in its own transaction.
             fsDir.unprotectedSetPermission(setPermissionsOp.src,
-                                           setPermissionsOp.permissions);
+                                           setPermissionsOp.permissions, false);
             break;
           }
           case OP_SET_OWNER: {
             SetOwnerOp setOwnerOp = (SetOwnerOp)op;
+            //[Hooman]TODO: This is done in its own transaction.
             fsDir.unprotectedSetOwner(setOwnerOp.src, setOwnerOp.username,
-                                      setOwnerOp.groupname);
+                                      setOwnerOp.groupname, false);
             break;
           }
           case OP_SET_NS_QUOTA: {
