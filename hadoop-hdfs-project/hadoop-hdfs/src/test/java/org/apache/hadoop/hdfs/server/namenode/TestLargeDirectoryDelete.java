@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
-
 /**
  * Ensure during large directory delete, namenode does not block until the 
  * deletion completes and handles new requests from other clients

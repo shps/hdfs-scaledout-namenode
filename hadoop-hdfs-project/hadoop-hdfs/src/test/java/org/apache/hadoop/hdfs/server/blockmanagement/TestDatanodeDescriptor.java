@@ -54,22 +54,27 @@ public class TestDatanodeDescriptor extends TestCase {
     BlockInfo blk = new BlockInfo(new Block(1L), 1);
     BlockInfo blk1 = new BlockInfo(new Block(2L), 2);
     // add first block
-    assertTrue(dd.addBlock(blk));
+    assertTrue(dd.addBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
-    assertFalse(dd.removeBlock(blk1));
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    assertFalse(dd.removeBlock(blk1, false));
     assertEquals(1, dd.numBlocks());
     // add an existent block
-    assertFalse(dd.addBlock(blk));
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    assertFalse(dd.addBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // add second block
-    assertTrue(dd.addBlock(blk1));
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    assertTrue(dd.addBlock(blk1, false));
     assertEquals(2, dd.numBlocks());
     // remove first block
-    assertTrue(dd.removeBlock(blk));
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    assertTrue(dd.removeBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove second block
-    assertTrue(dd.removeBlock(blk1));
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    assertTrue(dd.removeBlock(blk1, false));
     assertEquals(0, dd.numBlocks());    
   }
 }

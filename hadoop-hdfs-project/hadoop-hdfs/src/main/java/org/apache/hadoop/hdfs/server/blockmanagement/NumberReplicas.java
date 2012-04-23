@@ -54,4 +54,13 @@ public class NumberReplicas {
   public int excessReplicas() {
     return excessReplicas;
   }
+  
+    /**
+     * @return total number of replicas
+     */
+    int getTotal() {
+      return liveReplicas + decommissionedReplicas + 
+           + corruptReplicas + excessReplicas;
+    }
+  
 } 

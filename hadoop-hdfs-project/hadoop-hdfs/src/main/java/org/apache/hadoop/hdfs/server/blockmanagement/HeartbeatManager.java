@@ -220,7 +220,8 @@ class HeartbeatManager implements DatanodeStatistics {
         }
         try {
           synchronized(this) {
-            dm.removeDeadDatanode(dead);
+                  // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+            dm.removeDeadDatanode(dead, false);
           }
         } finally {
           namesystem.writeUnlock();
@@ -241,7 +242,8 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           final long now = Util.now();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
-            heartbeatCheck();
+            // Will not be part of an outer db transaction (lock)
+                  heartbeatCheck();
             lastHeartbeatCheck = now;
           }
           if (namesystem.getBlockManager().shouldUpdateBlockKey(

@@ -263,10 +263,10 @@ public class DatanodeManager {
    * Remove a datanode descriptor.
    * @param nodeInfo datanode descriptor.
    */
-  private void removeDatanode(DatanodeDescriptor nodeInfo) {
+  private void removeDatanode(DatanodeDescriptor nodeInfo, boolean isTransactional) {
     assert namesystem.hasWriteLock();
     heartbeatManager.removeDatanode(nodeInfo);
-    blockManager.removeBlocksAssociatedTo(nodeInfo);
+    blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
     networktopology.remove(nodeInfo);
 
     if (LOG.isDebugEnabled()) {
@@ -296,7 +296,7 @@ public class DatanodeManager {
   }
 
   /** Remove a dead datanode. */
-  void removeDeadDatanode(final DatanodeID nodeID) {
+  void removeDeadDatanode(final DatanodeID nodeID, boolean isTransactional) {
       synchronized(datanodeMap) {
         DatanodeDescriptor d;
         try {
@@ -307,7 +307,7 @@ public class DatanodeManager {
         if (d != null && isDatanodeDead(d)) {
           NameNode.stateChangeLog.info(
               "BLOCK* removeDeadDatanode: lost heartbeat from " + d.getName());
-          removeDatanode(d);
+          removeDatanode(d, isTransactional);
         }
       }
   }

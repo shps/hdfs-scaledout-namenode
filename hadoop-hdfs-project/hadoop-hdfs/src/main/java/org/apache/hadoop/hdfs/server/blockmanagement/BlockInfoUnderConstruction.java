@@ -215,13 +215,13 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * @param block - contains client reported block length and generation 
    * @throws IOException if block ids are inconsistent.
    */
-  void commitBlock(Block block) throws IOException {
+  void commitBlock(Block block, boolean isTransactional) throws IOException {
     if(getBlockId() != block.getBlockId())
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
-    BlocksHelper.updateBlockInfoInDB(this.getINode().getID(),this);
+    BlocksHelper.updateBlockInfoInDB(this.getINode().getID(),this, isTransactional);
   }
   
 

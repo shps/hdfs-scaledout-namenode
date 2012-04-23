@@ -73,6 +73,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.

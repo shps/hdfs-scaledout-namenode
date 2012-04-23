@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.mysql.clusterj.ClusterJException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -152,20 +153,21 @@ public class LeaseManager {
 	/**
 	 * Remove the specified lease and src
 	 */
-	synchronized void removeLease(Lease lease, String src) {
+	synchronized void removeLease(Lease lease, String src, boolean isTransactional) {
 		//sortedLeasesByPath.remove(src);
-		if (!lease.removePath(src)) {
+		if (!lease.removePath(src, isTransactional)) {
 			LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
 		}
 
 		if (!lease.hasPath()) {
-			LeaseHelper.deleteLease(lease.getHolder());
+			LeaseHelper.deleteLease(lease.getHolder(), isTransactional);
+                                                                                                
 		}
 	}
 	@Deprecated
-	synchronized void removeLeaseOld(Lease lease, String src) {
+	synchronized void removeLeaseOld(Lease lease, String src, boolean isTransactional) {
 		sortedLeasesByPath.remove(src);
-		if (!lease.removePath(src)) {
+		if (!lease.removePath(src, isTransactional)) {
 			LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
 		}
 
@@ -180,20 +182,20 @@ public class LeaseManager {
 	/**
 	 * Remove the lease for the specified holder and src
 	 */
-	synchronized void removeLease(String holder, String src) {
+	synchronized void removeLease(String holder, String src, boolean isTransactional) {
 		Lease lease = getLease(holder);
 		if (lease != null) {
-			removeLease(lease, src);
+			removeLease(lease, src, isTransactional);
 		}
 	}
 
 	/**
 	 * Reassign lease for file src to the new holder.
 	 */
-	synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
+	synchronized Lease reassignLease(Lease lease, String src, String newHolder, boolean isTransactional) {
 		assert newHolder != null : "new lease holder is null";
 		if (lease != null) {
-			removeLease(lease, src);
+			removeLease(lease, src, isTransactional);
 		}
 		return addLease(newHolder, src);
 	}
@@ -347,8 +349,8 @@ public class LeaseManager {
 		@Deprecated
 		boolean hasPathOld() {return !paths.isEmpty();}
 
-		boolean removePath(String src) {
-			return LeaseHelper.removePath(this.holderID, src);
+		boolean removePath(String src, boolean isTransactional) {
+			return LeaseHelper.removePath(this.holderID, src, isTransactional);
 		}
 		@Deprecated
 		boolean removePathOld(String src) {
@@ -412,18 +414,23 @@ public class LeaseManager {
 			return holder;
 		}
 
-		void replacePath(String oldpath, String newpath) {
-			LeaseHelper.replacePath(this.holderID, oldpath, newpath);
+		void replacePath(String oldpath, String newpath, boolean isTransactional) {
+			LeaseHelper.replacePath(this.holderID, oldpath, newpath, isTransactional);
 		}
 		
 		void replacePathOld(String oldpath, String newpath) {
 			paths.remove(oldpath);
 			paths.add(newpath);
 		}
+                                                                
+		
+		boolean doesExists() {
+			return LeaseHelper.exists(holder);
+		}
 	}
 
 	synchronized void changeLease(String src, String dst,
-			String overwrite, String replaceBy) {
+			String overwrite, String replaceBy, boolean isTransactional) {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug(getClass().getSimpleName() + ".changelease: " +
 					" src=" + src + ", dest=" + dst + 
@@ -442,12 +449,12 @@ public class LeaseManager {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
 			}
-			lease.replacePath(oldpath, newpath);
+			lease.replacePath(oldpath, newpath, isTransactional);
 		}
 	}
 	@Deprecated
 	synchronized void changeLeaseOld(String src, String dst,
-			String overwrite, String replaceBy) {
+			String overwrite, String replaceBy, boolean isTransactional) {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug(getClass().getSimpleName() + ".changelease: " +
 					" src=" + src + ", dest=" + dst + 
@@ -464,30 +471,30 @@ public class LeaseManager {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
 			}
-			lease.replacePath(oldpath, newpath);
+			lease.replacePath(oldpath, newpath, isTransactional);
 			sortedLeasesByPath.remove(oldpath);
 			sortedLeasesByPath.put(newpath, lease);
 		}
 	}
 
-	synchronized void removeLeaseWithPrefixPath(String prefix) {
+	synchronized void removeLeaseWithPrefixPath(String prefix, boolean isTransactional) {
 		SortedMap<String, Lease> sortedLeasesByPathFromDB = LeaseHelper.getSortedLeasesByPath();
 		for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPathFromDB)) {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug(LeaseManager.class.getSimpleName()
 						+ ".removeLeaseWithPrefixPath: entry=" + entry);
 			}
-			removeLease(entry.getValue(), entry.getKey());    
+			removeLease(entry.getValue(), entry.getKey(), isTransactional);    
 		}
 	}
 	@Deprecated
-	synchronized void removeLeaseWithPrefixPathOld(String prefix) {
+	synchronized void removeLeaseWithPrefixPathOld(String prefix, boolean isTransactional) {
 		for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug(LeaseManager.class.getSimpleName()
 						+ ".removeLeaseWithPrefixPath: entry=" + entry);
 			}
-			removeLease(entry.getValue(), entry.getKey());    
+			removeLease(entry.getValue(), entry.getKey(), isTransactional);    
 		}
 	}
 
@@ -527,7 +534,7 @@ public class LeaseManager {
 		/** Check leases periodically. */
 		public void run() {
 			for(; fsnamesystem.isRunning(); ) {
-				fsnamesystem.writeLock();
+                                                                                                                                                        	fsnamesystem.writeLock();
 				try {
 					if (!fsnamesystem.isInSafeMode()) {
 						checkLeases();
@@ -548,86 +555,96 @@ public class LeaseManager {
 		}
 	}
 
-	/** Check the leases beginning from the oldest. */
-	private synchronized void checkLeases() {
-		assert fsnamesystem.hasWriteLock();
-		
-		SortedSet<Lease> sortedLeasesFromDB = LeaseHelper.getSortedLeases();
-		for(; sortedLeasesFromDB.size() > 0; ) {
-			final Lease oldest = sortedLeasesFromDB.first();
-			if (!oldest.expiredHardLimit()) {
-				return;
-			}
+                                                /** Check the leases beginning from the oldest. */
+                                                private synchronized void checkLeases()
+                                                {
+                                                        assert fsnamesystem.hasWriteLock();
+                                                        SortedSet<Lease> sortedLeasesFromDB = LeaseHelper.getSortedLeases();
+                                                        for (; sortedLeasesFromDB.size() > 0;)
+                                                        {
+                                                                final Lease oldest = sortedLeasesFromDB.first();
+                                                                if (!oldest.expiredHardLimit())
+                                                                {
+                                                                        return;
+                                                                }
 
-			LOG.info("Lease " + oldest + " has expired hard limit");
+                                                                LOG.info("Lease " + oldest + " has expired hard limit");
 
-			final List<String> removing = new ArrayList<String>();
-			// need to create a copy of the oldest lease paths, becuase 
-			// internalReleaseLease() removes paths corresponding to empty files,
-			// i.e. it needs to modify the collection being iterated over
-			// causing ConcurrentModificationException
-			String[] leasePaths = new String[oldest.getPaths().size()];
-			oldest.getPaths().toArray(leasePaths);
-			for(String p : leasePaths) {
-				try {
-					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
-						LOG.info("Lease recovery for file " + p +
-								" is complete. File closed.");
-						removing.add(p);
-					} else {
-						LOG.info("Started block recovery for file " + p +
-								" lease " + oldest);
-					}
-				} catch (IOException e) {
-					LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
-					removing.add(p);
-				}
-			}
+                                                                final List<String> removing = new ArrayList<String>();
+                                                                // need to create a copy of the oldest lease paths, becuase 
+                                                                // internalReleaseLease() removes paths corresponding to empty files,
+                                                                // i.e. it needs to modify the collection being iterated over
+                                                                // causing ConcurrentModificationException
+                                                                Collection<String> paths = oldest.getPaths();
+                                                                if (paths == null)
+                                                                {
+                                                                        return;
+                                                                }
+                                                                String[] leasePaths = new String[paths.size()];
+                                                                paths.toArray(leasePaths);
+                                                                for (String p : leasePaths)
+                                                                {
+                                                                        try
+                                                                        {
+                                                                                // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+                                                                                if (fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, false))
+                                                                                {
+                                                                                        LOG.info("Lease recovery for file " + p
+                                                                                                 + " is complete. File closed.");
+                                                                                        removing.add(p);
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        LOG.info("Started block recovery for file " + p
+                                                                                                 + " lease " + oldest);
+                                                                                }
+                                                                        }
+                                                                        catch (IOException e)
+                                                                        {
+                                                                                LOG.error("Cannot release the path " + p + " in the lease " + oldest, e);
+                                                                                removing.add(p);
+                                                                        }
+                                                                }
 
-			for(String p : removing) {
-				removeLease(oldest, p);
-			}
-		}
-	}
-	@Deprecated
-	private synchronized void checkLeasesOld() {
-		assert fsnamesystem.hasWriteLock();
-		for(; sortedLeases.size() > 0; ) {
-			final Lease oldest = sortedLeases.first();
-			if (!oldest.expiredHardLimit()) {
-				return;
-			}
+                                                                for (String p : removing)
+                                                                {
+                                                                        // KTHFS: isTransactional = false since here we don't require atomicity in the transactions
+                                                                        // Single transaction
+                                                                        boolean isDone = false;
+                                                                        int tries = DBConnector.RETRY_COUNT;
 
-			LOG.info("Lease " + oldest + " has expired hard limit");
-
-			final List<String> removing = new ArrayList<String>();
-			// need to create a copy of the oldest lease paths, becuase 
-			// internalReleaseLease() removes paths corresponding to empty files,
-			// i.e. it needs to modify the collection being iterated over
-			// causing ConcurrentModificationException
-			String[] leasePaths = new String[oldest.getPaths().size()];
-			oldest.getPaths().toArray(leasePaths);
-			for(String p : leasePaths) {
-				try {
-					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
-						LOG.info("Lease recovery for file " + p +
-								" is complete. File closed.");
-						removing.add(p);
-					} else {
-						LOG.info("Started block recovery for file " + p +
-								" lease " + oldest);
-					}
-				} catch (IOException e) {
-					LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
-					removing.add(p);
-				}
-			}
-
-			for(String p : removing) {
-				removeLease(oldest, p);
-			}
-		}
-	}
+                                                                        try
+                                                                        {
+                                                                                while (!isDone && tries > 0)
+                                                                                {
+                                                                                        try
+                                                                                        {
+                                                                                                DBConnector.beginTransaction();
+                                                                                                removeLease(oldest, p, true);
+                                                                                                DBConnector.commit();
+                                                                                                isDone = true;
+                                                                                        }
+                                                                                        catch (ClusterJException ex)
+                                                                                        {
+                                                                                                if (!isDone)
+                                                                                                {
+                                                                                                        DBConnector.safeRollback();
+                                                                                                        tries--;
+                                                                                                        FSNamesystem.LOG.error("removeLease() :: failed to remove lease from holder" + oldest.getHolder() + " on file " + p+ ". Exception: " + ex.getMessage(), ex);
+                                                                                                }
+                                                                                        }
+                                                                                }
+                                                                        }
+                                                                        finally
+                                                                        {
+                                                                                if (!isDone)
+                                                                                {
+                                                                                        DBConnector.safeRollback();
+                                                                                }
+                                                                        }
+                                                                }
+                                                        }
+                                                }
 
 	/** {@inheritDoc} */
 	public synchronized String toString() {

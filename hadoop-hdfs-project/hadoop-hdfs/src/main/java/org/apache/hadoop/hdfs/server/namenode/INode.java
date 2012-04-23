@@ -207,7 +207,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 	 * the number of files in the sub tree. Also clears references since this
 	 * INode is deleted.
 	 */
-	abstract int collectSubtreeBlocksAndClear(List<Block> v);
+	abstract int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional);
 
 	/** Compute {@link ContentSummary}. */
 	public final ContentSummary computeContentSummary() {
@@ -414,17 +414,17 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 		return buf.toString();
 	}
 
-	boolean removeNode() {
-		INodeHelper.removeChild(getID());
+	boolean removeNode(boolean isTransactional) {
+		INodeHelper.removeChild(getID(), isTransactional);
 		return true;		
 	}
 
 	@Deprecated
-	boolean removeNodeOld() {
+	boolean removeNodeOld(boolean isTransactional) {
 		if (parent == null) {
 			return false;
 		} else {
-			parent.removeChild(this);
+			parent.removeChild(this, isTransactional);
 			parent = null;
 			return true;
 		}
