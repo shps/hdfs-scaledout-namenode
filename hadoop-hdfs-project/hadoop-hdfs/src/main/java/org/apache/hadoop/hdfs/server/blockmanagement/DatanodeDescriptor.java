@@ -222,7 +222,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Add block to the head of the list of blocks belonging to the data-node.
    */
   public boolean addBlock(BlockInfo b) {
-    BlockManager.LOG.debug("WASIF inside DND.addBlock " + b.getBlockId());
     if(!b.addNode(this))
       return false;
     // add to the head of the data-node list

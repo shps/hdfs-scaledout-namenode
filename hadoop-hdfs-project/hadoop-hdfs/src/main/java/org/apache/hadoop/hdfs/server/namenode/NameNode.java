@@ -446,7 +446,7 @@ public class NameNode {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.READER);
+    this(conf, NamenodeRole.WRITER);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 

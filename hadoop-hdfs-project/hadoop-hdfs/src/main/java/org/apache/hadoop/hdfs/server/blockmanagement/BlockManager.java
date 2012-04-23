@@ -958,7 +958,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
   private void markBlockAsCorrupt(BlockInfo storedBlock,
                                   DatanodeInfo dn) throws IOException {
-	  LOG.debug("WASIF entered BM.markBlockAsCorrupt " + storedBlock.getBlockId());
     assert storedBlock != null : "storedBlock should not be null";
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
@@ -1583,7 +1582,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
-    System.err.println("HI I AM HERE HERHEERE: " + dn.name);
     List<BlockInfo> existingBlocks = BlocksHelper.getBlockListForDatanode(dn.name);
 
     while(itBR.hasNext()) {
@@ -1598,6 +1596,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
     // collect blocks that have not been reported
     // all of them are next to the delimiter
+    //TODO: [thesis] W
 //    Iterator<? extends Block> it = new DatanodeDescriptor.BlockIterator(
 //        delimiter.getNext(0), dn);
 //    while(it.hasNext())
@@ -1606,7 +1605,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     {
     	toRemove.add(b);
     }
-    //dn.removeBlock(delimiter);
+    //dn.removeBlock(delimiter); //FIXME [thesis] W
   }
 
   /**
@@ -1800,7 +1799,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                                DatanodeDescriptor delNodeHint,
                                boolean logEveryBlock)
   throws IOException {
-	LOG.debug("WASIF entered BM.addStoredBlock " + block.getBlockId());
     assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
     if (block instanceof BlockInfoUnderConstruction) {
@@ -1870,15 +1868,11 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
-    LOG.debug("[W] numLiveReplicas=" + numLiveReplicas);
-    LOG.debug("[W] numCurrentReplica=" + numCurrentReplica);
-    LOG.debug("[W] fileReplication=" + fileReplication);
     if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedReplicas(), fileReplication);
     } else {
-    	LOG.debug("[W] curReplicaDelta=" + curReplicaDelta);
-      updateNeededReplications(storedBlock, curReplicaDelta, 0); //[thesis] This bug needs to DIE!
+      updateNeededReplications(storedBlock, curReplicaDelta, 0);
     }
     if (numCurrentReplica > fileReplication) {
       processOverReplicatedBlock(storedBlock, fileReplication, node, delNodeHint);
