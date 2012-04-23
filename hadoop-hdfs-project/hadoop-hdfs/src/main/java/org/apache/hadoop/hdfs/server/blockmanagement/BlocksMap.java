@@ -21,10 +21,8 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.util.GSet;
+import org.apache.hadoop.hdfs.util.GSetTransactional;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
-import org.mortbay.log.Log;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -60,7 +58,7 @@ class BlocksMap {
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
   
-  private GSet<Block, BlockInfo> blocks;
+  private GSetTransactional<Block, BlockInfo> blocks;
 
   BlocksMap(final float loadFactor) {
     this.capacity = computeCapacity();
@@ -106,13 +104,13 @@ class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo b, INodeFile iNode, boolean isTransactional) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
-      blocks.put(info);
+      blocks.put(info, isTransactional);
     }
-    info.setINode(iNode);
+    info.setINode(iNode, isTransactional);
     return info;
   }
   
@@ -132,16 +130,16 @@ class BlocksMap {
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
-  void removeBlock(Block block) {
-    BlockInfo blockInfo = blocks.remove(block);
+  void removeBlock(Block block, boolean isTransactional) {
+    BlockInfo blockInfo = blocks.remove(block, isTransactional);
     if (blockInfo == null)
     {
       return;
     }
-    blockInfo.setINode(null);
+    blockInfo.setINode(null, isTransactional);
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
-      dn.removeBlock(blockInfo); // remove from the list and wipe the location
+      dn.removeBlock(blockInfo, isTransactional); // remove from the list and wipe the location
     }
   }
   
@@ -177,17 +175,17 @@ class BlocksMap {
    * Remove the block from the block map
    * only if it does not belong to any file and data-nodes.
    */
-  boolean removeNode(Block b, DatanodeDescriptor node) {
+  boolean removeNode(Block b, DatanodeDescriptor node, boolean isTransactional) {
     BlockInfo info = blocks.get(b);
     if (info == null)
       return false;
 
     // remove block from the data-node list and the node from the block info
-    boolean removed = node.removeBlock(info);
+    boolean removed = node.removeBlock(info, isTransactional);
 
     if (info.getDatanode(0) == null     // no datanodes left
               && info.getINode() == null) {  // does not belong to a file
-      blocks.remove(b);  // remove block from the map
+      blocks.remove(b, isTransactional);  // remove block from the map
     }
     return removed;
   }
@@ -211,17 +209,17 @@ class BlocksMap {
    * @param newBlock - block for replacement
    * @return new block
    */
-  BlockInfo replaceBlock(BlockInfo newBlock) {
+  BlockInfo replaceBlock(BlockInfo newBlock, boolean isTransactional) {
 	  
     BlockInfo currentBlock = blocks.get(newBlock);
     assert currentBlock != null : "the block if not in blocksMap";
     // replace block in data-node lists
     for(int idx = currentBlock.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = currentBlock.getDatanode(idx);
-      dn.replaceBlock(currentBlock, newBlock);
+      dn.replaceBlock(currentBlock, newBlock, isTransactional);
     }
     // replace block in the map itself
-    blocks.put(newBlock);
+    blocks.put(newBlock, isTransactional);
     return newBlock;
   }
 }

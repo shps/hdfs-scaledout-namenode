@@ -311,7 +311,7 @@ public class FSDirectory implements Closeable {
           // Add file->block mapping
           INodeFile newF = (INodeFile)newNode;
           for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
+            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF, isTransactional), isTransactional);
           }
         }
       } catch (IOException e) {
@@ -344,7 +344,7 @@ public class FSDirectory implements Closeable {
         INodeFile newF = (INodeFile)newNode;
         BlockInfo[] blocks = newF.getBlocks();
         for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
+          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF, isTransactional), isTransactional);
         }
       }
     } finally {
@@ -359,7 +359,7 @@ public class FSDirectory implements Closeable {
   BlockInfo addBlock(String path,
                      INode[] inodes,
                      Block block,
-                     DatanodeDescriptor targets[]
+                     DatanodeDescriptor targets[], boolean isTransactional
   ) throws QuotaExceededException {
     waitForReady();
 
@@ -382,8 +382,8 @@ public class FSDirectory implements Closeable {
             BlockUCState.UNDER_CONSTRUCTION,
             targets);
       
-      getBlockManager().addINode(blockInfo, fileINode);
-      fileINode.addBlock(blockInfo);
+      getBlockManager().addINode(blockInfo, fileINode, isTransactional);
+      fileINode.addBlock(blockInfo, isTransactional);
       
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
@@ -441,14 +441,14 @@ public class FSDirectory implements Closeable {
    * Remove a block to the file.
    */
   boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
-                      Block block) throws IOException {
+                      Block block, boolean isTransactional) throws IOException {
     waitForReady();
 
     writeLock();
     try {
       // modify file-> block and blocksMap
       fileNode.removeLastBlock(block);
-      getBlockManager().removeBlockFromMap(block);
+      getBlockManager().removeBlockFromMap(block, isTransactional);
 
       // write modified block locations to log
       //fsImage.getEditLog().logOpenFile(path, fileNode);
@@ -811,7 +811,7 @@ public class FSDirectory implements Closeable {
           
           
           filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks, isTransactional); 
-          getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+          getFSNamesystem().removePathAndBlocks(src, collectedBlocks, isTransactional);
         }
         return filesDeleted >0;
       }
@@ -1106,7 +1106,7 @@ public class FSDirectory implements Closeable {
     }
     incrDeletedFileCount(filesRemoved);
     // Blocks will be deleted later by the caller of this method
-    getFSNamesystem().removePathAndBlocks(src, null);
+    getFSNamesystem().removePathAndBlocks(src, null, isTransactional);
     //fsImage.getEditLog().logDelete(src, now);
     return true;
   }
@@ -1157,7 +1157,7 @@ public class FSDirectory implements Closeable {
     List<Block> collectedBlocks = new ArrayList<Block>();
     int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime,isTransactional);
     if (filesRemoved > 0) {
-      getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+      getFSNamesystem().removePathAndBlocks(src, collectedBlocks, isTransactional);
     }
   }
   
@@ -1206,7 +1206,7 @@ public class FSDirectory implements Closeable {
                                                 
     	filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks, isTransactional);
     else //since we have already deleted the inode, we just need to clear the blocks
-    	filesRemoved = ((INodeFile)targetNode).collectSubtreeBlocksAndClearNoDelete(collectedBlocks);
+    	filesRemoved = ((INodeFile)targetNode).collectSubtreeBlocksAndClearNoDelete(collectedBlocks, isTransactional);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           +src+" is removed");

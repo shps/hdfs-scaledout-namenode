@@ -47,7 +47,8 @@ public class TestUnderReplicatedBlocks extends TestCase {
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
       bm.addToInvalidates(b.getLocalBlock(), dn);
-      bm.blocksMap.removeNode(b.getLocalBlock(), dn);
+      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+      bm.blocksMap.removeNode(b.getLocalBlock(), dn, false);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

@@ -366,8 +366,9 @@ public class FSEditLogLoader {
             INodeFileUnderConstruction pendingFile =
                 (INodeFileUnderConstruction) fsDir.getFileINode(
                     reassignLeaseOp.path);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsNamesys.reassignLeaseInternal(lease,
-                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
+                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile, false);
             break;
           }
           case OP_START_LOG_SEGMENT:

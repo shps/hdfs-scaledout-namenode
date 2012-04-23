@@ -88,8 +88,8 @@ public class BlocksHelper {
 	 * Helper function for inserting a block in the BlocksInfo table
 	 * Replacement for INodeFile.addBlock
 	 * */
-	public static void addBlock(BlockInfo newblock) {
-		putBlockInfo(newblock);
+	public static void addBlock(BlockInfo newblock, boolean isTransactional) {
+		putBlockInfo(newblock, isTransactional);
 
                                                                                                 // ADDED: To keep update of total blocks in the system
                                                                                                 updateTotalBlocks(true);
@@ -219,27 +219,37 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static void putBlockInfo(BlockInfo binfo) {
+	public static void putBlockInfo(BlockInfo binfo, boolean isTransactional) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				putBlockInfo(binfo, session);
-				tx.commit();
+                                
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
                                                                                                 
-				session.flush();
-				done=true;
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				System.err.println("putBlockInfo failed " + e.getMessage());
-				tries--;
-			}
-		}
+                                                                                                if(isTransactional)
+                                                                                                {
+                                                                                                        putBlockInfo(binfo, session);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                        while (done == false && tries > 0) {
+                                                                                                                        try {
+                                                                                                                                        tx.begin();
+                                                                                                                                        putBlockInfo(binfo, session);
+                                                                                                                                        tx.commit();
+
+                                                                                                                                        session.flush();
+                                                                                                                                        done=true;
+                                                                                                                        }
+                                                                                                                        catch (ClusterJException e){
+                                                                                                                                        tx.rollback();
+                                                                                                                                        System.err.println("putBlockInfo failed " + e.getMessage());
+                                                                                                                                        tries--;
+                                                                                                                        }
+                                                                                                        }
+                                                                                                }
 	}
 	private static void putBlockInfo(BlockInfo binfo, Session s){
                                                                                                 
@@ -272,27 +282,35 @@ public class BlocksHelper {
 	 * @param idx index of the BlockInfo
 	 * @param binfo BlockInfo object that already exists in the database
 	 */
-	public static void updateIndex(int idx, BlockInfo binfo) {
+	public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				updateIndex(idx, binfo, session);
-				tx.commit();
-				session.flush();
-				done=true;
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				System.err.println("updateIndex failed " + e.getMessage());
-				tries--;
-			}
-		}
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                if(isTransactional)
+                                                                                                {
+                                                                                                        updateIndex(idx, binfo, session);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                        while (done == false && tries > 0) {
+                                                                                                                        try {
+                                                                                                                                        tx.begin();
+                                                                                                                                        updateIndex(idx, binfo, session);
+                                                                                                                                        tx.commit();
+                                                                                                                                        session.flush();
+                                                                                                                                        done=true;
+                                                                                                                        }
+                                                                                                                        catch (ClusterJException e){
+                                                                                                                                        tx.rollback();
+                                                                                                                                        System.err.println("updateIndex failed " + e.getMessage());
+                                                                                                                                        tries--;
+                                                                                                                        }
+                                                                                                        }
+                                                                                                }
 	}
 	private static void updateIndex(int idx, BlockInfo binfo, Session s){
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
@@ -312,27 +330,36 @@ public class BlocksHelper {
 	 * @param iNodeID
 	 * @param binfo
 	 */
-	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo){ 
+	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional){ 
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				updateBlockInfoTable(iNodeID, binfo, session);
-				tx.commit();
-				session.flush();
-				done=true;
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				System.err.println("updateINodeID failed " + e.getMessage());
-				tries--;
-			}
-		}
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                
+                                                                                                if(isTransactional)
+                                                                                                {
+                                                                                                                updateBlockInfoTable(iNodeID, binfo, session);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                                while (done == false && tries > 0) {
+                                                                                                                                try {
+                                                                                                                                                tx.begin();
+                                                                                                                                                updateBlockInfoTable(iNodeID, binfo, session);
+                                                                                                                                                tx.commit();
+                                                                                                                                                session.flush();
+                                                                                                                                                done=true;
+                                                                                                                                }
+                                                                                                                                catch (ClusterJException e){
+                                                                                                                                                tx.rollback();
+                                                                                                                                                System.err.println("updateINodeID failed " + e.getMessage());
+                                                                                                                                                tries--;
+                                                                                                                                }
+                                                                                                                }
+                                                                                                }
 	}
 
 	
@@ -415,34 +442,52 @@ public class BlocksHelper {
 	 */
 	public static class BlockInfoComparator implements Comparator<BlockInfo> {
 
+                                                                                                /*
 		@Override
 		public int compare(BlockInfo o1, BlockInfo o2) {
 			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
+		}
+                                                                                                 * 
+                                                                                                 */
+		@Override
+                                                                                                /* For this to work, ensure that by default value for column BlockIndex in table [BlockInfo] is -1 */
+		public int compare(BlockInfo o1, BlockInfo o2) {
+                                                                                                                                                return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
 		}
 
 	}
 
 	/** Update the DataNode in the triplets table.*/
-	public static void setDatanode(long blockId, int index, String name) {
+	public static void setDatanode(long blockId, int index, String name, boolean isTransactional) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				setDatanodeInternal(blockId, index, name, session);
-				tx.commit();
-				session.flush();
-				done=true;
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				System.err.println("setDataNode failed " + e.getMessage());
-				tries--;
-			}
-		}
+                                                                                        
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                if(isTransactional)
+                                                                                                {
+                                                                                                        setDatanodeInternal(blockId, index, name, session);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                        while (done == false && tries > 0) {
+                                                                                                                        try {
+                                                                                                                                        tx.begin();
+                                                                                                                                        setDatanodeInternal(blockId, index, name, session);
+                                                                                                                                        tx.commit();
+                                                                                                                                        session.flush();
+                                                                                                                                        done=true;
+                                                                                                                        }
+                                                                                                                        catch (ClusterJException e){
+                                                                                                                                        tx.rollback();
+                                                                                                                                        System.err.println("setDataNode failed " + e.getMessage());
+                                                                                                                                        e.printStackTrace();
+                                                                                                                                        tries--;
+                                                                                                                        }
+                                                                                                        }
+                                                                                                }
 	}	
 
 	private  static void setDatanodeInternal(long blockId, int index, String name, Session session) {
@@ -544,29 +589,41 @@ public class BlocksHelper {
 		return query.getResultList();
 	}
 
-	public static BlockInfo removeBlocks(Block key){
+	public static BlockInfo removeBlocks(Block key, boolean isTransactional){
 		int tries = RETRY_COUNT;
 		boolean done = false;
-
-		Session session = DBConnector.obtainSession();
+                                
+                                                                                                Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				BlockInfo ret = removeBlocksInternal(key, session);
-                                                                                                                                                                                                updateTotalBlocks( false);
-				tx.commit();
-				session.flush();
-				done=true;
-				return ret;
-			}
-			catch (ClusterJException e){
-				if(tx.isActive())
-					tx.rollback();
-				System.err.println("removeBlocks failed " + e.getMessage());
-				tries--;
-			}
-		}
+                                
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                
+                                                                                                if(isTransactional)
+                                                                                                {
+                                                                                                        BlockInfo ret = removeBlocksInternal(key, session);
+                                                                                                        updateTotalBlocks( false);
+                                                                                                        return ret;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                                while (done == false && tries > 0) {
+                                                                                                                                try {
+                                                                                                                                                tx.begin();
+                                                                                                                                                BlockInfo ret = removeBlocksInternal(key, session);
+                                                                                                                                                updateTotalBlocks( false);
+                                                                                                                                                tx.commit();
+                                                                                                                                                session.flush();
+                                                                                                                                                done=true;
+                                                                                                                                                return ret;
+                                                                                                                                }
+                                                                                                                                catch (ClusterJException e){
+                                                                                                                                                if(tx.isActive())
+                                                                                                                                                                tx.rollback();
+                                                                                                                                                System.err.println("removeBlocks failed " + e.getMessage());
+                                                                                                                                                tries--;
+                                                                                                                                }
+                                                                                                                }
+                                                                                                }
 		return null;
 	}
 
@@ -580,36 +637,49 @@ public class BlocksHelper {
 		return bi;
 	}
 
-	public static void removeTriplets(BlockInfo blockInfo, int index)
+	public static void removeTriplets(BlockInfo blockInfo, int index, boolean isTransactional)
 	{ 
 		Session session = DBConnector.obtainSession();	
 		Transaction tx = session.currentTransaction();
-		tx.begin();
-		deleteTriplet(session, blockInfo.getBlockId(), index);
-		// The triplets entries in the DB for a block have an ordered list of
-		// indices. Removal of an entry of an index X means that all entries
-		// with index greater than X needs to be corrected (decremented by 1
-		// basically).
-		//TODO: wowowowo!!! lots of stuff happening here, later!
-		List<TripletsTable> results = selectTriplet(session, blockInfo.getBlockId());
-		Collections.sort(results, new TripletsTableComparator());
-		for (TripletsTable t: results)	{
-			long oldIndex = t.getIndex();
-
-			// entry that needs its index corrected
-			if (index < oldIndex)
-			{				
-				TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
-				replacementEntry.setBlockId(t.getBlockId());
-				replacementEntry.setDatanodeName(t.getDatanodeName());
-				replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
-				deleteTriplet(session, t.getBlockId(), t.getIndex());
-				insertTriplet(session, replacementEntry, false);
-			}
-		}
-		tx.commit();
+                                                                                                assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                                                                                                
+                                                                                                if (isTransactional)
+                                                                                                {
+                                                                                                        removeTripletsInternal(session, blockInfo, index);
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                        tx.begin();
+                                                                                                        removeTripletsInternal(session, blockInfo, index);
+                                                                                                        tx.commit();
+                                                                                                }
 	}
 
+                                                private static void removeTripletsInternal(Session session, BlockInfo blockInfo, int index)
+                                                {
+                                                        deleteTriplet(session, blockInfo.getBlockId(), index);
+                                                        // The triplets entries in the DB for a block have an ordered list of
+                                                        // indices. Removal of an entry of an index X means that all entries
+                                                        // with index greater than X needs to be corrected (decremented by 1
+                                                        // basically).
+                                                        //TODO: wowowowo!!! lots of stuff happening here, later!
+                                                        List<TripletsTable> results = selectTriplet(session, blockInfo.getBlockId());
+                                                        Collections.sort(results, new TripletsTableComparator());
+                                                        for (TripletsTable t: results)	{
+                                                                        long oldIndex = t.getIndex();
+
+                                                                        // entry that needs its index corrected
+                                                                        if (index < oldIndex)
+                                                                        {				
+                                                                                        TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
+                                                                                        replacementEntry.setBlockId(t.getBlockId());
+                                                                                        replacementEntry.setDatanodeName(t.getDatanodeName());
+                                                                                        replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
+                                                                                        deleteTriplet(session, t.getBlockId(), t.getIndex());
+                                                                                        insertTriplet(session, replacementEntry, false);
+                                                                        }
+                                                        }
+                                                }
 	/**
 	 * A Comparator to sort the Triplets according to index
 	 *
@@ -933,7 +1003,7 @@ public class BlocksHelper {
 		Object[] pKey = new Object[2];
 		pKey[0] = blkid;
 		pKey[1] = index;
-		session.deletePersistent(TripletsTable.class, pKey);
+                                                                                                session.deletePersistent(TripletsTable.class, pKey);
 	}
 	
 	private static void insertTriplet(Session session, TripletsTable tt, boolean update) {
@@ -990,7 +1060,7 @@ public class BlocksHelper {
 		dobj.where(dobj.get("datanodeName").equal(dobj.param("param")));
 		Query<TripletsTable> query = session.createQuery(dobj);
 		query.setParameter("param", datanodeName);
-		return 	query.getResultList();
+		return query.getResultList();
 	}
 	
 	
@@ -1031,4 +1101,5 @@ public class BlocksHelper {
                 return blkTable.getTotal();
         }
 }
+
 

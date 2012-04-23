@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsAction;
@@ -26,7 +28,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.mortbay.log.Log;
 
 /** I-node for closed file. */
 public class INodeFile extends INode {
@@ -163,7 +164,7 @@ public class INodeFile extends INode {
 	}
 	
 	@Deprecated
-	  void appendBlocksOld(INodeFile [] inodes, int totalAddedBlocks) {
+	  void appendBlocksOld(INodeFile [] inodes, int totalAddedBlocks, boolean isTransactional) {
 	    int size = this.blocks.length;
 
 	    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
@@ -175,7 +176,7 @@ public class INodeFile extends INode {
 	    }
 
 	    for(BlockInfo bi: newlist) {
-	      bi.setINode(this);
+	      bi.setINode(this, isTransactional);
 	    }
 	    this.blocks = newlist;
 	  }
@@ -197,13 +198,13 @@ public class INodeFile extends INode {
 		}
 	}*/
 	
-	void addBlock(BlockInfo newblock) {
+	void addBlock(BlockInfo newblock, boolean isTransactional) {
 		/*
 		if (this.blocks == null) {
 			this.blocks = new BlockInfo[1];
 			this.blocks[0] = newblock;
 		} else {*/
-			BlocksHelper.addBlock(newblock);
+			BlocksHelper.addBlock(newblock, isTransactional);
 			//this.blocks = BlocksHelper.getBlocksArray(this); //TODO: [thesis] redundant (SITW)
 		//}
 	}
@@ -220,8 +221,8 @@ public class INodeFile extends INode {
 	 * Set file block - KTHFS
 	 */
 
-	public void setBlock(int idx, BlockInfo blk) {
-		BlocksHelper.updateIndex(idx, blk);
+	public void setBlock(int idx, BlockInfo blk, boolean isTransactional) {
+		BlocksHelper.updateIndex(idx, blk, isTransactional);
 	}
 
 	public void setBlocksList(BlockInfo[] blklist) {
@@ -236,7 +237,7 @@ public class INodeFile extends INode {
 		if(blocks != null && v != null) { //TODO: [thesis] blocks should be fetched from DB here
 			for (BlockInfo blk : blocks) {
 				v.add(blk);
-				blk.setINode(null);
+				blk.setINode(null, isTransactional);
 			}
 		}
 		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
@@ -246,13 +247,13 @@ public class INodeFile extends INode {
 		return 1;
 	}
 	
-	int collectSubtreeBlocksAndClearNoDelete(List<Block> v) {
+	int collectSubtreeBlocksAndClearNoDelete(List<Block> v, boolean isTransactional) {
 		
 		parent = null;
 		if(blocks != null && v != null) { 
 			for (BlockInfo blk : blocks) {
 				v.add(blk);
-				blk.setINode(null);
+				blk.setINode(null, isTransactional);
 			}
 		}
 		blocks = null;

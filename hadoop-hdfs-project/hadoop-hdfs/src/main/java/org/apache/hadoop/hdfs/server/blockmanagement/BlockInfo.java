@@ -72,10 +72,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		return (INodeFile) BlocksHelper.getInodeFromBlockId(this.getBlockId());
 	}
 
-	public void setINode(INodeFile inode) {
+	public void setINode(INodeFile inode, boolean isTransactional) {
 		this.inode = inode;
 		if(inode!=null) //FIXME: W: no need for this check 
-			BlocksHelper.updateBlockInfoInDB(inode.getID(), this);
+			BlocksHelper.updateBlockInfoInDB(inode.getID(), this, isTransactional);
 	}
 	
 	public void setINodeWithoutTransaction(INodeFile inode) {	
@@ -91,10 +91,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 				return node;
 	}
 
-	void setDatanode(int index, DatanodeDescriptor node) {
+	void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
 		assert index >= 0;
 		if(node != null)
-			BlocksHelper.setDatanode(this.getBlockId(), index, node.name);
+			BlocksHelper.setDatanode(this.getBlockId(), index, node.name, isTransactional);
 	}
 
 	/** Checks the size of the triplets and how many more, we can add (in theory) */
@@ -123,13 +123,13 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	  /**
 	* Add data-node this block belongs to.
 	*/
-	  public boolean addNode(DatanodeDescriptor node) {
+	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
 	    if(findDatanode(node) >= 0) // the node is already there
 	      return false;
 
 	    // find the last available datanode index
 	    int lastNode = ensureCapacity(1);
-	    setDatanode(lastNode, node);
+	    setDatanode(lastNode, node, isTransactional);
 	    
 	    return true;
 	  }
@@ -137,12 +137,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	  /**
 	* Remove data-node from the block.
 	*/
-	  public boolean removeNode(DatanodeDescriptor node) {
+	  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
 	    int dnIndex = findDatanode(node);
-	    if(dnIndex < 0) // the node is not found
+                                                    if(dnIndex < 0) // the node is not found
 	      return false;
 
-	    BlocksHelper.removeTriplets(this,dnIndex);
+	    BlocksHelper.removeTriplets(this,dnIndex, isTransactional);
 	    return true;
 	  }
 

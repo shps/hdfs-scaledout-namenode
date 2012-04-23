@@ -116,7 +116,7 @@ public class DBConnector {
                 throw new ClusterJUserException("The transaction is not started!");
             
             tx.commit();
-            // session.flush(); why?
+             session.flush(); //why?
         }
         
         /**
