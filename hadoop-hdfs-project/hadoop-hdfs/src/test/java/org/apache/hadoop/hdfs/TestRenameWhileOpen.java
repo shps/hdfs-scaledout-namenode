@@ -69,7 +69,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 try
                 {
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
                         final int nnport = cluster.getNameNodePort();
 
                         // create file1.
@@ -134,7 +134,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         {
                         }
                         System.out.println("Creating New miniDFS Cluster instance[1]...");
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
                         System.out.println("New miniDFS Cluster instance created[1]...");
                         cluster.waitActive();
@@ -151,11 +151,11 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
                         
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
 
                         Path newfile = new Path("/user/dir3/dir1", "file1");
                         assertTrue(fs.exists(newfile));
@@ -191,7 +191,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 try
                 {
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
                         final int nnport = cluster.getNameNodePort();
 
                         // create file1.
@@ -226,7 +226,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
 
                         // restart cluster yet again. This triggers the code to read in
@@ -239,9 +239,9 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
 
                         Path newfile = new Path("/user/dir3", "file1");
                         assertTrue(!fs.exists(file1));
@@ -278,7 +278,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 try
                 {
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
                         final int nnport = cluster.getNameNodePort();
 
                         // create file1.
@@ -305,7 +305,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
 
                         // restart cluster yet again. This triggers the code to read in
@@ -318,9 +318,9 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
 
                         Path newfile = new Path("/user/dir2", "file1");
                         assertTrue(!fs.exists(file1));
@@ -355,7 +355,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 try
                 {
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
                         final int nnport = cluster.getNameNodePort();
 
                         // create file1.
@@ -381,7 +381,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
 
                         // restart cluster yet again. This triggers the code to read in
@@ -394,9 +394,9 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).build();
+                        cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
                         cluster.waitActive();
-                        fs = cluster.getFileSystem();
+                        fs = cluster.getWritingFileSystem();
 
                         Path newfile = new Path("/user", "dir2");
                         assertTrue(!fs.exists(file1));

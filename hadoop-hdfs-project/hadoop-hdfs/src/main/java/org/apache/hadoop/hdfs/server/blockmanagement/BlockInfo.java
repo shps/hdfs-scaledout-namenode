@@ -128,11 +128,11 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
 	    if(findDatanode(node) >= 0) // the node is already there
 	      return false;
-	    }
+	    
 	    
 	    // find the last available datanode index
 	    int lastNode = ensureCapacity(1);
-	    //setDatanode(lastNode, node, isTransactional);
+	    setDatanode(lastNode, node, isTransactional);	    
 	    return true;
 	  }
 
