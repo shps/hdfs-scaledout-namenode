@@ -602,14 +602,11 @@
           </systemPropertyVariables>
           <includes>
             <!-- <include>**/Test*.java</include> -->
-			 <!-- TODO infinite loop <include>**/org/apache/hadoop/hdfs/TestLeaseRecovery.java</include> -->
 			 <!-- TODO infinite loop <include>**/org/apache/hadoop/hdfs/TestDistributedFileSystem.java</include>  -->
 			 <include>**/org/apache/hadoop/hdfs/server/blockmanagement/TestUnderReplicatedBlocks.java</include> 
 			 <include>**/org/apache/hadoop/hdfs/TestHFlush.java</include> 
-			 <!-- FIXED <include>**/org/apache/hadoop/hdfs/server/blockmanagement/TestHost2NodesMap.java</include> -->
 			 <include>**/org/apache/hadoop/hdfs/TestFileStatus.java</include> 
 			 <!-- TODO <include>**/org/apache/hadoop/hdfs/server/datanode/TestBlockReport.java</include> -->
-			 <!-- FIXED <include>**/org/apache/hadoop/hdfs/TestDFSMkdirs.java</include> -->
 
           </includes>
           <excludes>
@@ -621,11 +618,10 @@
 			<exclude>**/TestDFSFinalize.java</exclude>
 			<exclude>**/TestDFSRollback.java</exclude>
 			<exclude>**/TestDFSStartupVersions.java</exclude>
-			<!-- Hooman told it fails anyway-->
-			<exclude>**/TestLeaseRecovery2.java</exclude>
+			<exclude>**/TestLeaseRecovery2.java</exclude> <!-- persisting lease recovery-id needed -->
+			<<exclude>**/TestLeaseRecovery.java</exclude> <!-- persisting lease recovery-id needed --> 
 			<exclude>**/org/apache/hadoop/fs/loadGenerator/TestLoadGenerator.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend3.java</exclude>
-			<!-- TODO <exclude>**/org/apache/hadoop/hdfs/TestLeaseRecovery.java</exclude> -->
 			<exclude>**/org/apache/hadoop/hdfs/util/TestGSet.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestHDFSTrash.java</exclude>
@@ -639,7 +635,6 @@
 			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestNodeCount.java</exclude>
 			<!-- TODO  <exclude>**/org/apache/hadoop/hdfs/TestHFlush.java</exclude> -->
 			<exclude>**/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java</exclude>
-			<!-- TODO  <exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestHost2NodesMap.java</exclude> -->
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestInterDatanodeProtocol.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java</exclude>
 			<exclude>**/org/apache/hadoop/security/TestPermission.java</exclude>
@@ -679,7 +674,6 @@
 			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestStreamFile.java</exclude>
 			<exclude>**/org/apache/hadoop/fs/permission/TestStickyBit.java</exclude>
 			<exclude>**/org/apache/hadoop/fs/TestFcHdfsSymlink.java</exclude>
-			<!-- TODO <exclude>**/org/apache/hadoop/hdfs/TestDFSMkdirs.java</exclude> -->
 			<exclude>**/org/apache/hadoop/hdfs/TestSafeMode.java</exclude>
 			<exclude>**/org/apache/hadoop/tools/TestJMXGet.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDeleteBlockPool.java</exclude>
