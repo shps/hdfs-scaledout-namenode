@@ -155,46 +155,31 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
 	{
 
 		Session session = obtainSession();
-
 		Transaction tx = session.currentTransaction();
-
 		try
 		{
-
 			tx.begin();
-
 			session.deletePersistentAll(INodeTableSimple.class);
-
 			session.deletePersistentAll(BlockInfoTable.class);
-
 			session.deletePersistentAll(LeaseTable.class);
-
 			session.deletePersistentAll(LeasePathsTable.class);
-
 			session.deletePersistentAll(TripletsTable.class);
-
 			// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
 			session.deletePersistentAll(BlockTotalTable.class);
-					BlocksHelper.resetTotalBlocks(true);
-
-					tx.commit();
-
-					session.flush();
-
-					return true;
+			BlocksHelper.resetTotalBlocks(true);
+			tx.commit();
+			session.flush();
+			LOG.info("Deleted all rows from the database");
+			return true;
 
 		}
 		catch (ClusterJException ex)
 		{
-
 			//LOG.error(ex.getMessage(), ex);
 			System.err.println(ex.getMessage());
 			ex.printStackTrace();
-
 			tx.rollback();
-
 		}
-
 		return false;
 
 	}        
