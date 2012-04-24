@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
-  static final short REPLICATION_NUM = (short)1; //[thesis] was originally set to 3
+  static final short REPLICATION_NUM = (short)3; //[thesis] was originally set to 3
   private static final long LEASE_PERIOD = 300L;
 
   static void checkMetaInfo(ExtendedBlock b, DataNode dn
