@@ -619,7 +619,7 @@
 			<exclude>**/TestDFSRollback.java</exclude>
 			<exclude>**/TestDFSStartupVersions.java</exclude>
 			<exclude>**/TestLeaseRecovery2.java</exclude> <!-- persisting lease recovery-id needed -->
-			<<exclude>**/TestLeaseRecovery.java</exclude> <!-- persisting lease recovery-id needed --> 
+			<exclude>**/TestLeaseRecovery.java</exclude> <!-- persisting lease recovery-id needed --> 
 			<exclude>**/org/apache/hadoop/fs/loadGenerator/TestLoadGenerator.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend3.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/util/TestGSet.java</exclude>
