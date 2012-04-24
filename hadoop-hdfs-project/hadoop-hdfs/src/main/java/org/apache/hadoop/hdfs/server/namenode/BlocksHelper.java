@@ -582,7 +582,23 @@ public class BlocksHelper {
 		return query.getResultList();
 	}
 
-	public static BlockInfo removeBlocks(Block key){
+        public static BlockInfo removeBlocks(Block key, boolean isTransactional){
+		DBConnector.checkTransactionState(isTransactional);
+                BlockInfo ret = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    ret = removeBlocksInternal(key, session);
+                    session.flush();
+                }
+                else
+                    ret = removeBlocksWithTransaction(key);
+                
+                return ret;
+	}
+        
+	public static BlockInfo removeBlocksWithTransaction(Block key){
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -600,7 +616,7 @@ public class BlocksHelper {
 			catch (ClusterJException e){
 				if(tx.isActive())
 					tx.rollback();
-				System.err.println("removeBlocks failed " + e.getMessage());
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}

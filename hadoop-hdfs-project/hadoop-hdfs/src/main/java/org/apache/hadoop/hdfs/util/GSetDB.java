@@ -30,4 +30,12 @@ public interface GSetDB<K, E extends K> extends GSet<K, E> {
      * @return 
      */
     E put(E element, boolean isTransactional);
+   
+    /**
+     * 
+     * @param key
+     * @param isTransactional
+     * @return 
+     */
+    E remove(K key, boolean isTransactional);
 }

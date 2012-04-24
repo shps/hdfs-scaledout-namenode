@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.util.GSet;
 import org.apache.hadoop.hdfs.util.GSetDB;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 import org.mortbay.log.Log;
+import sun.nio.cs.ext.ISCII91;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -134,8 +135,8 @@ class BlocksMap {
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
-  void removeBlock(Block block) {
-    BlockInfo blockInfo = blocks.remove(block);
+ void removeBlock(Block block, boolean isTransactional) {
+    BlockInfo blockInfo = blocks.remove(block, isTransactional);
     if (blockInfo == null)
     {
       return;
@@ -144,8 +145,7 @@ class BlocksMap {
     System.out.println("numNodes() for block: "+blockInfo.numNodes());
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
-      //TODO[Hooman]: add isTransactional param when you reach here from the caller.
-      dn.removeBlock(blockInfo, false); // remove from the list and wipe the location
+      dn.removeBlock(blockInfo, isTransactional); // remove from the list and wipe the location
     }
   }
   

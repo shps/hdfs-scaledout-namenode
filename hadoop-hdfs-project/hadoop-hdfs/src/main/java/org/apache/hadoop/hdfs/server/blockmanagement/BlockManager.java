@@ -2366,11 +2366,11 @@ public class BlockManager {
     return blocksMap.size();
   }
 
-  public void removeBlock(Block block) {
+  public void removeBlock(Block block, boolean isTransactional) {
     block.setNumBytes(BlockCommand.NO_ACK); //TODO: [thesis] should be sent to DB
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
-    blocksMap.removeBlock(block);
+    blocksMap.removeBlock(block, isTransactional);
   }
 
   public BlockInfo getStoredBlock(Block block) {
@@ -2503,7 +2503,8 @@ public class BlockManager {
   }
 
   public void removeBlockFromMap(Block block) {
-    blocksMap.removeBlock(block);
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller.
+    blocksMap.removeBlock(block, false);
     // If block is removed from blocksMap remove it from corruptReplicasMap
     corruptReplicas.removeFromCorruptReplicasMap(block);
   }

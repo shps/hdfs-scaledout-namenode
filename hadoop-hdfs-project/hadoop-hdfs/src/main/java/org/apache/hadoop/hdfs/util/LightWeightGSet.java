@@ -257,19 +257,29 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	}*/
 
 	@SuppressWarnings("unchecked")
-	private E remove(final int index, final K key) {
+	private E remove(final int index, final K key, boolean isTransactional) {
 		Block b = (Block)key;
-		BlockInfo bi = BlocksHelper.removeBlocks(b);
+		BlockInfo bi = BlocksHelper.removeBlocks(b, isTransactional);
 		return (E)bi;
 	}
 	
 	@Override
+        @Deprecated
 	public E remove(final K key) {
 		//validate key
 		if (key == null) {
 			throw new NullPointerException("key == null");
 		}
-		return remove(getIndex(key), key);
+		return remove(getIndex(key), key, false);
+	}
+        
+        @Override
+	public E remove(final K key, boolean isTransactional) {
+		//validate key
+		if (key == null) {
+			throw new NullPointerException("key == null");
+		}
+		return remove(getIndex(key), key, isTransactional);
 	}
 
 	@Override

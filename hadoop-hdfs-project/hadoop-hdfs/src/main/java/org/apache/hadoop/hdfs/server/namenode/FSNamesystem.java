@@ -2166,7 +2166,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
       if (deleteNow) { // Perform small deletes right away
-      	removeBlocks(collectedBlocks);
+      	removeBlocks(collectedBlocks, isTransactional);
       }
     } finally {
       writeUnlock();
@@ -2177,7 +2177,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       if (!deleteNow) {
-        removeBlocks(collectedBlocks); // Incremental deletion of blocks
+        removeBlocks(collectedBlocks, isTransactional); // Incremental deletion of blocks
       }
     } finally {
       writeUnlock();
@@ -2191,7 +2191,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** From the given list, incrementally remove the blocks from blockManager */
-  private void removeBlocks(List<Block> blocks) {
+  private void removeBlocks(List<Block> blocks, boolean isTransactional) {
     assert hasWriteLock();
     int start = 0;
     int end = 0;
@@ -2200,7 +2200,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       end = BLOCK_DELETION_INCREMENT + start;
       end = end > blocks.size() ? blocks.size() : end;
       for (int i=start; i<end; i++) {
-        blockManager.removeBlock(blocks.get(i));
+        blockManager.removeBlock(blocks.get(i), isTransactional);
       }
       start = end;
     }
@@ -2213,7 +2213,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
     for(Block b : blocks) {
-      blockManager.removeBlock(b);
+        //TODO[Hooman]: add isTransactional param when you reach here from the caller.
+      blockManager.removeBlock(b, false);
     }
   }
 
