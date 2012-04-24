@@ -492,7 +492,7 @@ public class BlockManager {
    * @return the last block locations if the block is partial or null otherwise
    */
   public LocatedBlock convertLastBlockToUnderConstruction(
-      INodeFileUnderConstruction fileINode) throws IOException {
+      INodeFileUnderConstruction fileINode, boolean isTransactional) throws IOException {
     BlockInfo oldBlock = fileINode.getLastBlock();
     if(oldBlock == null ||
         fileINode.getPreferredBlockSize() == oldBlock.getNumBytes())
@@ -508,8 +508,7 @@ public class BlockManager {
 
     BlockInfoUnderConstruction ucBlock =
       fileINode.setLastBlock(oldBlock, targets);
-    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-    blocksMap.replaceBlock(ucBlock, false);
+    blocksMap.replaceBlock(ucBlock, isTransactional);
 
     // Remove block from replication queue.
     updateNeededReplications(oldBlock, 0, 0);

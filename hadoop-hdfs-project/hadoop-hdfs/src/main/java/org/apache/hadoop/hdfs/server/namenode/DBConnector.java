@@ -11,6 +11,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.ClusterJUserException;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
@@ -98,6 +99,7 @@ public class DBConnector {
         public static void beginTransaction()
         {
             Session session = obtainSession();
+//            session.setLockMode(LockMode.SHARED);
             session.currentTransaction().begin();
         }
         

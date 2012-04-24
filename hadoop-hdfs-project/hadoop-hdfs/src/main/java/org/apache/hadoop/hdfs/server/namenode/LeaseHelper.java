@@ -94,7 +94,7 @@ public class LeaseHelper {
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
 			catch (ClusterJException e){
-				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
+				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -102,6 +102,33 @@ public class LeaseHelper {
 		return null; 
 	}
 
+        /**
+	 * Adds a lease to the database with a path. This method should ONLY be called if the lease does not exist in database already
+	 * Roundtrips: 3
+	 * @param holder
+	 * @param src
+	 * @param lastUpd
+	 * @return an updated Lease object. It will only return null if the database is down.
+	 */
+	public static Lease addLease(String holder, int holderID, String src, long lastUpd,
+                boolean isTransactional) {
+		DBConnector.checkTransactionState(isTransactional);
+                Lease lease = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    insertLeaseInternal(session, holder, lastUpd, holderID);
+                    insertLeasePathsInternal(session, holderID, src);
+                    session.flush();
+                    lease = LeaseHelper.getLease(holder);
+                }
+                else
+                    lease = addLeaseWithTransaction(holder, holderID, src, lastUpd);
+                
+                return lease;
+	}
+        
 	/**
 	 * Adds a lease to the database with a path. This method should ONLY be called if the lease does not exist in database already
 	 * Roundtrips: 3
@@ -110,7 +137,7 @@ public class LeaseHelper {
 	 * @param lastUpd
 	 * @return an updated Lease object. It will only return null if the database is down.
 	 */
-	public static Lease addLease(String holder, int holderID, String src, long lastUpd) {
+	public static Lease addLeaseWithTransaction(String holder, int holderID, String src, long lastUpd) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -129,8 +156,9 @@ public class LeaseHelper {
 				return lease;
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in addLease: " + e.getMessage());
+                                if (tx.isActive())
+                                    tx.rollback();
+				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -139,11 +167,30 @@ public class LeaseHelper {
 
 	}
 
+        /**Updates the lastUpdated time in database
+	 * Roundtrips: 2
+	 * @param holder
+	 */
+	public static void renewLease(String holder, boolean isTransactional) {
+		DBConnector.checkTransactionState(isTransactional);
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    LeaseHelper.renewLeaseInternal(session, holder);
+                    session.flush();
+                }
+                else
+                {
+                    renewLeaseWithTransaction(holder);
+                }
+	}
+        
 	/**Updates the lastUpdated time in database
 	 * Roundtrips: 2
 	 * @param holder
 	 */
-	public static void renewLease(String holder) {
+	public static void renewLeaseWithTransaction(String holder) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -153,13 +200,14 @@ public class LeaseHelper {
 			try{	
 				tx.begin();
 				LeaseHelper.renewLeaseInternal(session, holder);
-				done = true;
 				tx.commit();
+                                done = true;
 				session.flush();
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in renewLease: " + e.getMessage());
+                                if (tx.isActive())
+                                    tx.rollback();
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -219,6 +267,32 @@ public class LeaseHelper {
 			}
 		}
 	}
+        
+        /**Renews an already existing Lease and adds a path to it
+	 * @param holder the lease holder
+	 * @param holderID 
+	 * @param src the path of the file
+	 * @return
+	 */
+	public static Lease renewLeaseAndAddPath(String holder, int holderID, String src,
+                boolean isTransactional) {
+		
+                DBConnector.checkTransactionState(isTransactional);
+                Lease lease = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    renewLeaseInternal(session, holder);
+                    insertLeasePathsInternal(session, holderID, src);
+                    session.flush();
+                    lease = getLease(holder);
+                }
+                else
+                    lease = renewLeaseAndAddPathWithTransaction(holder, holderID, src);
+                
+                return lease;
+	}
  
 	/**Renews an already existing Lease and adds a path to it
 	 * @param holder the lease holder
@@ -226,7 +300,7 @@ public class LeaseHelper {
 	 * @param src the path of the file
 	 * @return
 	 */
-	public static Lease renewLeaseAndAddPath(String holder, int holderID, String src) {
+	public static Lease renewLeaseAndAddPathWithTransaction(String holder, int holderID, String src) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -246,8 +320,9 @@ public class LeaseHelper {
 
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in renewLeaseAndAddPath: " + e.getMessage());
+                                if (tx.isActive()) //[Hooman]: This is necessary to be checked, because some exceptions close the transaction.
+                                    tx.rollback();
+				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -293,8 +368,12 @@ public class LeaseHelper {
                 boolean found = false;
                 DBConnector.checkTransactionState(isTransactional);
                 if (isTransactional)
-                    found = deleteLeasePathsInternal(DBConnector.obtainSession(), 
+                {
+                    Session session = DBConnector.obtainSession();
+                    found = deleteLeasePathsInternal(session, 
                             holderID, src);
+                    session.flush();
+                }
                 else
                     found = removePathWithTransaction(holderID, src);
 
@@ -320,6 +399,7 @@ public class LeaseHelper {
 				found = deleteLeasePathsInternal(session, holderID, src);
 				done = true;
 				tx.commit();
+                                session.flush();
 				return found;
 			}
 			catch(ClusterJException e) {
@@ -365,7 +445,7 @@ public class LeaseHelper {
 				return sortedLeases;
 			}
 			catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -588,7 +668,6 @@ public class LeaseHelper {
 				return true;
 			}
 		}
-                session.flush();
 		return false;
 	}
 	

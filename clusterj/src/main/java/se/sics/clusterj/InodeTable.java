@@ -69,7 +69,7 @@ public interface InodeTable {
 
     // Inode
     
-    @Lob
+//    @Lob
     @Column(name = "permission")
     byte[] getPermission (); 
     void setPermission (byte[] permission);

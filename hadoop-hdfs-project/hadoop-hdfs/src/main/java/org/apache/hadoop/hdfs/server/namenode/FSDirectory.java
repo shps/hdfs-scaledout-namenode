@@ -245,7 +245,7 @@ public class FSDirectory implements Closeable {
                 String clientName,
                 String clientMachine,
                 DatanodeDescriptor clientNode,
-                long generationStamp) 
+                long generationStamp, boolean isTransactional) 
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException {
     waitForReady();
@@ -253,7 +253,7 @@ public class FSDirectory implements Closeable {
     // Always do an implicit mkdirs for parent directory tree.
     long modTime = now();
     if (!mkdirs(new Path(path).getParent().toString(), permissions, true,
-        modTime)) {
+        modTime, isTransactional)) {
       return null;
     }
     INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
@@ -262,7 +262,7 @@ public class FSDirectory implements Closeable {
                                  clientMachine, clientNode);
     writeLock();
     try {
-      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false);
+      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -305,7 +305,8 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       try {
-        newNode = addNode(path, newNode, diskspace, false);
+          //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+        newNode = addNode(path, newNode, diskspace, false, false);
         if(newNode != null && blocks != null) {
           int nrBlocks = blocks.length;
           // Add file->block mapping
@@ -1602,7 +1603,7 @@ public class FSDirectory implements Closeable {
    * @throws UnresolvedLinkException if a symlink is encountered in src.                      
    */
   boolean mkdirs(String src, PermissionStatus permissions,
-      boolean inheritPermission, long now)
+      boolean inheritPermission, long now, boolean isTransactional)
       throws FileAlreadyExistsException, QuotaExceededException, 
              UnresolvedLinkException {
     src = normalizePath(src);
@@ -1630,7 +1631,7 @@ public class FSDirectory implements Closeable {
         pathbuilder.append(Path.SEPARATOR + names[i]);
         String cur = pathbuilder.toString();
         unprotectedMkdir(inodes, i, components[i], permissions,
-            inheritPermission || i != components.length-1, now);
+            inheritPermission || i != components.length-1, now, isTransactional);
         if (inodes[i] == null) {
           return false;
         }
@@ -1660,8 +1661,9 @@ public class FSDirectory implements Closeable {
     INode[] inodes = new INode[components.length];
 
     rootDir.getExistingPathINodes(components, inodes, false);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
     unprotectedMkdir(inodes, inodes.length-1, components[inodes.length-1],
-        permissions, false, timestamp);
+        permissions, false, timestamp, false);
     return inodes[inodes.length-1];
   }
 
@@ -1671,18 +1673,18 @@ public class FSDirectory implements Closeable {
    */
   private void unprotectedMkdir(INode[] inodes, int pos,
       byte[] name, PermissionStatus permission, boolean inheritPermission,
-      long timestamp) throws QuotaExceededException {
+      long timestamp, boolean isTransactional) throws QuotaExceededException {
     assert hasWriteLock();
     inodes[pos] = addChild(inodes, pos, 
         new INodeDirectory(name, permission, timestamp),
-        -1, inheritPermission );
+        -1, inheritPermission, isTransactional);
   }
   
   /** Add a node child to the namespace. The full path name of the node is src.
    * childDiskspace should be -1, if unknown. 
    * QuotaExceededException is thrown if it violates quota limit */
   private <T extends INode> T addNode(String src, T child, 
-        long childDiskspace, boolean inheritPermission) 
+        long childDiskspace, boolean inheritPermission, boolean isTransactional) 
   throws QuotaExceededException, UnresolvedLinkException {
 	  
     byte[][] components = INode.getPathComponents(src);
@@ -1694,7 +1696,7 @@ public class FSDirectory implements Closeable {
     try {
       rootDir.getExistingPathINodes(components, inodes, false);
       return addChild(inodes, inodes.length-1, child, childDiskspace,
-                      inheritPermission);
+                      inheritPermission, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -1823,7 +1825,7 @@ public class FSDirectory implements Closeable {
    * QuotaExceededException is thrown if it violates quota limit */
   private <T extends INode> T addChild(INode[] pathComponents, int pos,
       T child, long childDiskspace, boolean inheritPermission,
-      boolean checkQuota, boolean reuseID) throws QuotaExceededException {
+      boolean checkQuota, boolean reuseID, boolean isTransactional) throws QuotaExceededException {
 	// The filesystem limits are not really quotas, so this check may appear
 	// odd.  It's because a rename operation deletes the src, tries to add
 	// to the dest, if that fails, re-adds the src from whence it came.
@@ -1839,39 +1841,36 @@ public class FSDirectory implements Closeable {
     if (childDiskspace < 0) {
       childDiskspace = counts.getDsCount();
     }
-    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
     updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace,
-        checkQuota, false);
+        checkQuota, isTransactional);
     if (pathComponents[pos-1] == null) {
       throw new NullPointerException("Panic: parent does not exist");
     }
-    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
-        child, inheritPermission, true, reuseID, false);
+        child, inheritPermission, true, reuseID, isTransactional);
     if (addedNode == null) {
-        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(pathComponents, pos, -counts.getNsCount(), 
-          -childDiskspace, true, false);
+          -childDiskspace, true, isTransactional);
     }
     
     return addedNode;
   }
 
   private <T extends INode> T addChild(INode[] pathComponents, int pos,
-      T child, long childDiskspace, boolean inheritPermission)
+      T child, long childDiskspace, boolean inheritPermission, boolean isTransactional)
       throws QuotaExceededException {
 	
     return addChild(pathComponents, pos, child, childDiskspace,
-        inheritPermission, true, false);
+        inheritPermission, true, false, isTransactional);
   }
   
   private <T extends INode> T addChildNoQuotaCheck(INode[] pathComponents,
       int pos, T child, long childDiskspace, boolean inheritPermission, boolean reuseID) {
     T inode = null;
     try {
-
+        //TODO[Hooman]: add isTransactional whenever you reach this method from the callers.
       inode = addChild(pathComponents, pos, child, childDiskspace,
-          inheritPermission, false, reuseID);
+          inheritPermission, false, reuseID, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e); 
     }
@@ -2244,7 +2243,8 @@ public class FSDirectory implements Closeable {
     final long modTime = now();
     if (createParent) {
       final String parent = new Path(path).getParent().toString();
-      if (!mkdirs(parent, dirPerms, true, modTime)) {
+      //TODO[Hooman]: add isTransactional whenever you reach this method from the callers.
+      if (!mkdirs(parent, dirPerms, true, modTime, false)) {
         return null;
       }
     }
@@ -2281,7 +2281,8 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     INodeSymlink newNode = new INodeSymlink(target, modTime, atime, perm);
     try {
-      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false);
+        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false, false);
     } catch (UnresolvedLinkException e) {
       /* All UnresolvedLinkExceptions should have been resolved by now, but we
        * should re-throw them in case that changes so they are not swallowed 

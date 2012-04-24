@@ -271,9 +271,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
         clientName, clientMachine, flag.get(), createParent, replication, blockSize);
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
-    
-    /*added by Wasif*/
-    //se.sics.clusterj.Main_LW.insertINodeFile(src, clientName, clientMachine, 123);
   }
 
   @Override // ClientProtocol

@@ -123,13 +123,16 @@ public class LeaseManager {
 	 * Adds (or re-adds) the lease for the specified file.
 	 */
 
-	synchronized Lease addLease(String holder, String src) {
+	synchronized Lease addLease(String holder, String src, 
+                boolean isTransactional) {
 		Lease lease = getLease(holder);
 		if (lease == null) {
 			int holderID = DFSUtil.getRandom().nextInt();
-			return LeaseHelper.addLease(holder, holderID, src, now());
+			return LeaseHelper.addLease(holder, holderID, src, now(),
+                                isTransactional);
 		} else {
-			return LeaseHelper.renewLeaseAndAddPath(holder, lease.getHolderID(), src);
+			return LeaseHelper.renewLeaseAndAddPath(holder, 
+                                lease.getHolderID(), src, isTransactional);
 		}
 	}
 
@@ -141,7 +144,7 @@ public class LeaseManager {
 			leases.put(holder, lease);
 			sortedLeases.add(lease);
 		} else {
-			renewLease(lease);
+			renewLease(lease, false);
 		}
 		sortedLeasesByPath.put(src, lease); 
 		lease.paths.add(src);
@@ -189,13 +192,13 @@ public class LeaseManager {
 	/**
 	 * Reassign lease for file src to the new holder.
 	 */
-	synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
+	synchronized Lease reassignLease(Lease lease, String src, String newHolder,
+                boolean isTransactional) {
 		assert newHolder != null : "new lease holder is null";
 		if (lease != null) {
-                    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-			removeLease(lease, src, false);
+			removeLease(lease, src, isTransactional);
 		}
-		return addLease(newHolder, src);
+		return addLease(newHolder, src, isTransactional);
 	}
 
 	/**
@@ -218,17 +221,18 @@ public class LeaseManager {
 	 * Renew the lease(s) held by the given client
 	 */
 	synchronized void renewLease(String holder) {
-		renewLease(getLease(holder));
+            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+		renewLease(getLease(holder), false);
 	}
-	synchronized void renewLease(Lease lease) {
+	synchronized void renewLease(Lease lease, boolean isTransactional) {
 		if (lease != null) {
-			lease.renew();
+			lease.renew(isTransactional);
 		}
 	}
 	synchronized void renewLeaseOld(Lease lease) {
 		if (lease != null) {
 			sortedLeases.remove(lease);
-			lease.renew();
+			lease.renew(false);
 			sortedLeases.add(lease);
 		}
 	}
@@ -256,7 +260,7 @@ public class LeaseManager {
 		 * */
 		private Lease(String holder) {
 			this.holder = holder;
-			renew();
+			renew(false);
 		}
 
 		/*W: This constructor should be used when lazy fetching is done with renew = false*/
@@ -288,9 +292,9 @@ public class LeaseManager {
 
 
 		/** Only LeaseManager object can renew a lease */
-		private void renew() {
+		private void renew(boolean isTransactional) {
 			this.lastUpdate = now(); //W: this might not be required because we always read lastUpdate from the DB
-			LeaseHelper.renewLease(this.holder);
+			LeaseHelper.renewLease(this.holder, isTransactional);
 			
 		}
 		@Deprecated
@@ -567,11 +571,14 @@ public class LeaseManager {
 			// internalReleaseLease() removes paths corresponding to empty files,
 			// i.e. it needs to modify the collection being iterated over
 			// causing ConcurrentModificationException
-			String[] leasePaths = new String[oldest.getPaths().size()];
-			oldest.getPaths().toArray(leasePaths);
+                        Collection<String> leasePaths = oldest.getPaths();
+                        assert leasePaths != null : "The lease " + oldest.toString() + " hase not path.";
+                        
+                        //FIXME [Hooman]: The process of internalReleaseLease and removeLease, each should be executed
+                        // in one transaction and boolean should be transactional.
 			for(String p : leasePaths) {
 				try {
-					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
+					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, false)) {
 						LOG.info("Lease recovery for file " + p +
 								" is complete. File closed.");
 						removing.add(p);
@@ -586,9 +593,10 @@ public class LeaseManager {
 			}
 
 			for(String p : removing) {
-                            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
 				removeLease(oldest, p, false);
 			}
+                        
+                        sortedLeasesFromDB = LeaseHelper.getSortedLeases();
 		}
 	}
 	@Deprecated
@@ -611,7 +619,7 @@ public class LeaseManager {
 			oldest.getPaths().toArray(leasePaths);
 			for(String p : leasePaths) {
 				try {
-					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
+					if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, false)) {
 						LOG.info("Lease recovery for file " + p +
 								" is complete. File closed.");
 						removing.add(p);

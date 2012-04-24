@@ -111,6 +111,7 @@ class INodeDirectory extends INode {
 	 * @param newChild Child node to be added
 	 */
 	void replaceChild(INode newChild) {
+                this.children = getChildrenFromDB();
 		if ( children == null ) {
 			throw new IllegalArgumentException("The directory is empty");
 		}

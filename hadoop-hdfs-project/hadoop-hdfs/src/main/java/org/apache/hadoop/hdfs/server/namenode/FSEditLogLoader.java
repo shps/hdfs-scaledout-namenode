@@ -211,8 +211,9 @@ public class FSEditLogLoader {
                                         null);
               //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
               fsDir.replaceNode(addCloseOp.path, node, cons, false);
+              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
               fsNamesys.leaseManager.addLease(cons.getClientName(),
-                                              addCloseOp.path);
+                                              addCloseOp.path, false);
             }
             break;
           }
@@ -360,8 +361,9 @@ public class FSEditLogLoader {
             INodeFileUnderConstruction pendingFile =
                 (INodeFileUnderConstruction) fsDir.getFileINode(
                     reassignLeaseOp.path);
+            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
             fsNamesys.reassignLeaseInternal(lease,
-                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
+                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile, false);
             break;
           }
           case OP_START_LOG_SEGMENT:

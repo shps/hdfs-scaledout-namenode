@@ -56,7 +56,7 @@ public interface INodeTableSimple {
 
     // Inode
     
-    @Lob
+//    @Lob
     @Column(name = "permission")
     byte[] getPermission (); 
     void setPermission (byte[] permission);

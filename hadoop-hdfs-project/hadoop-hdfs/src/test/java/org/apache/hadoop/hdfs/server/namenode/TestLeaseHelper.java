@@ -61,7 +61,7 @@ public class TestLeaseHelper {
           String holder = "wmalik";
 	  int holderID = DFSUtil.getRandom().nextInt();
 	  String src = "/home/wmalik/file"+holderID+".txt";
-	  Lease lease = leaseManager.addLease(holder, src);
+	  Lease lease = leaseManager.addLease(holder, src, false);
 	  
           assertEquals("holder not persisted correctly", holder, lease.getHolder());
 	  assertTrue("path not persisted correctly", lease.getPathsLocal().contains(src));
