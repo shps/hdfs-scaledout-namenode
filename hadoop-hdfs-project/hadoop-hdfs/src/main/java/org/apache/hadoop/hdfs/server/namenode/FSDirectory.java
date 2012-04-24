@@ -602,8 +602,9 @@ public class FSDirectory implements Closeable {
     INode srcChild = null;
     String srcChildName = null;
     try {
+        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       // remove src
-      srcChild = removeChild(srcInodes, srcInodes.length-1);
+      srcChild = removeChild(srcInodes, srcInodes.length-1, false);
       srcChild = srcInodes[srcInodes.length-1];
       if (srcChild == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -1059,7 +1060,8 @@ public class FSDirectory implements Closeable {
       if(nodeToRemove == null) continue;
       
       nodeToRemove.blocks = null;
-      trgParent.removeChild(nodeToRemove);
+      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+      trgParent.removeChild(nodeToRemove, false);
       count++;
     }
     
@@ -1076,7 +1078,7 @@ public class FSDirectory implements Closeable {
    * @param collectedBlocks Blocks under the deleted directory
    * @return true on successful deletion; else false
    */
-  boolean delete(String src, List<Block>collectedBlocks) 
+  boolean delete(String src, List<Block>collectedBlocks, boolean isTransactional) 
     throws UnresolvedLinkException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
@@ -1086,7 +1088,7 @@ public class FSDirectory implements Closeable {
     int filesRemoved;
     writeLock();
     try {
-      filesRemoved = unprotectedDelete(src, collectedBlocks, now);
+      filesRemoved = unprotectedDelete(src, collectedBlocks, now, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -1144,7 +1146,8 @@ public class FSDirectory implements Closeable {
     throws UnresolvedLinkException {
     assert hasWriteLock();
     List<Block> collectedBlocks = new ArrayList<Block>();
-    int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime);
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+    int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime, false);
     if (filesRemoved > 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
     }
@@ -1159,7 +1162,7 @@ public class FSDirectory implements Closeable {
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
   int unprotectedDelete(String src, List<Block> collectedBlocks, 
-      long mtime) throws UnresolvedLinkException {
+      long mtime, boolean isTransactional) throws UnresolvedLinkException {
     assert hasWriteLock();
     src = normalizePath(src);
 
@@ -1183,7 +1186,7 @@ public class FSDirectory implements Closeable {
     int pos = inodes.length - 1;
     
     // Remove the node from the namespace
-    targetNode = removeChild(inodes, pos);
+    targetNode = removeChild(inodes, pos, isTransactional);
     if (targetNode == null) {
       return 0;
     }
@@ -1511,11 +1514,10 @@ public class FSDirectory implements Closeable {
    * See {@link #updateCount(INode[], int, long, long, boolean)}
    */ 
   private void updateCountNoQuotaCheck(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta) {
+                           long nsDelta, long dsDelta, boolean isTransactional) {
     assert hasWriteLock();
     try {
-        //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
-      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false, false);
+      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false, isTransactional);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
     }
@@ -1882,14 +1884,14 @@ public class FSDirectory implements Closeable {
    * Count of each ancestor with quota is also updated.
    * Return the removed node; null if the removal fails.
    */
-  private INode removeChild(INode[] pathComponents, int pos) {
+  private INode removeChild(INode[] pathComponents, int pos, boolean isTransactional) {
 	INodeDirectory dir = ((INodeDirectory)pathComponents[pos-1]);	//parent of file/dir being removed
-    INode removedNode = dir.removeChild(pathComponents[pos]);
+    INode removedNode = dir.removeChild(pathComponents[pos], isTransactional);
     if (removedNode != null) {
       INode.DirCounts counts = new INode.DirCounts();
       removedNode.spaceConsumedInTree(counts); //[W] works?
       updateCountNoQuotaCheck(pathComponents, pos,
-                  -counts.getNsCount(), -counts.getDsCount());
+                  -counts.getNsCount(), -counts.getDsCount(), isTransactional);
     }
     return removedNode;
   }

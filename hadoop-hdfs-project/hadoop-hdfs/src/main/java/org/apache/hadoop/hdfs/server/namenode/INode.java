@@ -425,7 +425,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 		if (parent == null) {
 			return false;
 		} else {
-			parent.removeChild(this);
+			parent.removeChild(this, false);
 			parent = null;
 			return true;
 		}

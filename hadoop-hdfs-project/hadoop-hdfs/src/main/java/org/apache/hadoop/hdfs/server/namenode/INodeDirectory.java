@@ -85,12 +85,11 @@ class INodeDirectory extends INode {
 		return true;
 	}
 
-	INode removeChild(INode node) {
+	INode removeChild(INode node, boolean isTransactional) {
 		assert getChildrenFromDB() != null;
 
 			INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
-                        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-			INodeHelper.removeChild(node.getID(), false);
+			INodeHelper.removeChild(node.getID(), isTransactional);
 			return removedNode;
 	}
 

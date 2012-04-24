@@ -481,7 +481,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
     }
-    boolean ret = namesystem.delete(src, recursive);
+    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
+    boolean ret = namesystem.delete(src, recursive, false);
     if (ret) 
       metrics.incrDeleteFileOps();
     return ret;

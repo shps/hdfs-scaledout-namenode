@@ -1383,7 +1383,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } else {
         // File exists - must be one of append or overwrite
         if (overwrite) {
-          delete(src, true);
+          delete(src, true, isTransactional);
         } else if (!append) {
           throw new FileAlreadyExistsException("failed to create file " + src
               + " on client " + clientMachine
@@ -2115,13 +2115,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
    * description of exceptions
    */
-    boolean delete(String src, boolean recursive)
+    boolean delete(String src, boolean recursive, boolean isTransactional)
         throws AccessControlException, SafeModeException,
                UnresolvedLinkException, IOException {
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
       }
-      boolean status = deleteInternal(src, recursive, true);
+      boolean status = deleteInternal(src, recursive, true, isTransactional);
       if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
@@ -2142,7 +2142,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#delete(String, boolean) for description of exceptions
    */
   private boolean deleteInternal(String src, boolean recursive,
-      boolean enforcePermission)
+      boolean enforcePermission, boolean isTransactional)
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
     boolean deleteNow = false;
@@ -2161,7 +2161,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // Unlink the target directory from directory tree
       
-      if (!dir.delete(src, collectedBlocks)) { //[thesis] only the inode is deleted at this point, the blocks are still there
+      if (!dir.delete(src, collectedBlocks, isTransactional)) { //[thesis] only the inode is deleted at this point, the blocks are still there
     	  return false;
       }
       deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
