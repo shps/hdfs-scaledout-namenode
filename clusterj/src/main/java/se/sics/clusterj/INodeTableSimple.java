@@ -6,7 +6,6 @@ package se.sics.clusterj;
 import com.mysql.clusterj.annotation.Column;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
-import com.mysql.clusterj.annotation.Lob;
 import com.mysql.clusterj.annotation.Index;
 
 

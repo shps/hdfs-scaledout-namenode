@@ -462,9 +462,8 @@ public class FSDirectory implements Closeable {
 
       // update space consumed
       INode[] pathINodes = getExistingPathINodes(path);
-      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(pathINodes, pathINodes.length-1, 0,
-          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true, false);
+          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true, isTransactional);
     } finally {
       writeUnlock();
     }

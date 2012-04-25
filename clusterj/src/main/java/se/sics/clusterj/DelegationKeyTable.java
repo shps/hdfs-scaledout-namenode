@@ -4,7 +4,6 @@
 package se.sics.clusterj;
 
 import com.mysql.clusterj.annotation.Column;
-import com.mysql.clusterj.annotation.Lob;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 
@@ -24,7 +23,7 @@ public interface DelegationKeyTable {
     long getExpiryDate();  
     void setExpiryDate(long expiryDate);
     
-    @Lob
+//    @Lob
     @Column(name = "keyBytes")
     byte[] getKeyBytes(); 
     void setKeyBytes (byte[] keyBytes);

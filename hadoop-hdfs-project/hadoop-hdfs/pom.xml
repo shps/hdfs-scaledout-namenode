@@ -366,8 +366,7 @@
           </execution>
         </executions>
       </plugin>
-
-    </plugins>
+  </plugins>
   </build>
 
   <profiles>
