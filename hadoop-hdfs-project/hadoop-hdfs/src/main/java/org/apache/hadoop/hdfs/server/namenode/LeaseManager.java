@@ -344,7 +344,7 @@ public class LeaseManager {
 		/** Does this lease contain any path? */
 		boolean hasPath() {
 			Lease lease = LeaseHelper.getLease(this.holder);
-			return !lease.getPathsLocal().isEmpty();
+			return (lease == null)? false: !lease.getPathsLocal().isEmpty();
 			}
 		@Deprecated
 		boolean hasPathOld() {return !paths.isEmpty();}
