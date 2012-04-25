@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -375,11 +376,11 @@ class INodeDirectory extends INode {
 	 * @param name a child's name
 	 * @return the index of the next child
 	 */
-	int nextChild(byte[] name) {
+	int nextChild(byte[] name, List<INode> childs) {
 		if (name.length == 0) { // empty name
 			return 0;
 		}
-		int nextPos = Collections.binarySearch(getChildrenFromDB(), name) + 1;
+		int nextPos = Collections.binarySearch(childs, name) + 1;
 		if (nextPos >= 0) {
 			return nextPos;
 		}
@@ -391,12 +392,12 @@ class INodeDirectory extends INode {
 	 * @param chldrn
 	 * @return
 	 */
-	int nextChild(byte[] name, List<INode> chldrn) {
+	int nextChildSlow(byte[] name, List<INode> childs) {
 		if (name.length == 0) { // empty name
 			return 0;
 		}
-		for(int i=0;i<chldrn.size();i++) {
-		  if(chldrn.get(i).compareTo(name) == 0) {
+		for(int i=0;i<childs.size();i++) {
+		  if(childs.get(i).compareTo(name) == 0) {
 		    return i+1;
 		  }
 		}
@@ -598,19 +599,19 @@ class INodeDirectory extends INode {
 	 * TODO: We need only getChildren() or getChildrenFromDB(), not both.
 	 */
 	List<INode> getChildren() {
-		//return children==null ? new ArrayList<INode>() : children;
-		return getChildrenFromDB();
+	  //return children==null ? new ArrayList<INode>() : children;
+	  return getChildrenFromDB();
 	}
 
 	List<INode> getChildrenFromDB() {
-		try {
-			List<INode> childrenFromDB = INodeHelper.getChildren(this.id);
-			if(childrenFromDB != null) 
-				return childrenFromDB;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<INode>();
+	  try {
+	    List<INode> childrenFromDB = INodeHelper.getChildren(this.id);
+	    if(childrenFromDB != null)
+	      return childrenFromDB;
+	  } catch (IOException e) {
+	    e.printStackTrace();
+	  }
+	  return new ArrayList<INode>();
 	}
 
 

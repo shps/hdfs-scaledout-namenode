@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -371,31 +372,30 @@ public class INodeHelper {
 	 * @throws IOException
 	 */
 	public static List<INode> getChildren(long parentid) throws IOException {
-		boolean done = false;
-		int tries = RETRY_COUNT;
-		Session session = DBConnector.obtainSession();
-		List<INode> children = new ArrayList<INode>();
+	  boolean done = false;
+	  int tries = RETRY_COUNT;
+	  Session session = DBConnector.obtainSession();
+	  List<INode> children = new ArrayList<INode>();
 
-		while (done == false && tries > 0) {
-			try {
-				List<INodeTableSimple> inodetList = getChildrenInternal(session, parentid);
-				for (INodeTableSimple inodet : inodetList) {
-				  //int low = Collections.binarySearch(children, DFSUtil.string2Bytes(inodet.getName()));
-				  //children.add(-low-1, convertINodeTableToINode(inodet));
-				  children.add(convertINodeTableToINode(inodet));
-				}
-				if (children.size() > 0) {
-					done = true;
-					return children;
-				}
-				return null;
-			} catch (ClusterJException e) {
-				System.err.println("INodeTableSimpleHelper.getChildren() threw error " + e.getMessage());
-				tries--;
-			}
-		}
+	  while (done == false && tries > 0) {
+	    try {
+	      List<INodeTableSimple> inodetList = getChildrenInternal(session, parentid);
+	      for (INodeTableSimple inodet : inodetList) {
+		children.add(convertINodeTableToINode(inodet));
+	      }
+	      if (children.size() > 0) {
+		sortChildren(children);
+		done = true;
+		return children;
+	      }
+	      return null;
+	    } catch (ClusterJException e) {
+	      System.err.println("INodeTableSimpleHelper.getChildren() threw error " + e.getMessage());
+	      tries--;
+	    }
+	  }
 
-		return null;
+	  return null;
 	}
 
 	/**Fetches all the children of a parent from the database
@@ -957,6 +957,22 @@ public class INodeHelper {
         inodet.setPermission(permissionString.getData());
         session.updatePersistent(inodet);
     }
+    
+    /** Sorts the sibling inodes according to their natural order
+     *  This sorting is required for namesystem.getListing()
+     *  This is a destructive method
+     * @param childs List of siblings
+     */
+    private static void sortChildren(List<INode> childs) {
+	  Collections.sort(childs,
+	      new Comparator<INode>() {
+	    @Override
+	    public int compare(INode o1, INode o2) {
+	      return o1.compareTo(o2.name);
+	    }
+	  }
+	      );
+	}
 
 
 }
