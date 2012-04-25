@@ -71,7 +71,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
         conf.setBoolean("dfs.support.append", true);
         buffersize = conf.getInt("io.file.buffer.size", 4096);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
-        fs = (DistributedFileSystem)cluster.getFileSystem();
+        fs = (DistributedFileSystem)cluster.getWritingFileSystem();
       }
     
       protected void tearDown() throws Exception {

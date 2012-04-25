@@ -96,7 +96,7 @@ public class TestFsck extends TestCase {
       conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
       conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final String fileName = "/srcdat";
       util.createFiles(fs, fileName);
       util.waitReplication(fs, fileName, (short)3);
@@ -123,7 +123,7 @@ public class TestFsck extends TestCase {
       cluster.startDataNodes(conf, 4, true, null, null);
       cluster.waitActive();
       cluster.waitClusterUp();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       util.cleanup(fs, "/srcdat");
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -166,7 +166,7 @@ public class TestFsck extends TestCase {
       Configuration conf = new HdfsConfiguration();
       conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       util.createFiles(fs, "/srcdat");
       util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, 0, true, "/non-existent");
@@ -192,7 +192,7 @@ public class TestFsck extends TestCase {
       final MiniDFSCluster c2 = cluster;
       final String dir = "/dfsck";
       final Path dirpath = new Path(dir);
-      final FileSystem fs = c2.getFileSystem();
+      final FileSystem fs = c2.getWritingFileSystem();
 
       util.createFiles(fs, dir);
       util.waitReplication(fs, dir, (short) 3);
@@ -237,7 +237,7 @@ public class TestFsck extends TestCase {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       String topDir = "/srcdat";
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       cluster.waitActive();
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
@@ -293,7 +293,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       String topDir = "/srcdat";
       String randomString = "HADOOP  ";
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       cluster.waitActive();
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
@@ -348,7 +348,7 @@ public class TestFsck extends TestCase {
     try {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
     Path file1 = new Path("/testCorruptBlock");
     DFSTestUtil.createFile(fs, file1, 1024, factor, 0);
     // Wait until file replication has completed
@@ -417,7 +417,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).build();
       String fileName = "/test.txt";
       Path filePath = new Path(fileName);
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       
       // create a one-block file
       DFSTestUtil.createFile(fs, filePath, 1L, (short)1, 1L);
@@ -453,7 +453,7 @@ public class TestFsck extends TestCase {
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
       util.createFiles(fs, "/corruptData", (short) 1);
       util.waitReplication(fs, "/corruptData", (short) 1);
@@ -520,7 +520,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).build();
       String fileName = "/test.txt";
       Path filePath = new Path(fileName);
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
 
       // create a one-block file
       DFSTestUtil.createFile(fs, filePath, 1L, (short) 1, 1L);

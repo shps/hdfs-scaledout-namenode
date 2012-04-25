@@ -22,6 +22,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.security.token.SecretManager;
@@ -34,6 +36,9 @@ import org.apache.hadoop.security.token.Token;
 public class BlockPoolTokenSecretManager extends
     SecretManager<BlockTokenIdentifier> {
   
+	public static final Log LOG = LogFactory
+		      .getLog(BlockPoolTokenSecretManager.class);
+	
   private final Map<String, BlockTokenSecretManager> map = 
     new HashMap<String, BlockTokenSecretManager>();
 

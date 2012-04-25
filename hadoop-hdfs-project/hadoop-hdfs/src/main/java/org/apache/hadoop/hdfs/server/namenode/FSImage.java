@@ -144,7 +144,8 @@ public class FSImage implements Closeable {
   void setFSNamesystem(FSNamesystem ns) {
     namesystem = ns;
     if (ns != null) {
-      storage.setUpgradeManager(ns.upgradeManager);
+      storage.setUpgradeManager(
+              ns.upgradeManager);
     }
   }
  

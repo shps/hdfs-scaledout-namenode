@@ -64,7 +64,7 @@ public class TestDistributedFileSystem {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     URI address = FileSystem.getDefaultUri(conf);
-
+    
     try {
       FileSystem.closeAll();
 
@@ -87,7 +87,7 @@ public class TestDistributedFileSystem {
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
 
     try {
       // create two files
@@ -105,7 +105,7 @@ public class TestDistributedFileSystem {
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
 
     try {
       String file = "/test/fileclosethenseek/file-0";
@@ -156,7 +156,7 @@ public class TestDistributedFileSystem {
       final long millis = System.currentTimeMillis();
 
       {
-        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
         dfs.dfs.leaserenewer.setGraceSleepPeriod(grace);
         assertFalse(dfs.dfs.leaserenewer.isRunning());
   
@@ -236,7 +236,7 @@ public class TestDistributedFileSystem {
 
       {
         // Check to see if opening a non-existent file triggers a FNF
-        FileSystem fs = cluster.getFileSystem();
+        FileSystem fs = cluster.getWritingFileSystem();
         Path dir = new Path("/wrwelkj");
         assertFalse("File should not exist for test.", fs.exists(dir));
 
@@ -256,7 +256,7 @@ public class TestDistributedFileSystem {
       }
 
       {
-        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
         assertFalse(dfs.dfs.leaserenewer.isRunning());
 
         //open and check the file
@@ -299,7 +299,7 @@ public class TestDistributedFileSystem {
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       Path dir = new Path("/test");
       Path file = new Path(dir, "file");
       
@@ -402,7 +402,7 @@ public class TestDistributedFileSystem {
     conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem hdfs = cluster.getFileSystem();
+    final FileSystem hdfs = cluster.getWritingFileSystem();
     final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     System.out.println("hftpuri=" + hftpuri);
     final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);

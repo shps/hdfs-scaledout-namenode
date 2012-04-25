@@ -109,13 +109,13 @@ class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo b, INodeFile iNode, boolean isTransactional) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
-      blocks.put(info);
+      blocks.put(info, isTransactional);
     }
-    info.setINode(iNode);
+    info.setINode(iNode, isTransactional);
     return info;
   }
   
@@ -135,14 +135,13 @@ class BlocksMap {
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
- void removeBlock(Block block, boolean isTransactional) {
+  void removeBlock(Block block, boolean isTransactional) {
     BlockInfo blockInfo = blocks.remove(block, isTransactional);
     if (blockInfo == null)
     {
       return;
     }
-    blockInfo.setINode(null);
-    System.out.println("numNodes() for block: "+blockInfo.numNodes());
+    blockInfo.setINode(null, isTransactional);
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo, isTransactional); // remove from the list and wipe the location
@@ -181,18 +180,17 @@ class BlocksMap {
    * Remove the block from the block map
    * only if it does not belong to any file and data-nodes.
    */
-  boolean removeNode(Block b, DatanodeDescriptor node) {
+  boolean removeNode(Block b, DatanodeDescriptor node, boolean isTransactional) {
     BlockInfo info = blocks.get(b);
     if (info == null)
       return false;
 
     // remove block from the data-node list and the node from the block info
-    //TODO[Hooman]: add isTransactional param when you reach here from the caller.
-    boolean removed = node.removeBlock(info, false);
+    boolean removed = node.removeBlock(info, isTransactional);
 
     if (info.getDatanode(0) == null     // no datanodes left
               && info.getINode() == null) {  // does not belong to a file
-      blocks.remove(b);  // remove block from the map
+      blocks.remove(b, isTransactional);  // remove block from the map
     }
     return removed;
   }

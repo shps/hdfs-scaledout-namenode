@@ -68,7 +68,7 @@ public class TestReadWhileWriting {
 
       //wait for the cluster
       cluster.waitActive();
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       final Path p = new Path(DIR, "file1");
       final int half = BLOCK_SIZE/2;
 

@@ -47,13 +47,13 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numWNameNodes(
           2).numDataNodes(2).build();
 
       cluster.waitActive();
 
-      FileSystem fs1 = cluster.getFileSystem(0);
-      FileSystem fs2 = cluster.getFileSystem(1);
+      FileSystem fs1 = cluster.getWritingFileSystem(0);
+      FileSystem fs2 = cluster.getWritingFileSystem(1);
 
       DFSTestUtil.createFile(fs1, new Path("/alpha"), 1024, (short) 2, 54);
       DFSTestUtil.createFile(fs2, new Path("/beta"), 1024, (short) 2, 54);
@@ -155,13 +155,13 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numWNameNodes(
           2).numDataNodes(1).build();
 
       cluster.waitActive();
 
-      FileSystem fs1 = cluster.getFileSystem(0);
-      FileSystem fs2 = cluster.getFileSystem(1);
+      FileSystem fs1 = cluster.getWritingFileSystem(0);
+      FileSystem fs2 = cluster.getWritingFileSystem(1);
 
       DFSTestUtil.createFile(fs1, new Path("/alpha"), 1024, (short) 1, 54);
       DFSTestUtil.createFile(fs2, new Path("/beta"), 1024, (short) 1, 54);

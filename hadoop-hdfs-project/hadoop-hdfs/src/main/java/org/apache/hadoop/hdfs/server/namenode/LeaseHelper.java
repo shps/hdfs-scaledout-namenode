@@ -17,6 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import se.sics.clusterj.*;
 
 import com.mysql.clusterj.ClusterJException;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
@@ -37,7 +38,7 @@ public class LeaseHelper {
 	private static LeaseManager lm = null;
 	private static final int RETRY_COUNT = 3; 
 
-	
+
 	/**
 	 * This method creates a Lease object using the values stored in leaseTable and pathList
 	 * @param leaseTable
@@ -88,8 +89,18 @@ public class LeaseHelper {
 			try {
 				//First roundtrip
 				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+				if(leaseTable == null)
+				{
+					LOG.warn("Lease done not exist for holder: "+holder);
+							return null;
+				}
 				//Second roundtrip
 				List<LeasePathsTable> pathList =selectLeasePathsTableInternal(session, "holderID", leaseTable.getHolderID());
+				if(pathList == null)
+				{
+					LOG.warn("Lease paths does not exist for lease: "+ leaseTable.toString()+", holder: "+leaseTable.getHolder());
+							return null;
+				}
 				done = true;
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
@@ -129,6 +140,39 @@ public class LeaseHelper {
                 return lease;
 	}
         
+	/**
+	 * Checks to see if lease exists
+	 * @param holder
+	 * @return boolean true: if exists and false: if it doesn't
+	 */
+	public static boolean exists(String holder) {
+		int tries=RETRY_COUNT;
+		boolean done = false;
+		Session session = DBConnector.obtainSession();
+
+		while (done == false && tries > 0 ){
+			try {
+				LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
+				done = true;
+				if(leaseTable == null)
+				{
+					return false;
+				}
+				else
+				{
+					return true;
+				}
+				//return leaseTable != null ? true : false;
+			}
+			catch (ClusterJException e){
+				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
+				tries--;
+			}
+		}
+
+		return false; 
+	}
+
 	/**
 	 * Adds a lease to the database with a path. This method should ONLY be called if the lease does not exist in database already
 	 * Roundtrips: 3
@@ -213,7 +257,7 @@ public class LeaseHelper {
 		}
 	}
 
-	
+
 
 	/**
 	 * Fetches a lease from the database
@@ -237,7 +281,8 @@ public class LeaseHelper {
 				return lease;
 
 			} catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getLease: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -261,8 +306,10 @@ public class LeaseHelper {
 				tx.commit();
 			}
 			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
+				if(tx.isActive())
+					tx.rollback();
+				//LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
@@ -328,30 +375,42 @@ public class LeaseHelper {
 		}
 		return null;
 	}
- 
+
 	/**Replaces an already existing path with a new one
 	 * @param holderID
 	 * @param oldpath
 	 * @param newpath
 	 */
-	public static void replacePath(int holderID, String oldpath, String newpath) {
-		int tries = RETRY_COUNT;
-		boolean done = false;
+	public static void replacePath(int holderID, String oldpath, String newpath, boolean isTransactional) {
+
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		while(done == false && tries > 0) {
-			try{
-				tx.begin();
-				deleteLeasePathsInternal(session, holderID, oldpath);
-				insertLeasePathsInternal(session, holderID, newpath);
-				done = true;
-				tx.commit();
-			}
-			catch(ClusterJException e) {
-				tx.rollback();
-				LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
-				tries--;
+		// If the transaction is active, then we cannot use the beginTransaction
+		assert tx.isActive() == isTransactional;       
+
+		if (isTransactional){
+
+			deleteLeasePathsInternal(session, holderID, oldpath);
+			insertLeasePathsInternal(session, holderID, newpath);
+		}
+		else
+		{
+			int tries = RETRY_COUNT;
+			boolean done = false;
+			while(done == false && tries > 0) {
+				try{
+					tx.begin();
+					deleteLeasePathsInternal(session, holderID, oldpath);
+					insertLeasePathsInternal(session, holderID, newpath);
+					done = true;
+					tx.commit();
+				}
+				catch(ClusterJException e) {
+					tx.rollback();
+					LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
+					tries--;
+				}
 			}
 		}
 
@@ -408,10 +467,11 @@ public class LeaseHelper {
 				tries--;
 			}
 		}
+
 		return false;
 	}
 
-	
+
 	private static List<LeaseTable> getAllLeaseTables(Session session) {
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
@@ -428,8 +488,8 @@ public class LeaseHelper {
 	}
 
 
-	
-	
+
+
 	/**
 	 * @return A sorted set of leases
 	 */
@@ -437,7 +497,7 @@ public class LeaseHelper {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
-		
+
 		while(done == false && tries > 0) {
 			try{
 				SortedSet<Lease> sortedLeases = getSortedLeasesInternal(session);
@@ -449,10 +509,10 @@ public class LeaseHelper {
 				tries--;
 			}
 		}
-		
+
 		return new TreeSet<Lease>();
 	}
-	
+
 	/**
 	 * @return A map of leases sorted by path
 	 */
@@ -460,7 +520,7 @@ public class LeaseHelper {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
-		
+
 		while(done == false && tries > 0) {
 			try{
 				SortedMap<String, Lease> sortedLeases = getSortedLeasesByPathInternal(session);
@@ -468,16 +528,17 @@ public class LeaseHelper {
 				return sortedLeases;
 			}
 			catch(ClusterJException e) {
-				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				//LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
-		
+
 		return new TreeMap<String, Lease>();
 	}
-	
 
-	
+
+
 	/**
 	 * Searches for a lease by path
 	 * @param src
@@ -487,7 +548,7 @@ public class LeaseHelper {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
-		
+
 		while(done == false && tries > 0) {
 			try{
 				List<LeasePathsTable> leasePaths = selectLeasePathsTableInternal(session, "path", src);
@@ -504,11 +565,12 @@ public class LeaseHelper {
 				}
 			}
 			catch(ClusterJException e) {
-				LOG.error("ClusterJException in getLeaseByPath: " + e.getMessage());
+				//LOG.error("ClusterJException in getLeaseByPath: " + e.getMessage());
+				e.printStackTrace();
 				tries--;
 			}
 		}
-		
+
 		return null;
 	}
 	
@@ -552,19 +614,19 @@ public class LeaseHelper {
 			}
 		}
 	}
-	
+
 	/**Sets the leaseManager object. This method should be called before using any of the helper functions in this class.
 	 * @param leaseMgr
 	 */
 	public static void initialize(LeaseManager leaseMgr) {
 		lm = leaseMgr;
 	}
-	
-	
+
+
 	////////////////////////////////////////////////////////////////////////
 	// 				Internal Methods
 	////////////////////////////////////////////////////////////////////////
-	
+
 	/**
 	 * This method inserts a record (or updates if holder is already present) in the Lease table. 
 	 * The call to this method should be wrapped in  tx.begin() and tx.commit() calls.
@@ -593,7 +655,8 @@ public class LeaseHelper {
 		LeasePathsTable leasePathsTable = session.newInstance(LeasePathsTable.class);
 		leasePathsTable.setHolderID(holderID);
 		leasePathsTable.setPath(path);
-		session.makePersistent(leasePathsTable);
+		//session.makePersistent(leasePathsTable);
+		session.savePersistent(leasePathsTable);
 	}
 
 	/**
@@ -670,7 +733,7 @@ public class LeaseHelper {
 		}
 		return false;
 	}
-	
+
 	private static void renewLeaseInternal(Session session, String holder) {
 		LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
 		leaseTable.setLastUpdated(now());
@@ -685,13 +748,13 @@ public class LeaseHelper {
 	private static SortedSet<Lease> getSortedLeasesInternal(Session session) {
 		List<LeaseTable> leaseTables = getAllLeaseTables(session);
 		SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
-		
+
 		for(LeaseTable leaseTable : leaseTables) {
 			sortedLeases.add(getLease(leaseTable.getHolder()));
 		}
 		return sortedLeases;
 	}
-	
+
 	/**Fetches lease and paths from the database and returns a path sorted TreeMap<String, Lease>
 	 * @param session
 	 * @return TreeMap<String, Lease> sorted by path
@@ -699,18 +762,18 @@ public class LeaseHelper {
 	private static SortedMap<String, Lease> getSortedLeasesByPathInternal(Session session) {
 		List<LeaseTable> leaseTables = getAllLeaseTables(session);
 		SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
-		
+
 		for(LeaseTable leaseTable : leaseTables) {
 			//sortedLeases.add(getLease(leaseTable.getHolder()));
 			Lease lease = getLease(leaseTable.getHolder());
 			for(String path : lease.getPathsLocal()) {
 				sortedLeasesByPath.put(path, lease);
 			}
-			
+
 		}
 		return sortedLeasesByPath;
 	}
-	
+
 	/**
 	 * Selects rows in the Lease table using holderID. 
 	 * If there is more than one row in the database with holderID, it throws an error and returns null.
@@ -732,7 +795,7 @@ public class LeaseHelper {
 		Query<LeaseTable> query = session.createQuery(dobj);
 		query.setParameter("param", holderID); //the WHERE clause of SQL
 		List<LeaseTable> leaseTables = query.getResultList();
-		
+
 		if(leaseTables.size() > 1) {
 			LOG.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
 			return null;

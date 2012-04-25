@@ -32,6 +32,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,10 +53,12 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.log4j.Level;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
 public class TestBlockReplacement extends TestCase {
+		 
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBlockReplacement");
 
@@ -84,6 +87,7 @@ public class TestBlockReplacement extends TestCase {
   }
   
   public void testBlockReplacement() throws IOException, TimeoutException {
+	  
     final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
@@ -101,7 +105,7 @@ public class TestBlockReplacement extends TestCase {
     try {
       cluster.waitActive();
       
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       Path fileName = new Path("/tmp.txt");
       
       // create a file with one block

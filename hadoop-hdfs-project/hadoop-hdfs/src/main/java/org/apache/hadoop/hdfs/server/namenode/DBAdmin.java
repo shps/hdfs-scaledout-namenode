@@ -8,6 +8,16 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+
+import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.DelegationKeyTable;
+import se.sics.clusterj.INodeTableSimple;
+import se.sics.clusterj.LeasePathsTable;
+import se.sics.clusterj.LeaseTable;
+import se.sics.clusterj.TripletsTable;
+
+import com.mysql.clusterj.Session;
+
 /**Used for performing administrative functions on the database. 
  * Assumes that a MySQL API server is running in the cluster
  * @author wmalik
@@ -15,6 +25,11 @@ import java.sql.Statement;
  */
 public class DBAdmin {
 
+	/**
+	 * @param database
+	 * @deprecated use DBAdmin.deleteAllTables
+	 */
+	@Deprecated
 	public static void truncateAllTables(String database) {
 		try {
 			   Class.forName("com.mysql.jdbc.Driver").newInstance();
@@ -39,6 +54,20 @@ public class DBAdmin {
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
+		
+	}
+	
+	/** Deletes all rows from all kthfs tables
+	 * @param session
+	 * @param database
+	 */
+	public static void deleteAllTables(Session session, String database) {
+		session.deletePersistentAll(DelegationKeyTable.class);
+		session.deletePersistentAll(INodeTableSimple.class);
+		session.deletePersistentAll(LeaseTable.class);
+		session.deletePersistentAll(LeasePathsTable.class);
+		session.deletePersistentAll(TripletsTable.class);
+		session.deletePersistentAll(BlockInfoTable.class);
 		
 	}
 	

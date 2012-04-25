@@ -46,7 +46,7 @@ public class TestDatanodeJsp {
   
   private static void testViewingFile(MiniDFSCluster cluster, String filePath,
       boolean doTail) throws IOException {
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     
     Path testPath = new Path(filePath);
     if (!fs.exists(testPath)) {
@@ -110,7 +110,7 @@ public class TestDatanodeJsp {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
         .build();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       Path testFile = new Path("/test/mkdirs/TestchunkSizeToView");
       writeFile(fs, testFile);
       JspWriter writerMock = Mockito.mock(JspWriter.class);

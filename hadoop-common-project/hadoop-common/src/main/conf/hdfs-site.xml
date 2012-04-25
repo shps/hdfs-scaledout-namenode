@@ -21,7 +21,7 @@
 </property>
 <property>
   <name>dfs.dbconnector.database</name>
-  <value>kthfs-inodes</value>
+  <value>kthfs-getblocks</value>
   <description>Default block replication.
   </description>
 </property>

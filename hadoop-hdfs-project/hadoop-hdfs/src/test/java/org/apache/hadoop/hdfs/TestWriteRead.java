@@ -76,7 +76,7 @@ public class TestWriteRead {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
 
-    mfs = cluster.getFileSystem();
+    mfs = cluster.getWritingFileSystem();
     mfc = FileContext.getFileContext();
 
     Path rootdir = new Path(ROOT_DIR);

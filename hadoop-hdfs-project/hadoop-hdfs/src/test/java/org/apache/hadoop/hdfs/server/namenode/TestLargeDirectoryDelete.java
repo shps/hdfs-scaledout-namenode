@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
-
 /**
  * Ensure during large directory delete, namenode does not block until the 
  * deletion completes and handles new requests from other clients
@@ -52,7 +51,7 @@ public class TestLargeDirectoryDelete {
   
   /** create a file with a length of <code>filelen</code> */
   private void createFile(final String fileName, final long filelen) throws IOException {
-    FileSystem fs = mc.getFileSystem();
+    FileSystem fs = mc.getWritingFileSystem();
     Path filePath = new Path(fileName);
     DFSTestUtil.createFile(fs, filePath, filelen, (short) 1, 0);
   }
@@ -98,7 +97,7 @@ public class TestLargeDirectoryDelete {
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
               String file = "/tmp" + createOps;
               createFile(file, 1);
-              mc.getFileSystem().delete(new Path(file), true);
+              mc.getWritingFileSystem().delete(new Path(file), true);
               createOps++;
             }
           } catch (IOException ex) {
@@ -134,7 +133,7 @@ public class TestLargeDirectoryDelete {
     
     final long start = System.currentTimeMillis();
     FSNamesystem.BLOCK_DELETION_INCREMENT = 1;
-    mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
+    mc.getWritingFileSystem().delete(new Path("/root"), true); // recursive delete
     final long end = System.currentTimeMillis();
     threads[0].endThread();
     threads[1].endThread();

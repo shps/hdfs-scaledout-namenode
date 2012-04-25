@@ -61,7 +61,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
     
     username = System.getProperty("user.name");
 
-    fs = dfsCluster.getFileSystem();
+    fs = dfsCluster.getWritingFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
   }

@@ -77,7 +77,7 @@ public class BlockReaderTestUtil {
    */
   public byte[] writeFile(Path filepath, int sizeKB)
       throws IOException {
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
 
     // Write a file with the specified amount of data
     DataOutputStream os = fs.create(filepath);

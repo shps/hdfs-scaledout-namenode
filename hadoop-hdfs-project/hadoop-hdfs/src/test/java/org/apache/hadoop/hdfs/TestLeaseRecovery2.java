@@ -88,7 +88,7 @@ public class TestLeaseRecovery2 {
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     cluster.waitActive();
-    dfs = (DistributedFileSystem)cluster.getFileSystem();
+    dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
   }
   
   /**
@@ -426,7 +426,8 @@ public class TestLeaseRecovery2 {
     // write bytes into the file.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
     AppendTestUtil.LOG.info("size=" + size);
-    stm.write(buffer, 0, size);
+    //stm.write(buffer, 0, size);
+    TestFileCreation.writeFile(stm);
     
     String originalLeaseHolder = NameNodeAdapter.getLeaseHolderForPath(
         cluster.getNameNode(), fileStr);
@@ -486,7 +487,7 @@ public class TestLeaseRecovery2 {
       Thread.sleep(SHORT_LEASE_PERIOD);
       locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
         fileStr, 0L, size);
-    } while (locatedBlocks.isUnderConstruction());
+    } while (locatedBlocks.isUnderConstruction());              // This doesn't work and loops continuously, maybe because of DN new port no. assigned issue 
     assertEquals(size, locatedBlocks.getFileLength());
 
     // make sure that the client can't write data anymore.

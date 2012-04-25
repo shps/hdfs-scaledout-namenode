@@ -87,7 +87,7 @@ class INodeDirectory extends INode {
 
 	INode removeChild(INode node, boolean isTransactional) {
 		assert getChildrenFromDB() != null;
-
+                                                                                                 
 			INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
 			INodeHelper.removeChild(node.getID(), isTransactional);
 			return removedNode;
@@ -418,8 +418,7 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), 
-                        isTransactional);
+		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), isTransactional);
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
@@ -453,8 +452,8 @@ class INodeDirectory extends INode {
 	 * @throws UnresolvedLinkException if any path component is a symbolic link
 	 * is not a directory.
 	 */
-	<T extends INode> T addNode(String path, T newNode, boolean inheritPermission
-			, boolean isTransactional) throws FileNotFoundException, UnresolvedLinkException  {
+	<T extends INode> T addNode(String path, T newNode, boolean inheritPermission, boolean isTransactional
+			) throws FileNotFoundException, UnresolvedLinkException  {
 		byte[][] pathComponents = getPathComponents(path);
 
 		if(addToParent(pathComponents, newNode,
@@ -476,13 +475,14 @@ class INodeDirectory extends INode {
 			INode newNode,
 			INodeDirectory parent,
 			boolean inheritPermission,
-			boolean propagateModTime
+			boolean propagateModTime,
+                                                                                                                                                boolean isTransactional
 			) throws FileNotFoundException, 
 			UnresolvedLinkException {
 		// insert into the parent children list
 		newNode.name = localname;
-                //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
-		if(parent.addChild(newNode, inheritPermission, propagateModTime, false, false) == null)
+
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, false, isTransactional) == null)
 			return null;
 		return parent;
 	}
@@ -531,8 +531,7 @@ class INodeDirectory extends INode {
 		// insert into the parent children list
 		INodeDirectory parent = getParent(pathComponents);
 
-		if(parent.addChild(newNode, inheritPermission, propagateModTime, true,
-                        isTransactional) == null)
+		if(parent.addChild(newNode, inheritPermission, propagateModTime, true, isTransactional) == null)
 			return null;
 		return parent;
 	}
@@ -611,7 +610,7 @@ class INodeDirectory extends INode {
 	}
 
 	//TODO: [thesis] should delete everything in one transaction to reduce latency of this operation
-	int collectSubtreeBlocksAndClear(List<Block> v) {
+	int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
 		int total = 1;
 		List<INode> childrenTemp = getChildrenFromDB(); //TODO: confirm if raw can be used here
 		
@@ -619,7 +618,7 @@ class INodeDirectory extends INode {
 			return total;
 		}
 		for (INode child : childrenTemp) {
-			total += child.collectSubtreeBlocksAndClear(v);
+			total += child.collectSubtreeBlocksAndClear(v, isTransactional);
 		}
 
 		parent = null;

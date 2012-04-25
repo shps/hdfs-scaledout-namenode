@@ -62,7 +62,7 @@ public class TestLocalDFS extends TestCase {
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     try {
       Path orig_path = fileSys.getWorkingDirectory();
       assertTrue(orig_path.isAbsolute());

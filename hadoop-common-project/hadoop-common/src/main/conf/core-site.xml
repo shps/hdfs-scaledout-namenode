@@ -9,7 +9,7 @@
 <!-- In: conf/core-site.xml -->
 <property>
   <name>hadoop.tmp.dir</name>
-  <value>/hdp/hadoop/tmp2</value>
+  <value>/tmp/hadoop/</value>
   <description>A base for other temporary directories.</description>
 </property>
 

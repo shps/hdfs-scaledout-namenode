@@ -79,7 +79,7 @@ public class TestClientReportBadBlock {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes)
         .build();
     cluster.waitActive();
-    dfs = (DistributedFileSystem) cluster.getFileSystem();
+    dfs = (DistributedFileSystem) cluster.getWritingFileSystem();
     buffersize = conf.getInt("io.file.buffer.size", 4096);
   }
 

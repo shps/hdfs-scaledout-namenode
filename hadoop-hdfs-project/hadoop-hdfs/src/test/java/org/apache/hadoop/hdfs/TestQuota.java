@@ -83,7 +83,7 @@ public class TestQuota {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem fs = cluster.getWritingFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -359,7 +359,7 @@ public class TestQuota {
   public void testNamespaceCommands() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem fs = cluster.getWritingFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -532,7 +532,7 @@ public class TestQuota {
     conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem fs = cluster.getWritingFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -782,7 +782,7 @@ public class TestQuota {
     MiniDFSCluster cluster = 
       new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     DFSAdmin admin = new DFSAdmin(conf);
     
     try {
@@ -837,7 +837,7 @@ public class TestQuota {
     MiniDFSCluster cluster = 
       new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     DFSAdmin admin = new DFSAdmin(conf);
 
     try {

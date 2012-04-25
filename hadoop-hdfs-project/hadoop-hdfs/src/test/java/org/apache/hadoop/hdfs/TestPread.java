@@ -212,7 +212,7 @@ public class TestPread extends TestCase {
       conf.setBoolean("dfs.datanode.transferTo.allowed", false);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     try {
       Path file1 = new Path("preadtest.dat");
       writeFile(fileSys, file1);

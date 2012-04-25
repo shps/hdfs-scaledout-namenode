@@ -68,7 +68,7 @@ public class TestResolveHdfsSymlink {
   public void testFcResolveAfs() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     FileContext fcLocal = FileContext.getLocalFSFileContext();
-    FileContext fcHdfs = FileContext.getFileContext(cluster.getFileSystem()
+    FileContext fcHdfs = FileContext.getFileContext(cluster.getWritingFileSystem()
         .getUri());
 
     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
@@ -109,7 +109,7 @@ public class TestResolveHdfsSymlink {
   @Test
   public void testFcDelegationToken() throws UnsupportedFileSystemException,
       IOException, InterruptedException {
-    FileContext fcHdfs = FileContext.getFileContext(cluster.getFileSystem()
+    FileContext fcHdfs = FileContext.getFileContext(cluster.getWritingFileSystem()
         .getUri());
     final AbstractFileSystem afs = fcHdfs.getDefaultFileSystem();
     final List<Token<?>> tokenList =

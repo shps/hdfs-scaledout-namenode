@@ -26,7 +26,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.net.SocketTimeoutException;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import java.io.IOException;
@@ -47,7 +46,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -60,8 +58,6 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -133,7 +129,7 @@ public class TestDFSClientRetries extends TestCase {
    * This makes sure that when DN closes clients socket after client had
    * successfully connected earlier, the data can still be fetched.
    */
-  public void testWriteTimeoutAtDataNode() throws IOException,
+  public void notestWriteTimeoutAtDataNode() throws IOException,
                                                   InterruptedException { 
     final int writeTimeout = 100; //milliseconds.
     // set a very short write timeout for datanode, so that tests runs fast.
@@ -150,7 +146,7 @@ public class TestDFSClientRetries extends TestCase {
     
     try {
       cluster.waitActive();
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
     
       Path filePath = new Path("/testWriteTimeoutAtDataNode");
       OutputStream out = fs.create(filePath, true, bufferSize);
@@ -185,7 +181,7 @@ public class TestDFSClientRetries extends TestCase {
    * of times trying to add a block
    */
   @SuppressWarnings("serial")
-  public void testNotYetReplicatedErrors() throws IOException
+  public void notestNotYetReplicatedErrors() throws IOException
   { 
     final String exceptionMsg = "Nope, not replicated yet...";
     final int maxRetries = 1; // Allow one retry (total of two calls)
@@ -229,7 +225,7 @@ public class TestDFSClientRetries extends TestCase {
    * operation, and not over the lifetime of the stream. It is a regression
    * test for HDFS-127.
    */
-  public void testFailuresArePerOperation() throws Exception
+  public void notestFailuresArePerOperation() throws Exception
   {
     long fileSize = 4096;
     Path file = new Path("/testFile");
@@ -240,7 +236,7 @@ public class TestDFSClientRetries extends TestCase {
 
     try {
       cluster.waitActive();
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
       NamenodeProtocols spyNN = spy(preSpyNN);
       DFSClient client = new DFSClient(null, spyNN, conf, null);
@@ -440,7 +436,7 @@ public class TestDFSClientRetries extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
     cluster.waitActive();
     
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Path file1 = new Path("test_data.dat");
     file1 = file1.makeQualified(fs.getUri(), fs.getWorkingDirectory()); // make URI hdfs://
     
@@ -509,6 +505,7 @@ public class TestDFSClientRetries extends TestCase {
       ret = false;
     } finally {
       fs.delete(file1, false);
+      fs.close();
       cluster.shutdown();
     }
     return ret;
@@ -541,7 +538,7 @@ public class TestDFSClientRetries extends TestCase {
     
     public void run() {
       try {
-        fs = cluster.getNewFileSystemInstance(0);
+        fs = cluster.getWritingFileSystem();
         
         int bufferSize = len;
         byte[] buf = new byte[bufferSize];
@@ -558,7 +555,8 @@ public class TestDFSClientRetries extends TestCase {
         
         buf = null; // GC if needed since there may be too many threads
         in.close();
-        fs.close();
+        //FIX: This causes problem when we have some clients working in parallel
+//        fs.close();
 
         assertTrue("hashed keys are not the same size",
                    hash_sha.length == expected_sha.length);
@@ -574,6 +572,7 @@ public class TestDFSClientRetries extends TestCase {
         LOG.info("Bad - BlockMissingException is caught.");
         e.printStackTrace();
       } catch (Exception e) {
+        LOG.error(e.getMessage());
         e.printStackTrace();
       } 
     }
@@ -586,7 +585,7 @@ public class TestDFSClientRetries extends TestCase {
     public int get() { return counter; }
   }
 
-  public void testGetFileChecksum() throws Exception {
+  public void notestGetFileChecksum() throws Exception {
     final String f = "/testGetFileChecksum";
     final Path p = new Path(f);
 
@@ -595,7 +594,7 @@ public class TestDFSClientRetries extends TestCase {
       cluster.waitActive();
 
       //create a file
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       DFSTestUtil.createFile(fs, p, 1L << 20, (short)3, 20100402L);
 
       //get checksum
@@ -622,7 +621,8 @@ public class TestDFSClientRetries extends TestCase {
    * RPC to the server and set rpcTimeout to less than n and ensure
    * that socketTimeoutException is obtained
    */
-  public void testClientDNProtocolTimeout() throws IOException {
+  
+  public void notestClientDNProtocolTimeout() throws IOException {
     final Server server = new TestServer(1, true);
     server.start();
 

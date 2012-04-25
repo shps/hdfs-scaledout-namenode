@@ -40,7 +40,7 @@ public class TestWriteConfigurationToDFS {
     FileSystem fs = null;
     OutputStream os = null;
     try {
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       Path filePath = new Path("/testWriteConf.xml");
       os = fs.create(filePath);
       StringBuilder longString = new StringBuilder();

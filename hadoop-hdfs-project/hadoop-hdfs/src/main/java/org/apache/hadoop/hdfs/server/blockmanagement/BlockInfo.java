@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
+import org.mortbay.log.Log;
 
 /**
  * Internal class for block metadata.
@@ -56,6 +58,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		this.getBlockName();
 		this.getNumBytes(); 
 		this.getGenerationStamp();
+                                
 	}
 
 	/**
@@ -72,11 +75,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		return (INodeFile) BlocksHelper.getInodeFromBlockId(this.getBlockId());
 	}
 
-	public void setINode(INodeFile inode) {
+	public void setINode(INodeFile inode, boolean isTransactional) {
 		this.inode = inode;
 		if(inode!=null) //FIXME: W: no need for this check 
-                    //[Hooman]TODO: add isTransactional param whenever you reach this method from the callers.
-			BlocksHelper.updateBlockInfoInDB(inode.getID(), this, false); 
+			BlocksHelper.updateBlockInfoInDB(inode.getID(), this, isTransactional);
 	}
 	
 	public void setINodeWithoutTransaction(INodeFile inode) {	
@@ -85,7 +87,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 
 	public DatanodeDescriptor getDatanode(int index) {
 		assert index >= 0;
-		DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index);
+		DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index); //[thesis] this should return a DND with ip:port
 		assert node == null || 
 				DatanodeDescriptor.class.getName().equals(node.getClass().getName()) : 
 					"DatanodeDescriptor is expected at " + index*3;
@@ -127,11 +129,11 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
 	    if(findDatanode(node) >= 0) // the node is already there
 	      return false;
-
+	    
+	    
 	    // find the last available datanode index
 	    int lastNode = ensureCapacity(1);
-	    setDatanode(lastNode, node, isTransactional);
-	    
+	    setDatanode(lastNode, node, isTransactional);	    
 	    return true;
 	  }
 
@@ -140,7 +142,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	*/
 	  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
 	    int dnIndex = findDatanode(node);
-	    if(dnIndex < 0) // the node is not found
+                                                    if(dnIndex < 0) // the node is not found
 	      return false;
 
 	    BlocksHelper.removeTriplets(this,dnIndex, isTransactional);

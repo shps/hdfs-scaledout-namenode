@@ -57,7 +57,7 @@ public class TestListPathServlet {
     // start a cluster with single datanode
     cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
-    fs = cluster.getFileSystem();
+    fs = cluster.getWritingFileSystem();
 
     final String str = "hftp://"
         + CONF.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);

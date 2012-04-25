@@ -57,18 +57,23 @@ public class TestDatanodeDescriptor extends TestCase {
     assertTrue(dd.addBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     assertFalse(dd.removeBlock(blk1, false));
     assertEquals(1, dd.numBlocks());
     // add an existent block
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     assertFalse(dd.addBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // add second block
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     assertTrue(dd.addBlock(blk1, false));
     assertEquals(2, dd.numBlocks());
     // remove first block
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     assertTrue(dd.removeBlock(blk, false));
     assertEquals(1, dd.numBlocks());
     // remove second block
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     assertTrue(dd.removeBlock(blk1, false));
     assertEquals(0, dd.numBlocks());    
   }

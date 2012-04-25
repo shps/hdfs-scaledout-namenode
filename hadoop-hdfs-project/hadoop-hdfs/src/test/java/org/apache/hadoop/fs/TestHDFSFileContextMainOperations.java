@@ -50,7 +50,7 @@ public class TestHDFSFileContextMainOperations extends
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
+    fc = FileContext.getFileContext(cluster.getWritingURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
@@ -64,7 +64,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
                                               .format(false).build();
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
+    fc = FileContext.getFileContext(cluster.getWritingURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
@@ -101,7 +101,7 @@ public class TestHDFSFileContextMainOperations extends
   
   @Test
   public void testOldRenameWithQuota() throws Exception {
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     Path src1 = getTestRootPath(fc, "test/testOldRenameWithQuota/srcdir/src1");
     Path src2 = getTestRootPath(fc, "test/testOldRenameWithQuota/srcdir/src2");
     Path dst1 = getTestRootPath(fc, "test/testOldRenameWithQuota/dstdir/dst1");
@@ -136,7 +136,7 @@ public class TestHDFSFileContextMainOperations extends
   
   @Test
   public void testRenameWithQuota() throws Exception {
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     Path src1 = getTestRootPath(fc, "test/testRenameWithQuota/srcdir/src1");
     Path src2 = getTestRootPath(fc, "test/testRenameWithQuota/srcdir/src2");
     Path dst1 = getTestRootPath(fc, "test/testRenameWithQuota/dstdir/dst1");
@@ -200,7 +200,7 @@ public class TestHDFSFileContextMainOperations extends
    */
   @Test
   public void testEditsLogOldRename() throws Exception {
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     Path src1 = getTestRootPath(fc, "testEditsLogOldRename/srcdir/src1");
     Path dst1 = getTestRootPath(fc, "testEditsLogOldRename/dstdir/dst1");
     createFile(src1);
@@ -216,7 +216,7 @@ public class TestHDFSFileContextMainOperations extends
     // Restart the cluster and ensure the above operations can be
     // loaded from the edits log
     restartCluster();
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = (DistributedFileSystem)cluster.getWritingFileSystem();
     src1 = getTestRootPath(fc, "testEditsLogOldRename/srcdir/src1");
     dst1 = getTestRootPath(fc, "testEditsLogOldRename/dstdir/dst1");
     Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
@@ -229,7 +229,7 @@ public class TestHDFSFileContextMainOperations extends
    */
   @Test
   public void testEditsLogRename() throws Exception {
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     Path src1 = getTestRootPath(fc, "testEditsLogRename/srcdir/src1");
     Path dst1 = getTestRootPath(fc, "testEditsLogRename/dstdir/dst1");
     createFile(src1);
@@ -245,7 +245,7 @@ public class TestHDFSFileContextMainOperations extends
     // Restart the cluster and ensure the above operations can be
     // loaded from the edits log
     restartCluster();
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = (DistributedFileSystem)cluster.getWritingFileSystem();
     src1 = getTestRootPath(fc, "testEditsLogRename/srcdir/src1");
     dst1 = getTestRootPath(fc, "testEditsLogRename/dstdir/dst1");
     Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
@@ -254,7 +254,7 @@ public class TestHDFSFileContextMainOperations extends
   
   private void oldRename(Path src, Path dst, boolean renameSucceeds,
       boolean exception) throws Exception {
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     try {
       Assert.assertEquals(renameSucceeds, fs.rename(src, dst));
     } catch (Exception ex) {

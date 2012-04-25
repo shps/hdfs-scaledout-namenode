@@ -21,15 +21,15 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,36 +40,33 @@ import com.mysql.clusterj.ClusterJException;
  * @author wmalik
  *
  */
-public class TestLeaseHelper {
-  public static final Log LOG = LogFactory.getLog(TestLeaseHelper.class);
+public class TestSecretHelper {
+  public static final Log LOG = LogFactory.getLog(TestSecretHelper.class);
   private static final Configuration CONF = new HdfsConfiguration();
-  private static LeaseManager leaseManager = new LeaseManager(null);
   
   @Before
   public void connect() throws IOException {
+	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "kthfs-getblocks");
 	  DBConnector.setConfiguration(CONF);
-	  LeaseHelper.initialize(leaseManager);
+	  DBAdmin.deleteAllTables(DBConnector.obtainSession(), "kthfs-getblocks");
   }
 
   @After
   public void disconnect() throws IOException {
   
   }
+
   
   @Test
-  public void testAddDeleteLease() throws ClusterJException {
-          String holder = "wmalik";
-	  int holderID = DFSUtil.getRandom().nextInt();
-	  String src = "/home/wmalik/file"+holderID+".txt";
-	  Lease lease = leaseManager.addLease(holder, src, false);
+  public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
+	  BlockTokenSecretManagerNN tokenMgr = 
+			  new BlockTokenSecretManagerNN(true, 60*60*1000L, 60*60*1000L); //60 minutes
 	  
-          assertEquals("holder not persisted correctly", holder, lease.getHolder());
-	  assertTrue("path not persisted correctly", lease.getPathsLocal().contains(src));
-          
-	  leaseManager.removeLease(lease, src, false);
+	  ExportedBlockKeys expKeys = tokenMgr.exportKeys();
+	  assertEquals(2, expKeys.getAllKeys().length);
 	  
-	  Lease leaseByPath = leaseManager.getLeaseByPath(src);
-	  assertNull("lease not removed from database", leaseByPath);
   }
+  
+  
   
 }

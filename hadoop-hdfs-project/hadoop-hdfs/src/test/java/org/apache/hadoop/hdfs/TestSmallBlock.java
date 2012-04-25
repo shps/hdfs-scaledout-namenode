@@ -96,7 +96,7 @@ public class TestSmallBlock extends TestCase {
     }
     conf.set(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, "1");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fileSys = cluster.getFileSystem();
+    FileSystem fileSys = cluster.getWritingFileSystem();
     try {
       Path file1 = new Path("smallblocktest.dat");
       writeFile(fileSys, file1);

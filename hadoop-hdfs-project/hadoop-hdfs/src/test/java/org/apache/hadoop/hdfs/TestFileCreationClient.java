@@ -54,7 +54,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
 
     try {
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       final Path dir = new Path("/wrwelkj");
       
       SlowWriter[] slowwriters = new SlowWriter[10];

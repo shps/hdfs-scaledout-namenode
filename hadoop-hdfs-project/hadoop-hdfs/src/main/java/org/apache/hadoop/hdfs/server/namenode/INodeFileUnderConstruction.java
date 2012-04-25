@@ -131,18 +131,18 @@ public class INodeFileUnderConstruction extends INodeFile {
    * Set its locations.
    */
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-                                          DatanodeDescriptor[] targets)
+                                          DatanodeDescriptor[] targets, boolean isTransactional)
   throws IOException {
     if (blocks == null || blocks.length == 0) {
       throw new IOException("Trying to update non-existant block. " +
           "File is empty.");
     }
+    NameNode.LOG.debug("W: setLastBlock lastBlock"+lastBlock.getBlockId());
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, targets);
-    ucBlock.setINode(this);
-    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
-    setBlock(numBlocks()-1, ucBlock, false);
+    ucBlock.setINode(this, isTransactional);
+    setBlock(numBlocks()-1, ucBlock, isTransactional);
     return ucBlock;
   }
 }

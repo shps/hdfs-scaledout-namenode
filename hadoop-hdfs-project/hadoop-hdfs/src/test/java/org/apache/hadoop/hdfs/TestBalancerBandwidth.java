@@ -51,7 +51,7 @@ public class TestBalancerBandwidth extends TestCase {
     try {
       cluster.waitActive();
 
-      DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+      DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
 
       ArrayList<DataNode> datanodes = cluster.getDataNodes();
       // Ensure value from the configuration is reflected in the datanodes.

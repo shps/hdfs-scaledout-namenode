@@ -39,7 +39,7 @@ import org.junit.Test;
 public class TestLoadGenerator extends Configured implements Tool {
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
-  private static final String OUT_DIR = 
+  private static final String OUT_DIR =  
     System.getProperty("test.build.data","build/test/data");
   private static final File DIR_STRUCTURE_FILE = 
     new File(OUT_DIR, StructureGenerator.DIR_STRUCTURE_FILE_NAME);
@@ -74,6 +74,8 @@ public class TestLoadGenerator extends Configured implements Tool {
     final int AVG_FILE_SIZE = 9;
     final int SEED = 13;
     try {
+    	System.out.println("outDir in Test: " + OUT_DIR);
+      new File(OUT_DIR).mkdir();
       // successful case
       assertEquals(0, sg.run(args));
       BufferedReader in = new BufferedReader(new FileReader(DIR_STRUCTURE_FILE));

@@ -121,7 +121,7 @@ public class TestDelegationTokenForProxyUser {
           .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
             public Token<DelegationTokenIdentifier> run() throws IOException {
               DistributedFileSystem dfs = (DistributedFileSystem) cluster
-                  .getFileSystem();
+                  .getWritingFileSystem();
               return dfs.getDelegationToken("RenewerUser");
             }
           });

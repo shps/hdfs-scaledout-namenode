@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import java.io.File;
@@ -50,7 +49,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
-import se.sics.clusterj.*;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -89,7 +87,7 @@ import se.sics.clusterj.*;
  * used by secondary namenodes or rebalancing processes to get partial
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
-@InterfaceAudience.Private
+ @InterfaceAudience.Private
 public class NameNode {
   static{
     HdfsConfiguration.init();
@@ -200,6 +198,7 @@ public class NameNode {
     return getAddress(addr);
   }
 
+  //TODO:kamal, add for reading NN
   public static InetSocketAddress getAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
     return getAddress(filesystemURI);
@@ -207,6 +206,7 @@ public class NameNode {
 
 
   /**
+   * TODO:Kamal, reading NN
    * TODO:FEDERATION
    * @param filesystemURI
    * @return address of file system
@@ -252,6 +252,10 @@ public class NameNode {
   boolean isRole(NamenodeRole that) {
     return role.equals(that);
   }
+  
+  boolean isWritingNN() {
+      return role.equals(NamenodeRole.WRITER);
+  }
 
   /**
    * Given a configuration get the address of the service rpc server
@@ -290,7 +294,7 @@ public class NameNode {
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
-    this.namesystem = new FSNamesystem(conf);
+    this.namesystem = new FSNamesystem(conf, this);
   }
 
   NamenodeRegistration getRegistration() {
@@ -377,7 +381,7 @@ public class NameNode {
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
-    if ((isRole(NamenodeRole.NAMENODE))
+    if ((isRole(NamenodeRole.READER) || isRole(NamenodeRole.WRITER))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
@@ -442,7 +446,7 @@ public class NameNode {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.NAMENODE);
+    this(conf, NamenodeRole.WRITER);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
@@ -652,6 +656,10 @@ public class NameNode {
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
+      } else if (StartupOption.READER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.READER;
+      } else if (StartupOption.WRITER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.WRITER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
         // might be followed by two args
@@ -734,10 +742,13 @@ public class NameNode {
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case BACKUP:      
+      case READER:
+        DefaultMetricsSystem.initialize("Reading NameNode");
+        return new NameNode(conf, NamenodeRole.READER);
+//TODO:kamal, backup node      case BACKUP:      
       default:
-        DefaultMetricsSystem.initialize("NameNode");
-        return new NameNode(conf);
+        DefaultMetricsSystem.initialize("Writing NameNode");
+        return new NameNode(conf, NamenodeRole.WRITER);
     }
   }
 

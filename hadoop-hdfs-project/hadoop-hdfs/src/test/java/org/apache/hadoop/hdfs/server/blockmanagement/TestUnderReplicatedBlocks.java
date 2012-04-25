@@ -37,7 +37,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR + 1).build();
     try {
       // create a file with one block with a replication factor of 2
-      final FileSystem fs = cluster.getFileSystem();
+      final FileSystem fs = cluster.getWritingFileSystem();
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
       
@@ -47,7 +47,8 @@ public class TestUnderReplicatedBlocks extends TestCase {
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
       bm.addToInvalidates(b.getLocalBlock(), dn);
-      bm.blocksMap.removeNode(b.getLocalBlock(), dn);
+      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+      bm.blocksMap.removeNode(b.getLocalBlock(), dn, false);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

@@ -54,22 +54,23 @@ public class TestDFSRemove extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       assertTrue(fs.mkdirs(dir));
       
       long dfsUsedStart = getTotalDfsUsed(cluster);
       {
         // Create 100 files
-        final int fileCount = 100;
+        final int fileCount = 2;
         for (int i = 0; i < fileCount; i++) {
           Path a = new Path(dir, "a" + i);
           createFile(fs, a);
         }
         long dfsUsedMax = getTotalDfsUsed(cluster);
+        Thread.sleep(3 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);
         // Remove 100 files
         for (int i = 0; i < fileCount; i++) {
           Path a = new Path(dir, "a" + i);
-          fs.delete(a, false);
+          assertTrue(fs.delete(a, false));
         }
         // wait 3 heartbeat intervals, so that all blocks are deleted.
         Thread.sleep(3 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);

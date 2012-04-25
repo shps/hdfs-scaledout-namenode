@@ -54,7 +54,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
-    fHdfs = cluster.getFileSystem();
+    fHdfs = cluster.getWritingFileSystem();
     defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fHdfs.mkdirs(defaultWorkingDirectory);

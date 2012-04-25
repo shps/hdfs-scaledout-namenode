@@ -264,7 +264,8 @@ class FSImageFormat {
        INode newNode = loadINode(in); // read rest of inode
 
        // add to parent
-       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false);       
+       // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false, false);       
      }
      return numChildren;
    }
@@ -298,8 +299,9 @@ class FSImageFormat {
       }
 
       // add new inode
+      // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
       parentINode = fsDir.addToParent(pathComponents[pathComponents.length-1], 
-          parentINode, newNode, false);
+          parentINode, newNode, false, false);
     }
   }
 

@@ -52,7 +52,7 @@ public class TestDatanodeRestart {
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     try {
       // test finalized replicas
       final String TopDir = "/test";
@@ -87,7 +87,7 @@ public class TestDatanodeRestart {
   private void testRbwReplicas(MiniDFSCluster cluster, boolean isCorrupt) 
   throws IOException {
     FSDataOutputStream out = null;
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     final Path src = new Path("/test.txt");
     try {
       final int fileLen = 515;
@@ -141,7 +141,7 @@ public class TestDatanodeRestart {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     try {
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
       for (int i=0; i<4; i++) {
         Path fileName = new Path("/test"+i);
         DFSTestUtil.createFile(fs, fileName, 1, (short)1, 0L);

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsAction;
@@ -26,7 +28,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.mortbay.log.Log;
 
 /** I-node for closed file. */
 public class INodeFile extends INode {
@@ -160,7 +161,7 @@ public class INodeFile extends INode {
 	}
 	
 	@Deprecated
-	  void appendBlocksOld(INodeFile [] inodes, int totalAddedBlocks) {
+	  void appendBlocksOld(INodeFile [] inodes, int totalAddedBlocks, boolean isTransactional) {
 	    int size = this.blocks.length;
 
 	    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
@@ -172,7 +173,7 @@ public class INodeFile extends INode {
 	    }
 
 	    for(BlockInfo bi: newlist) {
-	      bi.setINode(this);
+	      bi.setINode(this, isTransactional);
 	    }
 	    this.blocks = newlist;
 	  }
@@ -194,13 +195,13 @@ public class INodeFile extends INode {
 		}
 	}*/
 	
-	void addBlock(BlockInfo newblock) {
+	void addBlock(BlockInfo newblock, boolean isTransactional) {
 		/*
 		if (this.blocks == null) {
 			this.blocks = new BlockInfo[1];
 			this.blocks[0] = newblock;
 		} else {*/
-			BlocksHelper.addBlock(newblock);
+			BlocksHelper.addBlock(newblock, isTransactional);
 			//this.blocks = BlocksHelper.getBlocksArray(this); //TODO: [thesis] redundant (SITW)
 		//}
 	}
@@ -227,29 +228,29 @@ public class INodeFile extends INode {
 		}
 	}
 
-	int collectSubtreeBlocksAndClear(List<Block> v) {
+	int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
 		
 		parent = null;
 		if(blocks != null && v != null) { //TODO: [thesis] blocks should be fetched from DB here
 			for (BlockInfo blk : blocks) {
 				v.add(blk);
-				blk.setINode(null);
+				blk.setINode(null, isTransactional);
 			}
 		}
 		//FIXME: Reflect this in the DB plz [thesis] its already being done, so no need to do it in DB
 		blocks = null;
-                //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-		INodeHelper.removeChild(super.id, false); //TODO, why super.id?
+
+		INodeHelper.removeChild(super.id, isTransactional); //TODO, why super.id?
 		return 1;
 	}
 	
-	int collectSubtreeBlocksAndClearNoDelete(List<Block> v) {
+	int collectSubtreeBlocksAndClearNoDelete(List<Block> v, boolean isTransactional) {
 		
 		parent = null;
 		if(blocks != null && v != null) { 
 			for (BlockInfo blk : blocks) {
 				v.add(blk);
-				blk.setINode(null);
+				blk.setINode(null, isTransactional);
 			}
 		}
 		blocks = null;
@@ -268,7 +269,6 @@ public class INodeFile extends INode {
 	/** Compute file size.
 	 * May or may not include BlockInfoUnderConstruction.
 	 */
-	//FIXME: KTHFSBLOCKS
 	long computeFileSize(boolean includesBlockInfoUnderConstruction) {
 		if (blocks == null || blocks.length == 0) {
 			return 0;
@@ -353,7 +353,7 @@ public class INodeFile extends INode {
 			return null;
 		T returnBlock = null;
 		try {
-			@SuppressWarnings("unchecked")  // ClassCastException is caught below
+                                                                                                                                                @SuppressWarnings("unchecked")  // ClassCastException is caught below
 			T tBlock = (T)tempblocks[tempblocks.length - 1];
 			returnBlock = tBlock;
 		} catch(ClassCastException cce) {
@@ -362,11 +362,12 @@ public class INodeFile extends INode {
 		}
 		return returnBlock;
 	}
+	
 
 	/** @return the number of blocks */ 
 	//FIXME: KTHFSBLOCKS
 	public int numBlocks() {
-		return blocks == null ? 0 : blocks.length;
+                                                                                                return blocks == null ? 0 : blocks.length;
 	}
 
 

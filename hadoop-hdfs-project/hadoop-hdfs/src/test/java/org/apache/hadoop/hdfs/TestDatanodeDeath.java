@@ -292,7 +292,7 @@ public class TestDatanodeDeath extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(numDatanodes).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Modify modThread = null;
 
     try {
@@ -350,7 +350,7 @@ public class TestDatanodeDeath extends TestCase {
                        datanodeToKill);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(myMaxNodes).build();
     cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     short repl = 3;
 
     Path filename = new Path("simpletest.dat");

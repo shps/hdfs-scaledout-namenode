@@ -60,7 +60,7 @@ import org.apache.hadoop.util.VersionInfo;
  * The locks are released when the servers stop (normally or abnormally).
  * 
  */
-@InterfaceAudience.Private
+ @InterfaceAudience.Private
 public abstract class Storage extends StorageInfo {
   public static final Log LOG = LogFactory.getLog(Storage.class.getName());
 

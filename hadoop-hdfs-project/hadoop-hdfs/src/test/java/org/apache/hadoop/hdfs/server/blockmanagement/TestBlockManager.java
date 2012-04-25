@@ -97,7 +97,8 @@ public class TestBlockManager {
   private void removeNode(DatanodeDescriptor deadNode) {
     NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
     cluster.remove(deadNode);
-    bm.removeBlocksAssociatedTo(deadNode);
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    bm.removeBlocksAssociatedTo(deadNode, false);
   }
 
 
@@ -317,7 +318,8 @@ public class TestBlockManager {
   private void fulfillPipeline(BlockInfo blockInfo,
       DatanodeDescriptor[] pipeline) throws IOException {
     for (int i = 1; i < pipeline.length; i++) {
-      bm.addBlock(pipeline[i], blockInfo, null);
+            // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+      bm.addBlock(pipeline[i], blockInfo, null, false);
     }
   }
 
@@ -326,6 +328,8 @@ public class TestBlockManager {
     BlockInfo blockInfo = new BlockInfo(block, 3);
 
     for (DatanodeDescriptor dn : nodes) {
+            
+      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
       blockInfo.addNode(dn, false);
     }
     return blockInfo;
@@ -352,7 +356,8 @@ public class TestBlockManager {
     Mockito.doReturn((short)3).when(iNode).getReplication();
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
 
-    bm.blocksMap.addINode(blockInfo, iNode);
+    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
+    bm.blocksMap.addINode(blockInfo, iNode, false);
     return blockInfo;
   }
   

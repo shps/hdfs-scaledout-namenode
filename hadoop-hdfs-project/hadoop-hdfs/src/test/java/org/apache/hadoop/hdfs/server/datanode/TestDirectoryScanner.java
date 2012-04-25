@@ -64,7 +64,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** create a file with a length of <code>fileLen</code> */
   private void createFile(String fileName, long fileLen) throws IOException {
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = cluster.getWritingFileSystem();
     Path filePath = new Path(fileName);
     DFSTestUtil.createFile(fs, filePath, fileLen, (short) 1, r.nextLong());
   }

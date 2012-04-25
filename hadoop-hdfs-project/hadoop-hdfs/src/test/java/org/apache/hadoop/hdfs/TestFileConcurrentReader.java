@@ -88,7 +88,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     }
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitClusterUp();
-    fileSystem = cluster.getFileSystem();
+    fileSystem = cluster.getWritingFileSystem();
   }
 
   private void writeFileAndSync(FSDataOutputStream stm, int size)

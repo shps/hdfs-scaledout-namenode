@@ -73,8 +73,8 @@ public class TestFileStatus {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     cluster = new MiniDFSCluster.Builder(conf).build();
-    fs = cluster.getFileSystem();
-    fc = FileContext.getFileContext(cluster.getURI(0), conf);
+    fs = cluster.getWritingFileSystem();
+    fc = FileContext.getFileContext(cluster.getWritingURI(0), conf);
     hftpfs = cluster.getHftpFileSystem(0);
     dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
     file1 = new Path("filestatus.dat");

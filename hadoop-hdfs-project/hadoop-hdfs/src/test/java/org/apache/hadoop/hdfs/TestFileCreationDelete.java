@@ -50,7 +50,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -77,7 +77,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -86,11 +86,11 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getFileSystem();
+      fs = cluster.getWritingFileSystem();
 
       assertTrue(!fs.exists(file1));
       assertTrue(fs.exists(file2));

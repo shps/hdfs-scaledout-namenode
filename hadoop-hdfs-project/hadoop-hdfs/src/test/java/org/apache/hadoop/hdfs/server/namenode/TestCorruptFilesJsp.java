@@ -57,7 +57,7 @@ public class TestCorruptFilesJsp  {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
-      FileSystem fs = cluster.getFileSystem();
+      FileSystem fs = cluster.getWritingFileSystem();
 
       // create files
       for (Path filepath : filepaths) {

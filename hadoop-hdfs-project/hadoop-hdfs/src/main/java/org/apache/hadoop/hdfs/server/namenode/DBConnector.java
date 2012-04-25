@@ -1,12 +1,20 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import se.sics.clusterj.BlockTotalTable;
 import com.mysql.clusterj.ClusterJException;
+import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.INodeTableSimple;
+import se.sics.clusterj.LeasePathsTable;
+import se.sics.clusterj.LeaseTable;
+import se.sics.clusterj.TripletsTable;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
@@ -15,15 +23,6 @@ import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
-import java.util.HashMap;
-import java.util.Hashtable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import se.sics.clusterj.BlockInfoTable;
-import se.sics.clusterj.INodeTableSimple;
-import se.sics.clusterj.LeasePathsTable;
-import se.sics.clusterj.LeaseTable;
-import se.sics.clusterj.TripletsTable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -48,18 +47,22 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
  *    and the read/write locks in FSNamesystem and 
  *    FSDirectory will make sure this stays safe. * 
  */
-public class DBConnector {
+public class DBConnector { //TODO: [W] the methods and variables in this class should not be static
 	private static int NUM_SESSION_FACTORIES;
 	static SessionFactory [] sessionFactory;
-	static Map<Long, Session> sessionPool;
-        public static final int RETRY_COUNT = 3;
-        public static final Log LOG = LogFactory.getLog(DBConnector.class);
-	
+	static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
+	static final Log LOG = LogFactory.getLog(DBConnector.class);
+	public static final int RETRY_COUNT = 3;
+
 	public static void setConfiguration (Configuration conf){
+		if(sessionFactory != null) {
+			LOG.warn("SessionFactory is already initialized");
+			return; //[W] workaround to prevent recreation of SessionFactory for the time being
+		}
 		NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
-                sessionPool = new ConcurrentHashMap<Long, Session>();
-                sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
-                
+		sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
+		LOG.info("Database connect string: "+ conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
+		LOG.info("Database name: " + conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
 		for (int i = 0; i < NUM_SESSION_FACTORIES; i++)
 		{
 			Properties p = new Properties();
@@ -69,7 +72,7 @@ public class DBConnector {
 			sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
 		}
 	}
-	
+
 	/*
 	 * Return a session from a random session factory in our
 	 * pool.
@@ -79,7 +82,7 @@ public class DBConnector {
 	 */
 	public synchronized static Session obtainSession (){
 		long threadId = Thread.currentThread().getId();
-		
+
 		if (sessionPool.containsKey(threadId))	{
 			return sessionPool.get(threadId); 
 		}
@@ -143,6 +146,9 @@ public class DBConnector {
                 session.deletePersistentAll(LeaseTable.class);
                 session.deletePersistentAll(LeasePathsTable.class);
                 session.deletePersistentAll(TripletsTable.class);
+				// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+				session.deletePersistentAll(BlockTotalTable.class);
+				BlocksHelper.resetTotalBlocks(true);
                 tx.commit();
                 session.flush();
                 return true;
