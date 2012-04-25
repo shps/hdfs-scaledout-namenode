@@ -385,6 +385,23 @@ class INodeDirectory extends INode {
 		}
 		return -nextPos;
 	}
+	
+	/** Returns the index of next child using O(n) traversal 
+	 * @param name
+	 * @param chldrn
+	 * @return
+	 */
+	int nextChild(byte[] name, List<INode> chldrn) {
+		if (name.length == 0) { // empty name
+			return 0;
+		}
+		for(int i=0;i<chldrn.size();i++) {
+		  if(chldrn.get(i).compareTo(name) == 0) {
+		    return i+1;
+		  }
+		}
+		return 0;
+	}
 
 	/**
 	 * Add a child inode to the directory.

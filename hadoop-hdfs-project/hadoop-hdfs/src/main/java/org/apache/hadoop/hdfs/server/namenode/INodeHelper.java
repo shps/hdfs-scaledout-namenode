@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -379,7 +380,9 @@ public class INodeHelper {
 			try {
 				List<INodeTableSimple> inodetList = getChildrenInternal(session, parentid);
 				for (INodeTableSimple inodet : inodetList) {
-					children.add(convertINodeTableToINode(inodet));
+				  //int low = Collections.binarySearch(children, DFSUtil.string2Bytes(inodet.getName()));
+				  //children.add(-low-1, convertINodeTableToINode(inodet));
+				  children.add(convertINodeTableToINode(inodet));
 				}
 				if (children.size() > 0) {
 					done = true;

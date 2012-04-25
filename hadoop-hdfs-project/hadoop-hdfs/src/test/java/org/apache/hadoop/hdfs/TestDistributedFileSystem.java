@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -46,6 +48,8 @@ public class TestDistributedFileSystem {
 
   {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)NameNode.LOG).getLogger().setLevel(Level.ALL);
+//    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
   }
 
   private boolean dualPortTesting = false;
@@ -294,7 +298,8 @@ public class TestDistributedFileSystem {
   
   @Test
   public void testStatistics() throws Exception {
-    int lsLimit = 2;
+    int lsLimit = 2; //[W]
+	//int lsLimit = 1000;
     final Configuration conf = getTestConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -476,7 +481,7 @@ public class TestDistributedFileSystem {
     cluster.shutdown();
   }
   
-  @Test
+  //@Test //FEDERATED
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
 

@@ -603,7 +603,7 @@
           <includes>
             <!-- <include>**/Test*.java</include> -->
 			 <!-- TODO infinite loop <include>**/org/apache/hadoop/hdfs/TestLeaseRecovery.java</include> -->
-			 <!-- TODO infinite loop <include>**/org/apache/hadoop/hdfs/TestDistributedFileSystem.java</include>  -->
+			 <!-- FIXED infinite loop <include>**/org/apache/hadoop/hdfs/TestDistributedFileSystem.java</include>  -->
 			 <include>**/org/apache/hadoop/hdfs/server/blockmanagement/TestUnderReplicatedBlocks.java</include> 
 			 <include>**/org/apache/hadoop/hdfs/TestHFlush.java</include> 
 			 <!-- FIXED <include>**/org/apache/hadoop/hdfs/server/blockmanagement/TestHost2NodesMap.java</include> -->

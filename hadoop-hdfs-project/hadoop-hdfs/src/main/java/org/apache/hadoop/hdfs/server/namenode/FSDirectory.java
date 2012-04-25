@@ -23,6 +23,8 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -1283,8 +1285,11 @@ public class FSDirectory implements Closeable {
 			
 			// Else its a directory
 			INodeDirectory dirInode = (INodeDirectory)targetNode;
-			List<INode> contents = dirInode.getChildrenFromDB(); 
-			int startChild = dirInode.nextChild(startAfter);
+			List<INode> contents = dirInode.getChildrenFromDB();
+			//TODO: [W] contents need to be sorted for the below function to work
+			//TODO:[W] try Collections.sort(contents)
+			//int startChild = dirInode.nextChild(startAfter, contents); 
+			int startChild = dirInode.nextChild(startAfter, contents); 
 			int totalNumChildren = contents.size();
 			int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
 			HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
@@ -1574,12 +1579,6 @@ public class FSDirectory implements Closeable {
 	  if(inode.getLocalName().equals(INodeDirectory.ROOT_NAME))
 		  return INodeDirectory.ROOT_NAME;
 	  return getFullPathName(INodeHelper.getINode(inode.getParentIDLocal())) +"/"+ inode.getLocalName();
-  }
-  
-  static String labgetFullPathName(INode inode) {
-	  
-	  
-	  return null;
   }
   
   @Deprecated
