@@ -23,8 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class TestCyclicIteration extends junit.framework.TestCase {
+  static final Log LOG = LogFactory.getLog(TestCyclicIteration.class);
   public void testCyclicIteration() throws Exception {
     for(int n = 0; n < 5; n++) {
       checkCyclicIteration(n);
@@ -39,8 +42,8 @@ public class TestCyclicIteration extends junit.framework.TestCase {
       integers[i] = 2*i;
       map.put(integers[i], integers[i]);
     }
-    System.out.println("\n\nintegers=" + Arrays.asList(integers));
-    System.out.println("map=" + map);
+    LOG.info("\n\nintegers=" + Arrays.asList(integers));
+    LOG.info("map=" + map);
 
     //try starting everywhere
     for(int start = -1; start <= 2*integers.length - 1; start++) {
@@ -49,7 +52,7 @@ public class TestCyclicIteration extends junit.framework.TestCase {
       for(Map.Entry<Integer, Integer> e : new CyclicIteration<Integer, Integer>(map, start)) {
         iteration.add(e.getKey());
       }
-      System.out.println("start=" + start + ", iteration=" + iteration);
+      LOG.info("start=" + start + ", iteration=" + iteration);
       
       //verify results
       for(int i = 0; i < integers.length; i++) {

@@ -17,6 +17,8 @@ import se.sics.clusterj.LeaseTable;
 import se.sics.clusterj.TripletsTable;
 
 import com.mysql.clusterj.Session;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**Used for performing administrative functions on the database. 
  * Assumes that a MySQL API server is running in the cluster
@@ -24,7 +26,7 @@ import com.mysql.clusterj.Session;
  *
  */
 public class DBAdmin {
-
+ static final Log LOG = LogFactory.getLog(DBAdmin.class);
 	/**
 	 * @param database
 	 * @deprecated use DBAdmin.deleteAllTables
@@ -36,7 +38,7 @@ public class DBAdmin {
 
 			   String ConnectionString="jdbc:mysql://" + "cloud3.sics.se:3307" + "/" + database + "?user=" +
 			          "wasif5" + "&password=" + "wasif";
-			   System.out.println("Truncating " + database + " on " + ConnectionString);
+			   LOG.info("Truncating " + database + " on " + ConnectionString);
 			   Connection conn = DriverManager.getConnection(ConnectionString);
 			   Statement stmt=conn.createStatement();
 			   stmt.execute("call trunc_kthfs()");
@@ -44,9 +46,9 @@ public class DBAdmin {
                            conn.close();
 			}
 			catch(SQLException SQLEx) {
-			   System.out.println("MySQL error: "+SQLEx.getErrorCode()+
+			   LOG.info("MySQL error: "+SQLEx.getErrorCode()+
 			          " SQLSTATE:" +SQLEx.getSQLState());
-			   System.out.println(SQLEx.getMessage());
+			   LOG.info(SQLEx.getMessage());
 			} catch (InstantiationException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {

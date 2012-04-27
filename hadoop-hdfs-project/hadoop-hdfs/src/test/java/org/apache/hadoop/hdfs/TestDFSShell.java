@@ -89,7 +89,7 @@ public class TestDFSShell extends TestCase {
   }
 
   static void show(String s) {
-    System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
+    LOG.info(Thread.currentThread().getStackTrace()[2] + " " + s);
   }
 
   public void testZeroSizeFile() throws IOException {
@@ -244,7 +244,7 @@ public class TestDFSShell extends TestCase {
       
       //use SecurityManager to pause the copying of f1 and begin copying f2
       SecurityManager sm = System.getSecurityManager();
-      System.out.println("SecurityManager = " + sm);
+      LOG.info("SecurityManager = " + sm);
       System.setSecurityManager(new SecurityManager() {
         private boolean firstTime = true;
   
@@ -712,7 +712,7 @@ public class TestDFSShell extends TestCase {
       localfs.mkdirs(localpath);
       
       final String localstr = localpath.toString();
-      System.out.println("localstr=" + localstr);
+      LOG.info("localstr=" + localstr);
       runCount(localstr, 1, 0, shell);
       assertEquals(0, runCmd(shell, "-count", root, localstr));
     } finally {
@@ -741,7 +741,7 @@ public class TestDFSShell extends TestCase {
       if (in!=null) in.close();
       IOUtils.closeStream(out);
       System.setOut(oldOut);
-      System.out.println("results:\n" + results);
+      LOG.info("results:\n" + results);
     }
   }
 
@@ -1320,7 +1320,7 @@ public class TestDFSShell extends TestCase {
   }
   private static String runLsr(final FsShell shell, String root, int returnvalue
       ) throws Exception {
-    System.out.println("root=" + root + ", returnvalue=" + returnvalue);
+    LOG.info("root=" + root + ", returnvalue=" + returnvalue);
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
@@ -1336,7 +1336,7 @@ public class TestDFSShell extends TestCase {
       System.setOut(oldOut);
       System.setErr(oldErr);
     }
-    System.out.println("results:\n" + results);
+    LOG.info("results:\n" + results);
     return results;
   }
   

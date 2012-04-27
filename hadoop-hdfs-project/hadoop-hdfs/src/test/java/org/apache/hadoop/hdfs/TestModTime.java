@@ -21,6 +21,8 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import java.net.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -33,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
  * This class tests the decommissioning of nodes.
  */
 public class TestModTime extends TestCase {
+    public static final Log LOG = LogFactory.getLog(TestModTime.class);  
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
@@ -63,10 +66,9 @@ public class TestModTime extends TestCase {
   }
 
   private void printDatanodeReport(DatanodeInfo[] info) {
-    System.out.println("-------------------------------------------------");
+    LOG.info("-------------------------------------------------");
     for (int i = 0; i < info.length; i++) {
-      System.out.println(info[i].getDatanodeReport());
-      System.out.println();
+      LOG.info(info[i].getDatanodeReport());
     }
   }
 
@@ -93,7 +95,7 @@ public class TestModTime extends TestCase {
      //
      // create file and record ctime and mtime of test file
      //
-     System.out.println("Creating testdir1 and testdir1/test1.dat.");
+     LOG.info("Creating testdir1 and testdir1/test1.dat.");
      Path dir1 = new Path("testdir1");
      Path file1 = new Path(dir1, "test1.dat");
      writeFile(fileSys, file1, replicas);
@@ -109,7 +111,7 @@ public class TestModTime extends TestCase {
      //
      // create second test file
      //
-     System.out.println("Creating testdir1/test2.dat.");
+     LOG.info("Creating testdir1/test2.dat.");
      Path file2 = new Path(dir1, "test2.dat");
      writeFile(fileSys, file2, replicas);
      stat = fileSys.getFileStatus(file2);
@@ -125,7 +127,7 @@ public class TestModTime extends TestCase {
      // create another directory
      //
      Path dir2 = fileSys.makeQualified(new Path("testdir2/"));
-     System.out.println("Creating testdir2 " + dir2);
+     LOG.info("Creating testdir2 " + dir2);
      assertTrue(fileSys.mkdirs(dir2));
      stat = fileSys.getFileStatus(dir2);
      long mdir2 = stat.getModificationTime();
@@ -133,7 +135,7 @@ public class TestModTime extends TestCase {
      // rename file1 from testdir into testdir2
      //
      Path newfile = new Path(dir2, "testnew.dat");
-     System.out.println("Moving " + file1 + " to " + newfile);
+     LOG.info("Moving " + file1 + " to " + newfile);
      fileSys.rename(file1, newfile);
      //
      // verify that modification time of file1 did not change.
@@ -154,7 +156,7 @@ public class TestModTime extends TestCase {
      //
      // delete newfile
      //
-     System.out.println("Deleting testdir2/testnew.dat.");
+     LOG.info("Deleting testdir2/testnew.dat.");
      assertTrue(fileSys.delete(newfile, true));
      //
      // verify that modification time of testdir1 has not changed.

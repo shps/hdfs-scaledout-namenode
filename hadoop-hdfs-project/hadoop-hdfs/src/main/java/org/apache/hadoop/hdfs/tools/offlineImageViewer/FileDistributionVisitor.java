@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * File size distribution visitor.
@@ -49,7 +51,8 @@ import java.util.LinkedList;
  * this segment.
  */
 class FileDistributionVisitor extends TextWriterImageVisitor {
-  final private LinkedList<ImageElement> elemS = new LinkedList<ImageElement>();
+ static final Log LOG = LogFactory.getLog(FileDistributionVisitor.class);
+ final private LinkedList<ImageElement> elemS = new LinkedList<ImageElement>();
 
   private final static long MAX_SIZE_DEFAULT = 0x2000000000L;   // 1/8 TB = 2^37
   private final static int INTERVAL_DEFAULT = 0x200000;         // 2 MB = 2^21
@@ -104,11 +107,11 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
     write("Size\tNumFiles\n");
     for(int i = 0; i < distribution.length; i++)
       write(((long)i * step) + "\t" + distribution[i] + "\n");
-    System.out.println("totalFiles = " + totalFiles);
-    System.out.println("totalDirectories = " + totalDirectories);
-    System.out.println("totalBlocks = " + totalBlocks);
-    System.out.println("totalSpace = " + totalSpace);
-    System.out.println("maxFileSize = " + maxFileSize);
+    LOG.info("totalFiles = " + totalFiles);
+    LOG.info("totalDirectories = " + totalDirectories);
+    LOG.info("totalBlocks = " + totalBlocks);
+    LOG.info("totalSpace = " + totalSpace);
+    LOG.info("maxFileSize = " + maxFileSize);
     super.finish();
   }
 
@@ -136,7 +139,7 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
       high = (int)Math.ceil((double)current.fileSize / step);
     distribution[high]++;
     if(totalFiles % 1000000 == 1)
-      System.out.println("Files processed: " + totalFiles
+      LOG.info("Files processed: " + totalFiles
           + "  Current: " + current.path);
   }
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -32,6 +33,7 @@ import org.apache.log4j.Level;
 
 public class TestRenameWhileOpen extends junit.framework.TestCase
 {
+  public static final Log LOG = LogFactory.getLog(TestRenameWhileOpen.class);  
         {
                 ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
                 ((Log4JLogger) LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -58,13 +60,13 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
                 conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
-                System.out.println("Min replication: "+conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, -1));
+                LOG.info("Min replication: "+conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, -1));
                 conf.setBoolean("dfs.support.append", true);
 
                 // create cluster
-                System.out.println("Test 1*****************************");
+                LOG.info("Test 1*****************************");
                 MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-                System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
+                LOG.info("Total Datanodes for test: "+cluster.getDataNodes().size());
                 FileSystem fs = null;
                 try
                 {
@@ -76,7 +78,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir1 = new Path("/user/a+b/dir1");
                         Path file1 = new Path(dir1, "file1");   //user/a+b/dir1/file1
                         FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file1);
                         TestFileCreation.writeFile(stm1);
                         stm1.hflush();
@@ -86,7 +88,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir2 = new Path("/user/dir2");
                         Path file2 = new Path(dir2, "file2");   //user/dir2/file2
                         FSDataOutputStream stm2 = TestFileCreation.createFile(fs, file2, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file2);
                         TestFileCreation.writeFile(stm2);
                         stm2.hflush();
@@ -124,7 +126,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
 
                         // restart cluster with the same namenode port as before.
                         // This ensures that leases are persisted in fsimage.
-                        System.out.println("Shutting down cluster[1]...");
+                        LOG.info("Shutting down cluster[1]...");
                         cluster.shutdown();
                         try
                         {
@@ -133,16 +135,16 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         catch (InterruptedException e)
                         {
                         }
-                        System.out.println("Creating New miniDFS Cluster instance[1]...");
+                        LOG.info("Creating New miniDFS Cluster instance[1]...");
                         cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
-                        System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
-                        System.out.println("New miniDFS Cluster instance created[1]...");
+                        LOG.info("Total Datanodes for test: "+cluster.getDataNodes().size());
+                        LOG.info("New miniDFS Cluster instance created[1]...");
                         cluster.waitActive();
-                        System.out.println("Wait time over[1]...");
+                        LOG.info("Wait time over[1]...");
 
                         // restart cluster yet again. This triggers the code to read in
                         // persistent leases from fsimage.
-                        System.out.println("Shutting down cluster[2]...");
+                        LOG.info("Shutting down cluster[2]...");
                         cluster.shutdown();
                         try
                         {
@@ -152,7 +154,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         {
                         }
                         cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
-                        System.out.println("Total Datanodes for test: "+cluster.getDataNodes().size());
+                        LOG.info("Total Datanodes for test: "+cluster.getDataNodes().size());
                         
                         cluster.waitActive();
                         fs = cluster.getWritingFileSystem();
@@ -183,7 +185,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
                 conf.setBoolean("dfs.support.append", true);
-                System.out.println("Test 2************************************");
+                LOG.info("Test 2************************************");
 
                 // create cluster
                 MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -198,7 +200,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir1 = new Path("/user/dir1");
                         Path file1 = new Path(dir1, "file1");
                         FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file1);
                         TestFileCreation.writeFile(stm1);
                         stm1.hflush();
@@ -207,7 +209,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir2 = new Path("/user/dir2");
                         Path file2 = new Path(dir2, "file2");
                         FSDataOutputStream stm2 = TestFileCreation.createFile(fs, file2, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file2);
                         TestFileCreation.writeFile(stm2);
                         stm2.hflush();
@@ -270,7 +272,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
                 conf.setBoolean("dfs.support.append", true);
-                System.out.println("Test 3************************************");
+                LOG.info("Test 3************************************");
 
                 // create cluster
                 MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -285,7 +287,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir1 = new Path("/user/dir1");
                         Path file1 = new Path(dir1, "file1");
                         FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file1);
                         TestFileCreation.writeFile(stm1);
                         stm1.hflush();
@@ -347,7 +349,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                 conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
                 conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
                 conf.setBoolean("dfs.support.append", true);
-                System.out.println("Test 4************************************");
+                LOG.info("Test 4************************************");
 
                 // create cluster
                 MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -362,7 +364,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         Path dir1 = new Path("/user/dir1");
                         Path file1 = new Path(dir1, "file1");
                         FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
-                        System.out.println("testFileCreationDeleteParent: "
+                        LOG.info("testFileCreationDeleteParent: "
                                            + "Created file " + file1);
                         TestFileCreation.writeFile(stm1);
                         stm1.hflush();

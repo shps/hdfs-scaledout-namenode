@@ -26,9 +26,9 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import junit.framework.Assert;
 import junit.framework.TestCase;
-import java.net.InetSocketAddress;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 
 
 public class TestDFSAddressConfig extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestDFSAddressConfig.class);
 
   public void testDFSAddressConfig() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -51,7 +52,7 @@ public class TestDFSAddressConfig extends TestCase {
     DataNode dn = dns.get(0);
 
     String selfSocketAddr = dn.getSelfAddr().toString();
-    System.out.println("DN Self Socket Addr == " + selfSocketAddr);
+    LOG.info("DN Self Socket Addr == " + selfSocketAddr);
     assertTrue(selfSocketAddr.startsWith("/127.0.0.1:"));
 
     /*-------------------------------------------------------------------------
@@ -76,7 +77,7 @@ public class TestDFSAddressConfig extends TestCase {
     dn = dns.get(0);
 
     selfSocketAddr = dn.getSelfAddr().toString();
-    System.out.println("DN Self Socket Addr == " + selfSocketAddr);
+    LOG.info("DN Self Socket Addr == " + selfSocketAddr);
     // assert that default self socket address is 127.0.0.1
     assertTrue(selfSocketAddr.startsWith("/127.0.0.1:"));
 
@@ -101,7 +102,7 @@ public class TestDFSAddressConfig extends TestCase {
     dn = dns.get(0);
 
     selfSocketAddr = dn.getSelfAddr().toString();
-    System.out.println("DN Self Socket Addr == " + selfSocketAddr);
+    LOG.info("DN Self Socket Addr == " + selfSocketAddr);
     // assert that default self socket address is 0.0.0.0
     assertTrue(selfSocketAddr.startsWith("/0.0.0.0:"));
 

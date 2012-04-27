@@ -23,6 +23,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.junit.Test;
 import org.junit.BeforeClass;
@@ -36,7 +38,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -44,6 +45,7 @@ import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.Level;
 
 public class TestHftpFileSystem {
+  static final Log LOG = LogFactory.getLog(TestHftpFileSystem.class);
   private static final Random RAN = new Random();
   
   private static Configuration config = null;
@@ -85,7 +87,7 @@ public class TestHftpFileSystem {
     ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
 
     final long seed = RAN.nextLong();
-    System.out.println("seed=" + seed);
+    LOG.info("seed=" + seed);
     RAN.setSeed(seed);
 
     config = new Configuration();

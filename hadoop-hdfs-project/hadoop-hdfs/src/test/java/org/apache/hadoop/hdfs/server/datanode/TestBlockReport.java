@@ -82,11 +82,15 @@ public class TestBlockReport {
     initLoggers();
     resetConfiguration();
   }
-
+  
   @Before
   public void startUpCluster() throws IOException {
+      startUpCluster(true);
+  }
+  
+  private void startUpCluster(boolean format) throws IOException {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
+    cluster = new MiniDFSCluster.Builder(conf).format(format).numDataNodes(REPL_FACTOR).build();
     fs = (DistributedFileSystem) cluster.getWritingFileSystem();
     bpid = cluster.getNamesystem().getBlockPoolId();
   }
@@ -417,7 +421,7 @@ public class TestBlockReport {
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesChkSum);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 6 * bytesChkSum);
     shutDownCluster();
-    startUpCluster();
+    startUpCluster(false);
 
     try {
       ArrayList<Block> blocks =
@@ -459,7 +463,7 @@ public class TestBlockReport {
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesChkSum);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 6 * bytesChkSum);
     shutDownCluster();
-    startUpCluster();
+    startUpCluster(false);
     // write file and start second node to be "older" than the original
 
     try {

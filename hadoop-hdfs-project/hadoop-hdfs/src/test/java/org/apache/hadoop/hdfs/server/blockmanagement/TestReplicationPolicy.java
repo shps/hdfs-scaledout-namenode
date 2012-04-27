@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +39,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
 public class TestReplicationPolicy extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestReplicationPolicy.class);  
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
   private static final Configuration CONF = new HdfsConfiguration();
@@ -209,7 +212,7 @@ public class TestReplicationPolicy extends TestCase {
     chosenNodes.add(dataNodes[2]);
     targets = repl.chooseTarget(1, dataNodes[0], chosenNodes, true,
         excludedNodes, BLOCK_SIZE);
-    System.out.println("targets=" + Arrays.asList(targets));
+    LOG.info("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.
     int i = 0;

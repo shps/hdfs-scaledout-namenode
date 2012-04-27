@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
  * maximum number of files that is configured.
  */
 public class TestFileLimit extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestFileLimit.class);
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   boolean simulatedStorage = false;
@@ -59,7 +62,7 @@ public class TestFileLimit extends TestCase {
     // wait for number of blocks to decrease
     while (true) {
       long total = namesys.getBlocksTotal() + namesys.dir.totalInodes();
-      System.out.println("Comparing current nodes " + total +
+      LOG.info("Comparing current nodes " + total +
                          " to become " + num);
       if (total == num) {
         break;
@@ -104,7 +107,7 @@ public class TestFileLimit extends TestCase {
       for (int i = 0; i < maxObjects/2; i++) {
         Path file = new Path("/filestatus" + i);
         createFile(fs, file);
-        System.out.println("Created file " + file);
+        LOG.info("Created file " + file);
         currentNodes += 2;      // two more objects for this creation.
       }
 
@@ -113,7 +116,7 @@ public class TestFileLimit extends TestCase {
       try {
         Path file = new Path("/filestatus");
         createFile(fs, file);
-        System.out.println("Created file " + file);
+        LOG.info("Created file " + file);
       } catch (IOException e) {
         hitException = true;
       }
@@ -122,7 +125,7 @@ public class TestFileLimit extends TestCase {
       // delete one file
       Path file0 = new Path("/filestatus0");
       fs.delete(file0, true);
-      System.out.println("Deleted file " + file0);
+      LOG.info("Deleted file " + file0);
       currentNodes -= 2;
 
       // wait for number of blocks to decrease
@@ -130,13 +133,13 @@ public class TestFileLimit extends TestCase {
 
       // now, we shud be able to create a new file
       createFile(fs, file0);
-      System.out.println("Created file " + file0 + " again.");
+      LOG.info("Created file " + file0 + " again.");
       currentNodes += 2;
 
       // delete the file again
       file0 = new Path("/filestatus0");
       fs.delete(file0, true);
-      System.out.println("Deleted file " + file0 + " again.");
+      LOG.info("Deleted file " + file0 + " again.");
       currentNodes -= 2;
 
       // wait for number of blocks to decrease
@@ -145,7 +148,7 @@ public class TestFileLimit extends TestCase {
       // create two directories in place of the file that we deleted
       Path dir = new Path("/dir0/dir1");
       fs.mkdirs(dir);
-      System.out.println("Created directories " + dir);
+      LOG.info("Created directories " + dir);
       currentNodes += 2;
       waitForLimit(namesys, currentNodes);
 
@@ -153,7 +156,7 @@ public class TestFileLimit extends TestCase {
       hitException = false;
       try {
         fs.mkdirs(new Path("dir.fail"));
-        System.out.println("Created directory should not have succeeded.");
+        LOG.info("Created directory should not have succeeded.");
       } catch (IOException e) {
         hitException = true;
       }

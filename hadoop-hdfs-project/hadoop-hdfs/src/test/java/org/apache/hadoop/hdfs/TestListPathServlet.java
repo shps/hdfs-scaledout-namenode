@@ -22,6 +22,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -44,6 +46,7 @@ import org.junit.Test;
  * {@link HftpFileSystem#listStatus(Path)} method.
  */
 public class TestListPathServlet {
+  public static final Log LOG = LogFactory.getLog(TestListPathServlet.class);  
   private static final Configuration CONF = new HdfsConfiguration();
   private static MiniDFSCluster cluster;
   private static FileSystem fs;
@@ -138,13 +141,13 @@ public class TestListPathServlet {
     listdir = listpath.toString();
     final FileStatus[] statuslist = hftpFs.listStatus(listpath);
     for (String directory : filelist) {
-      System.out.println("dir:" + directory);
+      LOG.info("dir:" + directory);
     }
     for (String file : filelist) {
-      System.out.println("file:" + file);
+      LOG.info("file:" + file);
     }
     for (FileStatus status : statuslist) {
-      System.out.println("status:" + status.getPath().toString() + " type "
+      LOG.info("status:" + status.getPath().toString() + " type "
           + (status.isDirectory() ? "directory" 
                                   : ( status.isFile() ? "file" : "symlink")));
     }

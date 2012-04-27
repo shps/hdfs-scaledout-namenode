@@ -25,14 +25,10 @@ import java.util.List;
 import java.net.InetSocketAddress;
 
 import java.net.SocketTimeoutException;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
-
-import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -63,6 +59,8 @@ import org.junit.Test;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestInterDatanodeProtocol {
+  static final Log LOG = LogFactory.getLog(TestInterDatanodeProtocol.class);
+  
   private static final String ADDRESS = "0.0.0.0";
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
@@ -236,7 +234,7 @@ public class TestInterDatanodeProtocol {
         Assert.fail();
       }
       catch(RecoveryInProgressException ripe) {
-        System.out.println("GOOD: getting " + ripe);
+        LOG.info("GOOD: getting " + ripe);
       }
     }
 
@@ -255,7 +253,7 @@ public class TestInterDatanodeProtocol {
         Assert.fail();
       }
       catch(IOException ioe) {
-        System.out.println("GOOD: getting " + ioe);
+        LOG.info("GOOD: getting " + ioe);
       }
     }
 
@@ -330,7 +328,7 @@ public class TestInterDatanodeProtocol {
           fsdataset.updateReplicaUnderRecovery(tmp, recoveryid, newlength);
           Assert.fail();
         } catch(IOException ioe) {
-          System.out.println("GOOD: getting " + ioe);
+          LOG.info("GOOD: getting " + ioe);
         }
       }
 

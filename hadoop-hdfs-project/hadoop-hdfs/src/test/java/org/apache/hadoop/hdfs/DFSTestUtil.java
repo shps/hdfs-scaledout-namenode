@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -77,7 +79,8 @@ import org.apache.hadoop.security.token.Token;
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
   
-  private static Random gen = new Random();
+ static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
+ private static Random gen = new Random();
   private static String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
@@ -179,7 +182,7 @@ public class DFSTestUtil {
   
   public static void createFile(FileSystem fs, Path fileName, long fileLen, 
       short replFactor, long seed) throws IOException {
-	  System.out.println("getParent:"+fileName.getParent());
+	  LOG.info("getParent:"+fileName.getParent());
     if (!fs.mkdirs(fileName.getParent())) {
       throw new IOException("Mkdirs failed to create " + 
                             fileName.getParent().toString());
@@ -321,7 +324,7 @@ public class DFSTestUtil {
       } catch (IOException e) {
         // Swallow exceptions
       }
-      System.out.println("Waiting for "+corruptRepls+" corrupt replicas");
+      LOG.info("Waiting for "+corruptRepls+" corrupt replicas");
       repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
       count++;
     }
@@ -481,19 +484,19 @@ public class DFSTestUtil {
         if (hostnames.length != replFactor) {
           String hostNameList = "";
           for (String h : hostnames) hostNameList += h + " ";
-          System.out.println("Block " + j + " of file " + fileName 
+          LOG.info("Block " + j + " of file " + fileName 
               + " has replication factor " + hostnames.length + "; locations "
               + hostNameList);
           good = false;
           try {
-            System.out.println("Waiting for replication factor to drain");
+            LOG.info("Waiting for replication factor to drain");
             Thread.sleep(100);
           } catch (InterruptedException e) {} 
           break;
         }
       }
       if (good) {
-        System.out.println("All blocks of file " + fileName
+        LOG.info("All blocks of file " + fileName
             + " verified to have replication factor " + replFactor);
       }
     } while(!good);
@@ -596,7 +599,7 @@ public class DFSTestUtil {
       if(!found) {
         l =  super.getGroups(user);
         if(l.size() == 0) {
-          System.out.println("failed to get real group for " + user + 
+          LOG.info("failed to get real group for " + user + 
               "; using default");
           return defaultGroups;
         }

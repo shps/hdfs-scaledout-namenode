@@ -75,7 +75,7 @@ public class TestFileCorruption extends TestCase {
         if (!blocks[idx].getName().startsWith("blk_")) {
           continue;
         }
-        System.out.println("Deliberately removing file "+blocks[idx].getName());
+        LOG.info("Deliberately removing file "+blocks[idx].getName());
         assertTrue("Cannot remove file.", blocks[idx].delete());
       }
       assertTrue("Corrupted replicas not handled properly.",
@@ -101,7 +101,7 @@ public class TestFileCorruption extends TestCase {
     // Now attempt to read the file
     DataInputStream dis = fs.open(file, 512);
     try {
-      System.out.println("A ChecksumException is expected to be logged.");
+      LOG.info("A ChecksumException is expected to be logged.");
       dis.readByte();
     } catch (ChecksumException ignore) {
       //expect this exception but let any NPE get thrown

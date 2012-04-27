@@ -734,7 +734,7 @@ public class BlocksHelper {
 	public static INode getInodeFromBlockId (long blockId) {
 		Session session = DBConnector.obtainSession();
 		BlockInfoTable blockInfoTable = selectBlockInfo(session, blockId);
-		return INodeHelper.getINode(blockInfoTable.getINodeID());
+		return (blockInfoTable == null)? null : INodeHelper.getINode(blockInfoTable.getINodeID());
 	}
 
 	public static int getTripletsIndex(DatanodeDescriptor node, long blockId) 

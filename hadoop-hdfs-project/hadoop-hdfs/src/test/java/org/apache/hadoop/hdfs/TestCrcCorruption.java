@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -62,7 +64,8 @@ import org.apache.hadoop.io.IOUtils;
  *     replica was created from the non-corrupted replica.
  */
 public class TestCrcCorruption {
-  /** 
+ static final Log LOG = LogFactory.getLog(TestCrcCorruption.class);
+ /** 
    * check if DFS can handle corrupted CRC blocks
    */
   private void thistest(Configuration conf, DFSTestUtil util) throws Exception {
@@ -98,7 +101,7 @@ public class TestCrcCorruption {
             //
             // remove .meta file
             //
-            System.out.println("Deliberately removing file " + blocks[idx].getName());
+            LOG.info("Deliberately removing file " + blocks[idx].getName());
             assertTrue("Cannot remove file.", blocks[idx].delete());
           } else if (num % 3 == 1) {
             //
@@ -107,7 +110,7 @@ public class TestCrcCorruption {
             RandomAccessFile file = new RandomAccessFile(blocks[idx], "rw");
             FileChannel channel = file.getChannel();
             int newsize = random.nextInt((int)channel.size()/2);
-            System.out.println("Deliberately truncating file " + 
+            LOG.info("Deliberately truncating file " + 
                                blocks[idx].getName() + 
                                " to size " + newsize + " bytes.");
             channel.truncate(newsize);
@@ -129,7 +132,7 @@ public class TestCrcCorruption {
             byte[] buffer = new byte[length];
             random.nextBytes(buffer);
             channel.write(ByteBuffer.wrap(buffer), position);
-            System.out.println("Deliberately corrupting file " + 
+            LOG.info("Deliberately corrupting file " + 
                                blocks[idx].getName() + 
                                " at offset " + position +
                                " length " + length);
@@ -158,7 +161,7 @@ public class TestCrcCorruption {
           //
           count++;
           if (count % 2 == 0) {
-            System.out.println("Deliberately insertimg bad crc into files " +
+            LOG.info("Deliberately insertimg bad crc into files " +
                                 blocks[idx].getName() + " " + previous.getName());
             assertTrue("Cannot remove file.", blocks[idx].delete());
             assertTrue("Cannot corrupt meta file.", previous.renameTo(blocks[idx]));
@@ -176,7 +179,7 @@ public class TestCrcCorruption {
       //
       assertTrue("Corrupted replicas not handled properly.",
                  util.checkFiles(fs, "/srcdat"));
-      System.out.println("All File still have a valid replica");
+      LOG.info("All File still have a valid replica");
 
       //
       // set replication factor back to 1. This causes only one replica of
@@ -186,10 +189,10 @@ public class TestCrcCorruption {
       //
       util.setReplication(fs, "/srcdat", (short)1);
       //util.waitReplication(fs, "/srcdat", (short)1);
-      //System.out.println("All Files done with removing replicas");
+      //LOG.info("All Files done with removing replicas");
       //assertTrue("Excess replicas deleted. Corrupted replicas found.",
       //           util.checkFiles(fs, "/srcdat"));
-      System.out.println("The excess-corrupted-replica test is disabled " +
+      LOG.info("The excess-corrupted-replica test is disabled " +
                          " pending HADOOP-1557");
 
       util.cleanup(fs, "/srcdat");
@@ -203,7 +206,7 @@ public class TestCrcCorruption {
     //
     // default parameters
     //
-    System.out.println("TestCrcCorruption with default parameters");
+    LOG.info("TestCrcCorruption with default parameters");
     Configuration conf1 = new HdfsConfiguration();
     conf1.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
     DFSTestUtil util1 = new DFSTestUtil("TestCrcCorruption", 40, 3, 8*1024);
@@ -212,7 +215,7 @@ public class TestCrcCorruption {
     //
     // specific parameters
     //
-    System.out.println("TestCrcCorruption with specific parameters");
+    LOG.info("TestCrcCorruption with specific parameters");
     Configuration conf2 = new HdfsConfiguration();
     conf2.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 17);
     conf2.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 34);

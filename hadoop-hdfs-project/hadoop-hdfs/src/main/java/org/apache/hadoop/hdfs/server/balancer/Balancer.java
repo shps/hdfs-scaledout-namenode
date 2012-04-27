@@ -1308,7 +1308,7 @@ public class Balancer {
        */
       final long bytesLeftToMove = initNodes(nnc.client.getDatanodeReport(DatanodeReportType.LIVE));
       if (bytesLeftToMove == 0) {
-        System.out.println("The cluster is balanced. Exiting...");
+        LOG.info("The cluster is balanced. Exiting...");
         return ReturnStatus.SUCCESS;
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
@@ -1322,7 +1322,7 @@ public class Balancer {
        */
       final long bytesToMove = chooseNodes();
       if (bytesToMove == 0) {
-        System.out.println("No block can be moved. Exiting...");
+        LOG.info("No block can be moved. Exiting...");
         return ReturnStatus.NO_MOVE_BLOCK;
       } else {
         LOG.info( "Will move " + StringUtils.byteDesc(bytesToMove) +
@@ -1348,7 +1348,7 @@ public class Balancer {
       } else {
         notChangedIterations++;
         if (notChangedIterations >= 5) {
-          System.out.println(
+          LOG.info(
               "No block has been moved for 5 iterations. Exiting...");
           return ReturnStatus.NO_MOVE_PROGRESS;
         }
@@ -1358,13 +1358,13 @@ public class Balancer {
       resetData();
       return ReturnStatus.IN_PROGRESS;
     } catch (IllegalArgumentException e) {
-      System.out.println(e + ".  Exiting ...");
+      LOG.info(e + ".  Exiting ...");
       return ReturnStatus.ILLEGAL_ARGS;
     } catch (IOException e) {
-      System.out.println(e + ".  Exiting ...");
+      LOG.info(e + ".  Exiting ...");
       return ReturnStatus.IO_EXCEPTION;
     } catch (InterruptedException e) {
-      System.out.println(e + ".  Exiting ...");
+      LOG.info(e + ".  Exiting ...");
       return ReturnStatus.INTERRUPTED;
     } finally {
       // shutdown thread pools
@@ -1388,7 +1388,7 @@ public class Balancer {
     LOG.info("p         = " + p);
     
     final Formatter formatter = new Formatter(System.out);
-    System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
+    LOG.info("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
     
     final List<NameNodeConnector> connectors
         = new ArrayList<NameNodeConnector>(namenodes.size());
@@ -1479,13 +1479,13 @@ public class Balancer {
         final List<InetSocketAddress> namenodes = DFSUtil.getNNServiceRpcAddresses(conf);
         return Balancer.run(namenodes, parse(args), conf);
       } catch (IOException e) {
-        System.out.println(e + ".  Exiting ...");
+        LOG.info(e + ".  Exiting ...");
         return ReturnStatus.IO_EXCEPTION.code;
       } catch (InterruptedException e) {
-        System.out.println(e + ".  Exiting ...");
+        LOG.info(e + ".  Exiting ...");
         return ReturnStatus.INTERRUPTED.code;
       } finally {
-        System.out.println("Balancing took " + time2Str(Util.now()-startTime));
+        LOG.info("Balancing took " + time2Str(Util.now()-startTime));
       }
     }
 
@@ -1535,11 +1535,11 @@ public class Balancer {
     }
 
     private static void printUsage() {
-      System.out.println("Usage: java " + Balancer.class.getSimpleName());
-      System.out.println("    [-policy <policy>]\tthe balancing policy: "
+      LOG.info("Usage: java " + Balancer.class.getSimpleName());
+      LOG.info("    [-policy <policy>]\tthe balancing policy: "
           + BalancingPolicy.Node.INSTANCE.getName() + " or " 
           + BalancingPolicy.Pool.INSTANCE.getName());
-      System.out.println(
+      LOG.info(
           "    [-threshold <threshold>]\tPercentage of disk capacity");
     }
   }
