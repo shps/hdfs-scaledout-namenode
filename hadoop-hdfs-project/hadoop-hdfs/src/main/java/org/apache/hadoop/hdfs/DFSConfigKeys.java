@@ -33,7 +33,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DB_CONNECTOR_STRING_KEY = "dfs.dbconnector.string";
   public static final String DFS_DB_CONNECTOR_STRING_DEFAULT = "cloud3.sics.se";
   public static final String DFS_DB_DATABASE_KEY = "dfs.dbconnector.database";
-  public static final String DFS_DB_DATABASE_DEFAULT = "kamal";
+  public static final String DFS_DB_DATABASE_DEFAULT = System.getenv("KTHFS_DATABASE");
   public static final String DFS_DB_NUM_SESSION_FACTORIES = "dfs.dbconnector.num-session-factories";
   public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   public static final long    DFS_BLOCK_SIZE_DEFAULT = 64*1024*1024;
