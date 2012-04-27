@@ -211,10 +211,11 @@ public class FSEditLogLoader {
                                         addCloseOp.clientName,
                                         addCloseOp.clientMachine,
                                         null);
-              // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
               fsDir.replaceNode(addCloseOp.path, node, cons, false);
+              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
               fsNamesys.leaseManager.addLease(cons.getClientName(),
-                                              addCloseOp.path);
+                                              addCloseOp.path, false);
             }
             break;
           }
@@ -370,7 +371,7 @@ public class FSEditLogLoader {
             INodeFileUnderConstruction pendingFile =
                 (INodeFileUnderConstruction) fsDir.getFileINode(
                     reassignLeaseOp.path);
-            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
             fsNamesys.reassignLeaseInternal(lease,
                 reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile, false);
             break;

@@ -435,7 +435,6 @@ public class BlockManager {
   public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode,
 		  Block commitBlock, boolean isTransactional) throws IOException
 		  {
-	  ;
 	  if (commitBlock == null)
 	  {
 		  return false; // not committing, this is a block allocation retry

@@ -425,9 +425,10 @@ class FSImageFormat {
           throw new IOException("Found lease for directory " + path);
         }
         INodeFile oldnode = (INodeFile) old;
-        // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
         fsDir.replaceNode(path, oldnode, cons, false);
-        namesystem.leaseManager.addLease(cons.getClientName(), path); 
+        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+        namesystem.leaseManager.addLease(cons.getClientName(), path, false); 
       }
     }
 

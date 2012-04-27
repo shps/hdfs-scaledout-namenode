@@ -224,98 +224,108 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static void putBlockInfo(BlockInfo binfo, boolean isTransactional) {
+        /**
+         * 
+         * @param binfo 
+         */
+        public static void putBlockInfo(BlockInfo binfo, boolean isTransactional) {
+            DBConnector.checkTransactionState(isTransactional);
+            if (isTransactional)
+                putBlockInfo(binfo, DBConnector.obtainSession());
+            else
+                putBlockInfoWithTransaction(binfo);
+	}
+        
+	private static void putBlockInfoWithTransaction(BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if(isTransactional)
-		{
-			putBlockInfo(binfo, session);
-		}
-		else
-		{
-			while (done == false && tries > 0) {
-				try {
-					tx.begin();
-					putBlockInfo(binfo, session);
-					tx.commit();
-
-					session.flush();
-					done=true;
-				}
-				catch (ClusterJException e){
-					tx.rollback();
-					System.err.println("putBlockInfo failed " + e.getMessage());
-					tries--;
-				}
+		while (done == false && tries > 0) {
+			try {
+				tx.begin();
+				putBlockInfo(binfo, session);
+				tx.commit();
+				session.flush();
+				done=true;
+			}
+			catch (ClusterJException e){
+                                LOG.error(e.getMessage(), e);
+                                if (tx.isActive())
+                                    tx.rollback();
+				tries--;
 			}
 		}
 	}
-	private static void putBlockInfo(BlockInfo binfo, Session s){
-
+	
+        private static void putBlockInfo(BlockInfo binfo, Session s){
+		
 		BlockInfoTable bit = selectBlockInfo(s, binfo.getBlockId());
-
-		if(bit == null)
-		{
-			// Inserting a new block
+		
+		if(bit == null) { //we want to generate a timestamp only if it doesnt exist in NDB
 			bit =  s.newInstance(BlockInfoTable.class);
-			// Add timestamp only at block creation time
-			bit.setTimestamp(System.currentTimeMillis()); //for sorting the blocks properly
+			bit.setTimestamp(System.currentTimeMillis());
 		}
+		
 		bit.setBlockId(binfo.getBlockId());
-					bit.setGenerationStamp(binfo.getGenerationStamp());
-					bit.setBlockUCState(binfo.getBlockUCState().ordinal());
+		bit.setGenerationStamp(binfo.getGenerationStamp());
+		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
 
-
-					if(binfo.isComplete()) {
-						INodeFile ifile = binfo.getINode();
-						long nodeID = ifile.getID();
-						bit.setINodeID(nodeID); 
-					}
-					bit.setNumBytes(binfo.getNumBytes());
-					insertBlockInfo(s, bit);
+		if(binfo.isComplete()) {
+			INodeFile ifile = binfo.getINode();
+			long nodeID = ifile.getID();
+			bit.setINodeID(nodeID); 
+		}
+		bit.setNumBytes(binfo.getNumBytes());
+		insertBlockInfo(s, bit);
 	}
 
 
-	/** Update index for a BlockInfo object in the DB
+        /** Update index for a BlockInfo object in the DB
 	 * @param idx index of the BlockInfo
 	 * @param binfo BlockInfo object that already exists in the database
 	 */
 	public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+            
+            if (isTransactional)
+                updateIndex(idx, binfo, session);
+            else
+                updateIndexWithTransaction(idx, binfo);
+        }
+        
+	/** Update index for a BlockInfo object in the DB. Begins a new transaction.
+	 * @param idx index of the BlockInfo
+	 * @param binfo BlockInfo object that already exists in the database
+	 */
+	private static void updateIndexWithTransaction(int idx, BlockInfo binfo) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-		if(isTransactional)
-		{
-			updateIndex(idx, binfo, session);
-		}
-		else
-		{
-			while (done == false && tries > 0) {
-				try {
-					tx.begin();
-					updateIndex(idx, binfo, session);
-					tx.commit();
-					session.flush();
-					done=true;
-				}
-				catch (ClusterJException e){
-					tx.rollback();
-					System.err.println("updateIndex failed " + e.getMessage());
-					tries--;
-				}
-			}
-		}
+                
+                while (done == false && tries > 0) {
+                    try {
+                            tx.begin();
+                            updateIndex(idx, binfo, session);
+                            tx.commit();
+                            session.flush();
+                            done=true;
+                    }
+                    catch (ClusterJException e){
+                            tx.rollback();
+                            System.err.println("updateIndex failed " + e.getMessage());
+                            tries--;
+                        }
+                }
 	}
+        
 	private static void updateIndex(int idx, BlockInfo binfo, Session s){
 		LOG.debug("Block persistance: ID:" + binfo.getBlockId() + "    index:" + idx + ", status:" + binfo.getBlockUCState() );
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
@@ -336,34 +346,39 @@ public class BlocksHelper {
 	 * @param iNodeID
 	 * @param binfo
 	 */
-	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional){ 
+	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional){
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+                updateBlockInfoTable(iNodeID, binfo, DBConnector.obtainSession());
+            else
+                updateBlockInfoInDBWithTransaction(iNodeID, binfo);
+        }
+	
+	/** Updates an already existing BlockInfo object in DB. Begins a new transaction.
+	 * @param iNodeID
+	 * @param binfo
+	 */
+	private static void updateBlockInfoInDBWithTransaction(long iNodeID, BlockInfo binfo){ 
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if(isTransactional)
-		{
-			updateBlockInfoTable(iNodeID, binfo, session);
-		}
-		else
-		{
-			while (done == false && tries > 0) {
-				try {
-					tx.begin();
-					updateBlockInfoTable(iNodeID, binfo, session);
-					tx.commit();
-					session.flush();
-					done=true;
-				}
-				catch (ClusterJException e){
-					tx.rollback();
-					System.err.println("updateINodeID failed " + e.getMessage());
-					tries--;
-				}
+		while (done == false && tries > 0) {
+			try {
+				tx.begin();
+				updateBlockInfoTable(iNodeID, binfo, session);
+				tx.commit();
+				session.flush();
+				done=true;
+			}
+			catch (ClusterJException e){
+                                LOG.error(e.getMessage(), e);
+                                if (tx.isActive())
+                                    tx.rollback();
+				tries--;
 			}
 		}
 	}
@@ -465,35 +480,45 @@ public class BlocksHelper {
 
 	}
 
-	/** Update the DataNode in the triplets table.*/
+        /**
+         * Update the DataNode in the triplets table.
+         * @param blockId
+         * @param index
+         * @param name 
+         */
 	public static void setDatanode(long blockId, int index, String name, boolean isTransactional) {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            assert isActive == isTransactional : 
+                    "Current transaction's isActive value is " + isActive + 
+                    " but isTransactional's value is " + isTransactional;
+            
+            if (isTransactional)
+                setDatanodeInternal(blockId, index, name, session);
+            else
+                setDatanodeWithTransaction(blockId, index, name);
+        }
+        
+	/** Update the DataNode in the triplets table. This begins a new transaction.*/
+	private static void setDatanodeWithTransaction(long blockId, int index, String name) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-		if(isTransactional)
-		{
-			setDatanodeInternal(blockId, index, name, session);
-		}
-		else
-		{
-			while (done == false && tries > 0) {
-				try {
-					tx.begin();
-					setDatanodeInternal(blockId, index, name, session);
-					tx.commit();
-					session.flush();
-					done=true;
-				}
-				catch (ClusterJException e){
-					tx.rollback();
-					System.err.println("setDataNode failed " + e.getMessage());
-					e.printStackTrace();
-					tries--;
-				}
+		while (done == false && tries > 0) {
+			try {
+				tx.begin();
+				setDatanodeInternal(blockId, index, name, session);
+				tx.commit();
+				session.flush();
+				done=true;
+			}
+			catch (ClusterJException e){
+                                LOG.error(e.getMessage(), e);
+                                if (tx.isActive())
+                                    tx.rollback();
+				tries--;
 			}
 		}
 	}	
@@ -601,39 +626,44 @@ public class BlocksHelper {
 		return query.getResultList();
 	}
 
-	public static BlockInfo removeBlocks(Block key, boolean isTransactional){
+        public static BlockInfo removeBlocks(Block key, boolean isTransactional){
+		DBConnector.checkTransactionState(isTransactional);
+                BlockInfo ret = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    ret = removeBlocksInternal(key, session);
+					updateTotalBlocks( false);
+                    session.flush();
+                }
+                else
+                    ret = removeBlocksWithTransaction(key);
+                
+                return ret;
+	}
+        
+	public static BlockInfo removeBlocksWithTransaction(Block key){
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if(isTransactional)
-		{
-			BlockInfo ret = removeBlocksInternal(key, session);
-			updateTotalBlocks( false);
-			return ret;
-		}
-		else
-		{
-			while (done == false && tries > 0) {
-				try {
-					tx.begin();
-					BlockInfo ret = removeBlocksInternal(key, session);
-					updateTotalBlocks( false);
-					tx.commit();
-					session.flush();
-					done=true;
-					return ret;
-				}
-				catch (ClusterJException e){
-					if(tx.isActive())
-						tx.rollback();
-					System.err.println("removeBlocks failed " + e.getMessage());
-					tries--;
-				}
+		while (done == false && tries > 0) {
+			try {
+				tx.begin();
+				BlockInfo ret = removeBlocksInternal(key, session);
+				updateTotalBlocks( false);
+				tx.commit();
+				session.flush();
+				done=true;
+				return ret;
+			}
+			catch (ClusterJException e){
+				if(tx.isActive())
+					tx.rollback();
+				LOG.error(e.getMessage(), e);
+				tries--;
 			}
 		}
 		return null;
@@ -647,24 +677,6 @@ public class BlocksHelper {
 		bi.setBlockId(blockId);
 		deleteBlockInfo(s, blockId);
 		return bi;
-	}
-
-	public static void removeTriplets(BlockInfo blockInfo, int index, boolean isTransactional)
-	{ 
-		Session session = DBConnector.obtainSession();	
-		Transaction tx = session.currentTransaction();
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if (isTransactional)
-		{
-			removeTripletsInternal(session, blockInfo, index);
-		}
-		else
-		{
-			tx.begin();
-			removeTripletsInternal(session, blockInfo, index);
-			tx.commit();
-		}
 	}
 
 	private static void removeTripletsInternal(Session session, BlockInfo blockInfo, int index)
@@ -692,6 +704,84 @@ public class BlocksHelper {
 			}
 		}
 	}
+        
+        /**
+         * 
+         * @param blockInfo
+         * @param index 
+         */
+	public static void removeTriplets(BlockInfo blockInfo, int index,
+               boolean isTransactional)
+	{ 
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
+                removeTripletesInternal(blockInfo, index, 
+                        session);
+                session.flush();
+            }
+            else
+                removeTripletsWithTransaction(blockInfo, index);
+        }
+        /**
+         * 
+         * @param blockInfo
+         * @param index 
+         */
+	private static void removeTripletsWithTransaction(BlockInfo blockInfo, int index)
+	{ 
+            int tries = RETRY_COUNT;
+            boolean done = false;
+
+            Session session = DBConnector.obtainSession();
+            Transaction tx = session.currentTransaction();
+
+            while (done == false && tries > 0) {
+                try {
+                    tx.begin();
+                    removeTripletesInternal(blockInfo, index, session);
+                    tx.commit();
+                    session.flush();
+                    done = true;
+                } catch(ClusterJException e)
+                {
+                    LOG.error(e.getMessage(), e);
+                    if (tx.isActive())
+                        tx.rollback();
+                    tries--;
+                }
+            }
+	}
+
+        private static void removeTripletesInternal(BlockInfo blockInfo, int index,
+                Session session)
+        {
+            deleteTriplet(session, blockInfo.getBlockId(), index);
+                    // The triplets entries in the DB for a block have an ordered list of
+                    // indices. Removal of an entry of an index X means that all entries
+                    // with index greater than X needs to be corrected (decremented by 1
+                    // basically).
+                    //TODO: wowowowo!!! lots of stuff happening here, later!
+                    List<TripletsTable> results = selectTriplet(session, blockInfo.getBlockId());
+                    Collections.sort(results, new TripletsTableComparator());
+                    for (TripletsTable t: results)	{
+                            long oldIndex = t.getIndex();
+
+                            // entry that needs its index corrected
+                            if (index < oldIndex)
+                            {				
+                                    TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
+                                    replacementEntry.setBlockId(t.getBlockId());
+                                    replacementEntry.setDatanodeName(t.getDatanodeName());
+                                    replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
+                                    deleteTriplet(session, t.getBlockId(), t.getIndex());
+                                    insertTriplet(session, replacementEntry, false);
+                            }
+                    }
+        }
+        
 	/**
 	 * A Comparator to sort the Triplets according to index
 	 *
@@ -716,8 +806,7 @@ public class BlocksHelper {
 				return ret;
 			}
 			catch (ClusterJException e){
-				//System.err.println("getTripletsForBlockLength failed " + e.getMessage());
-				e.printStackTrace();
+                LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -1093,6 +1182,7 @@ public class BlocksHelper {
 	 */
 	private static void updateBlockInfoTableInternal(Session session, BlockInfoTable bit) {
 		session.updatePersistent(bit);
+                session.flush();
 	}
 
 	/** Fetches all rows from the Triplets table using datanodeName and blockId

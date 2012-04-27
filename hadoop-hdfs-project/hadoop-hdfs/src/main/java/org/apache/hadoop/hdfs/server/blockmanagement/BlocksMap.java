@@ -20,9 +20,14 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.util.GSetTransactional;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.util.GSet;
+import org.apache.hadoop.hdfs.util.GSetDB;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
+import org.mortbay.log.Log;
+import sun.nio.cs.ext.ISCII91;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -58,7 +63,7 @@ class BlocksMap {
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
   
-  private GSetTransactional<Block, BlockInfo> blocks;
+  private GSetDB<Block, BlockInfo> blocks;
 
   BlocksMap(final float loadFactor) {
     this.capacity = computeCapacity();

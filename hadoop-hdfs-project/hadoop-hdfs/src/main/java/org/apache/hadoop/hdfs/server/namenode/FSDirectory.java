@@ -371,8 +371,9 @@ public class FSDirectory implements Closeable {
         (INodeFileUnderConstruction)inodes[inodes.length-1];
 
       // check quota limits and updated space consumed
+      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(inodes, inodes.length-1, 0,
-          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true);
+          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, false);
 
       // associate new last block for the file
       BlockInfoUnderConstruction blockInfo =
@@ -419,13 +420,14 @@ public class FSDirectory implements Closeable {
   /**
    * Close file.
    */
-  void closeFile(String path, INodeFile file) {
+  void closeFile(String path, INodeFile file, boolean isTransactional) {
     waitForReady();
     long now = now();
     writeLock();
     try {
       // file is closed
       file.setModificationTimeForce(now);
+      INodeHelper.updateModificationTime(file.getID(), now, isTransactional);
       //fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
@@ -461,7 +463,7 @@ public class FSDirectory implements Closeable {
       // update space consumed
       INode[] pathINodes = getExistingPathINodes(path);
       updateCount(pathINodes, pathINodes.length-1, 0,
-          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
+          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -880,7 +882,7 @@ public class FSDirectory implements Closeable {
 
     // check disk quota
     long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
-    updateCount(inodes, inodes.length-1, 0, dsDelta, true); 
+    updateCount(inodes, inodes.length-1, 0, dsDelta, true, isTransactional); 
 
     fileNode.setReplication(replication);
     INodeHelper.updateHeader(fileNode.getID(), fileNode.getHeader(), isTransactional);
@@ -1239,7 +1241,7 @@ public class FSDirectory implements Closeable {
        //Currently oldnode and newnode are assumed to contain the same
        //* blocks. Otherwise, blocks need to be removed from the blocksMap.
        
-      rootDir.addNode(path, newnode,isTransactional); 
+      rootDir.addNode(path, newnode, isTransactional); 
 
       /* [W] No need to patch the blocks in the db because we are resuing the inodeid
       int index = 0;
@@ -1438,7 +1440,7 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    * @throws FileNotFound if path does not exist.
    */
-  void updateSpaceConsumed(String path, long nsDelta, long dsDelta)
+  void updateSpaceConsumed(String path, long nsDelta, long dsDelta, boolean isTransactional)
                                          throws QuotaExceededException,
                                                 FileNotFoundException,
                                                 UnresolvedLinkException {
@@ -1450,7 +1452,7 @@ public class FSDirectory implements Closeable {
         throw new FileNotFoundException(path + 
                                         " does not exist under rootDir.");
       }
-      updateCount(inodes, len-1, nsDelta, dsDelta, true);
+      updateCount(inodes, len-1, nsDelta, dsDelta, true, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -1466,7 +1468,8 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the new count violates any quota limit
    */
   private void updateCount(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta, boolean checkQuota)
+                           long nsDelta, long dsDelta, boolean checkQuota, 
+                           boolean isTransactional)
                            throws QuotaExceededException {
     assert hasWriteLock();
     if (!ready) {
@@ -1482,9 +1485,8 @@ public class FSDirectory implements Closeable {
     
     for(int i = 0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.updateNumItemsInTree(nsDelta, dsDelta);
-        INodeHelper.updateNumItemsInTree(node.getID(), node.getNsCount(), node.getDsCount());
+        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i];
+        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
       }
     }
   }
@@ -1526,10 +1528,10 @@ public class FSDirectory implements Closeable {
    * See {@link #updateCount(INode[], int, long, long, boolean)}
    */ 
   private void updateCountNoQuotaCheck(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta) {
+                           long nsDelta, long dsDelta, boolean isTransactional) {
     assert hasWriteLock();
     try {
-      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false);
+      updateCount(inodes, numOfINodes, nsDelta, dsDelta, false, isTransactional);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.updateCountNoQuotaCheck - unexpected ", e);
     }
@@ -1675,6 +1677,7 @@ public class FSDirectory implements Closeable {
     INode[] inodes = new INode[components.length];
 
     rootDir.getExistingPathINodes(components, inodes, false);
+    //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
     unprotectedMkdir(inodes, inodes.length-1, components[inodes.length-1],
         permissions, false, timestamp, isTransactional);
     return inodes[inodes.length-1];
@@ -1854,18 +1857,16 @@ public class FSDirectory implements Closeable {
     if (childDiskspace < 0) {
       childDiskspace = counts.getDsCount();
     }
-    
     updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace,
-        checkQuota);
+        checkQuota, isTransactional);
     if (pathComponents[pos-1] == null) {
       throw new NullPointerException("Panic: parent does not exist");
     }
-    
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
         child, inheritPermission, true, reuseID, isTransactional);
     if (addedNode == null) {
       updateCount(pathComponents, pos, -counts.getNsCount(), 
-          -childDiskspace, true);
+          -childDiskspace, true, isTransactional);
     }
     
     return addedNode;
@@ -1883,7 +1884,7 @@ public class FSDirectory implements Closeable {
       int pos, T child, long childDiskspace, boolean inheritPermission, boolean reuseID, boolean isTransactional) {
     T inode = null;
     try {
-
+        //TODO[Hooman]: add isTransactional whenever you reach this method from the callers.
       inode = addChild(pathComponents, pos, child, childDiskspace,
           inheritPermission, false, reuseID, isTransactional);
     } catch (QuotaExceededException e) {
@@ -1904,7 +1905,7 @@ public class FSDirectory implements Closeable {
       INode.DirCounts counts = new INode.DirCounts();
       removedNode.spaceConsumedInTree(counts); //[W] works?
       updateCountNoQuotaCheck(pathComponents, pos,
-                  -counts.getNsCount(), -counts.getDsCount());
+                  -counts.getNsCount(), -counts.getDsCount(), isTransactional);
     }
     return removedNode;
   }

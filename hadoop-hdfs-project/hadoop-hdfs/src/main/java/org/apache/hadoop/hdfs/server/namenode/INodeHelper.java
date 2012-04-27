@@ -22,6 +22,7 @@ import se.sics.clusterj.InodeTable;
 
 import com.mysql.clusterj.ClusterJDatastoreException;
 import com.mysql.clusterj.ClusterJException;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 
@@ -30,6 +31,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import java.security.Permission;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
@@ -63,24 +65,24 @@ public class INodeHelper {
 			try {
 				tx.begin();
 
-				replaceChild(thisInode, newChild, session);
-				done = true;
+                replaceChild(thisInode, newChild, session);
 
-				tx.commit();
-				session.flush();
-			} catch (ClusterJException e) {
-				tx.rollback();
-				System.err.println("INodeTableSimpleHelper.replaceChild() threw error " + e.getMessage());
-				tries--;
-			}
-		}
-	}
+                tx.commit();
+                session.flush();
+                done = true;
+            } catch (ClusterJException e) {
+                LOG.error(e.getMessage(), e);
+                tx.rollback();
+                tries--;
+            }
+        }
+    }
 
 	//TODO: for simple, this should update the times of parent also
 	private static void replaceChild(INode thisInode, INode newChild, Session session) {
 
-		INodeTableSimple inodet = selectINodeTableInternal(session, newChild.getLocalName(), thisInode.getID());
-		assert inodet == null : "Child not found in database";
+        INodeTableSimple inodet = selectINodeTableInternal(session, newChild.getLocalName(), thisInode.getID());
+        assert inodet != null : "Child not found in database";
 
 		inodet.setModificationTime(thisInode.modificationTime);
 		inodet.setATime(thisInode.getAccessTime());
@@ -132,7 +134,7 @@ public class INodeHelper {
 			((INodeDirectory) (inode)).setID(inodetable.getId()); //added for simple
 		}
 		if (inodetable.getIsDirWithQuota()) {
-			inode = new INodeDirectoryWithQuota(inodetable.getName(), ps, inodetable.getNSCount(), inodetable.getDSQuota());
+			inode = new INodeDirectoryWithQuota(inodetable.getName(), ps, inodetable.getNSQuota(), inodetable.getDSQuota());
 			inode.setAccessTime(inodetable.getATime());
 			inode.setModificationTime(inodetable.getModificationTime());
 			((INodeDirectoryWithQuota) (inode)).setID(inodetable.getId()); //added for simple
@@ -324,7 +326,7 @@ public class INodeHelper {
 				}
 				return null;
 			} catch (ClusterJException e) {
-				System.err.println("INodeTableSimpleHelper.getChildINode() threw error " + e.getMessage());
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -387,7 +389,7 @@ public class INodeHelper {
 				}
 				return null;
 			} catch (ClusterJException e) {
-				System.err.println("INodeTableSimpleHelper.getChildren() threw error " + e.getMessage());
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -418,29 +420,23 @@ public class INodeHelper {
 	 */
 	public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException
 	{
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		// do directly
-		if (isTransactional)
-		{
-			updateModificationTimeInternal(session, inodeid, modTime);
-			session.flush();
-		}
-		else
-		{
-			// open a transaction and then commit
-			updateModificationTime(inodeid, modTime);
-		}
+		 DBConnector.checkTransactionState(isTransactional);
+        
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            updateModificationTimeInternal(session, inodeid, modTime);
+            session.flush();
+        }
+        else
+            updateModificationTimeWithTransaction(inodeid, modTime);
 	}
 
 	/**Updates the modification time of an inode in the database
 	 * @param inodeid
 	 * @param modTime
 	 */
-	public static void updateModificationTime(long inodeid, long modTime) {
+	public static void updateModificationTimeWithTransaction(long inodeid, long modTime) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 
@@ -481,43 +477,45 @@ public class INodeHelper {
 	 */
 	public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional)
 	{
-		boolean done = false;
-		int tries = RETRY_COUNT;
-
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if(isTransactional)
-		{
-			// do directly
-			addChildInternal(session, node, isRoot, parentid);
-		}
-		else
-		{
-			// open a transaction
-			while (done == false && tries > 0)
-			{
-				try
-				{
-					tx.begin();
-
-					addChildInternal(session, node, isRoot, parentid);
-					done = true;
-
-					tx.commit();
-					session.flush();
-				}
-				catch (ClusterJException e)
-				{
-					tx.rollback();
-					System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
-					tries--;
-				}
-			}
-		}
+		DBConnector.checkTransactionState(isTransactional);
+        
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            addChildInternal(session, node, isRoot, parentid);
+            session.flush();
+        }
+        else
+            addChildWithTransaction(node, isRoot, parentid);
 	}
+
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    private static void addChildWithTransaction(INode node, boolean isRoot, long parentid) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+
+                addChildInternal(session, node, isRoot, parentid);
+                tx.commit();
+                session.flush();
+                done = true;
+            } catch (ClusterJException e) {
+                LOG.error(e.getMessage(), e);
+                if (tx.isActive())
+                    tx.rollback();
+                tries--;
+            }
+        }
+    }
 
 	
 	/** Internal function to add a child to a directory after doing all the required casting
@@ -605,43 +603,16 @@ public class INodeHelper {
 	 */
 	public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional)
 	{
-		boolean done = false;
-		int tries = RETRY_COUNT;
-
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-
-		if (isTransactional)
-		{
-			// delete directly
-			deleteINodeTableInternal(session, inodeid);
-			session.flush();
-		}
-		else
-		{
-			while (done == false && tries > 0)
-			{
-				try
-				{
-					tx.begin();
-					deleteINodeTableInternal(session, inodeid);
-					done = true;
-
-					tx.commit();
-					session.flush();
-				}
-				catch (ClusterJException e)
-				{
-					if (tx.isActive())
-					{
-						tx.rollback();
-					}
-					LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
-					tries--;
-				}
-			}
-		}
+		DBConnector.checkTransactionState(isTransactional);
+        
+        if (isTransactional)
+        {
+           Session session = DBConnector.obtainSession();
+           deleteINodeTableInternal(session, inodeid);
+           session.flush();
+        }
+        else
+           removeChildWithTransaction(inodeid);
 	}
 	/** Deletes an inode from the database
 	 * @param inodeid the inodeid to remove
@@ -669,8 +640,35 @@ public class INodeHelper {
 				tries--;
 			}
 		}
-
 	}
+
+/** Deletes an inode from the database
+     * @param inodeid the inodeid to remove
+     */
+    private static void removeChildWithTransaction(long inodeid) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                deleteINodeTableInternal(session, inodeid);
+                tx.commit();
+                done = true;
+                session.flush();
+            } catch (ClusterJException e) {
+                if (tx.isActive()) {
+                    tx.rollback();
+                }
+                LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
+    }
+
 
 	 /**
      * Updates the header of an inode in database
@@ -686,7 +684,10 @@ public class INodeHelper {
                 " but isTransactional's value is " + isTransactional;
 
         if (isTransactional)
+		{
             updateHeaderInternal(session, inodeid, header);
+			session.flush();
+		}
         else
             updateHeaderOld(inodeid, header);
     }
@@ -862,17 +863,55 @@ public class INodeHelper {
 		return inodetSorted;
 	}
 	
-	 /**
+	/**
      * Updates number of items and diskspace of the inode directory in DB.
      * @param inodeId
      * @param nsDelta
      * @param dsDelta 
      */
-    public static void updateNumItemsInTree(long inodeId, long nsDelta, long dsDelta)
+    public static void updateNumItemsInTree(INodeDirectoryWithQuota inode, long nsDelta, long dsDelta, boolean isTransactional)
     {
-        updateNumItemsInTreeInternal(DBConnector.obtainSession(), inodeId, nsDelta, dsDelta);
+        DBConnector.checkTransactionState(isTransactional);
+        inode.updateNumItemsInTree(nsDelta, dsDelta);
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            updateNumItemsInTreeInternal(session,
+                    inode.getID(), inode.getNsCount(), inode.getDsCount());
+            session.flush();
+        }
+        else
+            updateNumItemsInTreeWithTransaction(inode.getID(), 
+                    inode.getNsCount(), inode.getDsCount());
     }
     
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    private static void updateNumItemsInTreeWithTransaction(long inodeId, long nsDelta, long dsDelta) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                updateNumItemsInTreeInternal(session, inodeId, nsDelta, dsDelta);
+                tx.commit();
+                session.flush();
+                done = true;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
+    }
+
+
     /**
      * Updates number of items and diskspace of the inode directory in DB.
      * @param session
@@ -902,7 +941,10 @@ public class INodeHelper {
                 " but isTransactional's value is " + isTransactional;
         
         if (isTransactional)
+        {
             setPermissionInternal(session, inodeId, permissionStatus);
+            session.flush();
+        }
         else
             setPermissionWithTransaction(inodeId, permissionStatus);
     }
@@ -926,8 +968,8 @@ public class INodeHelper {
                 tx.begin();
                 setPermissionInternal(session, inodeId, permissionStatus);
                 tx.commit();
-                done = true;
                 session.flush();
+                done = true;
                 return done;
             } catch (ClusterJException e) {
                 tx.rollback();
@@ -954,6 +996,7 @@ public class INodeHelper {
         inodet.setPermission(permissionString.getData());
         session.updatePersistent(inodet);
     }
+
 
 
 }

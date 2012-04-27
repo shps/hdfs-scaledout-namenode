@@ -105,8 +105,7 @@ public class LeaseHelper {
 				return convertLeasePathsTableToTreeSet(pathList);
 			}
 			catch (ClusterJException e){
-				//LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage());
-				e.printStackTrace();
+				LeaseHelper.LOG.error("ClusterJException in getPaths: " + e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -114,6 +113,33 @@ public class LeaseHelper {
 		return null; 
 	}
 
+        /**
+	 * Adds a lease to the database with a path. This method should ONLY be called if the lease does not exist in database already
+	 * Roundtrips: 3
+	 * @param holder
+	 * @param src
+	 * @param lastUpd
+	 * @return an updated Lease object. It will only return null if the database is down.
+	 */
+	public static Lease addLease(String holder, int holderID, String src, long lastUpd,
+                boolean isTransactional) {
+		DBConnector.checkTransactionState(isTransactional);
+                Lease lease = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    insertLeaseInternal(session, holder, lastUpd, holderID);
+                    insertLeasePathsInternal(session, holderID, src);
+                    session.flush();
+                    lease = LeaseHelper.getLease(holder);
+                }
+                else
+                    lease = addLeaseWithTransaction(holder, holderID, src, lastUpd);
+                
+                return lease;
+	}
+        
 	/**
 	 * Checks to see if lease exists
 	 * @param holder
@@ -155,7 +181,7 @@ public class LeaseHelper {
 	 * @param lastUpd
 	 * @return an updated Lease object. It will only return null if the database is down.
 	 */
-	public static Lease addLease(String holder, int holderID, String src, long lastUpd) {
+	public static Lease addLeaseWithTransaction(String holder, int holderID, String src, long lastUpd) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -174,10 +200,9 @@ public class LeaseHelper {
 				return lease;
 			}
 			catch(ClusterJException e) {
-				if(tx.isActive())
-					tx.rollback();
-				//LeaseHelper.LOG.error("ClusterJException in addLease: " + e.getMessage());
-				e.printStackTrace();
+                                if (tx.isActive())
+                                    tx.rollback();
+				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -186,11 +211,30 @@ public class LeaseHelper {
 
 	}
 
+        /**Updates the lastUpdated time in database
+	 * Roundtrips: 2
+	 * @param holder
+	 */
+	public static void renewLease(String holder, boolean isTransactional) {
+		DBConnector.checkTransactionState(isTransactional);
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    LeaseHelper.renewLeaseInternal(session, holder);
+                    session.flush();
+                }
+                else
+                {
+                    renewLeaseWithTransaction(holder);
+                }
+	}
+        
 	/**Updates the lastUpdated time in database
 	 * Roundtrips: 2
 	 * @param holder
 	 */
-	public static void renewLease(String holder) {
+	public static void renewLeaseWithTransaction(String holder) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -200,15 +244,14 @@ public class LeaseHelper {
 			try{	
 				tx.begin();
 				LeaseHelper.renewLeaseInternal(session, holder);
-				done = true;
 				tx.commit();
+                                done = true;
 				session.flush();
 			}
 			catch(ClusterJException e) {
-				if(tx.isActive())
-					tx.rollback();
-				//LeaseHelper.LOG.error("ClusterJException in renewLease: " + e.getMessage());
-				e.printStackTrace();
+                                if (tx.isActive())
+                                    tx.rollback();
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -271,14 +314,40 @@ public class LeaseHelper {
 			}
 		}
 	}
-
+        
+        /**Renews an already existing Lease and adds a path to it
+	 * @param holder the lease holder
+	 * @param holderID 
+	 * @param src the path of the file
+	 * @return
+	 */
+	public static Lease renewLeaseAndAddPath(String holder, int holderID, String src,
+                boolean isTransactional) {
+		
+                DBConnector.checkTransactionState(isTransactional);
+                Lease lease = null;
+                
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    renewLeaseInternal(session, holder);
+                    insertLeasePathsInternal(session, holderID, src);
+                    session.flush();
+                    lease = getLease(holder);
+                }
+                else
+                    lease = renewLeaseAndAddPathWithTransaction(holder, holderID, src);
+                
+                return lease;
+	}
+ 
 	/**Renews an already existing Lease and adds a path to it
 	 * @param holder the lease holder
 	 * @param holderID 
 	 * @param src the path of the file
 	 * @return
 	 */
-	public static Lease renewLeaseAndAddPath(String holder, int holderID, String src) {
+	public static Lease renewLeaseAndAddPathWithTransaction(String holder, int holderID, String src) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
@@ -298,10 +367,9 @@ public class LeaseHelper {
 
 			}
 			catch(ClusterJException e) {
-				if(tx.isActive())
-					tx.rollback();
-				//LeaseHelper.LOG.error("ClusterJException in renewLeaseAndAddPath: " + e.getMessage());
-				e.printStackTrace();
+                                if (tx.isActive()) //[Hooman]: This is necessary to be checked, because some exceptions close the transaction.
+                                    tx.rollback();
+				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -347,6 +415,29 @@ public class LeaseHelper {
 		}
 
 	}
+        
+        /**
+	 * Removes a path with holderID=holderID and path=src
+	 * @param holderID
+	 * @param src
+	 * @return true if a row was deleted, false if row was not found, or if the database is down
+	 */
+	public static boolean removePath(int holderID, String src, 
+                boolean isTransactional) {
+                boolean found = false;
+                DBConnector.checkTransactionState(isTransactional);
+                if (isTransactional)
+                {
+                    Session session = DBConnector.obtainSession();
+                    found = deleteLeasePathsInternal(session, 
+                            holderID, src);
+                    session.flush();
+                }
+                else
+                    found = removePathWithTransaction(holderID, src);
+
+                return found;
+	}
 
 	/**
 	 * Removes a path with holderID=holderID and path=src
@@ -354,33 +445,26 @@ public class LeaseHelper {
 	 * @param src
 	 * @return true if a row was deleted, false if row was not found, or if the database is down
 	 */
-	public static boolean removePath(int holderID, String src, boolean isTransactional) {
+	public static boolean removePathWithTransaction(int holderID, String src) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		boolean found = false;
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
 
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-		if (isTransactional)
-		{
-			return deleteLeasePathsInternal(session, holderID, src);
-		}
-		else
-		{
-			while(done == false && tries > 0) {
-				try{
-					tx.begin();
-					found = deleteLeasePathsInternal(session, holderID, src);
-					done = true;
-					tx.commit();
-					return found;
-				}
-				catch(ClusterJException e) {
-					tx.rollback();
-					LeaseHelper.LOG.error("ClusterJException in removePath: " + e.getMessage());
-					tries--;
-				}
+		while(done == false && tries > 0) {
+			try{
+				tx.begin();
+				found = deleteLeasePathsInternal(session, holderID, src);
+				done = true;
+				tx.commit();
+                                session.flush();
+				return found;
+			}
+			catch(ClusterJException e) {
+				LOG.error(e.getMessage(), e);
+                                tx.rollback();
+				tries--;
 			}
 		}
 
@@ -421,8 +505,7 @@ public class LeaseHelper {
 				return sortedLeases;
 			}
 			catch(ClusterJException e) {
-				//LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage());
-				e.printStackTrace();
+				LeaseHelper.LOG.error("ClusterJException in getSortedLeases: " + e.getMessage(), e);
 				tries--;
 			}
 		}
@@ -490,35 +573,44 @@ public class LeaseHelper {
 
 		return null;
 	}
-
-	/**Delete a lease
+	
+        /**Delete a lease
 	 * @param holder
 	 */
 	public static void deleteLease(String holder, boolean isTransactional) {
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
+                deleteLeaseInternal(session, holder);
+                session.flush();
+            }
+            else
+                deleteLeaseWithTransaction(holder);
+	}
+        
+	/**Delete a lease
+	 * @param holder
+	 */
+	private static void deleteLeaseWithTransaction(String holder) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 		Session session = DBConnector.obtainSession();
 		Transaction tx = session.currentTransaction();
-
-		assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
-		if(isTransactional)
-		{
+		
+		while(done == false && tries > 0) {
+			try {
+			tx.begin();
 			deleteLeaseInternal(session, holder);
-		}
-		else
-		{
-			while(done == false && tries > 0) {
-				try {
-					tx.begin();
-					deleteLeaseInternal(session, holder);
-					done = true;
-					tx.commit();
-				} catch(ClusterJException e) {
-					tx.rollback();
-					LOG.error("ClusterJException in deleteLease: " + e.getMessage());
-					tries--;
-				}
-
+			done = true;
+			tx.commit();
+                        session.flush();
+			} catch(ClusterJException e) {
+                            LOG.error("ClusterJException in deleteLease: " + e.getMessage());
+                            if (tx.isActive())
+                                tx.rollback();
+                            tries--;
 			}
 		}
 	}
@@ -631,6 +723,7 @@ public class LeaseHelper {
 	 * @return true if a row was deleted, false if row was not found
 	 */
 	private static boolean deleteLeasePathsInternal(Session session, int holderID, String src) {
+            //[Hooman]: Is this necessary to get the leasePathTables first and then delete?
 		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
 		for(LeasePathsTable leasePath : leasePathTables) {
 			if(leasePath.getPath().equals(src)) {

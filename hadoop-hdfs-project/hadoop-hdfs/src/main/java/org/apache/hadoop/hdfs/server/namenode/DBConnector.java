@@ -19,9 +19,12 @@ import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.ClusterJUserException;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import se.sics.clusterj.DelegationKeyTable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -94,93 +97,87 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
 			return session;
 		}
 	}
-
-	/**
-	 * begin a transaction.
-	 */
-	public static void beginTransaction() throws ClusterJUserException
-	{
-		Session session = obtainSession();
-		Transaction tx = session.currentTransaction();
-		if(tx.isActive())
-		{
-			throw new ClusterJUserException("Transaction is already active");
-		}
-		else
-		{
-			tx.begin();
-		}
-
-	}
-
-	/**
-	 * Commit a transaction.
-	 */
-	public static void commit() throws ClusterJUserException
-	{
-		Session session = obtainSession();
-		Transaction tx = session.currentTransaction();
-		if (!tx.isActive())
-			throw new ClusterJUserException("The transaction is not started!");
-
-		tx.commit();
-		session.flush(); //why?
-	}
-
-	/**
-	 * It rolls back only when the transaction is active.
-	 */
-	public static void safeRollback() throws ClusterJUserException
-	{
-		Session session = obtainSession();
-		Transaction tx = session.currentTransaction();
-		if (tx.isActive())
-			tx.rollback();
-	}
-	/**
-	 * Returns the current Transaction.
-	 */
-	public static Transaction getTransaction() throws ClusterJUserException
-	{
-		Session session = obtainSession();
-		return session.currentTransaction();
-	}
-
-	/**
-
-	 * This is called only when MiniDFSCluster wants to format the Namenode.
-
-	 */
-	public static boolean formatDB()
-	{
-
-		Session session = obtainSession();
-		Transaction tx = session.currentTransaction();
-		try
-		{
-			tx.begin();
-			session.deletePersistentAll(INodeTableSimple.class);
-			session.deletePersistentAll(BlockInfoTable.class);
-			session.deletePersistentAll(LeaseTable.class);
-			session.deletePersistentAll(LeasePathsTable.class);
-			session.deletePersistentAll(TripletsTable.class);
-			// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-			session.deletePersistentAll(BlockTotalTable.class);
-			BlocksHelper.resetTotalBlocks(true);
-			tx.commit();
-			session.flush();
-			LOG.info("Deleted all rows from the database");
-			return true;
-
-		}
-		catch (ClusterJException ex)
-		{
-			//LOG.error(ex.getMessage(), ex);
-			System.err.println(ex.getMessage());
-			ex.printStackTrace();
-			tx.rollback();
-		}
-		return false;
-
-	}        
+        
+        /**
+         * begin a transaction.
+         */
+        public static void beginTransaction()
+        {
+            Session session = obtainSession();
+//            session.setLockMode(LockMode.SHARED);
+            session.currentTransaction().begin();
+        }
+        
+        /**
+         * Commit a transaction.
+         */
+        public static void commit() throws ClusterJUserException
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            if (!tx.isActive())
+                throw new ClusterJUserException("The transaction is not began!");
+            
+            tx.commit();
+            session.flush();
+        }
+        
+        /**
+         * It rolls back only when the transaction is active.
+         */
+        public static void safeRollback() throws ClusterJUserException
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            if (tx.isActive())
+                tx.rollback();
+        }
+        
+        /**
+         * This is called only when MiniDFSCluster wants to format the Namenode.
+         */
+        public static boolean formatDB()
+        {
+            Session session = obtainSession();
+            Transaction tx = session.currentTransaction();
+            try
+            {
+                tx.begin();
+                session.deletePersistentAll(INodeTableSimple.class);
+                session.deletePersistentAll(BlockInfoTable.class);
+                session.deletePersistentAll(LeaseTable.class);
+                session.deletePersistentAll(LeasePathsTable.class);
+                session.deletePersistentAll(TripletsTable.class);
+		// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+		session.deletePersistentAll(BlockTotalTable.class);
+                session.deletePersistentAll(DelegationKeyTable.class);
+		BlocksHelper.resetTotalBlocks(true);
+                tx.commit();
+                session.flush();
+                return true;
+            }
+            catch(ClusterJException ex)
+            {
+                LOG.error(ex.getMessage(), ex);
+                tx.rollback();
+            }
+            
+            return false;
+        }
+        
+        public static boolean checkTransactionState(boolean isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            boolean isActive = session.currentTransaction().isActive();
+            boolean isValid = isActive == isTransactional;
+            assert isValid : 
+                "Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional;
+            //TODO[Hooman]: An exception should bubble up from here..
+            if (!isValid)
+                LOG.error("Current transaction's isActive value is " + isActive + 
+                " but isTransactional's value is " + isTransactional);
+            
+            return isValid;
+        }
 }

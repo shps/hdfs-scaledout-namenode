@@ -110,6 +110,7 @@ class INodeDirectory extends INode {
 	 * @param newChild Child node to be added
 	 */
 	void replaceChild(INode newChild) {
+                this.children = getChildrenFromDB();
 		if ( children == null ) {
 			throw new IllegalArgumentException("The directory is empty");
 		}
@@ -399,8 +400,8 @@ class INodeDirectory extends INode {
 	 */
 	<T extends INode> T addChild(final T node, boolean inheritPermission,
 			boolean setModTime,
-			boolean reuseID/*[W] added to reuse the same ID for move operations*/, 
-                                                                                                                                                boolean isTransactional) {
+			boolean reuseID/*[W] added to reuse the same ID for move operations*/,
+                        boolean isTransactional) {
 		if (inheritPermission) {
 			FsPermission p = getFsPermission();
 			//make sure the  permission has wx for the user
@@ -518,8 +519,8 @@ class INodeDirectory extends INode {
 	INodeDirectory addToParent( byte[][] pathComponents,
 			INode newNode,
 			boolean inheritPermission,
-			boolean propagateModTime,
-                                                                                                                                                boolean isTransactional
+			boolean propagateModTime, 
+                        boolean isTransactional
 			) throws FileNotFoundException, 
 			UnresolvedLinkException {
 

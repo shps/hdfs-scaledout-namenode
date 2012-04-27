@@ -260,6 +260,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the new block
    */
   public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock, boolean isTransactional) {
+      
     boolean done = removeBlock(oldBlock, isTransactional);
     assert done : "Old block should belong to the data-node when replacing";
     done = addBlock(newBlock, isTransactional);

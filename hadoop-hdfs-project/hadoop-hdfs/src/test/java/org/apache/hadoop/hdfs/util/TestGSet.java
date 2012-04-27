@@ -98,7 +98,7 @@ public class TestGSet {
       for(int v = 1; v < data.length-1; v++) {
         {
           //test remove while iterating
-          final GSetTransactional<IntElement, IntElement> gset = createGSet(data);
+          final GSetDB<IntElement, IntElement> gset = createGSet(data);
           for(IntElement i : gset) {
             if (i.value == v) {
               //okay because data[0] is not in gset
@@ -123,7 +123,7 @@ public class TestGSet {
 
         {
           //test put new element while iterating
-          final GSetTransactional<IntElement, IntElement> gset = createGSet(data);
+          final GSetDB<IntElement, IntElement> gset = createGSet(data);
           try {
             for(IntElement i : gset) {
               if (i.value == v) {
@@ -138,7 +138,7 @@ public class TestGSet {
 
         {
           //test put existing element while iterating
-          final GSetTransactional<IntElement, IntElement> gset = createGSet(data);
+          final GSetDB<IntElement, IntElement> gset = createGSet(data);
           try {
             for(IntElement i : gset) {
               if (i.value == v) {
@@ -154,8 +154,8 @@ public class TestGSet {
     }
   }
 
-  private static GSetTransactional<IntElement, IntElement> createGSet(final IntElement[] data) {
-    final GSetTransactional<IntElement, IntElement> gset
+  private static GSetDB<IntElement, IntElement> createGSet(final IntElement[] data) {
+    final GSetDB<IntElement, IntElement> gset
       = new LightWeightGSet<IntElement, IntElement>(8);
     for(int i = 1; i < data.length; i++) {
       gset.put(data[i]);
@@ -261,7 +261,7 @@ public class TestGSet {
   private static class GSetTestCase implements GSet<IntElement, IntElement> {
     final GSet<IntElement, IntElement> expected
         = new GSetByHashMap<IntElement, IntElement>(1024, 0.75f);
-    final GSetTransactional<IntElement, IntElement> gset;
+    final GSetDB<IntElement, IntElement> gset;
     final IntData data;
 
     final String info;

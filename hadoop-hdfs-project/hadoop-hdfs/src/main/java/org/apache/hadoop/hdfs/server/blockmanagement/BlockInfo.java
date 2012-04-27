@@ -53,6 +53,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		super(blk);
 		this.inode = null;
 
+                //[Hooman]: What does these four lines mean to do?!!
 		this.getBlockId(); 
 		this.getBlockName();
 		this.getNumBytes(); 

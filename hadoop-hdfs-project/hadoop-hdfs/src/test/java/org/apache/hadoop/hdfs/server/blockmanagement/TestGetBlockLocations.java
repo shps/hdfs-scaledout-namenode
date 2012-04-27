@@ -109,7 +109,7 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
     conf.setBoolean("dfs.support.append", true);
-    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, "kthfs-getblocks");
+    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT); // Don't set this By value!!
     return conf;
   }
   

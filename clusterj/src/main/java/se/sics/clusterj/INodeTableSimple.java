@@ -6,7 +6,6 @@ package se.sics.clusterj;
 import com.mysql.clusterj.annotation.Column;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
-import com.mysql.clusterj.annotation.Lob;
 import com.mysql.clusterj.annotation.Index;
 
 
@@ -56,7 +55,7 @@ public interface INodeTableSimple {
 
     // Inode
     
-    @Lob
+//    @Lob
     @Column(name = "permission")
     byte[] getPermission (); 
     void setPermission (byte[] permission);

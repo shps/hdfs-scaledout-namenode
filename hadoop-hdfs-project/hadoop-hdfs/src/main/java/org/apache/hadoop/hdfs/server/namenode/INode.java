@@ -123,6 +123,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 	INode(INode other) {
 		setLocalName(other.getLocalName());
 		this.parent = other.getParent();
+                this.parentid = other.getParentIDLocal();
 		setPermissionStatus(other.getPermissionStatus());
 		setModificationTime(other.getModificationTime());
 		setAccessTime(other.getAccessTime());

@@ -290,7 +290,7 @@ public class TestReplication extends TestCase {
     }
   }
   
-  // [Hooman] TODO: This test can be run after modifying DB to keep the Storage IDs in place of DN name.
+  //FIXME[Hooman]: This test can be run after modifying DB to keep the Storage IDs in place of DN name.
   /* This test makes sure that NameNode retries all the available blocks 
    * for under replicated blocks. 
    * 
@@ -396,7 +396,7 @@ public class TestReplication extends TestCase {
 //      }
 //    }  
 //  }
-  
+      
   /**
    * Test if replication can detect mismatched length on-disk blocks
    * @throws Exception

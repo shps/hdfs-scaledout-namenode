@@ -47,7 +47,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
  *       (2) implementing {@link LinkedElement} interface.
  */
 @InterfaceAudience.Private
-public class LightWeightGSet<K, E extends K> implements GSetTransactional<K, E> {
+public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
+
 	/**
 	 * Elements of {@link LightWeightGSet}.
 	 */
@@ -151,9 +152,8 @@ public class LightWeightGSet<K, E extends K> implements GSetTransactional<K, E> 
 		return get(key) != null;
 	}
 
-	@Override
-                                                @Deprecated
-	public E put(final E element) {
+
+	/*public E put_old(final E element) {
 		//validate element
 		if (element == null) {
 			throw new NullPointerException("Null element is not supported.");
@@ -178,17 +178,17 @@ public class LightWeightGSet<K, E extends K> implements GSetTransactional<K, E> 
 		entries[index] = e;
 
 		return existing;
-	}
+	}*/
 
 	/*KTHFS method for putting a BlockInfo into the database*/
-                                                @Override
-	public E put(final E element, boolean isTransactional) {
+        @Deprecated
+	public E putOld(final E element) {
 		
 		//TODO: use functions from BlocksHelper
 		BlockInfo binfo = (BlockInfo)element;
 		
 		BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
-		BlocksHelper.putBlockInfo(binfo, isTransactional);
+		BlocksHelper.putBlockInfo(binfo, false);
 		if(existing == null) {
 			return null;
 		}
@@ -196,23 +196,34 @@ public class LightWeightGSet<K, E extends K> implements GSetTransactional<K, E> 
 			return (E)existing;
 		}
 	}
+        
+        @Override
+        public E put(E element, boolean isTransactional) {
+            BlockInfo binfo = (BlockInfo)element;
+            BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
+            BlocksHelper.putBlockInfo(binfo, isTransactional);
+            if(existing == null) {
+		return null;
+            }
+            else {
+		return (E)existing;
+            }
+        }
 
+        @Override
+        @Deprecated
+        public E put(final E element) {
+            return put(element, false);    
+	}
 
-                                             @SuppressWarnings("unchecked")
-                                                private E remove(final int index, final K key, boolean isTransactional)
-                                                {
-                                                        Block b = (Block) key;
-                                                        BlockInfo bi = BlocksHelper.removeBlocks(b, isTransactional);
-                                                        return (E) bi;
-                                                }	/**
+	/**
 	 * Remove the element corresponding to the key,
 	 * given key.hashCode() == index.
 	 *
 	 * @return If such element exists, return it.
 	 *         Otherwise, return null.
 	 */
-                                                @Deprecated
-	private E remove(final int index, final K key) {
+/*	private E remove_old(final int index, final K key) {
 		if (entries[index] == null) {
 			return null;
 		} else if (entries[index].equals(key)) {
@@ -243,18 +254,26 @@ public class LightWeightGSet<K, E extends K> implements GSetTransactional<K, E> 
 			//element not found
 			return null;
 		}
-	}
+	}*/
 
+	@SuppressWarnings("unchecked")
+	private E remove(final int index, final K key, boolean isTransactional) {
+		Block b = (Block)key;
+		BlockInfo bi = BlocksHelper.removeBlocks(b, isTransactional);
+		return (E)bi;
+	}
+	
 	@Override
-                                                @Deprecated
+        @Deprecated
 	public E remove(final K key) {
 		//validate key
 		if (key == null) {
 			throw new NullPointerException("key == null");
 		}
-		return remove(getIndex(key), key);
+		return remove(getIndex(key), key, false);
 	}
-	@Override
+        
+        @Override
 	public E remove(final K key, boolean isTransactional) {
 		//validate key
 		if (key == null) {
