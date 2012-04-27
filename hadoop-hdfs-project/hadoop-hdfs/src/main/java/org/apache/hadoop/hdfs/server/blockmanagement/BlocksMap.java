@@ -98,7 +98,10 @@ class BlocksMap {
   }
 
   void close() {
-    blocks = null;
+      //FIXME:kamal, It is not necessary, sice it makes the client requests get 
+      //NullPointerException when the MiniDFSCluster is going to get shutdown which 
+      //causes junit to stop running tests.
+      //blocks = null;
   }
 
   INodeFile getINode(Block b) {
