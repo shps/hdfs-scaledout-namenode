@@ -46,9 +46,9 @@ public class TestSecretHelper {
   
   @Before
   public void connect() throws IOException {
-	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "kthfs-getblocks");
+	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
 	  DBConnector.setConfiguration(CONF);
-	  DBAdmin.deleteAllTables(DBConnector.obtainSession(), "kthfs-getblocks");
+	  DBConnector.formatDB();
   }
 
   @After
