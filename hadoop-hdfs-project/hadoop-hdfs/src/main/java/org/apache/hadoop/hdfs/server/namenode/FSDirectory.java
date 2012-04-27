@@ -23,6 +23,9 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -1266,40 +1269,40 @@ public class FSDirectory implements Closeable {
    * @return a partial listing starting after startAfter
    */
   DirectoryListing getListing(String src, byte[] startAfter,
-			boolean needLocation) throws UnresolvedLinkException, IOException {
-		String srcs = normalizePath(src);
+      boolean needLocation) throws UnresolvedLinkException, IOException {
+    String srcs = normalizePath(src);
 
-		readLock();
-		try {
-			INode targetNode = rootDir.getNode(srcs, true);
-						
-			if (targetNode == null)
-				return null;
-			
+    readLock();
+    try {
+      INode targetNode = rootDir.getNode(srcs, true);
 
-			if (!targetNode.isDirectory()) {
-				return new DirectoryListing(
-						new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-							targetNode, needLocation)}, 0);
-			}
-			
-			// Else its a directory
-			INodeDirectory dirInode = (INodeDirectory)targetNode;
-			List<INode> contents = dirInode.getChildrenFromDB(); 
-			int startChild = dirInode.nextChild(startAfter);
-			int totalNumChildren = contents.size();
-			int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
-			HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
-			for (int i=0; i<numOfListing; i++) {
-				INode cur = contents.get(startChild+i);
-				listing[i] = createFileStatus(cur.name, cur, needLocation);
-			}
-			return new DirectoryListing(
-					listing, totalNumChildren-startChild-numOfListing);
-		} finally {
-			readUnlock();
-		}
-	}
+      if (targetNode == null)
+	return null;
+
+
+      if (!targetNode.isDirectory()) {
+	return new DirectoryListing(
+	    new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
+		targetNode, needLocation)}, 0);
+      }
+
+      // Else its a directory
+      INodeDirectory dirInode = (INodeDirectory)targetNode;
+      List<INode> contents = dirInode.getChildrenFromDB();
+      int startChild = dirInode.nextChild(startAfter, contents); 
+      int totalNumChildren = contents.size();
+      int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
+      HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
+      for (int i=0; i<numOfListing; i++) {
+	INode cur = contents.get(startChild+i);
+	listing[i] = createFileStatus(cur.name, cur, needLocation);
+      }
+      return new DirectoryListing(
+	  listing, totalNumChildren-startChild-numOfListing);
+    } finally {
+      readUnlock();
+    }
+  }
 
   /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
@@ -1576,12 +1579,6 @@ public class FSDirectory implements Closeable {
 	  if(inode.getLocalName().equals(INodeDirectory.ROOT_NAME))
 		  return INodeDirectory.ROOT_NAME;
 	  return getFullPathName(INodeHelper.getINode(inode.getParentIDLocal())) +"/"+ inode.getLocalName();
-  }
-  
-  static String labgetFullPathName(INode inode) {
-	  
-	  
-	  return null;
   }
   
   @Deprecated

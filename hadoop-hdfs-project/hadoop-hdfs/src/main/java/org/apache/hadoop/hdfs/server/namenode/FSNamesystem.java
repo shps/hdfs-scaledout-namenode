@@ -2939,7 +2939,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
           }
     	
-    	//W: Not required at the moment
     	if (auditLog.isInfoEnabled() && isExternalInvocation()) {
     		logAuditEvent(UserGroupInformation.getCurrentUser(),
     				Server.getRemoteIp(),

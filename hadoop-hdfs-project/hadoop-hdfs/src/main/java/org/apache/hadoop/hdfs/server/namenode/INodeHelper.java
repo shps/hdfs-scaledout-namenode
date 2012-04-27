@@ -2,6 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -996,6 +998,22 @@ public class INodeHelper {
         inodet.setPermission(permissionString.getData());
         session.updatePersistent(inodet);
     }
+    
+    /** Sorts the sibling inodes according to their natural order
+     *  This sorting is required for namesystem.getListing()
+     *  This is a destructive method
+     * @param childs List of siblings
+     */
+    private static void sortChildren(List<INode> childs) {
+	  Collections.sort(childs,
+	      new Comparator<INode>() {
+	    @Override
+	    public int compare(INode o1, INode o2) {
+	      return o1.compareTo(o2.name);
+	    }
+	  }
+	      );
+	}
 
 
 

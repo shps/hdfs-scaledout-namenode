@@ -465,18 +465,18 @@ public class BlocksHelper {
 	 */
 	public static class BlockInfoComparator implements Comparator<BlockInfo> {
 
-		/*
+	  /*
 		@Override
 		public int compare(BlockInfo o1, BlockInfo o2) {
 			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
 		}
-		 * 
-		 */
-		@Override
-		/* For this to work, ensure that by default value for column BlockIndex in table [BlockInfo] is -1 */
-		public int compare(BlockInfo o1, BlockInfo o2) {
-			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
-		}
+	   * 
+	   */
+	  @Override
+	  /* For this to work, ensure that by default value for column BlockIndex in table [BlockInfo] is -1 */
+	  public int compare(BlockInfo o1, BlockInfo o2) {
+	    return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
+	  }
 
 	}
 
