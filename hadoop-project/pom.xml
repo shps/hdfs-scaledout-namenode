@@ -607,11 +607,11 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
+			<!-- TODO --><exclude>**/TestDistributedFileSystem.java</exclude>
 			<!-- TODO --><exclude>**/TestLeaseRecovery2.java</exclude>
 			<!-- TODO --><exclude>**/TestLeaseRecovery.java</exclude>
 			<!-- TODO --><exclude>**/TestFileAppend.java</exclude>
 			<!-- TODO: --><exclude>**/TestUnderReplicatedBlocks.java</exclude>
-			<!-- TODO--> <exclude>**/TestNodeCount.java</exclude>
 			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
 			<!-- TODO --><exclude>**/TestHost2NodesMap.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
@@ -625,7 +625,6 @@
 			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
 			<!-- TODO--><exclude>**/TestFileStatus.java</exclude>
-			<!-- TODO--><exclude>**/TestBlockReport.java</exclude>
 			<!-- TODO--><exclude>**/TestReplicasMap.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
 			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>

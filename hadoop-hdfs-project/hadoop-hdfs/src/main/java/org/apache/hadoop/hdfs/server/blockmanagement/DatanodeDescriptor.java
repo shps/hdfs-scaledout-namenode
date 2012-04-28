@@ -301,7 +301,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Iterates over the list of blocks belonging to the datanode.
    */
-  public static class BlockIterator implements Iterator<BlockInfo> {
+   public static class BlockIterator implements Iterator<BlockInfo> {
     private List<BlockInfo> list;
     private DatanodeDescriptor node;
     private int iteratorIndex;
@@ -313,7 +313,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
 
     public boolean hasNext() {
-      return list.get(iteratorIndex) != null;
+      return iteratorIndex != list.size();
     }
 
     public BlockInfo next() {

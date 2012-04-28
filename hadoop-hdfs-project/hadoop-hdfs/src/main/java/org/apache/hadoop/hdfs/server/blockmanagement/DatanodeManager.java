@@ -222,7 +222,7 @@ public class DatanodeManager {
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
-  DatanodeDescriptor getDatanode(final String storageID) {
+  public DatanodeDescriptor getDatanode(final String storageID) {
     return datanodeMap.get(storageID);
   }
 

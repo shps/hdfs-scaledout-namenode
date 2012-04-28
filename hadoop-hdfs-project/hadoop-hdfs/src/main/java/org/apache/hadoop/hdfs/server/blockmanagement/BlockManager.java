@@ -1978,7 +1978,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     // Now check for completion of blocks and safe block count
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
-    int numCurrentReplica = numLiveReplicas //[thesis] confirm this value!
+    int numCurrentReplica = numLiveReplicas + curReplicaDelta//[thesis] confirm this value!
       + pendingReplications.getNumReplicas(storedBlock);
    
 

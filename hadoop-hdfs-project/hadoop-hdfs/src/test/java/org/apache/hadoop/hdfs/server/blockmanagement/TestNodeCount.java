@@ -32,9 +32,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.blockmanagement.HeartbeatManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
@@ -46,7 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
  */
 public class TestNodeCount extends TestCase {
   final short REPLICATION_FACTOR = (short)2;
-  final long TIMEOUT = 20000L;
+  final long TIMEOUT = 60000L;
   long timeout = 0;
   long failtime = 0;
   Block lastBlock = null;
