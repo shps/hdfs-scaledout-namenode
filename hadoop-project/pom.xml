@@ -613,7 +613,6 @@
 			<!-- TODO --><exclude>**/TestFileAppend.java</exclude>
 			<!-- TODO: --><exclude>**/TestUnderReplicatedBlocks.java</exclude>
 			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
-			<!-- TODO --><exclude>**/TestHost2NodesMap.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
 			<!-- TODO--><exclude>**/TestSetTimes.java</exclude>
