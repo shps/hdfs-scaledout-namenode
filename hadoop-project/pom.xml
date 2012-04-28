@@ -636,7 +636,6 @@
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
 			<!-- TODO--><exclude>**/TestSmallBlock.java</exclude>
-			<!-- TODO--><exclude>**/TestClientReportBadBlock.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->
