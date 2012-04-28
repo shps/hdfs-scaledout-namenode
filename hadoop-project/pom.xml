@@ -624,7 +624,6 @@
 			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
 			<!-- TODO--><exclude>**/TestFileStatus.java</exclude>
-			<!-- TODO--><exclude>**/TestReplicasMap.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
 			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
