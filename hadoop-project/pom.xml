@@ -639,7 +639,6 @@
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->
-			<!-- TODO--><exclude>**/TestDFSShell.java</exclude>
 			<!-- TODO--><exclude>**/TestDataTransferProtocol.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockReplacement.java</exclude> <!--Needs to be fixed -->
 			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
