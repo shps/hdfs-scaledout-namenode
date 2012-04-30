@@ -387,6 +387,7 @@ public class INodeHelper {
 				}
 				if (children.size() > 0) {
 					done = true;
+					sortChildren(children);
 					return children;
 				}
 				return null;

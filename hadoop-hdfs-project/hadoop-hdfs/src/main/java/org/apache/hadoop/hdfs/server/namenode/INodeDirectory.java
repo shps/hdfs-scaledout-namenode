@@ -616,13 +616,9 @@ class INodeDirectory extends INode {
 	}
 
 
-	List<INode> getChildrenRaw() {
+	List<INode> getChildrenRaw() throws IOException {
 		List<INode> childrenFromDB = null;
-		try {
 			childrenFromDB = INodeHelper.getChildren(this.id);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 		//silence compiler
 		return childrenFromDB;
 	}
