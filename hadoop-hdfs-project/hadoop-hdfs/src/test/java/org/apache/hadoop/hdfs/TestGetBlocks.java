@@ -38,10 +38,13 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
 public class TestGetBlocks extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestGetBlocks.class);
   /** test getBlocks */
   public void testGetBlocks() throws Exception {
     final Configuration CONF = new HdfsConfiguration();
@@ -150,7 +153,7 @@ public class TestGetBlocks extends TestCase {
     Map<Block, Long> map = new HashMap<Block, Long>();
     final Random RAN = new Random();
     final long seed = RAN.nextLong();
-    System.out.println("seed=" +  seed);
+    LOG.info("seed=" +  seed);
     RAN.setSeed(seed);
 
     long[] blkids = new long[10]; 
@@ -158,12 +161,12 @@ public class TestGetBlocks extends TestCase {
       blkids[i] = 1000L + RAN.nextInt(100000);
       map.put(new Block(blkids[i], 0, blkids[i]), blkids[i]);
     }
-    System.out.println("map=" + map.toString().replace(",", "\n  "));
+    LOG.info("map=" + map.toString().replace(",", "\n  "));
     
     for(int i = 0; i < blkids.length; i++) {
       Block b = new Block(blkids[i], 0, GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       Long v = map.get(b);
-      System.out.println(b + " => " + v);
+      LOG.info(b + " => " + v);
       assertEquals(blkids[i], v.longValue());
     }
   }

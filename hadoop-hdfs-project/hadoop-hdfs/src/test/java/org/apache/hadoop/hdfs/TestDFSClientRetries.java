@@ -195,7 +195,7 @@ public class TestDFSClientRetries extends TestCase {
       public Object answer(InvocationOnMock invocation) 
                        throws Throwable {
         retryCount++;
-        System.out.println("addBlock has been called "  + retryCount + " times");
+        LOG.info("addBlock has been called "  + retryCount + " times");
         if(retryCount > maxRetries + 1) // First call was not a retry
           throw new IOException("Retried too many times: " + retryCount);
         else
@@ -347,7 +347,7 @@ public class TestDFSClientRetries extends TestCase {
    */
   public void testDFSClientRetriesOnBusyBlocks() throws IOException {
     
-    System.out.println("Testing DFSClient random waiting on busy blocks.");
+    LOG.info("Testing DFSClient random waiting on busy blocks.");
     
     //
     // Test settings: 
@@ -450,7 +450,7 @@ public class TestDFSClientRetries extends TestCase {
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
                   fs.getFileStatus(file1).isFile());
-      System.out.println("Path : \"" + file1 + "\"");
+      LOG.info("Path : \"" + file1 + "\"");
       LOG.info("Path : \"" + file1 + "\"");
 
       // write 1 block to file
@@ -497,7 +497,7 @@ public class TestDFSClientRetries extends TestCase {
         ret = false;
       
     } catch (InterruptedException e) {
-      System.out.println("Thread got InterruptedException.");
+      LOG.info("Thread got InterruptedException.");
       e.printStackTrace();
       ret = false;
     } catch (Exception e) {

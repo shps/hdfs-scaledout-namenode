@@ -255,7 +255,7 @@ public class NNThroughputBenchmark {
         elapsedTime = System.currentTimeMillis() - start;
         for(StatsDaemon d : daemons) {
           incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
-          // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
+          // LOG.info(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
         }
       }
     }

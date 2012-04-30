@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
 import java.io.OutputStream;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
 
 /**
@@ -31,11 +33,12 @@ import org.junit.Test;
  * Configuration.writeXML holds a lock on itself while writing to DFS.
  */
 public class TestWriteConfigurationToDFS {
+  public static final Log LOG = LogFactory.getLog(TestWriteConfigurationToDFS.class);  
   @Test(timeout=60000)
   public void testWriteConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
-    System.out.println("Setting conf in: " + System.identityHashCode(conf));
+    LOG.info("Setting conf in: " + System.identityHashCode(conf));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     FileSystem fs = null;
     OutputStream os = null;

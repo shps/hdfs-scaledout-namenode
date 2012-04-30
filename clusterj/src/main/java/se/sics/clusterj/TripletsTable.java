@@ -28,7 +28,11 @@ public interface TripletsTable {
     
       
     @Column(name = "datanodeName")
-    @Index(name="idx_datanodeName")
     String getDatanodeName();
     void setDatanodeName(String name);
+    
+    @Column(name = "storageId")
+    @Index(name="idx_datanodeStorage")
+    String getStorageId();
+    void setStorageId(String id);
 }

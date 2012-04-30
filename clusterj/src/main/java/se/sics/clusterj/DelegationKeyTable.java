@@ -23,7 +23,6 @@ public interface DelegationKeyTable {
     long getExpiryDate();  
     void setExpiryDate(long expiryDate);
     
-//    @Lob
     @Column(name = "keyBytes")
     byte[] getKeyBytes(); 
     void setKeyBytes (byte[] keyBytes);

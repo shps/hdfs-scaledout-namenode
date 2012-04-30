@@ -23,6 +23,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -41,6 +42,7 @@ import org.apache.log4j.Level;
  * This class tests hflushing concurrently from many threads.
  */
 public class TestMultiThreadedHflush {
+  public static final Log LOG = LogFactory.getLog(TestMultiThreadedHflush.class);  
   static final int blockSize = 1024*1024;
   static final int numBlocks = 10;
   static final int fileSize = numBlocks * blockSize + 1;
@@ -205,7 +207,7 @@ public class TestMultiThreadedHflush {
     // create a new file.
     FileSystem fs = p.getFileSystem(conf);
     FSDataOutputStream stm = createFile(fs, p, 1);
-    System.out.println("Created file simpleFlush.dat");
+    LOG.info("Created file simpleFlush.dat");
 
     // There have been a couple issues with flushing empty buffers, so do
     // some empty flushes first.
@@ -234,7 +236,7 @@ public class TestMultiThreadedHflush {
       throw new RuntimeException("Deferred", thrown.get());
     }
     stm.close();
-    System.out.println("Closed file.");
+    LOG.info("Closed file.");
   }
 
   public static void main(String args[]) throws Exception {
@@ -251,7 +253,7 @@ public class TestMultiThreadedHflush {
     test.doMultithreadedWrites(conf, p, 10, 511, 50000);
     long et = System.nanoTime();
 
-    System.out.println("Finished in " + ((et - st) / 1000000) + "ms");
+    LOG.info("Finished in " + ((et - st) / 1000000) + "ms");
   }
 
 }

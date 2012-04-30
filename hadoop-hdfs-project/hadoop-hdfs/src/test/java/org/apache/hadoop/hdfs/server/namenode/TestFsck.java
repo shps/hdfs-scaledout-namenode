@@ -32,6 +32,8 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -61,6 +63,7 @@ import org.apache.log4j.RollingFileAppender;
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestFsck.class);
   static final String auditLogFile = System.getProperty("test.build.dir",
       "build/test") + "/audit.log";
   
@@ -108,7 +111,7 @@ public class TestFsck extends TestCase {
       verifyAuditLogs();
       assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
-      System.out.println(outStr);
+      LOG.info(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
       
@@ -117,7 +120,7 @@ public class TestFsck extends TestCase {
       outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
-      System.out.println(outStr);
+      LOG.info(outStr);
       
       // bring up data nodes & cleanup cluster
       cluster.startDataNodes(conf, 4, true, null, null);
@@ -171,7 +174,7 @@ public class TestFsck extends TestCase {
       util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, 0, true, "/non-existent");
       assertEquals(-1, outStr.indexOf(NamenodeFsck.HEALTHY_STATUS));
-      System.out.println(outStr);
+      LOG.info(outStr);
       util.cleanup(fs, "/srcdat");
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -204,7 +207,7 @@ public class TestFsck extends TestCase {
       fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          System.out.println(runFsck(conf, -1, true, dir));
+          LOG.info(runFsck(conf, -1, true, dir));
           return null;
         }
       });
@@ -215,7 +218,7 @@ public class TestFsck extends TestCase {
         @Override
         public Object run() throws Exception {
           final String outStr = runFsck(conf, 0, true, dir);
-          System.out.println(outStr);
+          LOG.info(outStr);
           assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
           return null;
         }
@@ -309,19 +312,19 @@ public class TestFsck extends TestCase {
       }
       // We expect the filesystem to be HEALTHY and show one open file
       outStr = runFsck(conf, 0, true, topDir);
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE")); 
       // Use -openforwrite option to list open files
       outStr = runFsck(conf, 0, true, topDir, "-openforwrite");
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(outStr.contains("OPENFORWRITE"));
       assertTrue(outStr.contains("openFile"));
       // Close the file
       out.close(); 
       // Now, fsck should show HEALTHY fs and should not show any open files
       outStr = runFsck(conf, 0, true, topDir);
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE"));
       util.cleanup(fs, topDir);
@@ -357,7 +360,7 @@ public class TestFsck extends TestCase {
 
     // Make sure filesystem is in healthy state
     outStr = runFsck(conf, 0, true, "/");
-    System.out.println(outStr);
+    LOG.info(outStr);
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas
@@ -397,7 +400,7 @@ public class TestFsck extends TestCase {
 
     // Check if fsck reports the same
     outStr = runFsck(conf, 1, true, "/");
-    System.out.println(outStr);
+    LOG.info(outStr);
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     assertTrue(outStr.contains("testCorruptBlock"));
     } finally {
@@ -432,7 +435,7 @@ public class TestFsck extends TestCase {
       
       // run fsck and expect a failure with -1 as the error code
       String outStr = runFsck(conf, -1, true, fileName);
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(outStr.contains(NamenodeFsck.FAILURE_STATUS));
       
       // clean up file system
@@ -460,7 +463,7 @@ public class TestFsck extends TestCase {
 
       // String outStr = runFsck(conf, 0, true, "/corruptData", "-list-corruptfileblocks");
       String outStr = runFsck(conf, 0, false, "/corruptData", "-list-corruptfileblocks");
-      System.out.println("1. good fsck out: " + outStr);
+      LOG.info("1. good fsck out: " + outStr);
       assertTrue(outStr.contains("has 0 CORRUPT files"));
       // delete the blocks
       final String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -493,13 +496,13 @@ public class TestFsck extends TestCase {
         numCorrupt = corruptFileBlocks.getFiles().length;
       }
       outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
-      System.out.println("2. bad fsck out: " + outStr);
+      LOG.info("2. bad fsck out: " + outStr);
       assertTrue(outStr.contains("has 3 CORRUPT files"));
 
       // Do a listing on a dir which doesn't have any corrupt blocks and validate
       util.createFiles(fs, "/goodData");
       outStr = runFsck(conf, 0, true, "/goodData", "-list-corruptfileblocks");
-      System.out.println("3. good fsck out: " + outStr);
+      LOG.info("3. good fsck out: " + outStr);
       assertTrue(outStr.contains("has 0 CORRUPT files"));
       util.cleanup(fs,"/corruptData");
       util.cleanup(fs, "/goodData");
@@ -528,12 +531,12 @@ public class TestFsck extends TestCase {
 
       // passing illegal option
       String outStr = runFsck(conf, -1, true, fileName, "-thisIsNotAValidFlag");
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(!outStr.contains(NamenodeFsck.HEALTHY_STATUS));
 
       // passing multiple paths are arguments
       outStr = runFsck(conf, -1, true, "/", fileName);
-      System.out.println(outStr);
+      LOG.info(outStr);
       assertTrue(!outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       // clean up file system
       fs.delete(filePath, true);

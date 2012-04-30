@@ -106,7 +106,7 @@ public class TestListCorruptFileBlocks {
           try {
             util.checkFiles(fs, "/srcdat10");
           } catch (BlockMissingException e) {
-            System.out.println("Received BlockMissingException as expected.");
+            LOG.info("Received BlockMissingException as expected.");
           } catch (IOException e) {
             assertTrue("Corrupted replicas not handled properly. Expecting BlockMissingException " +
                 " but received IOException " + e, false);
@@ -191,7 +191,7 @@ public class TestListCorruptFileBlocks {
           try {
             util.checkFiles(fs, "/srcdat10");
           } catch (BlockMissingException e) {
-            System.out.println("Received BlockMissingException as expected.");
+            LOG.info("Received BlockMissingException as expected.");
           } catch (IOException e) {
             assertTrue("Corrupted replicas not handled properly. " +
                        "Expecting BlockMissingException " +
@@ -225,7 +225,7 @@ public class TestListCorruptFileBlocks {
       try {
         util.checkFiles(fs, "/srcdat10");
       } catch (BlockMissingException e) {
-        System.out.println("Received BlockMissingException as expected.");
+        LOG.info("Received BlockMissingException as expected.");
       } catch (IOException e) {
         assertTrue("Corrupted replicas not handled properly. " +
                    "Expecting BlockMissingException " +

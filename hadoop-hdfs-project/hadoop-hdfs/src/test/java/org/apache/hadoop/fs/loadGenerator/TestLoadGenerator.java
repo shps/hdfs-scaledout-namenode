@@ -21,6 +21,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -37,6 +39,7 @@ import org.junit.Test;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestLoadGenerator extends Configured implements Tool {
+  public static final Log LOG = LogFactory.getLog(TestLoadGenerator.class);  
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
   private static final String OUT_DIR =  
@@ -74,7 +77,7 @@ public class TestLoadGenerator extends Configured implements Tool {
     final int AVG_FILE_SIZE = 9;
     final int SEED = 13;
     try {
-    	System.out.println("outDir in Test: " + OUT_DIR);
+    	LOG.info("outDir in Test: " + OUT_DIR);
       new File(OUT_DIR).mkdir();
       // successful case
       assertEquals(0, sg.run(args));

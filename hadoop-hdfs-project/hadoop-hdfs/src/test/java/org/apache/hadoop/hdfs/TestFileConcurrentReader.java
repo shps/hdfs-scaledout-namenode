@@ -169,7 +169,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   public void testUnfinishedBlockPacketBufferOverrun() throws IOException {
     // check that / exists
     Path path = new Path("/");
-    System.out.println("Path : \"" + path.toString() + "\"");
+    LOG.info("Path : \"" + path.toString() + "\"");
 
     // create a new file in the root, write data, do no close
     Path file1 = new Path("/unfinished-block");

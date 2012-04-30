@@ -58,7 +58,7 @@ public class TestFuseDFS {
     do {
       byte b[] = new byte[is.available()];
       len = is.read(b);
-      System.out.println("Read "+len+" bytes");
+      LOG.info("Read "+len+" bytes");
       System.out.write(b, 0, b.length);
     } while (len > 0);
   }

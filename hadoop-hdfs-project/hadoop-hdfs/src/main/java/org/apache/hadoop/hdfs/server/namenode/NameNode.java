@@ -596,7 +596,7 @@ public class NameNode {
       //Generate a new cluster id
       clusterId = NNStorage.newClusterID();
     }
-    System.out.println("Formatting using clusterid: " + clusterId);
+    LOG.info("Formatting using clusterid: " + clusterId);
     
     FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
@@ -735,7 +735,7 @@ public class NameNode {
         return null; // avoid javac warning
       case GENCLUSTERID:
         System.err.println("Generating new cluster id:");
-        System.out.println(NNStorage.newClusterID());
+        LOG.info(NNStorage.newClusterID());
         System.exit(0);
         return null;
       case FINALIZE:

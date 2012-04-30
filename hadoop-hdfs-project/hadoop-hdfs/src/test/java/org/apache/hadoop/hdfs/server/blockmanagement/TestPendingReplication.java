@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import junit.framework.TestCase;
 import java.lang.System;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 
@@ -26,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * This class tests the internals of PendingReplicationBlocks.java
  */
 public class TestPendingReplication extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestPendingReplication.class);  
   final static int TIMEOUT = 3;     // 3 seconds
 
   public void testPendingReplication() {
@@ -99,7 +102,7 @@ public class TestPendingReplication extends TestCase {
       }
       loop++;
     }
-    System.out.println("Had to wait for " + loop +
+    LOG.info("Had to wait for " + loop +
                        " seconds for the lot to timeout");
 
     //

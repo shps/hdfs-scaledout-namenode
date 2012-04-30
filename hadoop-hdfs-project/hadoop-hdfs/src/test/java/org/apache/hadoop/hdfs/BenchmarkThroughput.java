@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -45,6 +46,7 @@ import org.apache.log4j.Level;
  */
 public class BenchmarkThroughput extends Configured implements Tool {
 
+  static final Log LOG = LogFactory.getLog(BenchmarkThroughput.class);
   // the property in the config that specifies a working directory
   private LocalDirAllocator dir;
   private long startTime;
@@ -56,7 +58,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
   }
 
   private void printMeasurements() {
-    System.out.println(" time: " +
+    LOG.info(" time: " +
                        ((System.currentTimeMillis() - startTime)/1000));
   }
 
@@ -196,7 +198,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
     dir = new LocalDirAllocator("mapred.temp.dir");
 
     System.setProperty("test.build.data", localDir);
-    System.out.println("Local = " + localDir);
+    LOG.info("Local = " + localDir);
     ChecksumFileSystem checkedLocal = FileSystem.getLocal(conf);
     FileSystem rawLocal = checkedLocal.getRawFileSystem();
     for(int i=0; i < reps; ++i) {

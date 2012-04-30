@@ -27,6 +27,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -37,15 +39,20 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
 public class TestDistributedFileSystem {
+  static final Log LOG = LogFactory.getLog(TestDistributedFileSystem.class);
   private static final Random RAN = new Random();
 
   {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)NameNode.LOG).getLogger().setLevel(Level.ALL);
+//    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
   }
 
   private boolean dualPortTesting = false;
@@ -294,7 +301,8 @@ public class TestDistributedFileSystem {
   
   @Test
   public void testStatistics() throws Exception {
-    int lsLimit = 2;
+    int lsLimit = 2; //[W]
+	//int lsLimit = 1000;
     final Configuration conf = getTestConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -395,7 +403,7 @@ public class TestDistributedFileSystem {
     ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
 
     final long seed = RAN.nextLong();
-    System.out.println("seed=" + seed);
+    LOG.info("seed=" + seed);
     RAN.setSeed(seed);
 
     final Configuration conf = getTestConfiguration();
@@ -404,7 +412,7 @@ public class TestDistributedFileSystem {
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem hdfs = cluster.getWritingFileSystem();
     final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    System.out.println("hftpuri=" + hftpuri);
+    LOG.info("hftpuri=" + hftpuri);
     final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
 
     final String dir = "/filechecksum";
@@ -417,7 +425,7 @@ public class TestDistributedFileSystem {
       //generate random data
       final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
       RAN.nextBytes(data);
-      System.out.println("data.length=" + data.length);
+      LOG.info("data.length=" + data.length);
   
       //write data to a file
       final Path foo = new Path(dir, "foo" + n);
@@ -430,14 +438,14 @@ public class TestDistributedFileSystem {
       
       //compute checksum
       final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
-      System.out.println("hdfsfoocs=" + hdfsfoocs);
+      LOG.info("hdfsfoocs=" + hdfsfoocs);
       
       final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
-      System.out.println("hftpfoocs=" + hftpfoocs);
+      LOG.info("hftpfoocs=" + hftpfoocs);
 
       final Path qualified = new Path(hftpuri + dir, "foo" + n);
       final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
-      System.out.println("qfoocs=" + qfoocs);
+      LOG.info("qfoocs=" + qfoocs);
 
       //write another file
       final Path bar = new Path(dir, "bar" + n);
@@ -476,7 +484,7 @@ public class TestDistributedFileSystem {
     cluster.shutdown();
   }
   
-  @Test
+  //@Test //FEDERATED
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
 

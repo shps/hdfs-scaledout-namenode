@@ -23,6 +23,9 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
  * This class tests that methods in DatanodeDescriptor
@@ -49,6 +52,10 @@ public class TestDatanodeDescriptor extends TestCase {
   }
   
   public void testBlocksCounter() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
+    DBConnector.setConfiguration(conf);
+    
     DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
     BlockInfo blk = new BlockInfo(new Block(1L), 1);

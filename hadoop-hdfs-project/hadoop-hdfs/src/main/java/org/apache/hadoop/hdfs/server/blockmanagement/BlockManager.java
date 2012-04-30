@@ -71,6 +71,8 @@ import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.mysql.clusterj.ClusterJException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
@@ -291,15 +293,18 @@ public class BlockManager {
     if (namesystem.isWritingNN()) {
         pendingReplications.start();
         datanodeManager.activate(conf);
-        this.replicationThread.start();
+        replicationThread.start();
     }
   }
 
   public void close() {
+    if (replicationThread != null) {
+        replicationThread.interrupt();
+        
+    }
     if (pendingReplications != null) pendingReplications.stop();
-    blocksMap.close();
     if(datanodeManager != null) datanodeManager.close();
-    if (replicationThread != null) replicationThread.interrupt();
+    blocksMap.close();
   }
 
   /** @return the datanodeManager */
@@ -441,7 +446,7 @@ public class BlockManager {
 	  {
 		  return false; // no blocks in file yet
 	  }
-	  //System.out.println("LastBlock: "+lastBlock.getBlockId() + " ["+lastBlock.getBlockUCState().name()+"], CommitBlock: "+commitBlock.getBlockId());
+	  //LOG.info("LastBlock: "+lastBlock.getBlockId() + " ["+lastBlock.getBlockUCState().name()+"], CommitBlock: "+commitBlock.getBlockId());
 	  if (lastBlock.isComplete())
 	  {
 		  return false; // already completed (e.g. by syncBlock) 
@@ -476,14 +481,14 @@ public class BlockManager {
 	  int totalReplicas = status.getTotal();
 	  if (numOfTargets > totalReplicas)
 	  {
-		  System.out.println("adding block to pending replications ["+block.getBlockId()+"]");
+		  LOG.info("adding block to pending replications ["+block.getBlockId()+"]");
 		  pendingReplications.add(block, numOfTargets - totalReplicas);
 	  }
 	  if (numOfTargets < expectedReplicas
 			  || status.decommissionedReplicas()!= 0
 			  || status.corruptReplicas() != 0)
 	  {
-		  System.out.println("adding block to needed replications ["+block.getBlockId()+"]");
+		  LOG.info("adding block to needed replications ["+block.getBlockId()+"]");
 		  LOG.info("Add " + block + " to needReplication queue: "
 				  + " numOfTargets = " + numOfTargets
 				  + " decomissionedReplicas = " + status.decommissionedReplicas()
@@ -816,7 +821,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final BlockTokenSecretManager.AccessMode mode = needBlockToken? BlockTokenSecretManager.AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
-      System.out.println("");
+      LOG.info("");
       final BlockInfo last = blocks[blocks.length - 1];
       final long lastPos = last.isComplete()?
           fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
@@ -1973,7 +1978,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     // Now check for completion of blocks and safe block count
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
-    int numCurrentReplica = numLiveReplicas //[thesis] confirm this value!
+    int numCurrentReplica = numLiveReplicas + curReplicaDelta//[thesis] confirm this value!
       + pendingReplications.getNumReplicas(storedBlock);
    
 
