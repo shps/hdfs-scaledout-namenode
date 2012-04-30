@@ -1015,7 +1015,64 @@ public class INodeHelper {
 	  }
 	      );
 	}
+    
+    
+    /**Updates the access time of an inode in the database
+     * @param inodeid
+     * @param modTime
+     */
+    public static void updateAccessTime(long inodeid, long aTime, boolean isTransactional) throws ClusterJException
+    {
+             DBConnector.checkTransactionState(isTransactional);
+    
+    if (isTransactional)
+    {
+        Session session = DBConnector.obtainSession();
+        updateAccessTimeInternal(session, inodeid, aTime);
+        session.flush();
+    }
+    else
+        updateAccessTimeWithTransaction(inodeid, aTime);
+    }
+    
+    /**Updates the access time of an inode in the database
+     * @param inodeid
+     * @param modTime
+     */
+    private static void updateAccessTimeWithTransaction(long inodeid, long aTime) {
+      boolean done = false;
+      int tries = RETRY_COUNT;
 
+      Session session = DBConnector.obtainSession();
+      Transaction tx = session.currentTransaction();
+      while (done == false && tries > 0) {
+        try {
+          tx.begin();
+          updateAccessTimeInternal(session, inodeid, aTime);
+          tx.commit();
+          done = true;
+          session.flush();
+        } catch (ClusterJException e) {
+          if (tx.isActive()) {
+            tx.rollback();
+          }
+          e.printStackTrace();
+          tries--;
+        }
+      }
+
+    }
+
+    /**Internal function for updating the access time of an inode in the database
+     * @param session
+     * @param inodeid
+     * @param modTime
+     */
+    private static void updateAccessTimeInternal(Session session, long inodeid, long aTime) throws ClusterJException{
+            INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
+            inodet.setATime(aTime);
+            session.updatePersistent(inodet);
+    }
 
 
 }
