@@ -607,7 +607,6 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
-			<!-- TODO --><exclude>**/TestDistributedFileSystem.java</exclude>
 			<!-- TODO --><exclude>**/TestLeaseRecovery2.java</exclude>
 			<!-- TODO --><exclude>**/TestLeaseRecovery.java</exclude>
 			<!-- TODO --><exclude>**/TestFileAppend.java</exclude>
@@ -615,7 +614,6 @@
 			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
-			<!-- TODO--><exclude>**/TestSetTimes.java</exclude>
 			<!-- TODO--><exclude>**/TestWriteRead.java</exclude>
 			<!-- TODO--><exclude>**/TestMultiThreadedHflush.java</exclude>
 			<!-- TODO--><exclude>**/TestPread.java</exclude>
@@ -623,7 +621,6 @@
 			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
-			<!-- TODO--><exclude>**/TestFileStatus.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
 			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
@@ -635,7 +632,6 @@
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
-			<!-- TODO--><exclude>**/TestSmallBlock.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->
