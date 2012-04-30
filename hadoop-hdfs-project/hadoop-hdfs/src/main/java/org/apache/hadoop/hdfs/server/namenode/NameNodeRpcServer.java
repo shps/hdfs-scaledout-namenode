@@ -324,7 +324,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       }
     }
     LocatedBlock locatedBlock = 
-      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
+      namesystem.getAdditionalBlockWithTransaction(src, clientName, previous, excludedNodesSet);
     if (locatedBlock != null)
       metrics.incrAddBlockOps();
     return locatedBlock;
@@ -477,8 +477,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
     }
-    //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
-    boolean ret = namesystem.delete(src, recursive, false);
+    
+    boolean ret = namesystem.deleteWithTransaction(src, recursive);
     if (ret) 
       metrics.incrDeleteFileOps();
     return ret;

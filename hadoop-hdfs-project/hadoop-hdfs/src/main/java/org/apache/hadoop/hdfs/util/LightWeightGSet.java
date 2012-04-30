@@ -116,7 +116,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 		return r;
 	}
 
-	/*@Override
+	
 	public E get_old(final K key) {
 		//validate key
 		if (key == null) {
@@ -132,7 +132,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 		}
 		//element not found
 		return null;
-	}*/
+	}
 
 
 	/*KTHFS method for getting a BlockInfo from the database*/
@@ -151,9 +151,13 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	public boolean contains(final K key) {
 		return get(key) != null;
 	}
+        
+	public boolean containsOld(final K key) {
+		return get_old(key) != null;
+	}
 
 
-	/*public E put_old(final E element) {
+	public E put_old(final E element) {
 		//validate element
 		if (element == null) {
 			throw new NullPointerException("Null element is not supported.");
@@ -169,7 +173,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 		final int index = getIndex(element);
 
 		//remove if it already exists
-		final E existing = remove(index, element);
+		final E existing = remove_old(index, element);
 
 		//insert the element to the head of the linked list
 		modification++;
@@ -178,23 +182,6 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 		entries[index] = e;
 
 		return existing;
-	}*/
-
-	/*KTHFS method for putting a BlockInfo into the database*/
-        @Deprecated
-	public E putOld(final E element) {
-		
-		//TODO: use functions from BlocksHelper
-		BlockInfo binfo = (BlockInfo)element;
-		
-		BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
-		BlocksHelper.putBlockInfo(binfo, false);
-		if(existing == null) {
-			return null;
-		}
-		else {
-			return (E)existing;
-		}
 	}
         
         @Override
@@ -223,7 +210,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	 * @return If such element exists, return it.
 	 *         Otherwise, return null.
 	 */
-/*	private E remove_old(final int index, final K key) {
+	public E remove_old(final int index, final K key) {
 		if (entries[index] == null) {
 			return null;
 		} else if (entries[index].equals(key)) {
@@ -254,7 +241,16 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 			//element not found
 			return null;
 		}
-	}*/
+	}
+        
+        @Deprecated
+	public E removeOld(final K key) {
+		//validate key
+		if (key == null) {
+			throw new NullPointerException("key == null");
+		}
+		return remove_old(getIndex(key), key);
+	}
 
 	@SuppressWarnings("unchecked")
 	private E remove(final int index, final K key, boolean isTransactional) {
