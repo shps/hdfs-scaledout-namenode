@@ -670,13 +670,13 @@
 			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestStreamFile.java</exclude>
 			<exclude>**/org/apache/hadoop/fs/permission/TestStickyBit.java</exclude>
 			<exclude>**/org/apache/hadoop/fs/TestFcHdfsSymlink.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDFSMkdirs.java</exclude>
+			<!-- FIXED <exclude>**/org/apache/hadoop/hdfs/TestDFSMkdirs.java</exclude>-->
 			<exclude>**/org/apache/hadoop/hdfs/TestSafeMode.java</exclude>
 			<exclude>**/org/apache/hadoop/tools/TestJMXGet.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDeleteBlockPool.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlocksWithNotEnoughRacks.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestOverReplicatedBlocks.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileCreationDelete.java</exclude>
+			<!-- FIXED <exclude>**/org/apache/hadoop/hdfs/TestFileCreationDelete.java</exclude> -->
 			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestFsck.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDiskError.java</exclude>
 			<exclude>**/org/apache/hadoop/hdfs/TestRestartDFS.java</exclude>
