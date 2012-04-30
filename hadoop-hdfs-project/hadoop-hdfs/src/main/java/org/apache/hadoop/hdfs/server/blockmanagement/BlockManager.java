@@ -525,6 +525,7 @@ public class BlockManager {
     fileINode.setBlock(blkIndex, completeBlock, isTransactional);
     // replace block in the blocksMap
     
+    //TODO: [W] remove ReplicaUnderConstruction from DB here
     return blocksMap.replaceBlock(completeBlock, isTransactional);
   }
 
@@ -808,7 +809,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final boolean isFileUnderConstruction,
       final long offset, final long length, final boolean needBlockToken
       ) throws IOException {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {

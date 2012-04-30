@@ -865,7 +865,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               continue;
             }
           }
-          dir.setTimes(src, inode, -1, now, false); //TODO: KTHFS W: change the setTime method of INodes
+          dir.setTimes(src, inode, -1, now, false);
         }
         return blockManager.createLocatedBlocks(inode.getBlocks(),
             inode.computeFileSize(false),
