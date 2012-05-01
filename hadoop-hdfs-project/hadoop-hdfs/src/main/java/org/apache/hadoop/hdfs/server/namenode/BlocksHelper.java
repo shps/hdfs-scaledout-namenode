@@ -231,7 +231,11 @@ public class BlocksHelper {
         public static void putBlockInfo(BlockInfo binfo, boolean isTransactional) {
             DBConnector.checkTransactionState(isTransactional);
             if (isTransactional)
-                putBlockInfo(binfo, DBConnector.obtainSession());
+            {
+                Session session = DBConnector.obtainSession();
+                putBlockInfo(binfo, session);
+                session.flush();
+            }
             else
                 putBlockInfoWithTransaction(binfo);
 	}
@@ -287,14 +291,14 @@ public class BlocksHelper {
 	 * @param binfo BlockInfo object that already exists in the database
 	 */
 	public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
-            Session session = DBConnector.obtainSession();
-            boolean isActive = session.currentTransaction().isActive();
-            assert isActive == isTransactional : 
-                    "Current transaction's isActive value is " + isActive + 
-                    " but isTransactional's value is " + isTransactional;
+            DBConnector.checkTransactionState(isTransactional);
             
             if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
                 updateIndex(idx, binfo, session);
+                session.flush();
+            }
             else
                 updateIndexWithTransaction(idx, binfo);
         }
@@ -350,7 +354,11 @@ public class BlocksHelper {
             DBConnector.checkTransactionState(isTransactional);
             
             if (isTransactional)
-                updateBlockInfoTable(iNodeID, binfo, DBConnector.obtainSession());
+            {
+                Session session = DBConnector.obtainSession();
+                updateBlockInfoTable(iNodeID, binfo, session);
+                session.flush();
+            }
             else
                 updateBlockInfoInDBWithTransaction(iNodeID, binfo);
         }
@@ -423,12 +431,13 @@ public class BlocksHelper {
 		while (done == false && tries > 0) {
 			try {
 				BlockInfo[] ret = getBlocksArrayInternal(inode, session);
+                                session.flush(); //Sets INode inside
 				done=true;
 				return ret;
 			}
 			catch (ClusterJException e){
 				//System.err.println("getBlocksArray failed " + e.getMessage());
-				e.printStackTrace();
+				LOG.error(e.getMessage(), e);
 				tries--;
 			}
 
@@ -487,14 +496,14 @@ public class BlocksHelper {
          * @param name 
          */
 	public static void setDatanode(long blockId, int index, String name, String storageId, boolean isTransactional) {
-            Session session = DBConnector.obtainSession();
-            boolean isActive = session.currentTransaction().isActive();
-            assert isActive == isTransactional : 
-                    "Current transaction's isActive value is " + isActive + 
-                    " but isTransactional's value is " + isTransactional;
+            DBConnector.checkTransactionState(isTransactional);
             
             if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
                 setDatanodeInternal(blockId, index, name, storageId, session);
+                session.flush();
+            }
             else
                 setDatanodeWithTransaction(blockId, index, name, storageId);
         }
@@ -1187,7 +1196,6 @@ public class BlocksHelper {
 	 */
 	private static void updateBlockInfoTableInternal(Session session, BlockInfoTable bit) {
 		session.updatePersistent(bit);
-                session.flush();
 	}
 
 	/** Fetches all rows from the Triplets table using datanodeName and blockId

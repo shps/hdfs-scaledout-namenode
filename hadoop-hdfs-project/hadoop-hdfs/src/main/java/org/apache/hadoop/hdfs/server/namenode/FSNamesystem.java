@@ -1724,6 +1724,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
                        IOException
   {
+    writeLock();
     boolean isDone = false;
     int tries = DBConnector.RETRY_COUNT;
     LocatedBlock result = null;
@@ -1750,6 +1751,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     finally
     {
         DBConnector.safeRollback();
+        writeUnlock();
     }
     
     return result;
@@ -1789,7 +1791,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           +src+" for "+clientName);
     }
 
-    writeLock();
+    if (!isTransactional)
+        writeLock();
     try{
         
       if (isInSafeMode()) {
@@ -1848,7 +1851,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dn.incBlocksScheduled();
       }
     } finally {
-      writeUnlock();
+        if (!isTransactional)
+            writeUnlock();
     }
 
     // Create next block
@@ -2352,27 +2356,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean deleteWithTransaction(String src, boolean recursive)
         throws AccessControlException, SafeModeException,
                UnresolvedLinkException, IOException {
-      boolean isDone = false;
       boolean status = false;
-      int tries = DBConnector.RETRY_COUNT;
-      while(!isDone && tries > 0)
+      writeLock();
+      try
       {
-          try
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          while(!isDone && tries > 0)
           {
-              DBConnector.beginTransaction();
-              status = delete(src, recursive, true);
-              DBConnector.commit();
-              isDone = true;
-          }
-          catch (ClusterJException e)
-          {
-              LOG.error(e.getMessage(), e);
-              tries--;
-              DBConnector.safeRollback();
-              status = false;
+              try
+              {
+                  DBConnector.beginTransaction();
+                  status = delete(src, recursive, true);
+                  DBConnector.commit();
+                  isDone = true;
+              }
+              catch (ClusterJException e)
+              {
+                  LOG.error(e.getMessage(), e);
+                  tries--;
+                  DBConnector.safeRollback();
+                  status = false;
+              }
           }
       }
-      
+      finally
+      {
+          writeUnlock();
+          DBConnector.safeRollback();
+      }
       return status;
     }
   
@@ -2414,8 +2426,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
              IOException {
     boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
-
-    writeLock();
+    
+    if (!isTransactional)
+        writeLock();
     try {
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot delete " + src, safeMode);
@@ -2448,7 +2461,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         removeBlocks(collectedBlocks, isTransactional); // Incremental deletion of blocks
       }
     } finally {
-      writeUnlock();
+      if (!isTransactional)
+        writeUnlock();
     }
     collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
