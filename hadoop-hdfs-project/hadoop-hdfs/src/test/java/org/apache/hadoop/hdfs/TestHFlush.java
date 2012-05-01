@@ -28,15 +28,17 @@ import org.apache.log4j.Level;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import java.io.InterruptedIOException;
 import java.io.IOException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /** Class contains a set of tests to verify the correctness of 
  * newly introduced {@link FSDataOutputStream#hflush()} method */
 public class TestHFlush {
+  static final Log LOG = LogFactory.getLog(TestHFlush.class);
   {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
@@ -112,12 +114,12 @@ public class TestHFlush {
       Path path = new Path(fileName);
       FSDataOutputStream stm = fileSystem.create(path, false, 4096, replicas,
           block_size);
-      System.out.println("Created file " + fileName);
+      LOG.info("Created file " + fileName);
 
       int tenth = AppendTestUtil.FILE_SIZE/SECTIONS;
       int rounding = AppendTestUtil.FILE_SIZE - tenth * SECTIONS;
       for (int i=0; i<SECTIONS; i++) {
-        System.out.println("Writing " + (tenth * i) + " to " + (tenth * (i+1)) + " section to file " + fileName);
+        LOG.info("Writing " + (tenth * i) + " to " + (tenth * (i+1)) + " section to file " + fileName);
         // write to the file
         stm.write(fileContent, tenth * i, tenth);
         // Wait while hflush() pushes all packets through built pipeline
@@ -129,12 +131,12 @@ public class TestHFlush {
         is = fileSystem.open(path);
         is.seek(tenth * i);
         int readBytes = is.read(toRead, 0, tenth);
-        System.out.println("Has read " + readBytes);
+        LOG.info("Has read " + readBytes);
         assertTrue("Should've get more bytes", (readBytes > 0) && (readBytes <= tenth));
         is.close();
         checkData(toRead, 0, readBytes, expected, "Partial verification");
       }
-      System.out.println("Writing " + (tenth * SECTIONS) + " to " + (tenth * SECTIONS + rounding) + " section to file " + fileName);
+      LOG.info("Writing " + (tenth * SECTIONS) + " to " + (tenth * SECTIONS + rounding) + " section to file " + fileName);
       stm.write(fileContent, tenth * SECTIONS, rounding);
       stm.close();
 
@@ -170,7 +172,7 @@ public class TestHFlush {
         timeout);
 
     final Path p = new Path("/pipelineHeartbeat/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
@@ -184,7 +186,7 @@ public class TestHFlush {
       stm.write(fileContents, 0, 1);
       Thread.sleep(timeout);
       stm.hflush();
-      System.out.println("Wrote 1 byte and hflush " + p);
+      LOG.info("Wrote 1 byte and hflush " + p);
 
       // write another byte
       Thread.sleep(timeout);
@@ -220,7 +222,7 @@ public class TestHFlush {
     Configuration conf = new HdfsConfiguration();
     final Path p = new Path("/hflush-interrupted");
 
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
@@ -238,7 +240,7 @@ public class TestHFlush {
         // still have interrupted status.
         assertTrue(Thread.currentThread().interrupted());
       } catch (InterruptedIOException ie) {
-        System.out.println("Got expected exception during flush");
+        LOG.info("Got expected exception during flush");
       }
       assertFalse(Thread.currentThread().interrupted());
 
@@ -260,7 +262,7 @@ public class TestHFlush {
         // still have interrupted status.
         assertTrue(Thread.currentThread().interrupted());
       } catch (InterruptedIOException ioe) {
-        System.out.println("Got expected exception during close");
+        LOG.info("Got expected exception during close");
         // If we got the exception, we shouldn't have interrupted status anymore.
         assertFalse(Thread.currentThread().interrupted());
 

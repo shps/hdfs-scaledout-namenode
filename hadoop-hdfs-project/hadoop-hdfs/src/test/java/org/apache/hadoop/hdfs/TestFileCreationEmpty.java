@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import java.util.ConcurrentModificationException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
  * Test empty file creation.
  */
 public class TestFileCreationEmpty extends junit.framework.TestCase {
+  static final Log LOG = LogFactory.getLog(TestFileCreationEmpty.class);
   private boolean isConcurrentModificationException = false;
 
   /**
@@ -46,7 +49,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
       }
     });
 
-    System.out.println("testLeaseExpireEmptyFiles start");
+    LOG.info("testLeaseExpireEmptyFiles start");
     final long leasePeriod = 1000;
     final int DATANODE_NUM = 3;
 

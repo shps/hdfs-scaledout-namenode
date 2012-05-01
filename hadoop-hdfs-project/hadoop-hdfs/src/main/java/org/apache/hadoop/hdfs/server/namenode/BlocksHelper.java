@@ -465,18 +465,18 @@ public class BlocksHelper {
 	 */
 	public static class BlockInfoComparator implements Comparator<BlockInfo> {
 
-		/*
+	  /*
 		@Override
 		public int compare(BlockInfo o1, BlockInfo o2) {
 			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
 		}
-		 * 
-		 */
-		@Override
-		/* For this to work, ensure that by default value for column BlockIndex in table [BlockInfo] is -1 */
-		public int compare(BlockInfo o1, BlockInfo o2) {
-			return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
-		}
+	   * 
+	   */
+	  @Override
+	  /* For this to work, ensure that by default value for column BlockIndex in table [BlockInfo] is -1 */
+	  public int compare(BlockInfo o1, BlockInfo o2) {
+	    return o1.getTimestamp() < o2.getTimestamp() ? -1 : 1;
+	  }
 
 	}
 
@@ -486,7 +486,7 @@ public class BlocksHelper {
          * @param index
          * @param name 
          */
-	public static void setDatanode(long blockId, int index, String name, boolean isTransactional) {
+	public static void setDatanode(long blockId, int index, String name, String storageId, boolean isTransactional) {
             Session session = DBConnector.obtainSession();
             boolean isActive = session.currentTransaction().isActive();
             assert isActive == isTransactional : 
@@ -494,13 +494,13 @@ public class BlocksHelper {
                     " but isTransactional's value is " + isTransactional;
             
             if (isTransactional)
-                setDatanodeInternal(blockId, index, name, session);
+                setDatanodeInternal(blockId, index, name, storageId, session);
             else
-                setDatanodeWithTransaction(blockId, index, name);
+                setDatanodeWithTransaction(blockId, index, name, storageId);
         }
         
 	/** Update the DataNode in the triplets table. This begins a new transaction.*/
-	private static void setDatanodeWithTransaction(long blockId, int index, String name) {
+	private static void setDatanodeWithTransaction(long blockId, int index, String name, String storageId) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -509,7 +509,7 @@ public class BlocksHelper {
 		while (done == false && tries > 0) {
 			try {
 				tx.begin();
-				setDatanodeInternal(blockId, index, name, session);
+				setDatanodeInternal(blockId, index, name, storageId, session);
 				tx.commit();
 				session.flush();
 				done=true;
@@ -523,13 +523,14 @@ public class BlocksHelper {
 		}
 	}	
 
-	private  static void setDatanodeInternal(long blockId, int index, String name, Session session) {
+	private  static void setDatanodeInternal(long blockId, int index, String name, String storageId, Session session) {
 
 		TripletsTable triplet = selectTriplet(session, blockId, index);
 		//TODO: [thesis] this update can be done in one shot TODO TODO TODO
 		if (triplet != null) {
 			LOG.debug("WASIF triplet exists for blkid:"+blockId + "index:" + index);
 			triplet.setDatanodeName(name);
+                        triplet.setStorageId(storageId);
 			triplet.setIndex(index);
 			insertTriplet(session, triplet, true);
 		}
@@ -538,6 +539,7 @@ public class BlocksHelper {
 			TripletsTable newTriplet = session.newInstance(TripletsTable.class);
 			newTriplet.setBlockId(blockId);
 			newTriplet.setDatanodeName(name);
+                        newTriplet.setStorageId(storageId);
 			newTriplet.setIndex(index);
 			insertTriplet(session, newTriplet, true); //TODO: this should be false rite?
 		}
@@ -566,8 +568,8 @@ public class BlocksHelper {
 	private static DatanodeDescriptor getDataDescriptorInternal(long blockId, int index, Session session){
 		TripletsTable triplet = selectTriplet(session, blockId, index);
 
-		if (triplet != null && triplet.getDatanodeName() != null) {
-			DatanodeDescriptor ret = dnm.getDatanodeByName(triplet.getDatanodeName());
+		if (triplet != null && triplet.getStorageId() != null) {
+			DatanodeDescriptor ret = dnm.getDatanode(triplet.getStorageId());
 			return ret;
 		}
 		return null;
@@ -599,7 +601,7 @@ public class BlocksHelper {
 		DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
 		int i = 0;
 		for (TripletsTable t: result){
-			DatanodeID dn = new DatanodeID(t.getDatanodeName());
+			DatanodeID dn = new DatanodeID(t.getDatanodeName(), t.getStorageId(), -1, -1);
 			nodeDescriptor[i] = new DatanodeDescriptor(dn);
 			i++;
 		}
@@ -698,6 +700,7 @@ public class BlocksHelper {
 				TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
 				replacementEntry.setBlockId(t.getBlockId());
 				replacementEntry.setDatanodeName(t.getDatanodeName());
+                                replacementEntry.setStorageId(t.getStorageId());
 				replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
 				deleteTriplet(session, t.getBlockId(), t.getIndex());
 				insertTriplet(session, replacementEntry, false);
@@ -775,6 +778,7 @@ public class BlocksHelper {
                                     TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
                                     replacementEntry.setBlockId(t.getBlockId());
                                     replacementEntry.setDatanodeName(t.getDatanodeName());
+                                    replacementEntry.setStorageId(t.getStorageId());
                                     replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
                                     deleteTriplet(session, t.getBlockId(), t.getIndex());
                                     insertTriplet(session, replacementEntry, false);
@@ -823,7 +827,7 @@ public class BlocksHelper {
 	public static INode getInodeFromBlockId (long blockId) {
 		Session session = DBConnector.obtainSession();
 		BlockInfoTable blockInfoTable = selectBlockInfo(session, blockId);
-		return INodeHelper.getINode(blockInfoTable.getINodeID());
+		return (blockInfoTable == null)? null : INodeHelper.getINode(blockInfoTable.getINodeID());
 	}
 
 	public static int getTripletsIndex(DatanodeDescriptor node, long blockId) 
@@ -1129,11 +1133,12 @@ public class BlocksHelper {
 	private static void insertTriplet(Session session, boolean update,
 			long blkid,
 			int index, 
-			String datanodeName) {
+			String datanodeName, String storageId) {
 		TripletsTable tt = session.newInstance(TripletsTable.class);
 		tt.setBlockId(blkid);
 		tt.setIndex(index);
 		tt.setDatanodeName(datanodeName);
+                tt.setStorageId(storageId);
 		insertTriplet(session, tt, update);
 	}
 

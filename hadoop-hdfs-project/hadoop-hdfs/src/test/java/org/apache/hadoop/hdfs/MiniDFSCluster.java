@@ -546,7 +546,7 @@ public class MiniDFSCluster {
     String rpcEngineName = System.getProperty("hdfs.rpc.engine");
     if (rpcEngineName != null && !"".equals(rpcEngineName)) {
       
-      System.out.println("HDFS using RPCEngine: "+rpcEngineName);
+      LOG.info("HDFS using RPCEngine: "+rpcEngineName);
       try {
         Class<?> rpcEngine = conf.getClassByName(rpcEngineName);
         setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
@@ -1006,17 +1006,17 @@ public class MiniDFSCluster {
         dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
             simulatedCapacities[i-curDatanodesNum]);
       }
-      System.out.println("Starting DataNode " + i + " with "
+      LOG.info("Starting DataNode " + i + " with "
                          + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": "
                          + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
       if (hosts != null) {
         dnConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, hosts[i - curDatanodesNum]);
-        System.out.println("Starting DataNode " + i + " with hostname set to: " 
+        LOG.info("Starting DataNode " + i + " with hostname set to: " 
                            + dnConf.get(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY));
       }
       if (racks != null) {
         String name = hosts[i - curDatanodesNum];
-        System.out.println("Adding node with hostname : " + name + " to rack "+
+        LOG.info("Adding node with hostname : " + name + " to rack "+
                             racks[i-curDatanodesNum]);
         StaticMapping.addNodeToRack(name,
                                     racks[i-curDatanodesNum]);
@@ -1034,7 +1034,7 @@ public class MiniDFSCluster {
       String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();
       if (racks != null) {
         int port = dn.getSelfAddr().getPort();
-        System.out.println("Adding node with IP:port : " + ipAddr + ":" + port+
+        LOG.info("Adding node with IP:port : " + ipAddr + ":" + port+
                             " to rack " + racks[i-curDatanodesNum]);
         StaticMapping.addNodeToRack(ipAddr + ":" + port,
                                   racks[i-curDatanodesNum]);
@@ -1230,7 +1230,7 @@ public class MiniDFSCluster {
    * Shutdown all the nodes in the cluster.
    */
   public void shutdown() {
-    System.out.println("Shutting down the Mini HDFS Cluster");
+    LOG.info("Shutting down the Mini HDFS Cluster");
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : writingNameNodes) {
       NameNode nameNode = nnInfo.nameNode;
@@ -1283,7 +1283,7 @@ public class MiniDFSCluster {
   public synchronized void shutdownNameNode(int nnIndex) {
     NameNode nn = writingNameNodes[nnIndex].nameNode;
     if (nn != null) {
-      System.out.println("Shutting down the namenode");
+      LOG.info("Shutting down the namenode");
       nn.stop();
       nn.join();
       Configuration conf = writingNameNodes[nnIndex].conf;
@@ -1327,9 +1327,9 @@ public class MiniDFSCluster {
     writingNameNodes[nnIndex] = new NameNodeInfo(nn, conf);
     if (waitActive) {
       waitClusterUp();
-      System.out.println("Restarted the namenode");
+      LOG.info("Restarted the namenode");
       waitActive();
-      System.out.println("Cluster is active");
+      LOG.info("Cluster is active");
     }
   }
 
@@ -1405,7 +1405,7 @@ public class MiniDFSCluster {
     }
     DataNodeProperties dnprop = dataNodes.remove(i);
     DataNode dn = dnprop.datanode;
-    System.out.println("MiniDFSCluster Stopping DataNode " + 
+    LOG.info("MiniDFSCluster Stopping DataNode " + 
                        dn.getMachineName() +
                        " from a total of " + (dataNodes.size() + 1) + 
                        " datanodes.");
@@ -1494,7 +1494,7 @@ public class MiniDFSCluster {
     for (int i = dataNodes.size() - 1; i >= 0; i--) {
       if (!restartDataNode(i, keepPort))
         return false;
-      System.out.println("Restarted DataNode " + i);
+      LOG.info("Restarted DataNode " + i);
     }
     return true;
   }
@@ -1684,7 +1684,7 @@ public class MiniDFSCluster {
           failedCount++;
           // Cached RPC connection to namenode, if any, is expected to fail once
           if (failedCount > 1) {
-            System.out.println("Tried waitActive() " + failedCount
+            LOG.info("Tried waitActive() " + failedCount
                 + " time(s) and failed, giving up.  "
                 + StringUtils.stringifyException(e));
             throw e;

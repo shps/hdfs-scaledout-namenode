@@ -607,111 +607,84 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
-
-			<!-- DFS Upgrade Unit tests that we don't mind-->
-			<exclude>**/TestDFSFinalize.java</exclude>
-			<exclude>**/TestDFSRollback.java</exclude>
-			<exclude>**/TestDFSStartupVersions.java</exclude>
-			
-			<!-- Hooman told it fails anyway-->
-			<exclude>**/TestLeaseRecovery2.java</exclude>
-
-			<exclude>**/org/apache/hadoop/fs/loadGenerator/TestLoadGenerator.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend3.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestLeaseRecovery.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/util/TestGSet.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDirectoryScanner.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestHDFSTrash.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDistributedFileSystem.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestFsLimits.java</exclude>
-			<exclude>**/org/apache/hadoop/security/TestRefreshUserMappings.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/viewfs/TestViewFsFileStatusHdfs.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestUnderReplicatedBlocks.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDatanodeJsp.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestNodeCount.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestHFlush.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/balancer/TestBalancer.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestHost2NodesMap.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestInterDatanodeProtocol.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureReporting.java</exclude>
-			<exclude>**/org/apache/hadoop/security/TestPermission.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDFSStorageStateRecovery.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/TestFcHdfsPermission.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/TestResolveHdfsSymlink.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/balancer/TestBalancerWithMultipleNameNodes.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestDecommissioningStatus.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestRenameWhileOpen.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDfsOverAvroRpc.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestListCorruptFileBlocks.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestSetTimes.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestInjectionForSimulatedStorage.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestAbandonBlock.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestWriteRead.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/TestHDFSFileContextMainOperations.java</exclude>
-			<!-- FIXED <exclude>**/org/apache/hadoop/hdfs/TestGetBlocks.java</exclude> -->
-			<exclude>**/org/apache/hadoop/hdfs/TestClientProtocolForPipelineRecovery.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestFileLimit.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestMultiThreadedHflush.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestPread.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestLargeDirectoryDelete.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestHDFSFileSystemContract.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/common/TestDistributedUpgrade.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/tools/TestGetGroups.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDatanodeDeath.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDatanodeBlockScanner.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileStatus.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestBlockReport.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestReplicasMap.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDecommission.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestCrcCorruption.java</exclude>
-			<!-- FIXED <exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockTokenWithDFS.java</exclude> -->
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestStreamFile.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/permission/TestStickyBit.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/TestFcHdfsSymlink.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDFSMkdirs.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestSafeMode.java</exclude>
-			<exclude>**/org/apache/hadoop/tools/TestJMXGet.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDeleteBlockPool.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlocksWithNotEnoughRacks.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestOverReplicatedBlocks.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileCreationDelete.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestFsck.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDiskError.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestRestartDFS.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestBlockManager.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestReadWhileWriting.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestHDFSConcat.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend2.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileAppend4.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileConcurrentReader.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestListFilesInFileContext.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/viewfs/TestViewFsHdfs.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileCreationNamenodeRestart.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestSmallBlock.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/metrics/TestNNMetricFilesInGetListingOps.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestClientReportBadBlock.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestQuota.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/blockmanagement/TestDatanodeDescriptor.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestDeadDatanode.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestMetaSave.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDatanodeRestart.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestWriteConfigurationToDFS.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestFileCorruption.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDFSShell.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestModTime.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/TestGlobPaths.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDataTransferProtocol.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/namenode/TestNNThroughputBenchmark.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/TestDFSUpgradeFromImage.java</exclude>
-			<exclude>**/org/apache/hadoop/fs/viewfs/TestViewFileSystemHdfs.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeVolumeFailureToleration.java</exclude>
-			<exclude>**/org/apache/hadoop/cli/TestHDFSCLI.java</exclude>
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
-			<exclude>**/org/apache/hadoop/hdfs/server/datanode/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
-			<exclude>**/org/apache/hadoop/hdfs/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN -->
-			<exclude>**/TestBlockReplacement.java</exclude> <!--Needs to be fixed -->
+			<!-- TODO --><exclude>**/TestLeaseRecovery2.java</exclude>
+			<!-- TODO --><exclude>**/TestLeaseRecovery.java</exclude>
+			<!-- TODO --><exclude>**/TestFileAppend.java</exclude>
+			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
+			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
+			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
+			<!-- TODO--><exclude>**/TestWriteRead.java</exclude>
+			<!-- TODO--><exclude>**/TestMultiThreadedHflush.java</exclude>
+			<!-- TODO--><exclude>**/TestPread.java</exclude>
+			<!-- TODO--><exclude>**/TestHDFSFileSystemContract.java</exclude>
+			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
+			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
+			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
+			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
+			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
+			<!-- TODO--><exclude>**/TestFsck.java</exclude>
+			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
+			<!-- TODO--><exclude>**/TestReadWhileWriting.java</exclude>
+			<!-- TODO--><exclude>**/TestHDFSConcat.java</exclude><!--atomic transaction for concat is needed-->
+			<!-- TODO--><exclude>**/TestFileAppend2.java</exclude><!--recovery-id-->
+			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->>
+			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
+			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
+			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
+			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
+			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
+			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->
+			<!-- TODO--><exclude>**/TestDataTransferProtocol.java</exclude>
+			<!-- TODO--><exclude>**/TestBlockReplacement.java</exclude> <!--Needs to be fixed -->
+			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
+			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
+			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
+			<exclude>**/TestFileAppend3.java</exclude>
+			<exclude>**/TestDirectoryScanner.java</exclude>
+			<exclude>**/TestFsLimits.java</exclude>
+			<exclude>**/TestRefreshUserMappings.java</exclude>
+			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
+			<exclude>**/TestDatanodeJsp.java</exclude>
+			<exclude>**/TestBalancer.java</exclude>
+			<exclude>**/TestDFSStorageStateRecovery.java</exclude>
+			<exclude>**/TestResolveHdfsSymlink.java</exclude>
+			<exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
+			<exclude>**/TestDecommissioningStatus.java</exclude>
+			<exclude>**/TestDfsOverAvroRpc.java</exclude>
+			<exclude>**/TestListCorruptFileBlocks.java</exclude>
+			<exclude>**/TestInjectionForSimulatedStorage.java</exclude>
+			<exclude>**/TestNameNodeMetrics.java</exclude>
+			<exclude>**/TestHDFSFileContextMainOperations.java</exclude>
+			<exclude>**/TestClientProtocolForPipelineRecovery.java</exclude>
+			<exclude>**/TestFileLimit.java</exclude>
+			<exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
+			<exclude>**/TestDistributedUpgrade.java</exclude>
+			<exclude>**/TestDecommission.java</exclude>
+			<exclude>**/TestCrcCorruption.java</exclude>
+			<exclude>**/TestFcHdfsSymlink.java</exclude>
+			<exclude>**/TestSafeMode.java</exclude>
+			<exclude>**/TestJMXGet.java</exclude>
+			<exclude>**/TestDeleteBlockPool.java</exclude>
+			<exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
+			<exclude>**/TestOverReplicatedBlocks.java</exclude>
+			<exclude>**/TestDiskError.java</exclude>
+			<exclude>**/TestRestartDFS.java</exclude><!--Datanode storage-id should get persisted -->
+			<exclude>**/TestViewFsHdfs.java</exclude>
+			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
+			<exclude>**/TestQuota.java</exclude>
+			<exclude>**/TestMetaSave.java</exclude>
+			<exclude>**/TestWriteConfigurationToDFS.java</exclude>
+			<exclude>**/TestFileCorruption.java</exclude>
+			<exclude>**/TestModTime.java</exclude>
+			<exclude>**/TestGlobPaths.java</exclude>
+			<exclude>**/TestNNThroughputBenchmark.java</exclude>
+			<exclude>**/TestDFSUpgradeFromImage.java</exclude>
+			<exclude>**/TestViewFileSystemHdfs.java</exclude>
+			<exclude>**/TestDataNodeVolumeFailureToleration.java</exclude>
+			<exclude>**/TestHDFSCLI.java</exclude>
+			<exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
+			<exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
+			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
           </excludes>
         </configuration>
       </plugin>

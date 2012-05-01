@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 import java.net.URL;
 import java.util.Collection;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
@@ -38,7 +39,7 @@ import org.junit.Test;
 
 /** A JUnit test for corrupt_files.jsp */
 public class TestCorruptFilesJsp  {
-
+ static final Log LOG = LogFactory.getLog(TestCorruptFilesJsp.class);
   @Test
   public void testCorruptFilesJsp() throws Exception {
     MiniDFSCluster cluster = null;
@@ -61,7 +62,7 @@ public class TestCorruptFilesJsp  {
 
       // create files
       for (Path filepath : filepaths) {
-    	  System.out.println("filepath:"+filepath);
+    	  LOG.info("filepath:"+filepath);
         DFSTestUtil.createFile(fs, filepath, FILE_SIZE, (short) 1, 0L);
         DFSTestUtil.waitReplication(fs, filepath, (short) 1);
       }

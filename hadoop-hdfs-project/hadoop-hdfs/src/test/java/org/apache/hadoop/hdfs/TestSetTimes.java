@@ -30,12 +30,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * This class tests the access time on files.
  *
  */
 public class TestSetTimes extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestSetTimes.class);  
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
@@ -66,10 +69,9 @@ public class TestSetTimes extends TestCase {
   }
 
   private void printDatanodeReport(DatanodeInfo[] info) {
-    System.out.println("-------------------------------------------------");
+    LOG.info("-------------------------------------------------");
     for (int i = 0; i < info.length; i++) {
-      System.out.println(info[i].getDatanodeReport());
-      System.out.println();
+      LOG.info(info[i].getDatanodeReport());
     }
   }
 
@@ -102,14 +104,14 @@ public class TestSetTimes extends TestCase {
       //
       // create file and record atime/mtime
       //
-      System.out.println("Creating testdir1 and testdir1/test1.dat.");
+      LOG.info("Creating testdir1 and testdir1/test1.dat.");
       Path dir1 = new Path("testdir1");
       Path file1 = new Path(dir1, "test1.dat");
       FSDataOutputStream stm = writeFile(fileSys, file1, replicas);
       FileStatus stat = fileSys.getFileStatus(file1);
       long atimeBeforeClose = stat.getAccessTime();
       String adate = dateForm.format(new Date(atimeBeforeClose));
-      System.out.println("atime on " + file1 + " before close is " + 
+      LOG.info("atime on " + file1 + " before close is " + 
                          adate + " (" + atimeBeforeClose + ")");
       assertTrue(atimeBeforeClose != 0);
       stm.close();
@@ -119,9 +121,9 @@ public class TestSetTimes extends TestCase {
       long mtime1 = stat.getModificationTime();
       adate = dateForm.format(new Date(atime1));
       String mdate = dateForm.format(new Date(mtime1));
-      System.out.println("atime on " + file1 + " is " + adate + 
+      LOG.info("atime on " + file1 + " is " + adate + 
                          " (" + atime1 + ")");
-      System.out.println("mtime on " + file1 + " is " + mdate + 
+      LOG.info("mtime on " + file1 + " is " + mdate + 
                          " (" + mtime1 + ")");
       assertTrue(atime1 != 0);
 
@@ -140,7 +142,7 @@ public class TestSetTimes extends TestCase {
       stat = fileSys.getFileStatus(file1);
       long atime3 = stat.getAccessTime();
       String adate3 = dateForm.format(new Date(atime3));
-      System.out.println("new atime on " + file1 + " is " + 
+      LOG.info("new atime on " + file1 + " is " + 
                          adate3 + " (" + atime3 + ")");
       assertTrue(atime2 == atime3);
       assertTrue(mtime1 == stat.getModificationTime());
@@ -153,7 +155,7 @@ public class TestSetTimes extends TestCase {
       stat = fileSys.getFileStatus(file1);
       long mtime3 = stat.getModificationTime();
       String mdate3 = dateForm.format(new Date(mtime3));
-      System.out.println("new mtime on " + file1 + " is " + 
+      LOG.info("new mtime on " + file1 + " is " + 
                          mdate3 + " (" + mtime3 + ")");
       assertTrue(atime2 == stat.getAccessTime());
       assertTrue(mtime2 == mtime3);
@@ -169,7 +171,7 @@ public class TestSetTimes extends TestCase {
 
       // verify that access times and modification times persist after a
       // cluster restart.
-      System.out.println("Verifying times after cluster restart");
+      LOG.info("Verifying times after cluster restart");
       stat = fileSys.getFileStatus(file1);
       assertTrue(atime2 == stat.getAccessTime());
       assertTrue(mtime3 == stat.getModificationTime());
@@ -215,22 +217,22 @@ public class TestSetTimes extends TestCase {
       // create a new file and write to it
       Path file1 = new Path("/simple.dat");
       FSDataOutputStream stm = writeFile(fileSys, file1, replicas);
-      System.out.println("Created and wrote file simple.dat");
+      LOG.info("Created and wrote file simple.dat");
       FileStatus statBeforeClose = fileSys.getFileStatus(file1);
       long mtimeBeforeClose = statBeforeClose.getModificationTime();
       String mdateBeforeClose = dateForm.format(new Date(
                                                      mtimeBeforeClose));
-      System.out.println("mtime on " + file1 + " before close is "
+      LOG.info("mtime on " + file1 + " before close is "
                   + mdateBeforeClose + " (" + mtimeBeforeClose + ")");
       assertTrue(mtimeBeforeClose != 0);
 
       //close file after writing
       stm.close();
-      System.out.println("Closed file.");
+      LOG.info("Closed file.");
       FileStatus statAfterClose = fileSys.getFileStatus(file1);
       long mtimeAfterClose = statAfterClose.getModificationTime();
       String mdateAfterClose = dateForm.format(new Date(mtimeAfterClose));
-      System.out.println("mtime on " + file1 + " after close is "
+      LOG.info("mtime on " + file1 + " after close is "
                   + mdateAfterClose + " (" + mtimeAfterClose + ")");
       assertTrue(mtimeAfterClose != 0);
       assertTrue(mtimeBeforeClose != mtimeAfterClose);

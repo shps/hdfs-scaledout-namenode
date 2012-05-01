@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -47,6 +49,7 @@ import org.junit.Test;
  * This class tests the decommissioning of nodes.
  */
 public class TestDecommissioningStatus {
+  static final Log LOG = LogFactory.getLog(TestDecommissioningStatus.class);
   private static final long seed = 0xDEADBEEFL;
   private static final int blockSize = 8192;
   private static final int fileSize = 16384;
@@ -154,7 +157,7 @@ public class TestDecommissioningStatus {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
 
     String nodename = info[nodeIndex].getName();
-    System.out.println("Decommissioning node: " + nodename);
+    LOG.info("Decommissioning node: " + nodename);
 
     // write nodename into the exclude file.
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);

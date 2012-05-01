@@ -25,6 +25,8 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,6 +56,7 @@ import static org.junit.Assert.*;
  * Fine-grain testing of block files and locations after volume failure.
  */
 public class TestDataNodeVolumeFailure {
+  static final Log LOG = LogFactory.getLog(TestDataNodeVolumeFailure.class);
   final private int block_size = 512;
   MiniDFSCluster cluster = null;
   int dn_num = 2;
@@ -104,7 +107,7 @@ public class TestDataNodeVolumeFailure {
   public void testVolumeFailure() throws IOException {
     FileSystem fs = cluster.getWritingFileSystem();
     dataDir = new File(cluster.getDataDirectory());
-    System.out.println("Data dir: is " +  dataDir.getPath());
+    LOG.info("Data dir: is " +  dataDir.getPath());
    
     
     // Data dir structure is dataDir/data[1-4]/[current,tmp...]
@@ -116,7 +119,7 @@ public class TestDataNodeVolumeFailure {
     int filesize = block_size*blocks_num;
     DFSTestUtil.createFile(fs, filePath, filesize, repl, 1L);
     DFSTestUtil.waitReplication(fs, filePath, repl);
-    System.out.println("file " + filename + "(size " +
+    LOG.info("file " + filename + "(size " +
         filesize + ") is created and replicated");
    
     // fail the volume
@@ -132,7 +135,7 @@ public class TestDataNodeVolumeFailure {
     }    
     data_fail.setReadOnly();
     failedDir.setReadOnly();
-    System.out.println("Deleteing " + failedDir.getPath() + "; exist=" + failedDir.exists());
+    LOG.info("Deleteing " + failedDir.getPath() + "; exist=" + failedDir.exists());
     
     // access all the blocks on the "failed" DataNode, 
     // we need to make sure that the "failed" volume is being accessed - 
@@ -150,13 +153,13 @@ public class TestDataNodeVolumeFailure {
     verify(filename, filesize);
     
     // create another file (with one volume failed).
-    System.out.println("creating file test1.txt");
+    LOG.info("creating file test1.txt");
     Path fileName1 = new Path("/test1.txt");
     DFSTestUtil.createFile(fs, fileName1, filesize, repl, 1L);
     
     // should be able to replicate to both nodes (2 DN, repl=2)
     DFSTestUtil.waitReplication(fs, fileName1, repl);
-    System.out.println("file " + fileName1.getName() + 
+    LOG.info("file " + fileName1.getName() + 
         " is created and replicated");
   }
   
@@ -173,15 +176,15 @@ public class TestDataNodeVolumeFailure {
   private void verify(String fn, int fs) throws IOException{
     // now count how many physical blocks are there
     int totalReal = countRealBlocks(block_map);
-    System.out.println("countRealBlocks counted " + totalReal + " blocks");
+    LOG.info("countRealBlocks counted " + totalReal + " blocks");
 
     // count how many blocks store in NN structures.
     int totalNN = countNNBlocks(block_map, fn, fs);
-    System.out.println("countNNBlocks counted " + totalNN + " blocks");
+    LOG.info("countNNBlocks counted " + totalNN + " blocks");
 
     for(String bid : block_map.keySet()) {
       BlockLocs bl = block_map.get(bid);
-      // System.out.println(bid + "->" + bl.num_files + "vs." + bl.num_locs);
+      // LOG.info(bid + "->" + bl.num_files + "vs." + bl.num_locs);
       // number of physical files (1 or 2) should be same as number of datanodes
       // in the list of the block locations
       assertEquals("Num files should match num locations",
@@ -198,10 +201,10 @@ public class TestDataNodeVolumeFailure {
     long underRepl = fsn.getUnderReplicatedBlocks();
     long pendRepl = fsn.getPendingReplicationBlocks();
     long totalRepl = underRepl + pendRepl;
-    System.out.println("underreplicated after = "+ underRepl + 
+    LOG.info("underreplicated after = "+ underRepl + 
         " and pending repl ="  + pendRepl + "; total underRepl = " + totalRepl);
 
-    System.out.println("total blocks (real and replicating):" + 
+    LOG.info("total blocks (real and replicating):" + 
         (totalReal + totalRepl) + " vs. all files blocks " + blocks_num*2);
 
     // together all the blocks should be equal to all real + all underreplicated
@@ -226,7 +229,7 @@ public class TestDataNodeVolumeFailure {
       try {
         accessBlock(dinfo, lb);
       } catch (IOException e) {
-        System.out.println("Failure triggered, on block: " + b.getBlockId() +  
+        LOG.info("Failure triggered, on block: " + b.getBlockId() +  
             "; corresponding volume should be removed by now");
         break;
       }
@@ -294,7 +297,7 @@ public class TestDataNodeVolumeFailure {
     NamenodeProtocols nn = cluster.getNameNodeRpc();
     List<LocatedBlock> locatedBlocks = 
       nn.getBlockLocations(path, 0, size).getLocatedBlocks();
-    //System.out.println("Number of blocks: " + locatedBlocks.size()); 
+    //LOG.info("Number of blocks: " + locatedBlocks.size()); 
         
     for(LocatedBlock lb : locatedBlocks) {
       String blockId = ""+lb.getBlock().getBlockId();
@@ -308,7 +311,7 @@ public class TestDataNodeVolumeFailure {
       total += dn_locs.length;        
       bl.num_locs += dn_locs.length;
       map.put(blockId, bl);
-      //System.out.println();
+      //LOG.info();
     }
     return total;
   }
@@ -327,23 +330,23 @@ public class TestDataNodeVolumeFailure {
         File storageDir = MiniDFSCluster.getStorageDir(i, j);
         File dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         if(dir == null) {
-          System.out.println("dir is null for dn=" + i + " and data_dir=" + j);
+          LOG.info("dir is null for dn=" + i + " and data_dir=" + j);
           continue;
         }
       
         String [] res = metaFilesInDir(dir);
         if(res == null) {
-          System.out.println("res is null for dir = " + dir + " i=" + i + " and j=" + j);
+          LOG.info("res is null for dir = " + dir + " i=" + i + " and j=" + j);
           continue;
         }
-        //System.out.println("for dn" + i + "." + j + ": " + dir + "=" + res.length+ " files");
+        //LOG.info("for dn" + i + "." + j + ": " + dir + "=" + res.length+ " files");
       
         //int ii = 0;
         for(String s: res) {
           // cut off "blk_-" at the beginning and ".meta" at the end
           assertNotNull("Block file name should not be null", s);
           String bid = s.substring(s.indexOf("_")+1, s.lastIndexOf("_"));
-          //System.out.println(ii++ + ". block " + s + "; id=" + bid);
+          //LOG.info(ii++ + ". block " + s + "; id=" + bid);
           BlockLocs val = map.get(bid);
           if(val == null) {
             val = new BlockLocs();
@@ -352,8 +355,8 @@ public class TestDataNodeVolumeFailure {
           map.put(bid, val);
 
         }
-        //System.out.println("dir1="+dir.getPath() + "blocks=" + res.length);
-        //System.out.println("dir2="+dir2.getPath() + "blocks=" + res2.length);
+        //LOG.info("dir1="+dir.getPath() + "blocks=" + res.length);
+        //LOG.info("dir2="+dir2.getPath() + "blocks=" + res2.length);
 
         total += res.length;
       }

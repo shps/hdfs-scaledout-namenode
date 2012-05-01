@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -32,8 +34,9 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
+  static final Log LOG = LogFactory.getLog(TestLeaseRecovery.class);
   static final int BLOCK_SIZE = 1024;
-  static final short REPLICATION_NUM = (short)1; //[thesis] was originally set to 3
+  static final short REPLICATION_NUM = (short)3; //[thesis] was originally set to 3
   private static final long LEASE_PERIOD = 300L;
 
   static void checkMetaInfo(ExtendedBlock b, DataNode dn
@@ -125,7 +128,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       }
 
       // verify that lease recovery does not occur when namenode is in safemode
-      System.out.println("Testing that lease recovery cannot happen during safemode.");
+      LOG.info("Testing that lease recovery cannot happen during safemode.");
       filestr = "/foo.safemode";
       filepath = new Path(filestr);
       dfs.create(filepath, (short)1);

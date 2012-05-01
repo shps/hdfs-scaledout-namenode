@@ -80,6 +80,7 @@ public class TestBlockManager {
         "need to set a dummy value here so it assumes a multi-rack cluster");
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
+    Mockito.doReturn(true).when(fsn).isWritingNN();
     bm = new BlockManager(fsn, conf);
   }
   

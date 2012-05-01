@@ -21,6 +21,8 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 import java.io.IOException;
 import junit.framework.Assert;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
  * to the NameNode
  */
 public class TestValidateConfigurationSettings {
+  public static final Log LOG = LogFactory.getLog(TestValidateConfigurationSettings.class);  
 
   /**
    * Tests setting the rpc port to the same as the web port to test that 
@@ -53,7 +56,7 @@ public class TestValidateConfigurationSettings {
     } catch (IOException e) {
       // verify we're getting the right IOException
       assertTrue(e.toString().contains("dfs.namenode.rpc-address (")); 
-      System.out.println("Got expected exception: " + e.toString());
+      LOG.info("Got expected exception: " + e.toString());
     }
   }
 

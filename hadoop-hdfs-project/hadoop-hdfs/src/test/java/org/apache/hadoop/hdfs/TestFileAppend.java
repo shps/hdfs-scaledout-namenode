@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.junit.Test;
 
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
  * support HDFS appends.
  */
 public class TestFileAppend{
+  static final Log LOG = LogFactory.getLog(TestFileAppend.class);
   boolean simulatedStorage = false;
 
   private static byte[] fileContents = null;
@@ -73,13 +76,13 @@ public class TestFileAppend{
       BlockLocation[] locations = fileSys.getFileBlockLocations(
           fileSys.getFileStatus(name), 0, AppendTestUtil.FILE_SIZE);
       if (locations.length < AppendTestUtil.NUM_BLOCKS) {
-        System.out.println("Number of blocks found " + locations.length);
+        LOG.info("Number of blocks found " + locations.length);
         done = false;
         continue;
       }
       for (int idx = 0; idx < AppendTestUtil.NUM_BLOCKS; idx++) {
         if (locations[idx].getHosts().length < repl) {
-          System.out.println("Block index " + idx + " not yet replciated.");
+          LOG.info("Block index " + idx + " not yet replciated.");
           done = false;
           break;
         }
@@ -141,7 +144,7 @@ public class TestFileAppend{
         ExtendedBlock b = blocks.get(i).getBlock();
         File f = dataset.getFile(b.getBlockPoolId(), b.getLocalBlock());
         File link = new File(f.toString() + ".link");
-        System.out.println("Creating hardlink for File " + f + " to " + link);
+        LOG.info("Creating hardlink for File " + f + " to " + link);
         HardLink.createHardLink(f, link);
       }
 
@@ -150,7 +153,7 @@ public class TestFileAppend{
       //
       for (int i = 0; i < blocks.size(); i++) {
         ExtendedBlock b = blocks.get(i).getBlock();
-        System.out.println("testCopyOnWrite detaching block " + b);
+        LOG.info("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
             dataset.unlinkBlock(b, 1));
       }
@@ -160,7 +163,7 @@ public class TestFileAppend{
       //
       for (int i = 0; i < blocks.size(); i++) {
         ExtendedBlock b = blocks.get(i).getBlock();
-        System.out.println("testCopyOnWrite detaching block " + b);
+        LOG.info("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
             !dataset.unlinkBlock(b, 1));
       }
@@ -189,36 +192,36 @@ public class TestFileAppend{
       // create a new file.
       Path file1 = new Path("/simpleFlush.dat");
       FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
-      System.out.println("Created file simpleFlush.dat");
+      LOG.info("Created file simpleFlush.dat");
 
       // write to file
       int mid = AppendTestUtil.FILE_SIZE /2;
       stm.write(fileContents, 0, mid);
       stm.hflush();
-      System.out.println("Wrote and Flushed first part of file.");
+      LOG.info("Wrote and Flushed first part of file.");
 
       // write the remainder of the file
       stm.write(fileContents, mid, AppendTestUtil.FILE_SIZE - mid);
-      System.out.println("Written second part of file");
+      LOG.info("Written second part of file");
       stm.hflush();
       stm.hflush();
-      System.out.println("Wrote and Flushed second part of file.");
+      LOG.info("Wrote and Flushed second part of file.");
 
       // verify that full blocks are sane
       checkFile(fs, file1, 1);
 
       stm.close();
-      System.out.println("Closed file.");
+      LOG.info("Closed file.");
 
       // verify that entire file is good
       AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
           fileContents, "Read 2");
 
     } catch (IOException e) {
-      System.out.println("Exception :" + e);
+      LOG.info("Exception :" + e);
       throw e; 
     } catch (Throwable e) {
-      System.out.println("Throwable :" + e);
+      LOG.info("Throwable :" + e);
       e.printStackTrace();
       throw new IOException("Throwable : " + e);
     } finally {
@@ -245,7 +248,7 @@ public class TestFileAppend{
       // create a new file.
       Path file1 = new Path("/complexFlush.dat");
       FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
-      System.out.println("Created file complexFlush.dat");
+      LOG.info("Created file complexFlush.dat");
 
       int start = 0;
       for (start = 0; (start + 29) < AppendTestUtil.FILE_SIZE; ) {
@@ -263,10 +266,10 @@ public class TestFileAppend{
       AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
           fileContents, "Read 2");
     } catch (IOException e) {
-      System.out.println("Exception :" + e);
+      LOG.info("Exception :" + e);
       throw e; 
     } catch (Throwable e) {
-      System.out.println("Throwable :" + e);
+      LOG.info("Throwable :" + e);
       e.printStackTrace();
       throw new IOException("Throwable : " + e);
     } finally {

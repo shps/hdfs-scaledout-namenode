@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,6 +47,7 @@ import org.apache.log4j.Level;
  * support HDFS appends.
  */
 public class TestFileAppend2 extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestFileAppend2.class);
 
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
@@ -95,22 +97,22 @@ public class TestFileAppend2 extends TestCase {
         // create a new file.
         Path file1 = new Path("/simpleAppend.dat");
         FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
-        System.out.println("Created file simpleAppend.dat");
+        LOG.info("Created file simpleAppend.dat");
   
         // write to file
         int mid = 186;   // io.bytes.per.checksum bytes
-        System.out.println("Writing " + mid + " bytes to file " + file1);
+        LOG.info("Writing " + mid + " bytes to file " + file1);
         stm.write(fileContents, 0, mid);
         stm.close();
-        System.out.println("Wrote and Closed first part of file.");
+        LOG.info("Wrote and Closed first part of file.");
   
         // write to file
         int mid2 = 607;   // io.bytes.per.checksum bytes
-        System.out.println("Writing " + mid + " bytes to file " + file1);
+        LOG.info("Writing " + mid + " bytes to file " + file1);
         stm = fs.append(file1);
         stm.write(fileContents, mid, mid2-mid);
         stm.close();
-        System.out.println("Wrote and Closed second part of file.");
+        LOG.info("Wrote and Closed second part of file.");
   
         // write the remainder of the file
         stm = fs.append(file1);
@@ -118,12 +120,12 @@ public class TestFileAppend2 extends TestCase {
         // ensure getPos is set to reflect existing size of the file
         assertTrue(stm.getPos() > 0);
 
-        System.out.println("Writing " + (AppendTestUtil.FILE_SIZE - mid2) +
+        LOG.info("Writing " + (AppendTestUtil.FILE_SIZE - mid2) +
             " bytes to file " + file1);
         stm.write(fileContents, mid2, AppendTestUtil.FILE_SIZE - mid2);
-        System.out.println("Written second part of file");
+        LOG.info("Written second part of file");
         stm.close();
-        System.out.println("Wrote and Closed second part of file.");
+        LOG.info("Wrote and Closed second part of file.");
   
         // verify that entire file is good
         AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
@@ -137,7 +139,7 @@ public class TestFileAppend2 extends TestCase {
           fail("Expected to have FileNotFoundException");
         }
         catch(java.io.FileNotFoundException fnfe) {
-          System.out.println("Good: got " + fnfe);
+          LOG.info("Good: got " + fnfe);
           fnfe.printStackTrace(System.out);
         }
         finally {
@@ -206,7 +208,7 @@ public class TestFileAppend2 extends TestCase {
           fail("Expected to have AccessControlException");
         }
         catch(AccessControlException ace) {
-          System.out.println("Good: got " + ace);
+          LOG.info("Good: got " + ace);
           ace.printStackTrace(System.out);
         }
         finally {
@@ -214,10 +216,10 @@ public class TestFileAppend2 extends TestCase {
         }
       }
     } catch (IOException e) {
-      System.out.println("Exception :" + e);
+      LOG.info("Exception :" + e);
       throw e; 
     } catch (Throwable e) {
-      System.out.println("Throwable :" + e);
+      LOG.info("Throwable :" + e);
       e.printStackTrace();
       throw new IOException("Throwable : " + e);
     } finally {
@@ -240,14 +242,14 @@ public class TestFileAppend2 extends TestCase {
 
     // create a bunch of files. Write to them and then verify.
     public void run() {
-      System.out.println("Workload " + id + " starting... ");
+      LOG.info("Workload " + id + " starting... ");
       for (int i = 0; i < numAppendsPerThread; i++) {
    
         // pick a file at random and remove it from pool
         Path testfile;
         synchronized (testFiles) {
           if (testFiles.size() == 0) {
-            System.out.println("Completed write to almost all files.");
+            LOG.info("Completed write to almost all files.");
             return;  
           }
           int index = AppendTestUtil.nextInt(testFiles.size());
@@ -264,7 +266,7 @@ public class TestFileAppend2 extends TestCase {
 
           // if file is already full, then pick another file
           if (len >= AppendTestUtil.FILE_SIZE) {
-            System.out.println("File " + testfile + " is full.");
+            LOG.info("File " + testfile + " is full.");
             continue;
           }
   
@@ -277,7 +279,7 @@ public class TestFileAppend2 extends TestCase {
           }
           sizeToAppend = AppendTestUtil.nextInt(left);
 
-          System.out.println("Workload thread " + id +
+          LOG.info("Workload thread " + id +
                              " appending " + sizeToAppend + " bytes " +
                              " to file " + testfile +
                              " of size " + len);
@@ -288,7 +290,7 @@ public class TestFileAppend2 extends TestCase {
           // wait for the file size to be reflected in the namenode metadata
           while (fs.getFileStatus(testfile).getLen() != (len + sizeToAppend)) {
             try {
-              System.out.println("Workload thread " + id +
+              LOG.info("Workload thread " + id +
                                  " file " + testfile  +
                                  " size " + fs.getFileStatus(testfile).getLen() +
                                  " expected size " + (len + sizeToAppend) +
@@ -307,7 +309,7 @@ public class TestFileAppend2 extends TestCase {
         } catch (Throwable e) {
           globalStatus = false;
           if (e != null && e.toString() != null) {
-            System.out.println("Workload exception " + id + 
+            LOG.info("Workload exception " + id + 
                                " testfile " + testfile +
                                " " + e);
             e.printStackTrace();
@@ -369,9 +371,9 @@ public class TestFileAppend2 extends TestCase {
       // wait for all transactions to get over
       for (int i = 0; i < numThreads; i++) {
         try {
-          System.out.println("Waiting for thread " + i + " to complete...");
+          LOG.info("Waiting for thread " + i + " to complete...");
           workload[i].join();
-          System.out.println("Waiting for thread " + i + " complete.");
+          LOG.info("Waiting for thread " + i + " complete.");
         } catch (InterruptedException e) {
           i--;      // retry
         }

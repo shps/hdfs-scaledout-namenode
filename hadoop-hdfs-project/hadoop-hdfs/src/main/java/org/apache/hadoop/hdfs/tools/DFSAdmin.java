@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -59,7 +61,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Private
 public class DFSAdmin extends FsShell {
-
+ static final Log LOG = LogFactory.getLog(DFSAdmin.class);
   static{
     HdfsConfiguration.init();
   }
@@ -293,20 +295,20 @@ public class DFSAdmin extends FsShell {
                       dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
 
       if (mode) {
-        System.out.println("Safe mode is ON");
+        LOG.info("Safe mode is ON");
       }
       if (status != null) {
-        System.out.println(status.getStatusText(false));
+        LOG.info(status.getStatusText(false));
       }
-      System.out.println("Configured Capacity: " + capacity
+      LOG.info("Configured Capacity: " + capacity
                          + " (" + StringUtils.byteDesc(capacity) + ")");
-      System.out.println("Present Capacity: " + presentCapacity
+      LOG.info("Present Capacity: " + presentCapacity
           + " (" + StringUtils.byteDesc(presentCapacity) + ")");
-      System.out.println("DFS Remaining: " + remaining
+      LOG.info("DFS Remaining: " + remaining
           + " (" + StringUtils.byteDesc(remaining) + ")");
-      System.out.println("DFS Used: " + used
+      LOG.info("DFS Used: " + used
                          + " (" + StringUtils.byteDesc(used) + ")");
-      System.out.println("DFS Used%: "
+      LOG.info("DFS Used%: "
                          + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
                          + "%");
       
@@ -315,36 +317,32 @@ public class DFSAdmin extends FsShell {
        * minutes. Use "-metaSave" to list of all such blocks and accurate 
        * counts.
        */
-      System.out.println("Under replicated blocks: " + 
+      LOG.info("Under replicated blocks: " + 
                          dfs.getUnderReplicatedBlocksCount());
-      System.out.println("Blocks with corrupt replicas: " + 
+      LOG.info("Blocks with corrupt replicas: " + 
                          dfs.getCorruptBlocksCount());
-      System.out.println("Missing blocks: " + 
+      LOG.info("Missing blocks: " + 
                          dfs.getMissingBlocksCount());
                            
-      System.out.println();
-
-      System.out.println("-------------------------------------------------");
+      LOG.info("-------------------------------------------------");
       
       DatanodeInfo[] live = dfs.getDataNodeStats(DatanodeReportType.LIVE);
       DatanodeInfo[] dead = dfs.getDataNodeStats(DatanodeReportType.DEAD);
-      System.out.println("Datanodes available: " + live.length +
+      LOG.info("Datanodes available: " + live.length +
                          " (" + (live.length + dead.length) + " total, " + 
                          dead.length + " dead)\n");
       
       if(live.length > 0) {
-        System.out.println("Live datanodes:");
+        LOG.info("Live datanodes:");
         for (DatanodeInfo dn : live) {
-          System.out.println(dn.getDatanodeReport());
-          System.out.println();
+          LOG.info(dn.getDatanodeReport());
         }
       }
       
       if(dead.length > 0) {
-        System.out.println("Dead datanodes:");
+        LOG.info("Dead datanodes:");
         for (DatanodeInfo dn : dead) {
-          System.out.println(dn.getDatanodeReport());
-          System.out.println();
+          LOG.info(dn.getDatanodeReport());
         }     
       }
   }
@@ -395,7 +393,7 @@ public class DFSAdmin extends FsShell {
       }
     }
 
-    System.out.println("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
+    LOG.info("Safe mode is " + (inSafeMode ? "ON" : "OFF"));
   }
 
   /**
@@ -430,7 +428,7 @@ public class DFSAdmin extends FsShell {
     
     DistributedFileSystem dfs = getDFS();
     Boolean res = dfs.restoreFailedStorage(arg);
-    System.out.println("restoreFailedStorage is set to " + res);
+    LOG.info("restoreFailedStorage is set to " + res);
     exitCode = 0;
 
     return exitCode;
@@ -594,67 +592,66 @@ public class DFSAdmin extends FsShell {
       "\t\tis specified.\n";
 
     if ("report".equals(cmd)) {
-      System.out.println(report);
+      LOG.info(report);
     } else if ("safemode".equals(cmd)) {
-      System.out.println(safemode);
+      LOG.info(safemode);
     } else if ("saveNamespace".equals(cmd)) {
-      System.out.println(saveNamespace);
+      LOG.info(saveNamespace);
     } else if ("restoreFailedStorage".equals(cmd)) {
-      System.out.println(restoreFailedStorage);
+      LOG.info(restoreFailedStorage);
     } else if ("refreshNodes".equals(cmd)) {
-      System.out.println(refreshNodes);
+      LOG.info(refreshNodes);
     } else if ("finalizeUpgrade".equals(cmd)) {
-      System.out.println(finalizeUpgrade);
+      LOG.info(finalizeUpgrade);
     } else if ("upgradeProgress".equals(cmd)) {
-      System.out.println(upgradeProgress);
+      LOG.info(upgradeProgress);
     } else if ("metasave".equals(cmd)) {
-      System.out.println(metaSave);
+      LOG.info(metaSave);
     } else if (SetQuotaCommand.matches("-"+cmd)) {
-      System.out.println(SetQuotaCommand.DESCRIPTION);
+      LOG.info(SetQuotaCommand.DESCRIPTION);
     } else if (ClearQuotaCommand.matches("-"+cmd)) {
-      System.out.println(ClearQuotaCommand.DESCRIPTION);
+      LOG.info(ClearQuotaCommand.DESCRIPTION);
     } else if (SetSpaceQuotaCommand.matches("-"+cmd)) {
-      System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
+      LOG.info(SetSpaceQuotaCommand.DESCRIPTION);
     } else if (ClearSpaceQuotaCommand.matches("-"+cmd)) {
-      System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
+      LOG.info(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("refreshServiceAcl".equals(cmd)) {
-      System.out.println(refreshServiceAcl);
+      LOG.info(refreshServiceAcl);
     } else if ("refreshUserToGroupsMappings".equals(cmd)) {
-      System.out.println(refreshUserToGroupsMappings);
+      LOG.info(refreshUserToGroupsMappings);
     } else if ("refreshSuperUserGroupsConfiguration".equals(cmd)) {
-      System.out.println(refreshSuperUserGroupsConfiguration);
+      LOG.info(refreshSuperUserGroupsConfiguration);
     } else if ("printTopology".equals(cmd)) {
-      System.out.println(printTopology);
+      LOG.info(printTopology);
     } else if ("refreshNamenodes".equals(cmd)) {
-      System.out.println(refreshNamenodes);
+      LOG.info(refreshNamenodes);
     } else if ("deleteBlockPool".equals(cmd)) {
-      System.out.println(deleteBlockPool);
+      LOG.info(deleteBlockPool);
     } else if ("setBalancerBandwidth".equals(cmd)) {
-      System.out.println(setBalancerBandwidth);
+      LOG.info(setBalancerBandwidth);
     } else if ("help".equals(cmd)) {
-      System.out.println(help);
+      LOG.info(help);
     } else {
-      System.out.println(summary);
-      System.out.println(report);
-      System.out.println(safemode);
-      System.out.println(saveNamespace);
-      System.out.println(restoreFailedStorage);
-      System.out.println(refreshNodes);
-      System.out.println(finalizeUpgrade);
-      System.out.println(upgradeProgress);
-      System.out.println(metaSave);
-      System.out.println(SetQuotaCommand.DESCRIPTION);
-      System.out.println(ClearQuotaCommand.DESCRIPTION);
-      System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
-      System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
-      System.out.println(refreshServiceAcl);
-      System.out.println(refreshUserToGroupsMappings);
-      System.out.println(refreshSuperUserGroupsConfiguration);
-      System.out.println(printTopology);
-      System.out.println(refreshNamenodes);
-      System.out.println(deleteBlockPool);
-      System.out.println(help);
-      System.out.println();
+      LOG.info(summary);
+      LOG.info(report);
+      LOG.info(safemode);
+      LOG.info(saveNamespace);
+      LOG.info(restoreFailedStorage);
+      LOG.info(refreshNodes);
+      LOG.info(finalizeUpgrade);
+      LOG.info(upgradeProgress);
+      LOG.info(metaSave);
+      LOG.info(SetQuotaCommand.DESCRIPTION);
+      LOG.info(ClearQuotaCommand.DESCRIPTION);
+      LOG.info(SetSpaceQuotaCommand.DESCRIPTION);
+      LOG.info(ClearSpaceQuotaCommand.DESCRIPTION);
+      LOG.info(refreshServiceAcl);
+      LOG.info(refreshUserToGroupsMappings);
+      LOG.info(refreshSuperUserGroupsConfiguration);
+      LOG.info(printTopology);
+      LOG.info(refreshNamenodes);
+      LOG.info(deleteBlockPool);
+      LOG.info(help);
       ToolRunner.printGenericCommandUsage(System.out);
     }
 
@@ -703,7 +700,7 @@ public class DFSAdmin extends FsShell {
     String statusText = (status == null ? 
         "There are no upgrades in progress." :
           status.getStatusText(action == UpgradeAction.DETAILED_STATUS));
-    System.out.println(statusText);
+    LOG.info(statusText);
     return 0;
   }
 
@@ -719,7 +716,7 @@ public class DFSAdmin extends FsShell {
     String pathname = argv[idx];
     DistributedFileSystem dfs = getDFS();
     dfs.metaSave(pathname);
-    System.out.println("Created file " + pathname + " on server " +
+    LOG.info("Created file " + pathname + " on server " +
                        dfs.getUri());
     return 0;
   }
@@ -753,7 +750,7 @@ public class DFSAdmin extends FsShell {
       Collections.sort(racks);
       
       for(String r : racks) {
-        System.out.println("Rack: " + r);
+        LOG.info("Rack: " + r);
         TreeSet<String> nodes = tree.get(r);
 
         for(String n : nodes) {
@@ -761,10 +758,8 @@ public class DFSAdmin extends FsShell {
           String hostname = NetUtils.getHostNameOfIP(n);
           if(hostname != null)
             System.out.print(" (" + hostname + ")");
-          System.out.println();
         }
 
-        System.out.println();
       }
     return 0;
   }

@@ -699,7 +699,7 @@ public class INodeTableHelper {
 		DataInputBuffer buffer = new DataInputBuffer();
 		if(inodetable==null)
 		{
-			System.out.println("inodetable == null");
+			LOG.info("inodetable == null");
 			return null;
 		}
 		buffer.reset(inodetable.getPermission(), inodetable.getPermission().length);

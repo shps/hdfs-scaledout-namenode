@@ -23,6 +23,7 @@ import java.io.RandomAccessFile;
 import junit.extensions.TestSetup;
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -44,6 +45,7 @@ import org.apache.log4j.Level;
 
 /** This class implements some of tests posted in HADOOP-2658. */
 public class TestFileAppend3 extends junit.framework.TestCase {
+  static final Log LOG = LogFactory.getLog(TestFileAppend3.class);
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -88,7 +90,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    */
   public void testTC1() throws Exception {
     final Path p = new Path("/TC1/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
 
     //a. Create file and write one block of data. Close file.
     final int len1 = (int)BLOCK_SIZE; 
@@ -116,7 +118,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    */
   public void testTC2() throws Exception {
     final Path p = new Path("/TC2/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
 
     //a. Create file with one and a half block of data. Close file.
     final int len1 = (int)(BLOCK_SIZE + BLOCK_SIZE/2); 
@@ -146,7 +148,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    */
   public void testTC5() throws Exception {
     final Path p = new Path("/TC5/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
 
     //a. Create file on Machine M1. Write half block to it. Close file.
     {
@@ -177,7 +179,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
   public void testTC7() throws Exception {
     final short repl = 2;
     final Path p = new Path("/TC7/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
     
     //a. Create file with replication factor of 2. Write half block of data. Close file.
     final int len1 = (int)(BLOCK_SIZE/2); 
@@ -224,7 +226,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    */
   public void testTC11() throws Exception {
     final Path p = new Path("/TC11/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
 
     //a. Create file and write one block of data. Close file.
     final int len1 = (int)BLOCK_SIZE; 
@@ -282,7 +284,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    */
   public void testTC12() throws Exception {
     final Path p = new Path("/TC12/foo");
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
     
     //a. Create file with a block size of 64KB
     //   and a default io.bytes.per.checksum of 512 bytes.
@@ -314,7 +316,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
   public void testAppendToPartialChunk() throws IOException {
     final Path p = new Path("/partialChunk/foo");
     final int fileLen = 513;
-    System.out.println("p=" + p);
+    LOG.info("p=" + p);
     
     byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
 
@@ -324,7 +326,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     // create 1 byte file
     stm.write(fileContents, 0, 1);
     stm.close();
-    System.out.println("Wrote 1 byte and closed the file " + p);
+    LOG.info("Wrote 1 byte and closed the file " + p);
 
     // append to file
     stm = fs.append(p);
@@ -333,7 +335,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     stm.hflush();
     // The partial CRC trunk is not full yet and close the file
     stm.close();
-    System.out.println("Append 1 byte and closed the file " + p);
+    LOG.info("Append 1 byte and closed the file " + p);
 
     // write the remainder of the file
     stm = fs.append(p);
@@ -345,16 +347,16 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     stm.write(fileContents, 2, 1);
     // The partial chunk is not full yet, force to send a packet to DN
     stm.hflush();
-    System.out.println("Append and flush 1 byte");
+    LOG.info("Append and flush 1 byte");
     // The partial chunk is not full yet, force to send another packet to DN
     stm.write(fileContents, 3, 2);
     stm.hflush();
-    System.out.println("Append and flush 2 byte");
+    LOG.info("Append and flush 2 byte");
 
     // fill up the partial chunk and close the file
     stm.write(fileContents, 5, fileLen-5);
     stm.close();
-    System.out.println("Flush 508 byte and closed the file " + p);
+    LOG.info("Flush 508 byte and closed the file " + p);
 
     // verify that entire file is good
     AppendTestUtil.checkFullFile(fs, p, fileLen,

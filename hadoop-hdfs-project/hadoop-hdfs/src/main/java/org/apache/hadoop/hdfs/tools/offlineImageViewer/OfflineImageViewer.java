@@ -30,6 +30,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -40,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class OfflineImageViewer {
+  static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
   private final static String usage = 
     "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
     "Offline Image Viewer\n" + 
@@ -201,7 +204,7 @@ public class OfflineImageViewer {
     try {
       cmd = parser.parse(options, args);
     } catch (ParseException e) {
-      System.out.println("Error parsing command-line options: ");
+      LOG.info("Error parsing command-line options: ");
       printUsage();
       return;
     }
@@ -219,7 +222,7 @@ public class OfflineImageViewer {
     String delimiter = cmd.getOptionValue("delimiter");
     
     if( !(delimiter == null || processor.equals("Delimited")) ) {
-      System.out.println("Can only specify -delimiter with Delimited processor");
+      LOG.info("Can only specify -delimiter with Delimited processor");
       printUsage();
       return;
     }
@@ -259,6 +262,6 @@ public class OfflineImageViewer {
    * Print application usage instructions.
    */
   private static void printUsage() {
-    System.out.println(usage);
+    LOG.info(usage);
   }
 }

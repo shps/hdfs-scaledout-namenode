@@ -235,7 +235,7 @@ public class TestLeaseRecovery2 {
                dfs.getFileStatus(filepath).getLen() == size);
 
     // verify that there is enough data to read.
-    System.out.println("File size is good. Now validating sizes from datanodes...");
+    LOG.info("File size is good. Now validating sizes from datanodes...");
     FSDataInputStream stmin = dfs.open(filepath);
     stmin.readFully(0, actual, 0, size);
     stmin.close();

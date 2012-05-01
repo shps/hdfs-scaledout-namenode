@@ -30,12 +30,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.ByteRangeInputStream.URLOpener;
 import org.junit.Test;
 
 class MockHttpURLConnection extends HttpURLConnection {
-  private int responseCode = -1;
+ static final Log LOG = LogFactory.getLog(MockHttpURLConnection.class);
+ private int responseCode = -1;
   URL m;
 
   public MockHttpURLConnection(URL u) {
@@ -62,7 +65,7 @@ class MockHttpURLConnection extends HttpURLConnection {
     try {
       u = new URL("http://resolvedurl/");
     } catch (Exception e) {
-      System.out.println(e.getMessage());
+      LOG.info(e.getMessage());
     }
     return u;
   }

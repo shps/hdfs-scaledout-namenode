@@ -20,11 +20,14 @@ package org.apache.hadoop.hdfs.util;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Random;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestGSet {
+  static final Log LOG = LogFactory.getLog(TestGSet.class);
   private static final Random ran = new Random();
   private static final long starttime = System.currentTimeMillis();
 
@@ -34,7 +37,7 @@ public class TestGSet {
   }
 
   private static void println(Object s) {
-    System.out.println(s);
+    LOG.info(s);
   }
 
   @Test

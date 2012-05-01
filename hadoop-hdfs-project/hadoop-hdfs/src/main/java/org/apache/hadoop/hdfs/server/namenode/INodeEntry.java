@@ -68,7 +68,6 @@ public class INodeEntry implements Comparable<byte[]> {
 		return compareBytes(name, o);
 	}
 
-
 	/**
 	 * Compare two byte arrays. (taken from INode class)
 	 * 

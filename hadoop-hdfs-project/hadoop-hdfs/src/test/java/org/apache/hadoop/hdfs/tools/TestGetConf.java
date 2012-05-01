@@ -25,16 +25,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import static org.junit.Assert.*;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.tools.GetConf;
 import org.apache.hadoop.hdfs.tools.GetConf.Command;
 import org.apache.hadoop.hdfs.tools.GetConf.CommandHandler;
 import org.apache.hadoop.util.ToolRunner;
@@ -44,6 +44,7 @@ import org.junit.Test;
  * Test for {@link GetConf}
  */
 public class TestGetConf {
+  static final Log LOG = LogFactory.getLog(TestGetConf.class);
   enum TestType {
     NAMENODE, BACKUP, SECONDARY, NNRPCADDRESSES
   }
@@ -213,7 +214,7 @@ public class TestGetConf {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     // Verify getting addresses fails
     getAddressListFromTool(TestType.NAMENODE, conf, false);
-    System.out.println(getAddressListFromTool(TestType.BACKUP, conf, false));
+    LOG.info(getAddressListFromTool(TestType.BACKUP, conf, false));
     getAddressListFromTool(TestType.SECONDARY, conf, false);
     getAddressListFromTool(TestType.NNRPCADDRESSES, conf, false);
     for (Command cmd : Command.values()) {

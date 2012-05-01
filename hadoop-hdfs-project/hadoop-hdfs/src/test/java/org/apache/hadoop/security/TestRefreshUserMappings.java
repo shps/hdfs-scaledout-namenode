@@ -34,6 +34,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,6 +50,7 @@ import org.junit.Test;
 
 
 public class TestRefreshUserMappings {
+  public static final Log LOG = LogFactory.getLog(TestRefreshUserMappings.class);  
   private MiniDFSCluster cluster;
   Configuration config;
   private static long groupRefreshTimeoutSec = 1;
@@ -58,7 +61,7 @@ public class TestRefreshUserMappings {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
-      System.out.println("Getting groups in MockUnixGroupsMapping");
+      LOG.info("Getting groups in MockUnixGroupsMapping");
       String g1 = user + (10 * i + 1);
       String g2 = user + (10 * i + 2);
       List<String> l = new ArrayList<String>(2);
@@ -70,7 +73,7 @@ public class TestRefreshUserMappings {
 
     @Override
     public void cacheGroupsRefresh() throws IOException {
-      System.out.println("Refreshing groups in MockUnixGroupsMapping");
+      LOG.info("Refreshing groups in MockUnixGroupsMapping");
     }
   
     @Override
@@ -109,24 +112,24 @@ public class TestRefreshUserMappings {
     String [] args =  new String[]{"-refreshUserToGroupsMappings"};
     Groups groups = Groups.getUserToGroupsMappingService(config);
     String user = UserGroupInformation.getCurrentUser().getUserName();
-    System.out.println("first attempt:");
+    LOG.info("first attempt:");
     List<String> g1 = groups.getGroups(user);
     String [] str_groups = new String [g1.size()];
     g1.toArray(str_groups);
-    System.out.println(Arrays.toString(str_groups));
+    LOG.info(Arrays.toString(str_groups));
     
-    System.out.println("second attempt, should be same:");
+    LOG.info("second attempt, should be same:");
     List<String> g2 = groups.getGroups(user);
     g2.toArray(str_groups);
-    System.out.println(Arrays.toString(str_groups));
+    LOG.info(Arrays.toString(str_groups));
     for(int i=0; i<g2.size(); i++) {
       assertEquals("Should be same group ", g1.get(i), g2.get(i));
     }
     admin.run(args);
-    System.out.println("third attempt(after refresh command), should be different:");
+    LOG.info("third attempt(after refresh command), should be different:");
     List<String> g3 = groups.getGroups(user);
     g3.toArray(str_groups);
-    System.out.println(Arrays.toString(str_groups));
+    LOG.info(Arrays.toString(str_groups));
     for(int i=0; i<g3.size(); i++) {
       assertFalse("Should be different group: " + g1.get(i) + " and " + g3.get(i), 
           g1.get(i).equals(g3.get(i)));
@@ -134,10 +137,10 @@ public class TestRefreshUserMappings {
     
     // test time out
     Thread.sleep(groupRefreshTimeoutSec*1100);
-    System.out.println("fourth attempt(after timeout), should be different:");
+    LOG.info("fourth attempt(after timeout), should be different:");
     List<String> g4 = groups.getGroups(user);
     g4.toArray(str_groups);
-    System.out.println(Arrays.toString(str_groups));
+    LOG.info(Arrays.toString(str_groups));
     for(int i=0; i<g4.size(); i++) {
       assertFalse("Should be different group ", g3.get(i).equals(g4.get(i)));
     }

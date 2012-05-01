@@ -435,9 +435,9 @@ public class TestWriteRead {
   private void usage() {
     LOG.info("Usage: [-useSeqRead | -usePosRead] [-append|truncate]"
         + " -chunkSize nn -loop ntimes  -f filename");
-    System.out.println("Usage: [-useSeqRead | -usePosRead] [-append|truncate]"
+    LOG.info("Usage: [-useSeqRead | -usePosRead] [-append|truncate]"
         + " -chunkSize nn -loop ntimes  -f filename");
-    System.out.println("Defaults: -chunkSize=10000, -loop=10, -f=/tmp/fileX1, "
+    LOG.info("Defaults: -chunkSize=10000, -loop=10, -f=/tmp/fileX1, "
         + "use sequential read, use append mode if file already exists");
     System.exit(0);
   }
@@ -502,9 +502,9 @@ public class TestWriteRead {
       int stat = trw.clusterTestWriteRead1();
 
       if (stat == 0) {
-        System.out.println("Status: clusterTestWriteRead1 test PASS");
+        LOG.info("Status: clusterTestWriteRead1 test PASS");
       } else {
-        System.out.println("Status: clusterTestWriteRead1 test FAIL with "
+        LOG.info("Status: clusterTestWriteRead1 test FAIL with "
                 + stat + " failures");
       }
       System.exit(stat);

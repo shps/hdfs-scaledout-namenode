@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import junit.framework.TestCase;
+import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -42,6 +43,7 @@ import org.apache.log4j.Level;
  * data can be read by another client.
  */
 public class TestDatanodeDeath extends TestCase {
+  static final Log LOG = LogFactory.getLog(TestDatanodeDeath.class);
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -84,11 +86,11 @@ public class TestDatanodeDeath extends TestCase {
 
     // create a bunch of files. Write to them and then verify.
     public void run() {
-      System.out.println("Workload starting ");
+      LOG.info("Workload starting ");
       for (int i = 0; i < numberOfFiles; i++) {
         Path filename = new Path(id + "." + i);
         try {
-          System.out.println("Workload processing file " + filename);
+          LOG.info("Workload processing file " + filename);
           FSDataOutputStream stm = createFile(fs, filename, replication);
           DFSOutputStream dfstream = (DFSOutputStream)
                                                  (stm.getWrappedStream());
@@ -97,7 +99,7 @@ public class TestDatanodeDeath extends TestCase {
           stm.close();
           checkFile(fs, filename, replication, numBlocks, fileSize, myseed);
         } catch (Throwable e) {
-          System.out.println("Workload exception " + e);
+          LOG.info("Workload exception " + e);
           assertTrue(e.toString(), false);
         }
 
@@ -166,7 +168,7 @@ public class TestDatanodeDeath extends TestCase {
 
       if (locations.length < numblocks) {
         if (attempt > 100) {
-          System.out.println("File " + name + " has only " +
+          LOG.info("File " + name + " has only " +
                              locations.length + " blocks, " +
                              " but is expected to have " + numblocks +
                              " blocks.");
@@ -177,7 +179,7 @@ public class TestDatanodeDeath extends TestCase {
       for (int idx = 0; idx < locations.length; idx++) {
         if (locations[idx].getHosts().length < repl) {
           if (attempt > 100) {
-            System.out.println("File " + name + " has " +
+            LOG.info("File " + name + " has " +
                                locations.length + " blocks: " +
                                " The " + idx + " block has only " +
                                locations[idx].getHosts().length + 
@@ -255,11 +257,11 @@ public class TestDatanodeDeath extends TestCase {
           // pick a random datanode to shutdown
           int victim = AppendTestUtil.nextInt(numDatanodes);
           try {
-            System.out.println("Stopping datanode " + victim);
+            LOG.info("Stopping datanode " + victim);
             cluster.restartDataNode(victim);
             // cluster.startDataNodes(conf, 1, true, null, null);
           } catch (IOException e) {
-            System.out.println("TestDatanodeDeath Modify exception " + e);
+            LOG.info("TestDatanodeDeath Modify exception " + e);
             assertTrue("TestDatanodeDeath Modify exception " + e, false);
             running = false;
           }
@@ -311,7 +313,7 @@ public class TestDatanodeDeath extends TestCase {
       // wait for all transactions to get over
       for (int i = 0; i < numThreads; i++) {
         try {
-          System.out.println("Waiting for thread " + i + " to complete...");
+          LOG.info("Waiting for thread " + i + " to complete...");
           workload[i].join();
 
           // if most of the threads are done, then stop restarting datanodes.
@@ -346,7 +348,7 @@ public class TestDatanodeDeath extends TestCase {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 2);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
     int myMaxNodes = 5;
-    System.out.println("SimpleTest starting with DataNode to Kill " + 
+    LOG.info("SimpleTest starting with DataNode to Kill " + 
                        datanodeToKill);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(myMaxNodes).build();
     cluster.waitActive();
@@ -357,7 +359,7 @@ public class TestDatanodeDeath extends TestCase {
     try {
 
       // create a file and write one block of data
-      System.out.println("SimpleTest creating file " + filename);
+      LOG.info("SimpleTest creating file " + filename);
       FSDataOutputStream stm = createFile(fs, filename, repl);
       DFSOutputStream dfstream = (DFSOutputStream)
                                              (stm.getWrappedStream());
@@ -375,7 +377,7 @@ public class TestDatanodeDeath extends TestCase {
       int count = 5;
       while (count-- > 0 && targets == null) {
         try {
-          System.out.println("SimpleTest: Waiting for pipeline to be created.");
+          LOG.info("SimpleTest: Waiting for pipeline to be created.");
           Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
@@ -384,15 +386,15 @@ public class TestDatanodeDeath extends TestCase {
 
       if (targets == null) {
         int victim = AppendTestUtil.nextInt(myMaxNodes);
-        System.out.println("SimpleTest stopping datanode random " + victim);
+        LOG.info("SimpleTest stopping datanode random " + victim);
         cluster.stopDataNode(victim);
       } else {
         int victim = datanodeToKill;
-        System.out.println("SimpleTest stopping datanode " +
+        LOG.info("SimpleTest stopping datanode " +
                             targets[victim].getName());
         cluster.stopDataNode(targets[victim].getName());
       }
-      System.out.println("SimpleTest stopping datanode complete");
+      LOG.info("SimpleTest stopping datanode complete");
 
       // write some more data to file, close and verify
       stm.write(buffer, mid, fileSize - mid);
@@ -400,7 +402,7 @@ public class TestDatanodeDeath extends TestCase {
 
       checkFile(fs, filename, repl, numBlocks, fileSize, myseed);
     } catch (Throwable e) {
-      System.out.println("Simple Workload exception " + e);
+      LOG.info("Simple Workload exception " + e);
       e.printStackTrace();
       assertTrue(e.toString(), false);
     } finally {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
 
 public class TestFileCreationDelete extends junit.framework.TestCase {
+  static final Log LOG = LogFactory.getLog(TestFileCreationDelete.class);
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -57,7 +59,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       Path dir = new Path("/foo");
       Path file1 = new Path(dir, "file1");
       FSDataOutputStream stm1 = TestFileCreation.createFile(fs, file1, 1);
-      System.out.println("testFileCreationDeleteParent: "
+      LOG.info("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1, 1000);
       stm1.hflush();
@@ -65,7 +67,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       // create file2.
       Path file2 = new Path("/file2");
       FSDataOutputStream stm2 = TestFileCreation.createFile(fs, file2, 1);
-      System.out.println("testFileCreationDeleteParent: "
+      LOG.info("testFileCreationDeleteParent: "
           + "Created file " + file2);
       TestFileCreation.writeFile(stm2, 1000);
       stm2.hflush();

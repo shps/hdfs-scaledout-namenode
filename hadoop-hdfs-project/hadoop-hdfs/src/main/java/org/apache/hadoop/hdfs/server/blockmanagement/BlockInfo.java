@@ -97,7 +97,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
 		assert index >= 0;
 		if(node != null)
-			BlocksHelper.setDatanode(this.getBlockId(), index, node.name, isTransactional);
+			BlocksHelper.setDatanode(this.getBlockId(), index, node.name, node.storageID, isTransactional);
 	}
 
 	/** Checks the size of the triplets and how many more, we can add (in theory) */

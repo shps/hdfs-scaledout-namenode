@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.IOException;
 import java.util.Formatter;
 import java.util.LinkedList;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * LsImageVisitor displays the blocks of the namespace in a format very similar
@@ -34,6 +36,7 @@ import java.util.LinkedList;
  * output of the lsr command.
  */
 class LsImageVisitor extends TextWriterImageVisitor {
+  static final Log LOG = LogFactory.getLog(LsImageVisitor.class);
   final private LinkedList<ImageElement> elemQ = new LinkedList<ImageElement>();
 
   private int numBlocks;
@@ -109,7 +112,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
 
   @Override
   void finishAbnormally() throws IOException {
-    System.out.println("Input ended unexpectedly.");
+    LOG.info("Input ended unexpectedly.");
     super.finishAbnormally();
   }
 

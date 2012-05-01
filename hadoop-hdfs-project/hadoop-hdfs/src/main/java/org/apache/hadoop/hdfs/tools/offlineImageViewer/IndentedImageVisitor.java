@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.IOException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * IndentedImageVisitor walks over an FSImage and displays its structure 
@@ -25,7 +27,9 @@ import java.io.IOException;
  */
 class IndentedImageVisitor extends TextWriterImageVisitor {
   
-  public IndentedImageVisitor(String filename) throws IOException {
+ static final Log LOG = LogFactory.getLog(IndentedImageVisitor.class);
+         
+    public IndentedImageVisitor(String filename) throws IOException {
     super(filename);
   }
 
@@ -43,7 +47,7 @@ class IndentedImageVisitor extends TextWriterImageVisitor {
 
   @Override
   void finishAbnormally() throws IOException {
-    System.out.println("*** Image processing finished abnormally.  Ending ***");
+    LOG.info("*** Image processing finished abnormally.  Ending ***");
     super.finishAbnormally();
   }
 

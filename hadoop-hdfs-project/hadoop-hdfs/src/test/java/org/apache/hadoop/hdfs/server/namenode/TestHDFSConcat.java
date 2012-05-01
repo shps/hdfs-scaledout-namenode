@@ -117,7 +117,7 @@ public class TestHDFSConcat {
     for(i=0; i<files.length; i++) {
       files[i] = new Path("/file"+i);
       Path path = files[i];
-      System.out.println("Creating file " + path);
+      LOG.info("Creating file " + path);
       DFSTestUtil.createFile(dfs, path, fileLen, REPL_FACTOR, 1);
     
       fStatus = nn.getFileInfo(path.toUri().getPath());
@@ -142,7 +142,7 @@ public class TestHDFSConcat {
       hdfs.concat(trgPath, files);
       fail("Permission exception expected");
     } catch (IOException ie) {
-      System.out.println("Got expected exception for permissions:"
+      LOG.info("Got expected exception for permissions:"
           + ie.getLocalizedMessage());
       // expected
     }
@@ -164,7 +164,7 @@ public class TestHDFSConcat {
       totalLen += lens[i];
       totalBlocks += lblocks[i].locatedBlockCount();
     }
-    System.out.println("total len=" + totalLen + "; totalBlocks=" + totalBlocks);
+    LOG.info("total len=" + totalLen + "; totalBlocks=" + totalBlocks);
     
     
     fStatus = nn.getFileInfo(trg);
@@ -311,7 +311,7 @@ public class TestHDFSConcat {
     LocatedBlocks lb2 = nn.getBlockLocations(name2, 0, srcFileLen);
     
     
-    System.out.println("trg len="+trgFileLen+"; src len="+srcFileLen);
+    LOG.info("trg len="+trgFileLen+"; src len="+srcFileLen);
     
     // move the blocks
     dfs.concat(filePath1, new Path [] {filePath2});
@@ -334,7 +334,7 @@ public class TestHDFSConcat {
         lb1.locatedBlockCount() + lb2.locatedBlockCount());
     
     // 2. file lengths
-    System.out.println("file1 len="+fileLen+"; total len="+totalLen);
+    LOG.info("file1 len="+fileLen+"; total len="+totalLen);
     assertEquals(fileLen, totalLen);
     
     // 3. removal of the src file
