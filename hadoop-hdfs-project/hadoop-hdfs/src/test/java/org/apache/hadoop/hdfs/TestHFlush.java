@@ -58,7 +58,7 @@ public class TestHFlush {
    * to write a file with a custom block size so the writes will be
    * happening across block' boundaries
    */
-  //@Test
+  @Test
   public void hFlush_02() throws IOException {
     Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 512;
@@ -74,7 +74,7 @@ public class TestHFlush {
    * to write a file with a custom block size so the writes will be
    * happening across block's and checksum' boundaries
    */
- //@Test
+ @Test
   public void hFlush_03() throws IOException {
     Configuration conf = new HdfsConfiguration();
     int customPerChecksumSize = 400;
@@ -150,7 +150,7 @@ public class TestHFlush {
     }
   }
   static void checkData(final byte[] actual, int from, int len,
-                        final byte[] expected, String message) {
+      final byte[] expected, String message) {
     for (int idx = 0; idx < len; idx++) {
       assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                    expected[from+idx]+" actual "+actual[idx],
@@ -162,12 +162,12 @@ public class TestHFlush {
   /** This creates a slow writer and check to see 
    * if pipeline heartbeats work fine
    */
- //@Test
+ @Test
   public void testPipelineHeartbeat() throws Exception {
     final int DATANODE_NUM = 2;
     final int fileLen = 6;
     Configuration conf = new HdfsConfiguration();
-    final int timeout = 2000;
+    final int timeout = 2000;//  2000;
     conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
         timeout);
 
@@ -214,7 +214,7 @@ public class TestHFlush {
     }
   }
 
-  //@Test
+  @Test
   public void testHFlushInterrupted() throws Exception {
     final int DATANODE_NUM = 2;
     final int fileLen = 6;

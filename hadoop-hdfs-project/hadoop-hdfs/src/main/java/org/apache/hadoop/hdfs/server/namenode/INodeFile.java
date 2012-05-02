@@ -129,8 +129,9 @@ public class INodeFile extends INode {
 	/**
 	 * Get file blocks 
 	 * @return file blocks
+	 * @throws IOException 
 	 */
-	public BlockInfo[] getBlocks() {
+	public BlockInfo[] getBlocks() throws IOException {
 		
 		BlockInfo [] ret = BlocksHelper.getBlockInfoArray(this);
 		
@@ -155,8 +156,9 @@ public class INodeFile extends INode {
   
 	/**
 	 * append array of blocks to this.blocks
+	 * @throws IOException 
 	 */
-	void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
+	void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) throws IOException {
 		BlocksHelper.appendBlocks(inodes, totalAddedBlocks);
 	}
 	
@@ -318,6 +320,7 @@ public class INodeFile extends INode {
 
 	/**
 	 * Return the penultimate allocated block for this file.
+	 * @throws IOException 
 	 */
 	//FIXME: KTHFSBLOCKS
 /*	BlockInfo getPenultimateBlock() {
@@ -326,7 +329,7 @@ public class INodeFile extends INode {
 	}
 */
 	
-	BlockInfo getPenultimateBlock() {
+	BlockInfo getPenultimateBlock() throws IOException {
 		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
 		if (tempblocks == null || tempblocks.length <= 1) {
 			return null;

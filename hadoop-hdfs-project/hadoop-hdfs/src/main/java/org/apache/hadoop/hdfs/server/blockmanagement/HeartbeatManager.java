@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -223,6 +224,8 @@ class HeartbeatManager implements DatanodeStatistics {
                   // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
             dm.removeDeadDatanode(dead, false);
           }
+        } catch (IOException e) {
+          e.printStackTrace();
         } finally {
           namesystem.writeUnlock();
         }

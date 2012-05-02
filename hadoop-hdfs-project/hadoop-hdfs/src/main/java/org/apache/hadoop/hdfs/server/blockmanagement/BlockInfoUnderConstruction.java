@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ReplicaHelper;
 
 /**
  * Represents a block that is currently being constructed.<br>
@@ -129,22 +130,24 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   /**
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
+   * @throws IOException 
    */
-  public BlockInfoUnderConstruction(Block blk, int replication) {
+  public BlockInfoUnderConstruction(Block blk, int replication) throws IOException {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
+   * @throws IOException 
    */
   public BlockInfoUnderConstruction(Block blk, int replication,
                              BlockUCState state,
-                             DatanodeDescriptor[] targets) {
+                             DatanodeDescriptor[] targets) throws IOException {
     super(blk, replication);
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "BlockInfoUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;
-    setExpectedLocations(targets);
+    setExpectedLocations(targets, false);
   }
 
   /**
@@ -165,30 +168,43 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return new BlockInfo(this);
   }
 
-  /** Set expected locations */ //FIXME: [thesis] replicas need to be persisted!
-  public void setExpectedLocations(DatanodeDescriptor[] targets) {
+  /** Set expected locations 
+   * @throws IOException */
+  public void setExpectedLocations(DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
     int numLocations = targets == null ? 0 : targets.length;
-    this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
-    for(int i = 0; i < numLocations; i++)
-      replicas.add(
-        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+    //this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
+    for(int i = 0; i < numLocations; i++) {
+      //replicas.add(
+      //  new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+      ReplicaHelper.add(this.getBlockId(), targets[i], ReplicaState.RBW, isTransactional);
+    }
   }
 
   /**
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
+   * @throws IOException 
    */
-  public DatanodeDescriptor[] getExpectedLocations() {
-    int numLocations = replicas == null ? 0 : replicas.size();
+  public DatanodeDescriptor[] getExpectedLocations() throws IOException {
+    //int numLocations = replicas == null ? 0 : replicas.size();
+    //DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
+    //for(int i = 0; i < numLocations; i++)
+    //  locations[i] = replicas.get(i).getExpectedLocation();
+    //return locations;
+    List<ReplicaUnderConstruction> replicasList = ReplicaHelper.getReplicas(this.getBlockId(), false);
+    int numLocations = replicasList == null ? 0 : replicasList.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
     for(int i = 0; i < numLocations; i++)
-      locations[i] = replicas.get(i).getExpectedLocation();
+      locations[i] = replicasList.get(i).getExpectedLocation();
     return locations;
+    
+    
   }
 
   /** Get the number of expected locations */
   public int getNumExpectedLocations() {
-    return replicas == null ? 0 : replicas.size();
+    //return replicas == null ? 0 : replicas.size();
+    return ReplicaHelper.size(this.getBlockId(), false);
   }
 
   /**
@@ -253,13 +269,24 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     }
   }
 
+//  void addReplicaIfNotPresentOld(DatanodeDescriptor dn,
+//                     Block block,
+//                     ReplicaState rState) {
+//    for(ReplicaUnderConstruction r : replicas)
+//      if(r.getExpectedLocation() == dn)
+//        return;
+//    replicas.add(new ReplicaUnderConstruction(block, dn, rState));
+//  }
+  
   void addReplicaIfNotPresent(DatanodeDescriptor dn,
-                     Block block,
-                     ReplicaState rState) {
-    for(ReplicaUnderConstruction r : replicas)
-      if(r.getExpectedLocation() == dn)
+      Block block,
+      ReplicaState rState, boolean isTransactional) throws IOException {
+    
+    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), false);
+    for(ReplicaUnderConstruction r : replicasFromDB)
+      if(r.getExpectedLocation().getName().equals(dn.getName()))
         return;
-    replicas.add(new ReplicaUnderConstruction(block, dn, rState));
+    ReplicaHelper.add(this.getBlockId(), dn, rState, isTransactional);
   }
 
   @Override // BlockInfo

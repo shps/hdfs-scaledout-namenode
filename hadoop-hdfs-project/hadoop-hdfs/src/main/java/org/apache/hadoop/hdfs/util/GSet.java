@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -33,8 +35,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface GSet<K, E extends K> extends Iterable<E> {
   /**
    * @return The size of this set.
+   * @throws IOException 
    */
-  int size();
+  int size() throws IOException;
 
   /**
    * Does this set contain an element corresponding to the given key?
@@ -43,7 +46,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    *         Otherwise, return false.
    * @throws NullPointerException if key == null.
    */
-  boolean contains(K key);
+  boolean contains(K key) throws IOException;
 
   /**
    * Return the stored element which is equal to the given key.
@@ -53,7 +56,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    *         Otherwise, return null.
    * @throws NullPointerException if key == null.
    */
-  E get(K key);
+  E get(K key) throws IOException;
   //E getFromDB(K key);
   /**
    * Add/replace an element.
@@ -70,7 +73,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    *         Otherwise, return null.
    * @throws NullPointerException if element == null.
    */
-  E put(E element);
+  E put(E element) throws IOException;
 
   /**
    * Remove the element corresponding to the given key. 
@@ -78,9 +81,10 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @param key The key of the element being removed.
    * @return If such element exists, return it.
    *         Otherwise, return null. 
+   * @throws IOException 
     * @throws NullPointerException if key == null.
   */
-  E remove(K key);
+  E remove(K key) throws IOException;
   
   
   

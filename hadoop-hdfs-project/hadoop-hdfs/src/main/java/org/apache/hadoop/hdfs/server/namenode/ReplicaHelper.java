@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction.ReplicaUnderConstruction;
@@ -38,6 +39,38 @@ public class ReplicaHelper {
   private static final Log LOG = LogFactory.getLog(ReplicaHelper.class);
   private static final int RETRY_COUNT = 3; 
 
+  public static void add(long blockId, DatanodeDescriptor expLocation, ReplicaState repState, boolean isTrans) 
+      throws IOException {
+    
+    if(isTrans)
+      add(blockId, expLocation, repState);
+    else
+      addWithTransaction(blockId, expLocation, repState);
+  }
+  
+  /** insert a ReplicaUnderConstruction object in the database 
+   * @param blockId
+   * @param expLocation
+   * @param repState
+   * @throws IOException 
+   */
+  private static void add(long blockId, DatanodeDescriptor expLocation, ReplicaState repState) throws IOException {
+    Session session = DBConnector.obtainSession();
+
+    // Serializing the DatanodeDescriptor. Upcasting to DatanodeID 
+    // because we would only need ip:port, storageID 
+    DataOutputBuffer expBytes = new DataOutputBuffer();
+    DatanodeID dnId = (DatanodeID) expLocation;
+    dnId.write(expBytes);
+
+    //Serializing the ReplicaState
+    DataOutputBuffer repStateBuf = new DataOutputBuffer();
+    repState.write(repStateBuf);
+
+    insert(session, blockId, expBytes.getData(), repStateBuf.getData());
+    session.flush();
+
+  }
 
   /** insert a ReplicaUnderConstruction object in the database 
    * @param blockId
@@ -45,7 +78,7 @@ public class ReplicaHelper {
    * @param repState
    * @throws IOException 
    */
-  public static void add(long blockId, DatanodeDescriptor expLocation, ReplicaState repState) throws IOException {
+  private static void addWithTransaction(long blockId, DatanodeDescriptor expLocation, ReplicaState repState) throws IOException {
     int tries = RETRY_COUNT;
     boolean done = false;
     Session session = DBConnector.obtainSession();
@@ -79,10 +112,27 @@ public class ReplicaHelper {
   }
 
 
+  public static void delete(long blockId, boolean isTransactional) {
+    if(isTransactional)
+      delete(blockId);
+    else
+      deleteWithTransaction(blockId);
+  }
+  
+  
   /** Delete all replicas of a blockId
    * @param blockId
    */
-  public static void delete(long blockId) {
+  private static void delete(long blockId) {
+    Session session = DBConnector.obtainSession();
+    delete(session, blockId);
+    session.flush();
+  }
+  
+  /** Delete all replicas of a blockId
+   * @param blockId
+   */
+  private static void deleteWithTransaction(long blockId) {
     int tries = RETRY_COUNT;
     boolean done = false;
     Session session = DBConnector.obtainSession();
@@ -104,12 +154,38 @@ public class ReplicaHelper {
       } 
     }
   }
+  
+  
+  
+  /** The number of replicas for a given blockId
+   * @param blockId
+   * @param isTransactional
+   * @return
+   */
+  public static int size(long blockId, boolean isTransactional) {
+    if(isTransactional)
+      return size(blockId);
+    else
+      return sizeWithTransaction(blockId);
+  }
+
+  
+  
+  /** The number of replicas for a given blockId
+   * @param blockId
+   * @return number of replicas
+   */
+  private static int size(long blockId) {
+    Session session = DBConnector.obtainSession();
+    return select(session, blockId).size();
+  }
+  
 
   /** The number of replicas for a given blockId
    * @param blockId
    * @return number of replicas
    */
-  public static int size(long blockId) {
+  private static int sizeWithTransaction(long blockId) {
     int tries = RETRY_COUNT;
     boolean done = false;
     Session session = DBConnector.obtainSession();
@@ -122,18 +198,41 @@ public class ReplicaHelper {
         tries--;
       } 
     }
-
     return -1;
   }
-
 
 
   /** Fetch all replicas of a blockId from DB. 
    * This method will never return null
    * @param blockId
    * @return a list of ReplicaUnderConstruction objects
+   * @throws IOException 
    */
-  public static List<ReplicaUnderConstruction> getReplicas(long blockId) { 
+  public static List<ReplicaUnderConstruction> getReplicas(long blockId, boolean isTransactional) throws IOException { 
+    if(isTransactional)
+      return getReplicas(blockId);
+    else
+      return getReplicasWithTransaction(blockId);
+  }
+  
+  /** Fetch all replicas of a blockId from DB. 
+   * This method will never return null
+   * @param blockId
+   * @return a list of ReplicaUnderConstruction objects
+   * @throws IOException 
+   */
+  private static List<ReplicaUnderConstruction> getReplicas(long blockId) throws IOException { 
+    Session session = DBConnector.obtainSession();
+    List<ReplicaUcTable> repList = select(session, blockId);
+    return convert(repList);
+  }
+  
+  /** Fetch all replicas of a blockId from DB. 
+   * This method will never return null
+   * @param blockId
+   * @return a list of ReplicaUnderConstruction objects
+   */
+  private static List<ReplicaUnderConstruction> getReplicasWithTransaction(long blockId) { 
     int tries = RETRY_COUNT;
     boolean done = false;
     Session session = DBConnector.obtainSession();
@@ -222,6 +321,7 @@ public class ReplicaHelper {
     rept.setBlockId(blockId);
     rept.setExpectedLocation(expLocation);
     rept.setState(repState);
+    rept.setId(DFSUtil.getRandom().nextInt());
     //setting the timestamp for ordering
     rept.setTimestamp(System.currentTimeMillis());
     session.makePersistent(rept);

@@ -7,6 +7,7 @@ import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.INodeTableSimple;
 import se.sics.clusterj.LeasePathsTable;
 import se.sics.clusterj.LeaseTable;
+import se.sics.clusterj.ReplicaUcTable;
 import se.sics.clusterj.TripletsTable;
 import java.util.Map;
 import java.util.Properties;
@@ -138,31 +139,32 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
          */
         public static boolean formatDB()
         {
-            Session session = obtainSession();
-            Transaction tx = session.currentTransaction();
-            try
-            {
-                tx.begin();
-                session.deletePersistentAll(INodeTableSimple.class);
-                session.deletePersistentAll(BlockInfoTable.class);
-                session.deletePersistentAll(LeaseTable.class);
-                session.deletePersistentAll(LeasePathsTable.class);
-                session.deletePersistentAll(TripletsTable.class);
-		// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-		session.deletePersistentAll(BlockTotalTable.class);
-                session.deletePersistentAll(DelegationKeyTable.class);
-		BlocksHelper.resetTotalBlocks(true);
-                tx.commit();
-                session.flush();
-                return true;
-            }
-            catch(ClusterJException ex)
-            {
-                LOG.error(ex.getMessage(), ex);
-                tx.rollback();
-            }
-            
-            return false;
+          Session session = obtainSession();
+          Transaction tx = session.currentTransaction();
+          try
+          {
+            tx.begin();
+            session.deletePersistentAll(INodeTableSimple.class);
+            session.deletePersistentAll(BlockInfoTable.class);
+            session.deletePersistentAll(LeaseTable.class);
+            session.deletePersistentAll(LeasePathsTable.class);
+            session.deletePersistentAll(TripletsTable.class);
+            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
+            session.deletePersistentAll(BlockTotalTable.class);
+            session.deletePersistentAll(DelegationKeyTable.class);
+            BlocksHelper.resetTotalBlocks(true);
+            session.deletePersistentAll(ReplicaUcTable.class);
+            tx.commit();
+            session.flush();
+            return true;
+          }
+          catch(ClusterJException ex)
+          {
+            LOG.error(ex.getMessage(), ex);
+            tx.rollback();
+          }
+
+          return false;
         }
         
         public static boolean checkTransactionState(boolean isTransactional)

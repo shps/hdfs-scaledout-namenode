@@ -2112,8 +2112,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /** 
    * Check all blocks of a file. If any blocks are lower than their intended
    * replication factor, then insert them into neededReplication
+   * @throws IOException 
    */
-  private void checkReplicationFactor(INodeFile file) {
+  private void checkReplicationFactor(INodeFile file) throws IOException {
 
     int numExpectedReplicas = file.getReplication();
     Block[] pendingBlocks = file.getBlocks();
@@ -2129,11 +2130,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param src path to the file
    * @param inodes INode representing each of the components of src. 
    *        <code>inodes[inodes.length-1]</code> is the INode for the file.
-   *        
-   * @throws QuotaExceededException If addition of block exceeds space quota
+   * @throws IOException 
    */
   private Block allocateBlock(String src, INode[] inodes,
-      DatanodeDescriptor targets[], boolean isTransactional) throws QuotaExceededException {
+      DatanodeDescriptor targets[], boolean isTransactional) throws IOException {
     assert hasWriteLock();
     Block b = new Block(DFSUtil.getRandom().nextLong(), 0, 0); 
     while(isValidBlock(b)) {
@@ -2150,8 +2150,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Check that the indicated file's blocks are present and
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
+   * @throws IOException 
    */
-  boolean checkFileProgress(INodeFile v, boolean checkall) {
+  boolean checkFileProgress(INodeFile v, boolean checkall) throws IOException {
     readLock();
     try {
       if (checkall) {
@@ -2472,8 +2473,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  /** From the given list, incrementally remove the blocks from blockManager */
-  private void removeBlocks(List<Block> blocks, boolean isTransactional) {
+  /** From the given list, incrementally remove the blocks from blockManager 
+   * @throws IOException */
+  private void removeBlocks(List<Block> blocks, boolean isTransactional) throws IOException {
     assert hasWriteLock();
     int start = 0;
     int end = 0;
@@ -2488,7 +2490,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  void removePathAndBlocks(String src, List<Block> blocks, boolean isTransactional) {
+  void removePathAndBlocks(String src, List<Block> blocks, boolean isTransactional) throws IOException {
     assert isWritingNN();
       assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src, isTransactional);
@@ -2810,7 +2812,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     case UNDER_RECOVERY:
       // setup the last block locations from the blockManager if not known
       if(lastBlock.getNumExpectedLocations() == 0)
-        lastBlock.setExpectedLocations(blockManager.getNodes(lastBlock));
+        lastBlock.setExpectedLocations(blockManager.getNodes(lastBlock), isTransactional);
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp();
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
@@ -3500,8 +3502,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * <p>
      * Switch to manual safe mode if distributed upgrade is required.<br>
      * Check for invalid, under- & over-replicated blocks in the end of startup.
+     * @throws IOException 
      */
-    private synchronized void leave(boolean checkForUpgrades) {
+    private synchronized void leave(boolean checkForUpgrades) throws IOException {
       if(checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
         boolean needUpgrade = false;
@@ -3540,8 +3543,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     /**
      * Initialize replication queues.
+     * @throws IOException 
      */
-    private synchronized void initializeReplQueues() {
+    private synchronized void initializeReplQueues() throws IOException {
       LOG.info("initializing replication queues");
       if (isPopulatingReplQueues()) {
         LOG.warn("Replication queues already initialized.");
@@ -3593,8 +3597,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     /**
      * Check and trigger safe mode if needed. 
+     * @throws IOException 
      */
-    private void checkMode() {
+    private void checkMode() throws IOException {
       if (needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
@@ -3630,8 +3635,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     /**
      * Set total number of blocks.
+     * @throws IOException 
      */
-    private synchronized void setBlockTotal(int total) {
+    private synchronized void setBlockTotal(int total) throws IOException {
       this.blockTotal = total;
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
@@ -3643,8 +3649,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Increment number of safe blocks if current block has 
      * reached minimal replication.
      * @param replication current replication 
+     * @throws IOException 
      */
-    private synchronized void incrementSafeBlockCount(short replication) {
+    private synchronized void incrementSafeBlockCount(short replication) throws IOException {
       if ((int)replication == safeReplication)
         this.blockSafe++;
       checkMode();
@@ -3654,8 +3661,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Decrement number of safe blocks if current block has 
      * fallen below minimal replication.
      * @param replication current replication 
+     * @throws IOException 
      */
-    private synchronized void decrementSafeBlockCount(short replication) {
+    private synchronized void decrementSafeBlockCount(short replication) throws IOException {
       if (replication == safeReplication-1)
         this.blockSafe--;
       checkMode();
@@ -3822,6 +3830,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           String msg = "SafeModeMonitor may not run during distributed upgrade.";
           assert false : msg;
           throw new RuntimeException(msg, es);
+        } catch (IOException e) {
+          e.printStackTrace();
         }
       }
       smmthread = null;
@@ -3844,7 +3854,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @Override
-  public void checkSafeMode() {
+  public void checkSafeMode() throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode != null) {
@@ -3880,7 +3890,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   @Override
-  public void incrementSafeBlockCount(int replication) {
+  public void incrementSafeBlockCount(int replication) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -3889,7 +3899,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @Override
-  public void decrementSafeBlockCount(Block b) {
+  public void decrementSafeBlockCount(Block b) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null) // mostly true
@@ -3899,8 +3909,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Set the total number of blocks in the system. 
+   * @throws IOException 
    */
-  private void setBlockTotal() {
+  private void setBlockTotal() throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -3920,8 +3931,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Get the total number of COMPLETE blocks in the system.
    * For safe mode only complete blocks are counted.
+   * @throws IOException 
    */
-  private long getCompleteBlocksTotal() {
+  private long getCompleteBlocksTotal() throws IOException {
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     readLock();
@@ -3990,7 +4002,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Leave safe mode.
    * @throws IOException
    */
-  void leaveSafeMode(boolean checkForUpgrades) throws SafeModeException {
+  void leaveSafeMode(boolean checkForUpgrades) throws IOException {
     writeLock();
     try {
       if (!isInSafeMode()) {
@@ -4020,8 +4032,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Returns whether the given block is one pointed-to by a file.
+   * @throws IOException 
    */
-  private boolean isValidBlock(Block b) {
+  private boolean isValidBlock(Block b) throws IOException {
     return (blockManager.getINode(b) != null);
   }
 
@@ -4372,7 +4385,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         descriptors[i] = dm.getDatanode(newNodes[i]);
       }
     }
-    blockinfo.setExpectedLocations(descriptors);
+    blockinfo.setExpectedLocations(descriptors, false);
 
     // persist blocks only if append is supported
     String src = leaseManager.findPath(pendingFile);

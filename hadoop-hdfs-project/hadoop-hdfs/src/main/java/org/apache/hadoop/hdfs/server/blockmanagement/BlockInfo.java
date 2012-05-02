@@ -182,9 +182,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	 * Convert a complete block to an under construction block.
 	 * 
 	 * @return BlockInfoUnderConstruction -  an under construction block.
+	 * @throws IOException 
 	 */
 	public BlockInfoUnderConstruction convertToBlockUnderConstruction(
-			BlockUCState s, DatanodeDescriptor[] targets) {
+			BlockUCState s, DatanodeDescriptor[] targets) throws IOException {
 		if(isComplete()) {
 			return new BlockInfoUnderConstruction(
 					this, getINode().getReplication(), s, targets);
@@ -192,7 +193,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		// the block is already under construction
 		BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
 		ucBlock.setBlockUCState(s);
-		ucBlock.setExpectedLocations(targets);
+		ucBlock.setExpectedLocations(targets, false);
 		return ucBlock;
 	}
 

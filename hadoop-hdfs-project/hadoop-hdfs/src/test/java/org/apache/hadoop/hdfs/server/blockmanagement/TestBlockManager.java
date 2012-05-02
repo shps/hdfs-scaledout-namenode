@@ -95,7 +95,7 @@ public class TestBlockManager {
     }
   }
 
-  private void removeNode(DatanodeDescriptor deadNode) {
+  private void removeNode(DatanodeDescriptor deadNode) throws IOException {
     NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
     cluster.remove(deadNode);
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
@@ -115,7 +115,7 @@ public class TestBlockManager {
     }
   }
   
-  private void doBasicTest(int testIndex) {
+  private void doBasicTest(int testIndex) throws IOException {
     List<DatanodeDescriptor> origNodes = nodes(0, 1);
     BlockInfo blockInfo = addBlockOnNodes((long)testIndex, origNodes);
 
@@ -296,7 +296,7 @@ public class TestBlockManager {
     }
   }
 
-  private void doTestSufficientlyReplBlocksUsesNewRack(int testIndex) {
+  private void doTestSufficientlyReplBlocksUsesNewRack(int testIndex) throws IOException {
     // Originally on only nodes in rack A.
     List<DatanodeDescriptor> origNodes = rackA;
     BlockInfo blockInfo = addBlockOnNodes((long)testIndex, origNodes);
@@ -352,7 +352,7 @@ public class TestBlockManager {
     return nodes;
   }
   
-  private BlockInfo addBlockOnNodes(long blockId, List<DatanodeDescriptor> nodes) {
+  private BlockInfo addBlockOnNodes(long blockId, List<DatanodeDescriptor> nodes) throws IOException {
     INodeFile iNode = Mockito.mock(INodeFile.class);
     Mockito.doReturn((short)3).when(iNode).getReplication();
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
@@ -362,7 +362,7 @@ public class TestBlockManager {
     return blockInfo;
   }
   
-  private DatanodeDescriptor[] scheduleSingleReplication(Block block) {
+  private DatanodeDescriptor[] scheduleSingleReplication(Block block) throws IOException {
     assertEquals("Block not initially pending replication",
         0, bm.pendingReplications.getNumReplicas(block));
     assertTrue("computeReplicationWork should indicate replication is needed",

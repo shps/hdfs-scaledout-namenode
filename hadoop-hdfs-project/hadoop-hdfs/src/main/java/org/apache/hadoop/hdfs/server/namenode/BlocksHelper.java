@@ -53,8 +53,9 @@ public class BlocksHelper {
 	/**
 	 * Helper function for appending an array of blocks - used by concat
 	 * Replacement for INodeFile.appendBlocks
+	 * @throws IOException 
 	 */
-	public static void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
+	public static void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) throws IOException {
 		int tries=RETRY_COUNT;
 		boolean done = false;
 
@@ -77,7 +78,7 @@ public class BlocksHelper {
 		}
 
 	}
-	private static void appendBlocks(INodeFile[] inodes, int totalAddedBlocks, Session session){
+	private static void appendBlocks(INodeFile[] inodes, int totalAddedBlocks, Session session) throws IOException{
 		for(INodeFile in: inodes) {
 			BlockInfo[] inBlocks = in.getBlocks();
 			for(int i=0;i<inBlocks.length;i++) {
@@ -135,7 +136,7 @@ public class BlocksHelper {
 	 * @return
 	 * @throws IOException 
 	 */
-	public static BlockInfo getBlockInfo(long blockId)  {
+	public static BlockInfo getBlockInfo(long blockId) throws IOException  {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -156,12 +157,10 @@ public class BlocksHelper {
 		return null;
 	}
 	/** When called with single=false, will not retrieve the INodes for the Block */
-	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) {
+	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
 		BlockInfoTable bit = selectBlockInfo(session, blockId);
 		if(bit == null)
-		{
 			return null;
-		}
 		else {
 			Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
 			BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
@@ -423,7 +422,7 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static BlockInfo[] getBlockInfoArray(INodeFile inode) {
+	public static BlockInfo[] getBlockInfoArray(INodeFile inode) throws IOException {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -445,7 +444,7 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) {
+	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) throws IOException {
 		if(inode==null)
 			return null;
 
@@ -922,7 +921,7 @@ public class BlocksHelper {
 	 * 
 	 * This is used by DatanodeDescriptor.BlockIterator
 	 */
-	public static List<BlockInfo> getBlockListForDatanode (String dataNodeName)
+	public static List<BlockInfo> getBlockListForDatanode (String dataNodeName) throws IOException
 	{
 		List<BlockInfo> ret = new ArrayList<BlockInfo>();
 		Session session = DBConnector.obtainSession();
