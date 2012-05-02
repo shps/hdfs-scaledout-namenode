@@ -1653,48 +1653,57 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Append to an existing file in the namespace.
    */
-  LocatedBlock appendFile(String src, String holder, String clientMachine)
-      throws AccessControlException, SafeModeException,
-      FileAlreadyExistsException, FileNotFoundException,
-                       ParentNotDirectoryException, IOException
-        {
-				if(!isWritingNN())
-			        throw new ImproperUsageException();
-                if (supportAppends == false)
-                {
-                        throw new UnsupportedOperationException("Append to hdfs not supported."
-                                                                + " Please refer to dfs.support.append configuration parameter.");
-    }
-    LocatedBlock lb = null;
-    writeLock();
-                try
-                {
-                        // Holds the db locks in 'startFileInternal ()' method
-      lb = startFileInternal(src, null, holder, clientMachine, 
-                        EnumSet.of(CreateFlag.APPEND), 
-                        false, blockManager.maxReplication, (long)0, false);
-    } finally {
-      writeUnlock();
-    }
-    //getEditLog().logSync();
-                if (lb != null)
-                {
-                        if (NameNode.stateChangeLog.isDebugEnabled())
-                        {
-        NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
-            +src+" for "+holder+" at "+clientMachine
-            +" block " + lb.getBlock()
-            +" block size " + lb.getBlock().getNumBytes());
-      }
-    }
-                if (auditLog.isInfoEnabled() && isExternalInvocation())
-                {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
+    LocatedBlock appendFile(String src, String holder, String clientMachine)
+            throws AccessControlException, SafeModeException,
+            FileAlreadyExistsException, FileNotFoundException,
+            ParentNotDirectoryException, IOException {
+        if (!isWritingNN()) {
+            throw new ImproperUsageException();
+        }
+        if (supportAppends == false) {
+            throw new UnsupportedOperationException("Append to hdfs not supported."
+                    + " Please refer to dfs.support.append configuration parameter.");
+        }
+        LocatedBlock lb = null;
+        writeLock();
+        int tries = DBConnector.RETRY_COUNT;
+        boolean isDone = false;
+        try {
+            while (!isDone && tries > 0) {
+                try {
+                    DBConnector.beginTransaction();
+                    // Holds the db locks in 'startFileInternal ()' method
+                    lb = startFileInternal(src, null, holder, clientMachine,
+                            EnumSet.of(CreateFlag.APPEND),
+                            false, blockManager.maxReplication, (long) 0, true);
+                    DBConnector.commit();
+                    isDone = true;
+                } catch (ClusterJException e) {
+                    LOG.error(e.getMessage(), e);
+                    tries--;
+                    DBConnector.safeRollback();
+                }
+            }
+        } finally {
+            DBConnector.safeRollback();
+            writeUnlock();
+        }
+        //getEditLog().logSync();
+        if (lb != null) {
+            if (NameNode.stateChangeLog.isDebugEnabled()) {
+                NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
+                        + src + " for " + holder + " at " + clientMachine
+                        + " block " + lb.getBlock()
+                        + " block size " + lb.getBlock().getNumBytes());
+            }
+        }
+        if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "append", src, null, null);
+        }
+        return lb;
     }
-    return lb;
-  }
 
   ExtendedBlock getExtendedBlock(Block blk) {
     return new ExtendedBlock(blockPoolId, blk);

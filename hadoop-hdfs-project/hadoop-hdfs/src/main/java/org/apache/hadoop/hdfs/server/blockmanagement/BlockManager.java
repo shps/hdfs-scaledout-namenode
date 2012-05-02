@@ -2404,94 +2404,75 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
   }
 
-  /** The given node is reporting that it received/deleted certain blocks. */
-  public void blockReceivedAndDeleted(final DatanodeID nodeID,
-		  final String poolId,
-		  final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]) throws IOException
-		  {
-	  namesystem.writeLock();
-	  int received = 0;
-	  int deleted = 0;
-	  try
-	  {
-		  final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
-		  if (node == null || !node.isAlive)
-		  {
-			  NameNode.stateChangeLog.warn("BLOCK* blockReceivedDeleted"
-					  + " is received from dead or unregistered node "
-					  + nodeID.getName());
-			  throw new IOException(
-					  "Got blockReceivedDeleted message from unregistered or dead node");
-		  }
+    /** The given node is reporting that it received/deleted certain blocks. */
+    public void blockReceivedAndDeleted(final DatanodeID nodeID,
+            final String poolId,
+            final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]) throws IOException {
+        namesystem.writeLock();
+        int received = 0;
+        int deleted = 0;
+        try {
+            final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+            if (node == null || !node.isAlive) {
+                NameNode.stateChangeLog.warn("BLOCK* blockReceivedDeleted"
+                        + " is received from dead or unregistered node "
+                        + nodeID.getName());
+                throw new IOException(
+                        "Got blockReceivedDeleted message from unregistered or dead node");
+            }
 
-		  for (int i = 0; i < receivedAndDeletedBlocks.length; i++)
-		  {
-			  boolean isDone = false;
-			  int tries = DBConnector.RETRY_COUNT;
+            for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
+                boolean isDone = false;
+                int tries = DBConnector.RETRY_COUNT;
 
-			  try
-			  {
-				  while (!isDone && tries > 0)
-				  {
-					  try
-					  {
-						  DBConnector.beginTransaction();
+                try {
+                    while (!isDone && tries > 0) {
+                        try {
+                            DBConnector.beginTransaction();
 
-						  if (receivedAndDeletedBlocks[i].isDeletedBlock())
-						  {
-							  // KTHFS:  removes block from triplets table
-							  removeStoredBlock(
-									  receivedAndDeletedBlocks[i].getBlock(), node, true);
-						  deleted++;
-						  }
-						  else
-						  {
-							  // KTHFS:  adds block from triplets table
-							  addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
-									  receivedAndDeletedBlocks[i].getDelHints(), true);
-						  received++;
-						  }
+                            if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
+                                // KTHFS:  removes block from triplets table
+                                removeStoredBlock(
+                                        receivedAndDeletedBlocks[i].getBlock(), node, true);
+                                deleted++;
+                            } else {
+                                // KTHFS:  adds block from triplets table
+                                addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
+                                        receivedAndDeletedBlocks[i].getDelHints(), true);
+                                received++;
+                            }
 
-						  DBConnector.commit();
-						  isDone = true;
-					  }
-					  catch(ClusterJException ex)
-					  {
-						  if(!isDone)
-						  {
-							  DBConnector.safeRollback();
-							  tries--;
-							  LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: "+ex.getMessage(), ex);
-							  ex.printStackTrace();
-						  }
-					  }
-				  }
-			  }
-			  finally
-			  {
-				  if(!isDone)
-				  {
-					  DBConnector.safeRollback();
-				  }
-			  }
+                            DBConnector.commit();
+                            isDone = true;
+                        } catch (ClusterJException ex) {
+                            if (!isDone) {
+                                DBConnector.safeRollback();
+                                tries--;
+                                LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                } finally {
+                    if (!isDone) {
+                        DBConnector.safeRollback();
+                    }
+                }
 
-			  if (NameNode.stateChangeLog.isDebugEnabled())
-			  {
-				  NameNode.stateChangeLog.debug("BLOCK* block"
-						  + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
-								  : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
-								  + " is received from " + nodeID.getName());
-			  }
-		  }
-	  }
-	  finally
-	  {
-		  namesystem.writeUnlock();
-		  NameNode.stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
-				  + nodeID.getName() + " received: " + received + ", "
-				  + " deleted: " + deleted);
-	  }
-		  }
+                if (NameNode.stateChangeLog.isDebugEnabled()) {
+                    NameNode.stateChangeLog.debug("BLOCK* block"
+                            + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
+                            : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
+                            + " is received from " + nodeID.getName());
+                }
+            }
+        } finally {
+            namesystem.writeUnlock();
+            NameNode.stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
+                    + nodeID.getName() + " received: " + received + ", "
+                    + " deleted: " + deleted);
+        }
+    }
 
     /**
    * Return the number of nodes that are live and decommissioned.

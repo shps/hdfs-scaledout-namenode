@@ -142,7 +142,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	*/
 	  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
 	    int dnIndex = findDatanode(node);
-                                                    if(dnIndex < 0) // the node is not found
+            if(dnIndex < 0) // the node is not found
 	      return false;
 
 	    BlocksHelper.removeTriplets(this,dnIndex, isTransactional);
