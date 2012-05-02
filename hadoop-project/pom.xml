@@ -610,7 +610,6 @@
 			<!-- TODO --><exclude>**/TestLeaseRecovery2.java</exclude>
 			<!-- TODO --><exclude>**/TestLeaseRecovery.java</exclude>
 			<!-- TODO --><exclude>**/TestFileAppend.java</exclude>
-			<!-- TODO: --><exclude>**/TestUnderReplicatedBlocks.java</exclude>
 			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>

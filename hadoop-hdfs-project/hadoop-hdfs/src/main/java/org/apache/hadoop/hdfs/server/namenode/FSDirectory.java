@@ -374,9 +374,8 @@ public class FSDirectory implements Closeable {
         (INodeFileUnderConstruction)inodes[inodes.length-1];
 
       // check quota limits and updated space consumed
-      //TODO[Hooman]: add isTransactional param when you reach here from the caller in place of false.
       updateCount(inodes, inodes.length-1, 0,
-          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, false);
+          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, isTransactional);
 
       // associate new last block for the file
       BlockInfoUnderConstruction blockInfo =

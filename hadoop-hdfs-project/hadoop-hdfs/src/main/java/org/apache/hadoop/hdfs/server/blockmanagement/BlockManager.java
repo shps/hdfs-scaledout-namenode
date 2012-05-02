@@ -463,7 +463,7 @@ public class BlockManager {
 		  completeBlock(fileINode, lastBlock, isTransactional);
 	  }
 	  return b;
-		  }
+    }
 
   /**
    * Check last block of the file under construction

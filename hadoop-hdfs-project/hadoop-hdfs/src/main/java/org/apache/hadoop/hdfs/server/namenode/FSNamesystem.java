@@ -1716,21 +1716,74 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  LocatedBlock getAdditionalBlock(String src,
+  LocatedBlock getAdditionalBlockWithTransaction(String src,
                                          String clientName,
                                          ExtendedBlock previous,
                                         HashMap<Node, Node> excludedNodes)
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
                        IOException
+  {
+    writeLock();
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    LocatedBlock result = null;
+    
+    try
+    {
+        while (!isDone && tries > 0)
         {
-				if (!isWritingNN())
-			        throw new ImproperUsageException();
+            try
+            {
+                DBConnector.beginTransaction();
+                result = getAdditionalBlock(src, clientName, previous, excludedNodes, true);
+                DBConnector.commit();
+                isDone = true;
+            } 
+            catch (ClusterJException e)
+            {
+                LOG.error(e.getMessage(), e);
+                tries--;
+                DBConnector.safeRollback();
+            }
+        }
+    }
+    finally
+    {
+        DBConnector.safeRollback();
+        writeUnlock();
+    }
+    
+    return result;
+  }
+  /**
+   * The client would like to obtain an additional block for the indicated
+   * filename (which is being written-to).  Return an array that consists
+   * of the block, plus a set of machines.  The first on this list should
+   * be where the client writes data.  Subsequent items in the list must
+   * be provided in the connection to the first datanode.
+   *
+   * Make sure the previous blocks have been reported by datanodes and
+   * are replicated.  Will return an empty 2-elt array if we want the
+   * client to "try again later".
+   */
+  LocatedBlock getAdditionalBlock(String src,
+                                         String clientName,
+                                         ExtendedBlock previous,
+                                        HashMap<Node, Node> excludedNodes, boolean isTransactional)
+      throws LeaseExpiredException, NotReplicatedYetException,
+      QuotaExceededException, SafeModeException, UnresolvedLinkException,
+                       IOException
+  {
+    if (!isWritingNN())
+        throw new ImproperUsageException();
+    
     checkBlock(previous);
     long fileLength, blockSize;
     int replication;
     DatanodeDescriptor clientNode = null;
     Block newBlock = null;
+    final DatanodeDescriptor targets[];
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug(
@@ -1738,8 +1791,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           +src+" for "+clientName);
     }
 
-    writeLock();
-    try {
+    if (!isTransactional)
+        writeLock();
+    try{
+        
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
@@ -1749,9 +1804,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
+      /*TODO[Hooman]: It seems that this operation is idempotent and can be done in a separate transaction. It can be committed
+       * in the first writelock and release the lock and try to take them again.*/
       // commit the last block and complete it if it has minimum replicas
-      //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous), false);
+      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous), isTransactional);
 
       //
       // If we fail this, bad things happen!
@@ -1763,38 +1819,40 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
       replication = (int)pendingFile.getReplication();
-    } finally {
+    /*} finally {
       writeUnlock();
-    }
+    }*/
 
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = blockManager.chooseTarget(
+    targets = blockManager.chooseTarget(
         src, replication, clientNode, excludedNodes, blockSize);
 
     // Allocate a new block and record it in the INode. 
-    writeLock();
-    try {
+    /*writeLock();
+    try {*/
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
       INode[] pathINodes = dir.getExistingPathINodes(src);
-      int inodesLen = pathINodes.length;
+      //[Hooman]: These checkings are not necessary when doing all in one writelock and one transaction.
+      /*int inodesLen = pathINodes.length;
       checkLease(src, clientName, pathINodes[inodesLen-1]);
       INodeFileUnderConstruction pendingFile  = (INodeFileUnderConstruction) 
-                                                pathINodes[inodesLen - 1];
+                                                pathINodes[inodesLen - 1];*/ 
                                                            
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
 
       // allocate new block record block locations in INode.
-                        newBlock = allocateBlock(src, pathINodes, targets, false);
+      newBlock = allocateBlock(src, pathINodes, targets, isTransactional);
       
       for (DatanodeDescriptor dn : targets) {
         dn.incBlocksScheduled();
-      }      
+      }
     } finally {
-      writeUnlock();
+        if (!isTransactional)
+            writeUnlock();
     }
 
     // Create next block
@@ -2295,6 +2353,47 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
    * description of exceptions
    */
+    boolean deleteWithTransaction(String src, boolean recursive)
+        throws AccessControlException, SafeModeException,
+               UnresolvedLinkException, IOException {
+      boolean status = false;
+      writeLock();
+      try
+      {
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          while(!isDone && tries > 0)
+          {
+              try
+              {
+                  DBConnector.beginTransaction();
+                  status = delete(src, recursive, true);
+                  DBConnector.commit();
+                  isDone = true;
+              }
+              catch (ClusterJException e)
+              {
+                  LOG.error(e.getMessage(), e);
+                  tries--;
+                  DBConnector.safeRollback();
+                  status = false;
+              }
+          }
+      }
+      finally
+      {
+          writeUnlock();
+          DBConnector.safeRollback();
+      }
+      return status;
+    }
+  
+  /**
+   * Remove the indicated file from namespace.
+   * 
+   * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
+   * description of exceptions
+   */
     boolean delete(String src, boolean recursive, boolean isTransactional)
         throws AccessControlException, SafeModeException,
                UnresolvedLinkException, IOException {
@@ -2327,8 +2426,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
              IOException {
     boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
-
-    writeLock();
+    
+    if (!isTransactional)
+        writeLock();
     try {
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot delete " + src, safeMode);
@@ -2348,19 +2448,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (deleteNow) { // Perform small deletes right away
       	removeBlocks(collectedBlocks, isTransactional);
       }
-    } finally {
+      //TODO[Hooman]: For now, the writelock optimization is commented and the whole transaction is being done with one writelock.
+  /*  } finally {
       writeUnlock();
     }
 
     //getEditLog().logSync();
 
     writeLock();
-    try {
+    try { */
       if (!deleteNow) {
         removeBlocks(collectedBlocks, isTransactional); // Incremental deletion of blocks
       }
     } finally {
-      writeUnlock();
+      if (!isTransactional)
+        writeUnlock();
     }
     collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {

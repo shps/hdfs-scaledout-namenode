@@ -48,7 +48,7 @@ public class TestGSet {
         = new LightWeightGSet<Integer, Integer>(16);
       try {
         //test contains with a null element
-        gset.contains(null);
+        gset.containsOld(null);
         Assert.fail();
       } catch(NullPointerException e) {
         LightWeightGSet.LOG.info("GOOD: getting " + e, e);
@@ -61,7 +61,7 @@ public class TestGSet {
         = new LightWeightGSet<Integer, Integer>(16);
       try {
         //test get with a null element
-        gset.get(null);
+        gset.get_old(null);
         Assert.fail();
       } catch(NullPointerException e) {
         LightWeightGSet.LOG.info("GOOD: getting " + e, e);
@@ -74,14 +74,14 @@ public class TestGSet {
         = new LightWeightGSet<Integer, Integer>(16);
       try {
         //test put with a null element
-        gset.put(null);
+        gset.put_old(null);
         Assert.fail();
       } catch(NullPointerException e) {
         LightWeightGSet.LOG.info("GOOD: getting " + e, e);
       }
       try {
         //test putting an element which is not implementing LinkedElement
-        gset.put(1);
+        gset.put_old(1);
         Assert.fail();
       } catch(IllegalArgumentException e) {
         LightWeightGSet.LOG.info("GOOD: getting " + e, e);
@@ -98,12 +98,11 @@ public class TestGSet {
       for(int v = 1; v < data.length-1; v++) {
         {
           //test remove while iterating
-          final GSetDB<IntElement, IntElement> gset = createGSet(data);
+          final LightWeightGSet<IntElement, IntElement> gset = createGSet(data);
           for(IntElement i : gset) {
             if (i.value == v) {
               //okay because data[0] is not in gset
-                    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-              gset.remove(data[0]);
+              gset.removeOld(data[0]);
             }
           }
 
@@ -111,8 +110,7 @@ public class TestGSet {
             //exception because data[1] is in gset
             for(IntElement i : gset) {
               if (i.value == v) {
-                      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-                gset.remove(data[1]);
+                gset.removeOld(data[1]);
               }
             }
             Assert.fail();
@@ -123,11 +121,11 @@ public class TestGSet {
 
         {
           //test put new element while iterating
-          final GSetDB<IntElement, IntElement> gset = createGSet(data);
+          final LightWeightGSet<IntElement, IntElement> gset = createGSet(data);
           try {
             for(IntElement i : gset) {
               if (i.value == v) {
-                gset.put(data[0]);
+                gset.put_old(data[0]);
               }
             }
             Assert.fail();
@@ -138,11 +136,11 @@ public class TestGSet {
 
         {
           //test put existing element while iterating
-          final GSetDB<IntElement, IntElement> gset = createGSet(data);
+          final LightWeightGSet<IntElement, IntElement> gset = createGSet(data);
           try {
             for(IntElement i : gset) {
               if (i.value == v) {
-                gset.put(data[3]);
+                gset.put_old(data[3]);
               }
             }
             Assert.fail();
@@ -154,11 +152,11 @@ public class TestGSet {
     }
   }
 
-  private static GSetDB<IntElement, IntElement> createGSet(final IntElement[] data) {
-    final GSetDB<IntElement, IntElement> gset
+  private static LightWeightGSet<IntElement, IntElement> createGSet(final IntElement[] data) {
+    final LightWeightGSet<IntElement, IntElement> gset
       = new LightWeightGSet<IntElement, IntElement>(8);
     for(int i = 1; i < data.length; i++) {
-      gset.put(data[i]);
+      gset.put_old(data[i]);
     }
     return gset;
   }
@@ -243,7 +241,6 @@ public class TestGSet {
     for(int j = 0; j < 10; j++) {
       for(int i = 0; i < test.data.size()/2; i++) {
         final int r = ran.nextInt(test.data.size());
-        // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
         test.remove(test.data.get(r));
       }
       for(int i = 0; i < test.data.size()/2; i++) {
@@ -261,7 +258,7 @@ public class TestGSet {
   private static class GSetTestCase implements GSet<IntElement, IntElement> {
     final GSet<IntElement, IntElement> expected
         = new GSetByHashMap<IntElement, IntElement>(1024, 0.75f);
-    final GSetDB<IntElement, IntElement> gset;
+    final LightWeightGSet<IntElement, IntElement> gset;
     final IntData data;
 
     final String info;
@@ -288,7 +285,7 @@ public class TestGSet {
 
     private boolean containsTest(IntElement key) {
       final boolean e = expected.contains(key);
-      Assert.assertEquals(e, gset.contains(key));
+      Assert.assertEquals(e, gset.containsOld(key));
       return e;
     }
     @Override
@@ -300,7 +297,7 @@ public class TestGSet {
 
     private IntElement getTest(IntElement key) {
       final IntElement e = expected.get(key);
-      Assert.assertEquals(e.id, gset.get(key).id);
+      Assert.assertEquals(e.id, gset.get_old(key).id);
       return e;
     }
     @Override
@@ -313,9 +310,9 @@ public class TestGSet {
     private IntElement putTest(IntElement element) {
       final IntElement e = expected.put(element);
       if (e == null) {
-        Assert.assertEquals(null, gset.put(element));
+        Assert.assertEquals(null, gset.put_old(element));
       } else {
-        Assert.assertEquals(e.id, gset.put(element).id);
+        Assert.assertEquals(e.id, gset.put_old(element).id);
       }
       return e;
     }
@@ -330,11 +327,9 @@ public class TestGSet {
             // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
       final IntElement e = expected.remove(key);
       if (e == null) {
-              // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-        Assert.assertEquals(null, gset.remove(key));
+        Assert.assertEquals(null, gset.removeOld(key));
       } else {
-              // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-        Assert.assertEquals(e.id, gset.remove(key).id);
+        Assert.assertEquals(e.id, gset.removeOld(key).id);
       }
 
       check();
