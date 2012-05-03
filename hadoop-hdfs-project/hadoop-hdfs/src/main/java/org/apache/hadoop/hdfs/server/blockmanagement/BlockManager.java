@@ -1633,7 +1633,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
+    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC, isTransactional);
 
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
@@ -1707,7 +1707,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Collection<Block> toRemove,           // remove from DatanodeDescriptor
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockInfo> toCorrupt,      // add to corrupt replicas list
-      Collection<StatefulBlockInfo> toUC) { // add to under-construction list
+      Collection<StatefulBlockInfo> toUC,
+      boolean isTransactional) { // add to under-construction list
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     //BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -1723,10 +1724,10 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Block iblk = itBR.next();
       ReplicaState iState = itBR.getCurrentReplicaState();
       BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
-                                  toAdd, toInvalidate, toCorrupt, toUC);
+                                  toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
       
       // move block to the head of the list
-      if(storedBlock != null && storedBlock.findDatanode(dn) >= 0)
+      if(storedBlock != null && storedBlock.findDatanode(dn, isTransactional) >= 0)
           existingBlocks.remove(storedBlock);
     }
     // collect blocks that have not been reported
@@ -1778,7 +1779,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final Collection<BlockInfo> toAdd, 
       final Collection<Block> toInvalidate, 
       final Collection<BlockInfo> toCorrupt,
-      final Collection<StatefulBlockInfo> toUC) {
+      final Collection<StatefulBlockInfo> toUC, 
+      boolean isTransactional) {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Reported block " + block
@@ -1798,7 +1800,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
-      assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+      assert storedBlock.findDatanode(dn, isTransactional) < 0 : "Block " + block
         + " in recentInvalidatesSet should not appear in DN " + dn;
       return storedBlock;
     }
@@ -1816,7 +1818,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
     //add replica if appropriate
     if (reportedState == ReplicaState.FINALIZED
-        && storedBlock.findDatanode(dn) < 0) {
+        && storedBlock.findDatanode(dn, isTransactional) < 0) {
       toAdd.add(storedBlock);
     }
     return storedBlock;
@@ -1883,7 +1885,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       boolean isTransactional) 
   throws IOException {
     block.addReplicaIfNotPresent(node, block, reportedState);
-    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
+    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node, isTransactional) < 0) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
   }
@@ -2381,7 +2383,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     processReportedBlock(node, block, ReplicaState.FINALIZED,
-                              toAdd, toInvalidate, toCorrupt, toUC);
+                              toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
     // the block is only in one of the to-do lists
     // if it is in none then data-node already has it
     assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1
@@ -2589,8 +2591,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // FIXME: When datanode restarts, it is assigned with another port and identified as a new replica (which is false)
     //                  and then its added to triplets as another replica (duplicate)
-    //return live;
-    return live/2; // (temporary fix) remove this when bug is fixed
+    return live;
+    //return live/2; // (temporary fix) remove this when bug is fixed
   }
 
 /** 
