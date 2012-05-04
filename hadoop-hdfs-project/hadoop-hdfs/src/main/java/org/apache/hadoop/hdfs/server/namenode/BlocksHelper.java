@@ -895,7 +895,7 @@ public class BlocksHelper {
 	 * and returns the lowest value of index among the
 	 * returned results. 
 	 */
-	public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId) 
+	public static int findDatanodeForBlockOld(DatanodeDescriptor node, long blockId) 
 	{
 		Session session = DBConnector.obtainSession();
 		List<TripletsTable> results = selectTriplets(node.name, blockId, session);
@@ -910,6 +910,74 @@ public class BlocksHelper {
 		}
 		return -1;
 	}
+	public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId, boolean isTransactional) 
+	{
+		Session session = DBConnector.obtainSession();
+		//List<TripletsTable> results = selectTriplets(node.name, blockId, session);
+                                                List<TripletsTable> results = selectTripletsByStorageId(node.getStorageID(), blockId, session);
+		if (results != null && results.size() > 0)
+		{
+			Collections.sort(results, new TripletsTableComparator());
+			//			for(int i=0; i<results.size(); i++) {
+			//				if(results.get(i).getDatanodeName().equals(node.getName()))
+			//					results.get(i).getIndex();
+			//			}
+                                                                        
+                                                                         TripletsTable record = results.get(0);
+                                                                         
+                                                                        // check if the dn addresses have changed
+                                                                         if(node.getName().trim().compareTo(record.getDatanodeName().trim()) == 0)
+                                                                         {
+                                                                           return record.getIndex();
+                                                                         }
+                                                                         else
+                                                                         {
+                                                                           updateDatanodeNameInTriplets(session, blockId, record.getIndex(), node.getName(), isTransactional);
+                                                                            return results.get(0).getIndex(); //FIXME: this should only return a datanode which is connected to this NN
+                                                                         }
+		}
+		return -1;
+	}
+
+                      private static void updateDatanodeNameInTriplets(Session session, long blockId, int index, String dnName, boolean isTransactional)
+                      {
+                            TripletsTable triplet = selectTriplet(session, blockId, index);
+                            
+                            boolean done = false;
+                            int tries = RETRY_COUNT;
+                            Transaction tx = session.currentTransaction();
+                            
+                            assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                            if (isTransactional)
+                            {
+                              //update
+                              updateDatanodeNameInTripletsInternal(session, triplet, dnName);
+                            }
+                            else
+                            {
+                              while (done == false && tries > 0)
+                              {
+                                try
+                                {
+                                  tx.begin();
+                                  // update
+                                  updateDatanodeNameInTripletsInternal(session, triplet, dnName);
+                                  tx.commit();
+                                  session.flush();
+                                  done = true;
+                                }
+                                catch (ClusterJException e)
+                                {
+                                        if (tx.isActive())
+                                        {
+                                                tx.rollback();
+                                        }
+                                        LOG.debug("BlocksHelper.updateDatanodeNameInTriplets() threw error " + e.getMessage());
+                                        tries--;
+                                }
+                              }
+                            }
+                      }
 
 	/*
 	 * Find the number of datanodes to which a block of blockId belongs to.
@@ -1237,6 +1305,23 @@ public class BlocksHelper {
 		return 	query.getResultList();
 
 	}
+	/** Fetches all rows from the Triplets table using datanodeName and blockId
+	 * SELECT * FROM triplets WHERE datanodeName=? AND blockId=?;
+	 */
+	private static List<TripletsTable> selectTripletsByStorageId(String storageId, long blockId, Session session){
+
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
+		Predicate pred = dobj.get("storageId").equal(dobj.param("param1"));
+		Predicate pred2 = dobj.get("blockId").equal(dobj.param("param2"));
+		Predicate and = pred.and(pred2);
+		dobj.where(and);
+		Query<TripletsTable> query = session.createQuery(dobj);
+		query.setParameter("param1", storageId); //the WHERE clause of SQL
+		query.setParameter("param2", blockId);
+		return 	query.getResultList();
+
+	}
 
 	/** Returns a list of datanode addresses for a block
 	 * @param blockId
@@ -1279,6 +1364,11 @@ public class BlocksHelper {
 		return blkTable.getTotal();
 	}
 
+                      private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName)
+                      {
+                        record.setDatanodeName(dnName);
+                        session.updatePersistent(record);
+                      }
 }
 
 
