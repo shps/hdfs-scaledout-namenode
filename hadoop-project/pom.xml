@@ -625,7 +625,6 @@
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
 			<!-- TODO--><exclude>**/TestReadWhileWriting.java</exclude>
-			<!-- TODO--><exclude>**/TestHDFSConcat.java</exclude><!--atomic transaction for concat is needed-->
 			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
