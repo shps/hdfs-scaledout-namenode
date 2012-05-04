@@ -50,42 +50,64 @@ public class BlocksHelper {
 		BlocksHelper.dnm = dnm;
 	}
 
-	/**
-	 * Helper function for appending an array of blocks - used by concat
-	 * Replacement for INodeFile.appendBlocks
-	 */
-	public static void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
-		int tries=RETRY_COUNT;
-		boolean done = false;
+        public static void appendBlocks(INodeFile target, 
+                INodeFile [] inodes, boolean isTransactional) {
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
+                appendBlocksInternal(target, inodes, session);
+                session.flush();
+            }
+            else
+                appendBlocksWithTransaction(target, inodes);
+        }
+        
+    /**
+     * Helper function for appending an array of blocks - used by concat
+     * Replacement for INodeFile.appendBlocksInternal
+     */
+    public static void appendBlocksWithTransaction(INodeFile target, 
+            INodeFile[] inodes) {
+        int tries = RETRY_COUNT;
+        boolean done = false;
 
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0 ){
-			try{	
-				tx.begin();
-				appendBlocks(inodes, totalAddedBlocks, session);
-				tx.commit();
-				done=true;
-				session.flush();
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				//System.err.println("BlocksHelper.appendBlocks() threw error " + e.getMessage());
-				e.printStackTrace();
-				tries--;
-			}
-		}
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                appendBlocksInternal(target, inodes, session);
+                tx.commit();
+                done = true;
+                session.flush();
+            } catch (ClusterJException e) {
+                LOG.error(e.getMessage(), e);
+                if (tx.isActive()) {
+                    tx.rollback();
+                }
 
-	}
-	private static void appendBlocks(INodeFile[] inodes, int totalAddedBlocks, Session session){
-		for(INodeFile in: inodes) {
-			BlockInfo[] inBlocks = in.getBlocks();
-			for(int i=0;i<inBlocks.length;i++) {
-				BlockInfoTable bInfoTable = createBlockInfoTable(inBlocks[i], session);
-				insertBlockInfo(session, bInfoTable);
-			}
-		}
-	}
+                tries--;
+            }
+        }
+
+    }
+
+    private static void appendBlocksInternal(INodeFile target,
+            INodeFile[] inodes, Session session) {
+        int index = target.getBlocks().length;
+        for (INodeFile in : inodes) {
+            BlockInfo[] inBlocks = in.getBlocks();
+            for (int i = 0; i < inBlocks.length; i++) {
+                BlockInfoTable bInfoTable = session.newInstance(BlockInfoTable.class);
+                bInfoTable.setBlockId(inBlocks[i].getBlockId());
+                bInfoTable.setINodeID(target.getID());
+                bInfoTable.setBlockIndex(index++);
+                session.updatePersistent(bInfoTable);
+            }
+        }
+    }
 
 	/**
 	 * Helper function for inserting a block in the BlocksInfo table

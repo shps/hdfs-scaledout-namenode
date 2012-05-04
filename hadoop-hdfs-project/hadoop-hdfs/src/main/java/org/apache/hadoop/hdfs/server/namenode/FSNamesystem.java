@@ -918,15 +918,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus resultingStat = null;
     writeLock();
+    int tries = DBConnector.RETRY_COUNT;
+    boolean isDone = false;
     try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot concat " + target, safeMode);
-      }
-      concatInternal(target, srcs);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(target, false);
-      }
+        while (!isDone && tries > 0) {
+            try
+            {
+                DBConnector.beginTransaction();
+                if (isInSafeMode()) {
+                    throw new SafeModeException("Cannot concat " + target, safeMode);
+                }
+                concatInternal(target, srcs, true);
+                DBConnector.commit();
+                isDone = true;
+                if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+                    resultingStat = dir.getFileInfo(target, false);
+                }
+            }
+            catch(ClusterJException e)
+            {
+                LOG.error(e.getMessage(), e);
+                DBConnector.safeRollback();
+                tries--;
+            }
+        }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
     //getEditLog().logSync();
@@ -938,7 +955,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** See {@link #concat(String, String[])} */
-  private void concatInternal(String target, String [] srcs) 
+  private void concatInternal(String target, String [] srcs, boolean isTransactional) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
 
@@ -1034,8 +1051,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           Arrays.toString(srcs) + " to " + target);
     }
 
-    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    dir.concat(target,srcs, false);
+    dir.concat(target,srcs, isTransactional);
   }
   
   /**

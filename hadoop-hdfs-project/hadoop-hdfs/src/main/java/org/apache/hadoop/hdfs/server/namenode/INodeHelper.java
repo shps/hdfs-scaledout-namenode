@@ -439,7 +439,7 @@ public class INodeHelper {
 	 * @param inodeid
 	 * @param modTime
 	 */
-	public static void updateModificationTimeWithTransaction(long inodeid, long modTime) {
+	private static void updateModificationTimeWithTransaction(long inodeid, long modTime) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 
@@ -617,33 +617,6 @@ public class INodeHelper {
             else
                removeChildWithTransaction(inodeid);
 	}
-	/** Deletes an inode from the database
-	 * @param inodeid the inodeid to remove
-	 */
-	public static /*synchronized*/ void removeChildOld(long inodeid) {
-		boolean done = false;
-		int tries = RETRY_COUNT;
-
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				deleteINodeTableInternal(session, inodeid);
-				done = true;
-
-				tx.commit();
-				session.flush();
-			} catch (ClusterJException e) {
-				if (tx.isActive()) {
-					tx.rollback();
-				}
-				LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
-				tries--;
-			}
-		}
-	}
 
 /** Deletes an inode from the database
      * @param inodeid the inodeid to remove
@@ -666,7 +639,7 @@ public class INodeHelper {
                 if (tx.isActive()) {
                     tx.rollback();
                 }
-                LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+                LOG.error(e.getMessage(), e);
                 tries--;
             }
         }
