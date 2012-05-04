@@ -130,6 +130,7 @@ public abstract class NameNodeSelector {
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
+          LOG.info("Next RNN: "+client);
           return client;
         }
       }
@@ -154,6 +155,7 @@ public abstract class NameNodeSelector {
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
+          LOG.info("Next WNN: "+client);
           return client;
         }
       }

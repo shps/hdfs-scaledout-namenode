@@ -104,22 +104,19 @@ public class DistributedFileSystem extends FileSystem {
 
   private String[] getReadNamenodes(Configuration conf) {
     String readNNs = conf.get(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY);
-    if (readNNs == null) {
+    if(readNNs.length() == 0)
+    {
       return new String[0];
     }
-    else {
-      return readNNs.split(",");
-    }
+     return readNNs.split(",");
   }
 
   private String[] getWriteNamenodes(Configuration conf) {
     String writeNNs = conf.get(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY);
-    if (writeNNs == null) {
+    if(writeNNs.length() == 0) {
       return new String[0];
     }
-    else {
-      return writeNNs.split(",");
-    }
+    return writeNNs.split(",");
   }
 
   /** Creates a DFSClient object for each namenode configured and adds it 
@@ -145,6 +142,7 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     String[] readNNs = getReadNamenodes(conf);
+    System.out.println("reader NNS .lenght = "+readNNs.length);
     if (readNNs.length > 0) {
       try {
         for (int i = 0; i < readNNs.length; i++) {

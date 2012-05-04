@@ -624,8 +624,47 @@ public class MiniDFSCluster {
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    
+    // update reader and writer confs so that the DistributedFileSystem is aware of all reader/writer namenodes
+    updateReaderWriterNamenodeConfs(0);
   }
-  
+
+  private void updateReaderWriterNamenodeConfs(int wIndex) {
+    // Getting URI of reader NNs
+    String readerNNURIs = "";
+    NameNodeInfo[] nnInfos = readingNameNodes.get(wIndex);
+
+    // Handle the case if there are no reader NNs
+    if (nnInfos != null && nnInfos.length > 0) {
+      for (int i = 0; i < nnInfos.length; i++) {
+        readerNNURIs += getReadingURI(wIndex, i).toString() + ",";
+      }
+      // Remove the last comma
+      readerNNURIs = readerNNURIs.substring(0, readerNNURIs.length() - 1);
+      LOG.info("ReaderNN  URIs: "+readerNNURIs);
+    }
+
+    // Getting URI of writer NNs
+    String writerNNURIs = "";
+    for (int i = 0; i < writingNameNodes.length; i++) {
+      writerNNURIs += getWritingURI(i).toString() + ",";
+    }
+    writerNNURIs = writerNNURIs.substring(0, writerNNURIs.length() - 1);
+    LOG.info("WriterNN  URIs: "+writerNNURIs);
+
+
+    // Setting the configurations for all reader/writer namenodes
+    if (nnInfos != null && nnInfos.length > 0) {
+      for (int i = 0; i < nnInfos.length; i++) {
+        nnInfos[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, readerNNURIs);
+        nnInfos[i].conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, writerNNURIs);
+      }
+    }
+    for (int i = 0; i < writingNameNodes.length; i++) {
+      writingNameNodes[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, readerNNURIs);
+      writingNameNodes[i].conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, writerNNURIs);
+    }
+  }
   /** Initialize configuration for federated cluster */
   private static void initFederationConf(Configuration conf,
       Collection<String> nameserviceIds, int nnPort) {

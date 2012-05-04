@@ -783,15 +783,6 @@ public class NameNode {
     }
   }
     
-    /**
-   * //ClientProtocol
-   * Ping to see if we have a connection with the NN
-   * 
-   * @throws IOException
-   */
-public void ping() throws IOException {
-    // If this code is reachable, there is a connection to the namenode
-  }
 
   /**
    */

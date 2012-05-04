@@ -847,6 +847,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
  */
   @Override
   public void ping() throws IOException {
-    nn.ping();
+
   }
 }
