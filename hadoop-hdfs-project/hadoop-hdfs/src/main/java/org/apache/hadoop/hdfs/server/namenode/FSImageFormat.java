@@ -549,7 +549,7 @@ class FSImageFormat {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
         out.writeInt(sourceNamesystem.getFSImage()
                      .getStorage().getNamespaceID()); // TODO bad dependency
-        out.writeLong(fsDir.rootDir.numItemsInTree());
+        out.writeLong(fsDir.rootDir.getNsCount());
         out.writeLong(sourceNamesystem.getGenerationStamp());
         out.writeLong(txid);
 

@@ -22,11 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -34,34 +31,36 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.mortbay.log.Log;
 
-import se.sics.clusterj.InodeTable;
-
-import com.mysql.clusterj.ClusterJDatastoreException;
-import com.mysql.clusterj.Query;
-import com.mysql.clusterj.Session;
-import com.mysql.clusterj.Transaction;
-import com.mysql.clusterj.query.QueryBuilder;
-import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Directory INode class.
  */
 class INodeDirectory extends INode {
+    
+        private static final Log LOG = LogFactory.getLog(INodeDirectory.class);
+        
 	protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
 	final static String ROOT_NAME = "";
 
-	private List<INode> children;
+	private List<INode> children = null;
+        
+        protected long nsCount;
+        protected long diskspace;
+
 
 	INodeDirectory(String name, PermissionStatus permissions) {
 		super(name, permissions);
-		this.children = null;
+                this.nsCount = 1;
+                this.diskspace = 0;
 	}
 
 	public INodeDirectory(PermissionStatus permissions, long mTime) {
 		super(permissions, mTime, 0);
-		this.children = null;
+                this.nsCount = 1;
+                this.diskspace = 0;
 	}
 
 	/** constructor */
@@ -76,8 +75,20 @@ class INodeDirectory extends INode {
 	 */
 	INodeDirectory(INodeDirectory other) {
 		super(other);
-		this.children = other.getChildrenFromDB();
+                INode.DirCounts counts = new INode.DirCounts();
+                other.spaceConsumedInTree(counts);
+                this.nsCount= counts.getNsCount();
+                this.diskspace = counts.getDsCount();
+		this.children = other.getChildren();
 	}
+
+         long getNsCount() {
+             return nsCount;
+         }
+  
+        long getDsCount() {
+              return diskspace;
+        }
 
 	/**
 	 * Check whether it's a directory
@@ -87,7 +98,7 @@ class INodeDirectory extends INode {
 	}
 
 	INode removeChild(INode node, boolean isTransactional) {
-		assert getChildrenFromDB() != null;
+		assert getChildren() != null;
                                                                                                  
 			INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
 			INodeHelper.removeChild(node.getID(), isTransactional);
@@ -96,10 +107,10 @@ class INodeDirectory extends INode {
 
 	@Deprecated
 	INode removeChildOld(INode node) {
-	    assert children != null;
-	    int low = Collections.binarySearch(children, node.name);
+	    assert getChildren() != null;
+	    int low = Collections.binarySearch(getChildren(), node.name);
 	    if (low >= 0) {
-	      return children.remove(low);
+	      return getChildren().remove(low);
 	    } else {
 	      return null;
 	    }
@@ -111,13 +122,12 @@ class INodeDirectory extends INode {
 	 * @param newChild Child node to be added
 	 */
 	void replaceChild(INode newChild) {
-                this.children = getChildrenFromDB();
-		if ( children == null ) {
+		if ( getChildren() == null ) {
 			throw new IllegalArgumentException("The directory is empty");
 		}
-		int low = Collections.binarySearch(children, newChild.name);
+		int low = Collections.binarySearch(getChildren(), newChild.name);
 		if (low>=0) { // an old child exists so replace by the newChild
-			children.set(low, newChild);
+			getChildren().set(low, newChild);
 			INodeHelper.replaceChild(this, newChild);
 		} else {
 			throw new IllegalArgumentException("No child exists to be replaced");
@@ -430,7 +440,7 @@ class INodeDirectory extends INode {
 			node.setPermission(p);
 		}
 
-		int low = Collections.binarySearch(getChildrenFromDB(), node.name);
+		int low = Collections.binarySearch(getChildren(), node.name);
 		if(low >= 0){
 			return null;
 		}
@@ -555,15 +565,31 @@ class INodeDirectory extends INode {
 	}
 
 	/** {@inheritDoc} */
+        @Override
 	DirCounts spaceConsumedInTree(DirCounts counts) {
-		counts.nsCount += 1;
-		if (children != null) {
-			for (INode child : children) {
-				child.spaceConsumedInTree(counts);
-			}
-		}
-		return counts;    
+            counts.nsCount += nsCount;
+            counts.dsCount += diskspace;
+            return counts;
 	}
+        
+        void updateNumItemsInTree(long nsDelta, long dsDelta) {
+            nsCount += nsDelta;
+            diskspace += dsDelta;
+         }
+
+        /** 
+        * Sets namespace and diskspace take by the directory rooted 
+        * at this INode. This should be used carefully. It does not check 
+        * for quota violations.
+        * 
+        * @param namespace size of the directory to be set
+        * @param diskspace disk space take by all the nodes under this directory
+        */
+        void setSpaceConsumed(long namespace, long diskspace) {
+            this.nsCount = namespace;
+            this.diskspace = diskspace;
+        }
+  
 
 	/** {@inheritDoc} */
 	long[] computeContentSummary(long[] summary) {
@@ -571,19 +597,17 @@ class INodeDirectory extends INode {
 		// for the (sub)tree rooted at this node
 		assert 4 == summary.length;
 		long[] subtreeSummary = new long[]{0,0,0,0};
-		if (children != null) {
-			for (INode child : children) {
-				child.computeContentSummary(subtreeSummary);
-			}
-		}
+                for (INode child : getChildren()) {
+                        child.computeContentSummary(subtreeSummary);
+                }
+                
 		if (this instanceof INodeDirectoryWithQuota) {
 			// Warn if the cached and computed diskspace values differ
 			INodeDirectoryWithQuota node = (INodeDirectoryWithQuota)this;
-			long space = node.diskspaceConsumed();
-			assert -1 == node.getDsQuota() || space == subtreeSummary[3];
-			if (-1 != node.getDsQuota() && space != subtreeSummary[3]) {
+			assert -1 == node.getDsQuota() || diskspace == subtreeSummary[3];
+			if (-1 != node.getDsQuota() && diskspace != subtreeSummary[3]) {
 				NameNode.LOG.warn("Inconsistent diskspace for directory "
-						+getLocalName()+". Cached: "+space+" Computed: "+subtreeSummary[3]);
+						+getLocalName()+". Cached: "+diskspace+" Computed: "+subtreeSummary[3]);
 			}
 		}
 
@@ -596,23 +620,19 @@ class INodeDirectory extends INode {
 		return summary;
 	}
 
-	/**
-	 * TODO: We need only getChildren() or getChildrenFromDB(), not both.
-	 */
 	List<INode> getChildren() {
-	  //return children==null ? new ArrayList<INode>() : children;
-	  return getChildrenFromDB();
-	}
-
-	List<INode> getChildrenFromDB() {
-	  try {
-	    List<INode> childrenFromDB = INodeHelper.getChildren(this.id);
-	    if(childrenFromDB != null)
-	      return childrenFromDB;
+         try {
+	    children = INodeHelper.getChildren(this.id);
+            
+	    if(children == null)
+                children = new ArrayList<INode>();
+            
+            return children;
 	  } catch (IOException e) {
-	    e.printStackTrace();
-	  }
-	  return new ArrayList<INode>();
+             LOG.error(e);
+	  } finally {
+             return children;
+         }
 	}
 
 
@@ -626,7 +646,7 @@ class INodeDirectory extends INode {
 	//TODO: [thesis] should delete everything in one transaction to reduce latency of this operation
 	int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
 		int total = 1;
-		List<INode> childrenTemp = getChildrenFromDB(); //TODO: confirm if raw can be used here
+		List<INode> childrenTemp = getChildren(); //TODO: confirm if raw can be used here
 		
 		if (childrenTemp == null) {
 			return total;

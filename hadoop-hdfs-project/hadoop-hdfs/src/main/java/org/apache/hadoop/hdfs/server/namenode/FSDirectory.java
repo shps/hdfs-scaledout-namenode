@@ -23,9 +23,6 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -61,9 +58,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
-import org.mortbay.log.Log;
-
-import com.sun.org.apache.bcel.internal.generic.INSTANCEOF;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -1287,7 +1281,7 @@ public class FSDirectory implements Closeable {
 
       // Else its a directory
       INodeDirectory dirInode = (INodeDirectory)targetNode;
-      List<INode> contents = dirInode.getChildrenFromDB();
+      List<INode> contents = dirInode.getChildren();
       int startChild = dirInode.nextChild(startAfter, contents); 
       int totalNumChildren = contents.size();
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
@@ -1486,8 +1480,8 @@ public class FSDirectory implements Closeable {
     }
     
     for(int i = 0; i < numOfINodes; i++) {
-      if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i];
+      if (inodes[i] instanceof INodeDirectory) { // a directory with quota
+        INodeDirectory node =(INodeDirectory)inodes[i];
         INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
       }
     }
@@ -1551,9 +1545,9 @@ public class FSDirectory implements Closeable {
                                       long nsDelta, long dsDelta) {
      assert hasWriteLock();
     for(int i=0; i < numOfINodes; i++) {
-      if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+      if (inodes[i] instanceof INodeDirectory) { // a directory with quota
+        INodeDirectory node =(INodeDirectory)inodes[i]; 
+        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, false);
       }
     }
   }
@@ -2100,7 +2094,7 @@ public class FSDirectory implements Closeable {
   long totalInodes() {
     readLock();
     try {
-      return rootDir.numItemsInTree();
+      return rootDir.getNsCount();
     } finally {
       readUnlock();
     }
