@@ -193,7 +193,7 @@ public class BlocksHelper {
 					node.setBlocksList(getBlocksArrayInternal(node, session));
 
 					blockInfo.setINodeWithoutTransaction(node);
-					updateBlockInfoTable(node.getID(), blockInfo, session);
+					updateBlockInfoTable(node.getID(), blockInfo, session);//TODO[Hooman]: Why does it update the block info here? It should be a read-only operation.
 				}
 			}
 			blockInfo.setBlockIndex(bit.getBlockIndex()); 
