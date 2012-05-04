@@ -630,7 +630,7 @@
 			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->>
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
-			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
+			<!-- FIXED <exclude>**/TestFileCreationNamenodeRestart.java</exclude>-->
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->

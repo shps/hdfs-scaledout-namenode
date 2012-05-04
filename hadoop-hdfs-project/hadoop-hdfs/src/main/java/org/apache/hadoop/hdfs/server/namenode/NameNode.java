@@ -783,6 +783,16 @@ public class NameNode {
     }
   }
     
+    /**
+   * //ClientProtocol
+   * Ping to see if we have a connection with the NN
+   * 
+   * @throws IOException
+   */
+public void ping() throws IOException {
+    // If this code is reachable, there is a connection to the namenode
+  }
+
   /**
    */
   public static void main(String argv[]) throws Exception {
@@ -799,5 +809,5 @@ public class NameNode {
       System.exit(-1);
     }
   }
-  
+
 }

@@ -285,4 +285,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_DU_RESERVED_KEY = "dfs.namenode.resource.du.reserved";
   public static final long    DFS_NAMENODE_DU_RESERVED_DEFAULT = 1024 * 1024 * 100; // 100 MB
   public static final String  DFS_NAMENODE_CHECKED_VOLUMES_KEY = "dfs.namenode.resource.checked.volumes";
+  
+  /*for client failover api*/
+  public static final String  DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY = "dfs.writenamenodes.rpc-address";
+  public static final String  DFS_READ_NAMENODES_RPC_ADDRESS_KEY = "dfs.readnamenodes.rpc-address";
+  public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
 }

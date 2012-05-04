@@ -24,8 +24,10 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -1487,5 +1489,31 @@ public class DFSClient implements java.io.Closeable {
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
         + ", ugi=" + ugi + "]"; 
+  }
+  
+  /**
+   * Ping the name node to see if there is a connection
+   * -- A connection won't exist if it gives an IOException of type ConnectException or SocketTimeout
+   */
+  public boolean pingNamenode() {
+    try {
+    namenode.ping();
+    }
+    catch (IOException ex) {
+      if(ex instanceof ConnectException) {
+        LOG.warn("Unable to connect to Namenode. ", ex);
+        return false;
+      }
+      else if(ex instanceof SocketTimeoutException) {
+        LOG.warn("Connectivity to Namenode timed out. ", ex);
+        return false;
+      }
+      else {
+        LOG.warn("Unknown error. ", ex);
+        return false;
+      }
+    }
+    // There is a connection
+    return true;
   }
 }
