@@ -308,7 +308,7 @@ public class INodeHelper {
 				}
 				return null;
 			} catch (ClusterJException e) {
-				System.err.println("INodeHelper.getINode() threw error " + e.getMessage());
+				LOG.error(e.getMessage(), e);
 				tries--;
 			} catch (IOException io) {
 				tries--;
@@ -375,16 +375,16 @@ public class INodeHelper {
 	 */
 	public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException
 	{
-		 DBConnector.checkTransactionState(isTransactional);
+            DBConnector.checkTransactionState(isTransactional);
         
-        if (isTransactional)
-        {
-            Session session = DBConnector.obtainSession();
-            updateModificationTimeInternal(session, inodeid, modTime);
-            session.flush();
-        }
-        else
-            updateModificationTimeWithTransaction(inodeid, modTime);
+            if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
+                updateModificationTimeInternal(session, inodeid, modTime);
+                session.flush();
+            }
+            else
+                updateModificationTimeWithTransaction(inodeid, modTime);
 	}
 
 	/**Updates the modification time of an inode in the database
@@ -558,43 +558,16 @@ public class INodeHelper {
 	 */
 	public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional)
 	{
-		DBConnector.checkTransactionState(isTransactional);
+            DBConnector.checkTransactionState(isTransactional);
         
-        if (isTransactional)
-        {
-           Session session = DBConnector.obtainSession();
-           deleteINodeTableInternal(session, inodeid);
-           session.flush();
-        }
-        else
-           removeChildWithTransaction(inodeid);
-	}
-	/** Deletes an inode from the database
-	 * @param inodeid the inodeid to remove
-	 */
-	public static /*synchronized*/ void removeChildOld(long inodeid) {
-		boolean done = false;
-		int tries = RETRY_COUNT;
-
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				deleteINodeTableInternal(session, inodeid);
-				done = true;
-
-				tx.commit();
-				session.flush();
-			} catch (ClusterJException e) {
-				if (tx.isActive()) {
-					tx.rollback();
-				}
-				LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
-				tries--;
-			}
-		}
+            if (isTransactional)
+            {
+               Session session = DBConnector.obtainSession();
+               deleteINodeTableInternal(session, inodeid);
+               session.flush();
+            }
+            else
+               removeChildWithTransaction(inodeid);
 	}
 
 /** Deletes an inode from the database
@@ -618,7 +591,7 @@ public class INodeHelper {
                 if (tx.isActive()) {
                     tx.rollback();
                 }
-                LOG.debug("INodeHelper.removeChild() threw error " + e.getMessage());
+                LOG.error(e.getMessage(), e);
                 tries--;
             }
         }
@@ -975,16 +948,16 @@ public class INodeHelper {
      */
     public static void updateAccessTime(long inodeid, long aTime, boolean isTransactional) throws ClusterJException
     {
-             DBConnector.checkTransactionState(isTransactional);
+        DBConnector.checkTransactionState(isTransactional);
     
-    if (isTransactional)
-    {
-        Session session = DBConnector.obtainSession();
-        updateAccessTimeInternal(session, inodeid, aTime);
-        session.flush();
-    }
-    else
-        updateAccessTimeWithTransaction(inodeid, aTime);
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            updateAccessTimeInternal(session, inodeid, aTime);
+            session.flush();
+        }
+        else
+            updateAccessTimeWithTransaction(inodeid, aTime);
     }
     
     /**Updates the access time of an inode in the database

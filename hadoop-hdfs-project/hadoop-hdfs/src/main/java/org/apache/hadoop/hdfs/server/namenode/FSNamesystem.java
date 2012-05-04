@@ -918,15 +918,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus resultingStat = null;
     writeLock();
+    int tries = DBConnector.RETRY_COUNT;
+    boolean isDone = false;
     try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot concat " + target, safeMode);
-      }
-      concatInternal(target, srcs);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(target, false);
-      }
+        while (!isDone && tries > 0) {
+            try
+            {
+                DBConnector.beginTransaction();
+                if (isInSafeMode()) {
+                    throw new SafeModeException("Cannot concat " + target, safeMode);
+                }
+                concatInternal(target, srcs, true);
+                DBConnector.commit();
+                isDone = true;
+                if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+                    resultingStat = dir.getFileInfo(target, false);
+                }
+            }
+            catch(ClusterJException e)
+            {
+                LOG.error(e.getMessage(), e);
+                DBConnector.safeRollback();
+                tries--;
+            }
+        }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
     //getEditLog().logSync();
@@ -938,7 +955,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** See {@link #concat(String, String[])} */
-  private void concatInternal(String target, String [] srcs) 
+  private void concatInternal(String target, String [] srcs, boolean isTransactional) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
 
@@ -1034,8 +1051,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           Arrays.toString(srcs) + " to " + target);
     }
 
-    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    dir.concat(target,srcs, false);
+    dir.concat(target,srcs, isTransactional);
   }
   
   /**
@@ -1653,48 +1669,57 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Append to an existing file in the namespace.
    */
-  LocatedBlock appendFile(String src, String holder, String clientMachine)
-      throws AccessControlException, SafeModeException,
-      FileAlreadyExistsException, FileNotFoundException,
-                       ParentNotDirectoryException, IOException
-        {
-				if(!isWritingNN())
-			        throw new ImproperUsageException();
-                if (supportAppends == false)
-                {
-                        throw new UnsupportedOperationException("Append to hdfs not supported."
-                                                                + " Please refer to dfs.support.append configuration parameter.");
-    }
-    LocatedBlock lb = null;
-    writeLock();
-                try
-                {
-                        // Holds the db locks in 'startFileInternal ()' method
-      lb = startFileInternal(src, null, holder, clientMachine, 
-                        EnumSet.of(CreateFlag.APPEND), 
-                        false, blockManager.maxReplication, (long)0, false);
-    } finally {
-      writeUnlock();
-    }
-    //getEditLog().logSync();
-                if (lb != null)
-                {
-                        if (NameNode.stateChangeLog.isDebugEnabled())
-                        {
-        NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
-            +src+" for "+holder+" at "+clientMachine
-            +" block " + lb.getBlock()
-            +" block size " + lb.getBlock().getNumBytes());
-      }
-    }
-                if (auditLog.isInfoEnabled() && isExternalInvocation())
-                {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
+    LocatedBlock appendFile(String src, String holder, String clientMachine)
+            throws AccessControlException, SafeModeException,
+            FileAlreadyExistsException, FileNotFoundException,
+            ParentNotDirectoryException, IOException {
+        if (!isWritingNN()) {
+            throw new ImproperUsageException();
+        }
+        if (supportAppends == false) {
+            throw new UnsupportedOperationException("Append to hdfs not supported."
+                    + " Please refer to dfs.support.append configuration parameter.");
+        }
+        LocatedBlock lb = null;
+        writeLock();
+        int tries = DBConnector.RETRY_COUNT;
+        boolean isDone = false;
+        try {
+            while (!isDone && tries > 0) {
+                try {
+                    DBConnector.beginTransaction();
+                    // Holds the db locks in 'startFileInternal ()' method
+                    lb = startFileInternal(src, null, holder, clientMachine,
+                            EnumSet.of(CreateFlag.APPEND),
+                            false, blockManager.maxReplication, (long) 0, true);
+                    DBConnector.commit();
+                    isDone = true;
+                } catch (ClusterJException e) {
+                    LOG.error(e.getMessage(), e);
+                    tries--;
+                    DBConnector.safeRollback();
+                }
+            }
+        } finally {
+            DBConnector.safeRollback();
+            writeUnlock();
+        }
+        //getEditLog().logSync();
+        if (lb != null) {
+            if (NameNode.stateChangeLog.isDebugEnabled()) {
+                NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
+                        + src + " for " + holder + " at " + clientMachine
+                        + " block " + lb.getBlock()
+                        + " block size " + lb.getBlock().getNumBytes());
+            }
+        }
+        if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "append", src, null, null);
+        }
+        return lb;
     }
-    return lb;
-  }
 
   ExtendedBlock getExtendedBlock(Block blk) {
     return new ExtendedBlock(blockPoolId, blk);
@@ -3645,7 +3670,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      */
     private synchronized void incrementSafeBlockCount(short replication) {
-      if ((int)replication == safeReplication)
+      /* 
+       * [JUDE] This is changed because in traditional HDFS, when the NN restarts, its blockMap is empty.
+       * 'blockMap' is filled each time the DN registers with the NN (via addStoredBlock method) and hence at once, on the first DN registration, this DN can report to the NN to have this block
+       * This would have minimum 1 replication. If 'safeReplication == 1' this check will pass and 'blockSafe' variable will increment to 1
+       * 
+       * In our case, the blockMap is not recreated if the NN restarts. When finding total replica for a block, we get this value from the 'triplets' table
+       * Hence, the condition 'replication == safeReplication' can never be exactly equal, since after restart, we can have many replica (depending on replication factor)
+       * This is just fetched from the db. But in the original HDFS, after restart of NN, the actual replicas are reported when all DNs have registered and reported their block info.
+       * So we need to modify the condition for 'replication >= safeReplication'
+       */
+      //if ((int)replication == safeReplication)
         this.blockSafe++;
       checkMode();
     }

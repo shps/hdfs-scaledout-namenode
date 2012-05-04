@@ -19,11 +19,9 @@ import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.ClusterJUserException;
-import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
 import se.sics.clusterj.DelegationKeyTable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
@@ -148,7 +146,6 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
                 session.deletePersistentAll(LeaseTable.class);
                 session.deletePersistentAll(LeasePathsTable.class);
                 session.deletePersistentAll(TripletsTable.class);
-		// KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
 		session.deletePersistentAll(BlockTotalTable.class);
                 session.deletePersistentAll(DelegationKeyTable.class);
 		BlocksHelper.resetTotalBlocks(true);
