@@ -1213,6 +1213,13 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Gets the Reader NameNode for the index.  May be null.
+   */
+  public NameNode getReaderNameNode(int index) {
+    return readingNameNodes.get(0)[index].nameNode;
+  }
+
+  /**
    * Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */

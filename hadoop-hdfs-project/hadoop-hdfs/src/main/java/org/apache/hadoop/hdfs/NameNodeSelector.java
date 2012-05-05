@@ -130,12 +130,15 @@ public abstract class NameNodeSelector {
 
       // Returns next nn based on policy
       DFSClient client = getReaderNameNode();
+      LOG.debug("Next RNN: "+client.getId());
 
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
-          LOG.info("Next RNN: " + client);
           return client;
+        }
+        else {
+          LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
       }
 
@@ -143,7 +146,7 @@ public abstract class NameNodeSelector {
     }
 
     // At this point, we have tried almost all NNs, all are not reachable. Something is wrong
-    throw new IOException("getNextReaderNameNode() :: Retrying for next reader Namenode failed");
+    throw new IOException("getNextReaderNameNode() :: Unable to connect to any reader / writer Namenode");
   }
 
   /**Gets the appropriate writer namenode for a read/write operation by policy and retries for next namenode incase of failure
@@ -155,12 +158,15 @@ public abstract class NameNodeSelector {
 
       // Returns next nn based on policy
       DFSClient client = getWriterNameNode();
+      LOG.debug("Next WNN: "+client.getId());
 
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
-          LOG.info("Next WNN: " + client);
           return client;
+        }
+        else {
+          LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
       }
 
@@ -168,7 +174,7 @@ public abstract class NameNodeSelector {
     }
 
     // At this point, we have tried almost all NNs, all are not reachable. Something is wrong
-    throw new IOException("getNextWriterNameNode() :: Retrying for next writer Namenode failed");
+    throw new IOException("getNextWriterNameNode() :: Unable to connect to any writer Namenode");
   }
 
   @Override

@@ -130,7 +130,7 @@ public class DFSClient implements java.io.Closeable {
   final LeaseRenewer leaserenewer;
   final SocketCache socketCache;
   final Conf dfsClientConf;
-
+  private int id=-1;
   /**
    * DFSClient configuration 
    */
@@ -245,6 +245,7 @@ public class DFSClient implements java.io.Closeable {
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
+    this.id= (nameNodeAddr.getHostName()+nameNodeAddr.getPort()).hashCode();
 
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
@@ -1515,5 +1516,13 @@ public class DFSClient implements java.io.Closeable {
     }
     // There is a connection
     return true;
+  }
+  
+  /**
+   * Since we have multiple reader/writer namenodes, we would like to differenciate the clients via the ID
+   * Used in NamenodeSelector
+   */
+  public int getId() {
+    return id;
   }
 }
