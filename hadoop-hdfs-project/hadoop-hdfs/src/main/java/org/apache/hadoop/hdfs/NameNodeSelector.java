@@ -38,14 +38,18 @@ public abstract class NameNodeSelector {
    */
   public static NameNodeSelector getInstance(Configuration conf, List<DFSClient> readerNamenodes, List<DFSClient> writerNamenodes) {
 
+    // We allow the writer to also do read operations (as it might sit idle)
+    readerNamenodes.addAll(writerNamenodes);
+
     if (nnSelectorPolicy != null) {
+      // reset all the reader / writer NNs
+      nnSelectorPolicy.readerNameNodes = readerNamenodes;
+      nnSelectorPolicy.writerNameNodes = writerNamenodes;
       return nnSelectorPolicy;
     }
     else {
       boolean error = false;
 
-      // We allow the writer to also do read operations (as it might sit idle)
-      readerNamenodes.addAll(writerNamenodes);
 
       // Getting appropriate policy
       String className = conf.get(DFSConfigKeys.DFS_NAMENODE_SELECTOR_POLICY_KEY, RoundRobinNameNodeSelector.class.getName());
@@ -130,7 +134,7 @@ public abstract class NameNodeSelector {
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
-          LOG.info("Next RNN: "+client);
+          LOG.info("Next RNN: " + client);
           return client;
         }
       }
@@ -155,7 +159,7 @@ public abstract class NameNodeSelector {
       // retry for this nn
       for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
-          LOG.info("Next WNN: "+client);
+          LOG.info("Next WNN: " + client);
           return client;
         }
       }
