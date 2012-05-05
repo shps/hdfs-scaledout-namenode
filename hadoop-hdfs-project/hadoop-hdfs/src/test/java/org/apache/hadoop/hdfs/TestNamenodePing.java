@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
 
-public class TestRenameWhileOpen extends junit.framework.TestCase
+public class TestNamenodePing extends junit.framework.TestCase
 {
   public static final Log LOG = LogFactory.getLog(TestRenameWhileOpen.class);  
         {
@@ -263,6 +263,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
          * mkdir /user/dir2
          * move /user/dir1/file1 /user/dir2/
          */
+        /*
         public void testWhileOpenRenameToExistentDirectory() throws IOException
         {
                 Configuration conf = new HdfsConfiguration();
@@ -335,11 +336,12 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         cluster.shutdown();
                 }
         }
-
+        */
         /**
          * open /user/dir1/file1 
          * move /user/dir1/file1 /user/dir2/
          */
+        /*
         public void testWhileOpenRenameToNonExistentDirectory() throws IOException
         {
                 Configuration conf = new HdfsConfiguration();
@@ -411,4 +413,5 @@ public class TestRenameWhileOpen extends junit.framework.TestCase
                         cluster.shutdown();
                 }
         }
+        */
 }
