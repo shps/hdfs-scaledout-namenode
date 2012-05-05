@@ -625,9 +625,7 @@
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
 			<!-- TODO--><exclude>**/TestReadWhileWriting.java</exclude>
-			<!-- TODO--><exclude>**/TestHDFSConcat.java</exclude><!--atomic transaction for concat is needed-->
-			<!-- FIXED <exclude>**/TestFileAppend2.java</exclude>-->
-			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->>
+			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- FIXED <exclude>**/TestFileCreationNamenodeRestart.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->

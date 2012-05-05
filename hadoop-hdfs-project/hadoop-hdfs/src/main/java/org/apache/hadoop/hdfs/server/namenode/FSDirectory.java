@@ -1062,13 +1062,13 @@ public class FSDirectory implements Closeable {
     
     INodeFile [] allSrcInodes = new INodeFile[srcs.length];
     int i = 0;
-    int totalBlocks = 0;
+//    int totalBlocks = 0;
     for(String src : srcs) {
       INodeFile srcInode = getFileINode(src);
       allSrcInodes[i++] = srcInode;
-      totalBlocks += srcInode.blocks.length;  
+//      totalBlocks += srcInode.blocks.length;  //TODO[Hooman]: No more used.
     }
-    trgInode.appendBlocks(allSrcInodes, totalBlocks); // copy the blocks
+    trgInode.appendBlocks(allSrcInodes, isTransactional); // copy the blocks
     
     // since we are in the same dir - we can use same parent to remove files
     int count = 0;
@@ -1081,10 +1081,13 @@ public class FSDirectory implements Closeable {
       count++;
     }
     
-    trgInode.setModificationTimeForce(timestamp);
-    trgParent.setModificationTime(timestamp);
+    //TODO[Hooman]: The following changes can be optimized to be updated or flushed together.
+//    trgInode.setModificationTimeForce(timestamp);
+    INodeHelper.updateModificationTime(trgInode.getID(), timestamp, isTransactional);
+//    trgParent.setModificationTime(timestamp);
+    INodeHelper.updateModificationTime(trgParent.getID(), timestamp, isTransactional);
     // update quota on the parent directory ('count' files removed, 0 space)
-    unprotectedUpdateCount(trgINodes, trgINodes.length-1, - count, 0);
+    unprotectedUpdateCount(trgINodes, trgINodes.length-1, - count, 0, isTransactional);
   }
 
   /**
@@ -1548,12 +1551,14 @@ public class FSDirectory implements Closeable {
    * @param dsDelta
    */
    void unprotectedUpdateCount(INode[] inodes, int numOfINodes, 
-                                      long nsDelta, long dsDelta) {
+                                      long nsDelta, long dsDelta, 
+                                      boolean isTransactional) {
      assert hasWriteLock();
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
         INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+//        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
       }
     }
   }
