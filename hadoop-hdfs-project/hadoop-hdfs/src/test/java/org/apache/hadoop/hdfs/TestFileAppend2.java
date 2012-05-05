@@ -63,9 +63,9 @@ public class TestFileAppend2 extends TestCase {
   private byte[] fileContents = null;
 
   int numDatanodes = 6;
-  int numberOfFiles = 50;
-  int numThreads = 10;
-  int numAppendsPerThread = 20;
+  int numberOfFiles = 1;//changed from 50
+  int numThreads = 5; //changed from 10
+  int numAppendsPerThread = 2; //changed from 20
 /***
   int numberOfFiles = 1;
   int numThreads = 1;

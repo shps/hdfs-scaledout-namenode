@@ -349,21 +349,21 @@ public class INodeFile extends INode {
 
 	}*/
 	public <T extends BlockInfo> T getLastBlock() throws IOException {
-		
-		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
-		
-		if (tempblocks == null || tempblocks.length == 0)
-			return null;
-		T returnBlock = null;
-		try {
-                                                                                                                                                @SuppressWarnings("unchecked")  // ClassCastException is caught below
-			T tBlock = (T)tempblocks[tempblocks.length - 1];
-			returnBlock = tBlock;
-		} catch(ClassCastException cce) {
-			throw new IOException("Unexpected last block type: " 
-					+ tempblocks[tempblocks.length - 1].getClass().getSimpleName());
-		}
-		return returnBlock;
+
+	  BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
+
+	  if (tempblocks == null || tempblocks.length == 0)
+	    return null;
+	  T returnBlock = null;
+	  try {
+	    @SuppressWarnings("unchecked")  // ClassCastException is caught below
+	    T tBlock = (T)tempblocks[tempblocks.length - 1];
+	    returnBlock = tBlock;
+	  } catch(ClassCastException cce) {
+	    throw new IOException("Unexpected last block type: " 
+	        + tempblocks[tempblocks.length - 1].getClass().getSimpleName());
+	  }
+	  return returnBlock;
 	}
 	
 

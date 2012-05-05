@@ -2147,7 +2147,6 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
-      //inode.setModificationTimeForce(mtime);
       inode.setModificationTimeForceDB(mtime);
       status = true;
     }
@@ -2159,7 +2158,6 @@ public class FSDirectory implements Closeable {
       if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
         status =  false;
       } else {
-        //inode.setAccessTime(atime);
         inode.setAccessTimeDB(atime);
         status = true;
       }

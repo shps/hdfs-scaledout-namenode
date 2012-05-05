@@ -417,18 +417,18 @@ class INodeDirectory extends INode {
 	 *          node, otherwise
 	 */
 	<T extends INode> T addChild(final T node, boolean inheritPermission,
-			boolean setModTime,
-			boolean reuseID/*[W] added to reuse the same ID for move operations*/,
-                        boolean isTransactional) {
-		if (inheritPermission) {
-			FsPermission p = getFsPermission();
-			//make sure the  permission has wx for the user
-			if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
-				p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
-						p.getGroupAction(), p.getOtherAction());
-			}
-			node.setPermission(p);
-		}
+	    boolean setModTime,
+	    boolean reuseID/*[W] added to reuse the same ID for move operations*/,
+	    boolean isTransactional) {
+	  if (inheritPermission) {
+	    FsPermission p = getFsPermission();
+	    //make sure the  permission has wx for the user
+	    if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
+	      p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
+	          p.getGroupAction(), p.getOtherAction());
+	    }
+	    node.setPermission(p);
+	  }
 
 		int low = Collections.binarySearch(getChildrenFromDB(), node.name);
 		if(low >= 0){
