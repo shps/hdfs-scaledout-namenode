@@ -105,7 +105,7 @@ public class TestLeaseRecovery2 {
    * Test the NameNode's revoke lease on current lease holder function.
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testImmediateRecoveryOfLease() throws Exception {
     //create a file
     // write bytes into the file.
@@ -251,7 +251,7 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testHardLeaseRecovery() throws Exception {
     //create a file
     String filestr = "/hardLeaseRecovery";
@@ -311,7 +311,7 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testSoftLeaseRecovery() throws Exception {
     Map<String, String []> u2g_map = new HashMap<String, String []>(1);
     u2g_map.put(fakeUsername, new String[] {fakeGroup});
@@ -407,7 +407,7 @@ public class TestLeaseRecovery2 {
     hardLeaseRecoveryRestartHelper(false);  
   }
   
-  //@Test
+  @Test
   public void testHardLeaseRecoveryWithRenameAfterNameNodeRestart()
       throws Exception {
     hardLeaseRecoveryRestartHelper(true);
@@ -426,8 +426,8 @@ public class TestLeaseRecovery2 {
     // write bytes into the file.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
     AppendTestUtil.LOG.info("size=" + size);
-    //stm.write(buffer, 0, size);
-    TestFileCreation.writeFile(stm);
+    stm.write(buffer, 0, size);
+    //TestFileCreation.writeFile(stm);
     
     String originalLeaseHolder = NameNodeAdapter.getLeaseHolderForPath(
         cluster.getNameNode(), fileStr);
@@ -488,8 +488,7 @@ public class TestLeaseRecovery2 {
       locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
         fileStr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());  
-    //assertEquals(size, locatedBlocks.getFileLength());
-    assertEquals(16385, locatedBlocks.getFileLength());
+    assertEquals(size, locatedBlocks.getFileLength());
 
     // make sure that the client can't write data anymore.
     stm.write('b');
@@ -510,7 +509,6 @@ public class TestLeaseRecovery2 {
     // verify data
     AppendTestUtil.LOG.info(
         "File size is good. Now validating sizes from datanodes...");
-    //AppendTestUtil.checkFullFile(dfs, filePath, size, buffer, fileStr);
-    AppendTestUtil.checkFullFile(dfs, filePath, 16385, buffer, fileStr);
+    AppendTestUtil.checkFullFile(dfs, filePath, size, buffer, fileStr);
   }
 }
