@@ -51,7 +51,7 @@ public class BlocksHelper {
 	}
 
         public static void appendBlocks(INodeFile target, 
-                INodeFile [] inodes, boolean isTransactional) {
+                INodeFile [] inodes, boolean isTransactional) throws IOException {
             DBConnector.checkTransactionState(isTransactional);
             
             if (isTransactional)
@@ -67,9 +67,10 @@ public class BlocksHelper {
     /**
      * Helper function for appending an array of blocks - used by concat
      * Replacement for INodeFile.appendBlocksInternal
+     * @throws IOException 
      */
     public static void appendBlocksWithTransaction(INodeFile target, 
-            INodeFile[] inodes) {
+            INodeFile[] inodes) throws IOException {
         int tries = RETRY_COUNT;
         boolean done = false;
 
@@ -95,7 +96,7 @@ public class BlocksHelper {
     }
 
     private static void appendBlocksInternal(INodeFile target,
-            INodeFile[] inodes, Session session) {
+            INodeFile[] inodes, Session session) throws IOException {
         int index = target.getBlocks().length;
         for (INodeFile in : inodes) {
             BlockInfo[] inBlocks = in.getBlocks();

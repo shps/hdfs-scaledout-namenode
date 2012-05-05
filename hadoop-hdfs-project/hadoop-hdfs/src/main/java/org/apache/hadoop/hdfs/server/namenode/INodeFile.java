@@ -156,8 +156,9 @@ public class INodeFile extends INode {
   
 	/**
 	 * append array of blocks to this.blocks
+	 * @throws IOException 
 	 */
-	void appendBlocks(INodeFile [] inodes, boolean isTransactional) {
+	void appendBlocks(INodeFile [] inodes, boolean isTransactional) throws IOException {
 		BlocksHelper.appendBlocks(this, inodes, isTransactional);
 	}
 	

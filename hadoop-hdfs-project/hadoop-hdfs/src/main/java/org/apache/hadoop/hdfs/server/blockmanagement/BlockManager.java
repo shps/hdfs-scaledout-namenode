@@ -1721,7 +1721,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockInfo> toCorrupt,      // add to corrupt replicas list
       Collection<StatefulBlockInfo> toUC,
-      boolean isTransactional) { // add to under-construction list
+      boolean isTransactional) throws IOException { // add to under-construction list
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     //BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -1794,7 +1794,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final Collection<Block> toInvalidate, 
       final Collection<BlockInfo> toCorrupt,
       final Collection<StatefulBlockInfo> toUC, 
-      boolean isTransactional) {
+      boolean isTransactional) throws IOException {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Reported block " + block
@@ -1898,7 +1898,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       ReplicaState reportedState,
       boolean isTransactional) 
   throws IOException {
-    block.addReplicaIfNotPresent(node, block, reportedState);
+    block.addReplicaIfNotPresent(node, block, reportedState, isTransactional);
     if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node, isTransactional) < 0) {
       addStoredBlock(block, node, null, true, isTransactional);
     }

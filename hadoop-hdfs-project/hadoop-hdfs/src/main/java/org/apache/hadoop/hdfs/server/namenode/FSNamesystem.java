@@ -3684,7 +3684,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      * @throws IOException 
      */
-    private synchronized void incrementSafeBlockCount(short replication) {
+    private synchronized void incrementSafeBlockCount(short replication) throws IOException {
       /* 
        * [JUDE] This is changed because in traditional HDFS, when the NN restarts, its blockMap is empty.
        * 'blockMap' is filled each time the DN registers with the NN (via addStoredBlock method) and hence at once, on the first DN registration, this DN can report to the NN to have this block
