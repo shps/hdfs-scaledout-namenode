@@ -50,43 +50,64 @@ public class BlocksHelper {
 		BlocksHelper.dnm = dnm;
 	}
 
-	/**
-	 * Helper function for appending an array of blocks - used by concat
-	 * Replacement for INodeFile.appendBlocks
-	 * @throws IOException 
-	 */
-	public static void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) throws IOException {
-		int tries=RETRY_COUNT;
-		boolean done = false;
+        public static void appendBlocks(INodeFile target, 
+                INodeFile [] inodes, boolean isTransactional) {
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional)
+            {
+                Session session = DBConnector.obtainSession();
+                appendBlocksInternal(target, inodes, session);
+                session.flush();
+            }
+            else
+                appendBlocksWithTransaction(target, inodes);
+        }
+        
+    /**
+     * Helper function for appending an array of blocks - used by concat
+     * Replacement for INodeFile.appendBlocksInternal
+     */
+    public static void appendBlocksWithTransaction(INodeFile target, 
+            INodeFile[] inodes) {
+        int tries = RETRY_COUNT;
+        boolean done = false;
 
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0 ){
-			try{	
-				tx.begin();
-				appendBlocks(inodes, totalAddedBlocks, session);
-				tx.commit();
-				done=true;
-				session.flush();
-			}
-			catch (ClusterJException e){
-				tx.rollback();
-				//System.err.println("BlocksHelper.appendBlocks() threw error " + e.getMessage());
-				e.printStackTrace();
-				tries--;
-			}
-		}
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                appendBlocksInternal(target, inodes, session);
+                tx.commit();
+                done = true;
+                session.flush();
+            } catch (ClusterJException e) {
+                LOG.error(e.getMessage(), e);
+                if (tx.isActive()) {
+                    tx.rollback();
+                }
 
-	}
-	private static void appendBlocks(INodeFile[] inodes, int totalAddedBlocks, Session session) throws IOException{
-		for(INodeFile in: inodes) {
-			BlockInfo[] inBlocks = in.getBlocks();
-			for(int i=0;i<inBlocks.length;i++) {
-				BlockInfoTable bInfoTable = createBlockInfoTable(inBlocks[i], session);
-				insertBlockInfo(session, bInfoTable);
-			}
-		}
-	}
+                tries--;
+            }
+        }
+
+    }
+
+    private static void appendBlocksInternal(INodeFile target,
+            INodeFile[] inodes, Session session) {
+        int index = target.getBlocks().length;
+        for (INodeFile in : inodes) {
+            BlockInfo[] inBlocks = in.getBlocks();
+            for (int i = 0; i < inBlocks.length; i++) {
+                BlockInfoTable bInfoTable = session.newInstance(BlockInfoTable.class);
+                bInfoTable.setBlockId(inBlocks[i].getBlockId());
+                bInfoTable.setINodeID(target.getID());
+                bInfoTable.setBlockIndex(index++);
+                session.updatePersistent(bInfoTable);
+            }
+        }
+    }
 
 	/**
 	 * Helper function for inserting a block in the BlocksInfo table
@@ -206,7 +227,7 @@ public class BlocksHelper {
 					node.setBlocksList(getBlocksArrayInternal(node, session)); 
 
 					blockInfo.setINodeWithoutTransaction(node);
-					updateBlockInfoTable(node.getID(), blockInfo, session);
+					updateBlockInfoTable(node.getID(), blockInfo, session);//TODO[Hooman]: Why does it update the block info here? It should be a read-only operation.
 				}
 			}
 			blockInfo.setBlockIndex(bit.getBlockIndex()); 
@@ -897,7 +918,7 @@ public class BlocksHelper {
 	 * and returns the lowest value of index among the
 	 * returned results. 
 	 */
-	public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId) 
+	public static int findDatanodeForBlockOld(DatanodeDescriptor node, long blockId) 
 	{
 		Session session = DBConnector.obtainSession();
 		List<TripletsTable> results = selectTriplets(node.name, blockId, session);
@@ -912,6 +933,74 @@ public class BlocksHelper {
 		}
 		return -1;
 	}
+	public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId, boolean isTransactional) 
+	{
+		Session session = DBConnector.obtainSession();
+		//List<TripletsTable> results = selectTriplets(node.name, blockId, session);
+                                                List<TripletsTable> results = selectTripletsByStorageId(node.getStorageID(), blockId, session);
+		if (results != null && results.size() > 0)
+		{
+			Collections.sort(results, new TripletsTableComparator());
+			//			for(int i=0; i<results.size(); i++) {
+			//				if(results.get(i).getDatanodeName().equals(node.getName()))
+			//					results.get(i).getIndex();
+			//			}
+                                                                        
+                                                                         TripletsTable record = results.get(0);
+                                                                         
+                                                                        // check if the dn addresses have changed
+                                                                         if(node.getName().trim().compareTo(record.getDatanodeName().trim()) == 0)
+                                                                         {
+                                                                           return record.getIndex();
+                                                                         }
+                                                                         else
+                                                                         {
+                                                                           updateDatanodeNameInTriplets(session, blockId, record.getIndex(), node.getName(), isTransactional);
+                                                                            return results.get(0).getIndex(); //FIXME: this should only return a datanode which is connected to this NN
+                                                                         }
+		}
+		return -1;
+	}
+
+                      private static void updateDatanodeNameInTriplets(Session session, long blockId, int index, String dnName, boolean isTransactional)
+                      {
+                            TripletsTable triplet = selectTriplet(session, blockId, index);
+                            
+                            boolean done = false;
+                            int tries = RETRY_COUNT;
+                            Transaction tx = session.currentTransaction();
+                            
+                            assert tx.isActive() == isTransactional;       // If the transaction is active, then we cannot use the beginTransaction
+                            if (isTransactional)
+                            {
+                              //update
+                              updateDatanodeNameInTripletsInternal(session, triplet, dnName);
+                            }
+                            else
+                            {
+                              while (done == false && tries > 0)
+                              {
+                                try
+                                {
+                                  tx.begin();
+                                  // update
+                                  updateDatanodeNameInTripletsInternal(session, triplet, dnName);
+                                  tx.commit();
+                                  session.flush();
+                                  done = true;
+                                }
+                                catch (ClusterJException e)
+                                {
+                                        if (tx.isActive())
+                                        {
+                                                tx.rollback();
+                                        }
+                                        LOG.debug("BlocksHelper.updateDatanodeNameInTriplets() threw error " + e.getMessage());
+                                        tries--;
+                                }
+                              }
+                            }
+                      }
 
 	/*
 	 * Find the number of datanodes to which a block of blockId belongs to.
@@ -1244,6 +1333,23 @@ public class BlocksHelper {
 		return 	query.getResultList();
 
 	}
+	/** Fetches all rows from the Triplets table using datanodeName and blockId
+	 * SELECT * FROM triplets WHERE datanodeName=? AND blockId=?;
+	 */
+	private static List<TripletsTable> selectTripletsByStorageId(String storageId, long blockId, Session session){
+
+		QueryBuilder qb = session.getQueryBuilder();
+		QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
+		Predicate pred = dobj.get("storageId").equal(dobj.param("param1"));
+		Predicate pred2 = dobj.get("blockId").equal(dobj.param("param2"));
+		Predicate and = pred.and(pred2);
+		dobj.where(and);
+		Query<TripletsTable> query = session.createQuery(dobj);
+		query.setParameter("param1", storageId); //the WHERE clause of SQL
+		query.setParameter("param2", blockId);
+		return 	query.getResultList();
+
+	}
 
 	/** Returns a list of datanode addresses for a block
 	 * @param blockId
@@ -1488,6 +1594,11 @@ public class BlocksHelper {
   
   
 
+                      private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName)
+                      {
+                        record.setDatanodeName(dnName);
+                        session.updatePersistent(record);
+                      }
 }
 
 

@@ -1646,7 +1646,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
+    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC, isTransactional);
 
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
@@ -1720,7 +1720,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Collection<Block> toRemove,           // remove from DatanodeDescriptor
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockInfo> toCorrupt,      // add to corrupt replicas list
-      Collection<StatefulBlockInfo> toUC) throws IOException { // add to under-construction list
+      Collection<StatefulBlockInfo> toUC,
+      boolean isTransactional) { // add to under-construction list
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     //BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -1736,10 +1737,10 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Block iblk = itBR.next();
       ReplicaState iState = itBR.getCurrentReplicaState();
       BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
-                                  toAdd, toInvalidate, toCorrupt, toUC);
+                                  toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
       
       // move block to the head of the list
-      if(storedBlock != null && storedBlock.findDatanode(dn) >= 0)
+      if(storedBlock != null && storedBlock.findDatanode(dn, isTransactional) >= 0)
           existingBlocks.remove(storedBlock);
     }
     // collect blocks that have not been reported
@@ -1792,7 +1793,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final Collection<BlockInfo> toAdd, 
       final Collection<Block> toInvalidate, 
       final Collection<BlockInfo> toCorrupt,
-      final Collection<StatefulBlockInfo> toUC) throws IOException {
+      final Collection<StatefulBlockInfo> toUC, 
+      boolean isTransactional) {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Reported block " + block
@@ -1812,7 +1814,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
-      assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+      assert storedBlock.findDatanode(dn, isTransactional) < 0 : "Block " + block
         + " in recentInvalidatesSet should not appear in DN " + dn;
       return storedBlock;
     }
@@ -1830,7 +1832,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
     //add replica if appropriate
     if (reportedState == ReplicaState.FINALIZED
-        && storedBlock.findDatanode(dn) < 0) {
+        && storedBlock.findDatanode(dn, isTransactional) < 0) {
       toAdd.add(storedBlock);
     }
     return storedBlock;
@@ -1896,8 +1898,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       ReplicaState reportedState,
       boolean isTransactional) 
   throws IOException {
-    block.addReplicaIfNotPresent(node, block, reportedState, isTransactional);
-    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
+    block.addReplicaIfNotPresent(node, block, reportedState);
+    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node, isTransactional) < 0) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
   }
@@ -2400,7 +2402,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     processReportedBlock(node, block, ReplicaState.FINALIZED,
-                              toAdd, toInvalidate, toCorrupt, toUC);
+                              toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
     // the block is only in one of the to-do lists
     // if it is in none then data-node already has it
     assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1
@@ -2423,94 +2425,75 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
   }
 
-  /** The given node is reporting that it received/deleted certain blocks. */
-  public void blockReceivedAndDeleted(final DatanodeID nodeID,
-		  final String poolId,
-		  final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]) throws IOException
-		  {
-	  namesystem.writeLock();
-	  int received = 0;
-	  int deleted = 0;
-	  try
-	  {
-		  final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
-		  if (node == null || !node.isAlive)
-		  {
-			  NameNode.stateChangeLog.warn("BLOCK* blockReceivedDeleted"
-					  + " is received from dead or unregistered node "
-					  + nodeID.getName());
-			  throw new IOException(
-					  "Got blockReceivedDeleted message from unregistered or dead node");
-		  }
+    /** The given node is reporting that it received/deleted certain blocks. */
+    public void blockReceivedAndDeleted(final DatanodeID nodeID,
+            final String poolId,
+            final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]) throws IOException {
+        namesystem.writeLock();
+        int received = 0;
+        int deleted = 0;
+        try {
+            final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+            if (node == null || !node.isAlive) {
+                NameNode.stateChangeLog.warn("BLOCK* blockReceivedDeleted"
+                        + " is received from dead or unregistered node "
+                        + nodeID.getName());
+                throw new IOException(
+                        "Got blockReceivedDeleted message from unregistered or dead node");
+            }
 
-		  for (int i = 0; i < receivedAndDeletedBlocks.length; i++)
-		  {
-			  boolean isDone = false;
-			  int tries = DBConnector.RETRY_COUNT;
+            for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
+                boolean isDone = false;
+                int tries = DBConnector.RETRY_COUNT;
 
-			  try
-			  {
-				  while (!isDone && tries > 0)
-				  {
-					  try
-					  {
-						  DBConnector.beginTransaction();
+                try {
+                    while (!isDone && tries > 0) {
+                        try {
+                            DBConnector.beginTransaction();
 
-						  if (receivedAndDeletedBlocks[i].isDeletedBlock())
-						  {
-							  // KTHFS:  removes block from triplets table
-							  removeStoredBlock(
-									  receivedAndDeletedBlocks[i].getBlock(), node, true);
-						  deleted++;
-						  }
-						  else
-						  {
-							  // KTHFS:  adds block from triplets table
-							  addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
-									  receivedAndDeletedBlocks[i].getDelHints(), true);
-						  received++;
-						  }
+                            if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
+                                // KTHFS:  removes block from triplets table
+                                removeStoredBlock(
+                                        receivedAndDeletedBlocks[i].getBlock(), node, true);
+                                deleted++;
+                            } else {
+                                // KTHFS:  adds block from triplets table
+                                addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
+                                        receivedAndDeletedBlocks[i].getDelHints(), true);
+                                received++;
+                            }
 
-						  DBConnector.commit();
-						  isDone = true;
-					  }
-					  catch(ClusterJException ex)
-					  {
-						  if(!isDone)
-						  {
-							  DBConnector.safeRollback();
-							  tries--;
-							  LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: "+ex.getMessage(), ex);
-							  ex.printStackTrace();
-						  }
-					  }
-				  }
-			  }
-			  finally
-			  {
-				  if(!isDone)
-				  {
-					  DBConnector.safeRollback();
-				  }
-			  }
+                            DBConnector.commit();
+                            isDone = true;
+                        } catch (ClusterJException ex) {
+                            if (!isDone) {
+                                DBConnector.safeRollback();
+                                tries--;
+                                LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                } finally {
+                    if (!isDone) {
+                        DBConnector.safeRollback();
+                    }
+                }
 
-			  if (NameNode.stateChangeLog.isDebugEnabled())
-			  {
-				  NameNode.stateChangeLog.debug("BLOCK* block"
-						  + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
-								  : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
-								  + " is received from " + nodeID.getName());
-			  }
-		  }
-	  }
-	  finally
-	  {
-		  namesystem.writeUnlock();
-		  NameNode.stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
-				  + nodeID.getName() + " received: " + received + ", "
-				  + " deleted: " + deleted);
-	  }
-		  }
+                if (NameNode.stateChangeLog.isDebugEnabled()) {
+                    NameNode.stateChangeLog.debug("BLOCK* block"
+                            + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
+                            : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
+                            + " is received from " + nodeID.getName());
+                }
+            }
+        } finally {
+            namesystem.writeUnlock();
+            NameNode.stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
+                    + nodeID.getName() + " received: " + received + ", "
+                    + " deleted: " + deleted);
+        }
+    }
 
     /**
    * Return the number of nodes that are live and decommissioned.
@@ -2609,8 +2592,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // FIXME: When datanode restarts, it is assigned with another port and identified as a new replica (which is false)
     //                  and then its added to triplets as another replica (duplicate)
-    //return live;
-    return live/2; // (temporary fix) remove this when bug is fixed
+    return live;
+    //return live/2; // (temporary fix) remove this when bug is fixed
   }
 
 /** 
