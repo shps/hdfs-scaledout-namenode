@@ -607,11 +607,8 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
-			<!-- FIXED has an issue <exclude>**/TestFileAppend.java</exclude> -->
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
-			<!-- TODO--><exclude>**/TestWriteRead.java</exclude>
-			<!-- TODO--><exclude>**/TestPread.java</exclude>
 			<!-- TODO--><exclude>**/TestHDFSFileSystemContract.java</exclude>
 			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
@@ -621,7 +618,6 @@
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
-			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
