@@ -185,15 +185,19 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	 * @throws IOException 
 	 */
 	public BlockInfoUnderConstruction convertToBlockUnderConstruction(
-			BlockUCState s, DatanodeDescriptor[] targets) throws IOException {
+			BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
 		if(isComplete()) {
-			return new BlockInfoUnderConstruction(
-					this, getINode().getReplication(), s, targets);
+			//return new BlockInfoUnderConstruction(
+			//		this, getINode().getReplication(), s, targets);
+		  BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this, getINode().getReplication());
+		  bUc.setBlockUCState(s);
+		  bUc.setExpectedLocations(targets, isTransactional);
+		  return bUc;
 		}
 		// the block is already under construction
 		BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
 		ucBlock.setBlockUCState(s);
-		ucBlock.setExpectedLocations(targets, false);
+		ucBlock.setExpectedLocations(targets, isTransactional);
 		return ucBlock;
 	}
 

@@ -139,7 +139,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     }
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
-          BlockUCState.UNDER_CONSTRUCTION, targets);
+          BlockUCState.UNDER_CONSTRUCTION, targets, isTransactional);
     ucBlock.setINode(this, isTransactional);
     setBlock(numBlocks()-1, ucBlock, isTransactional);
     return ucBlock;

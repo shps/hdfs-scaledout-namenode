@@ -1456,9 +1456,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                         clientMachine,
                                         clientNode);
         
-        cons.setLocalName(node.getLocalName()); //for simple
-        cons.setParentIDLocal(node.getParentIDLocal()); //for simple
-        cons.setID(node.getID()); //for simple
+        cons.setLocalName(node.getLocalName());
+        cons.setParentIDLocal(node.getParentIDLocal());
+        cons.setID(node.getID());
         dir.replaceNode(src, node, cons, isTransactional);
         leaseManager.addLease(cons.getClientName(), src, isTransactional);
 
@@ -1700,7 +1700,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                             false, blockManager.maxReplication, (long) 0, true);
                     DBConnector.commit();
                     isDone = true;
-                } catch (ClusterJException e) {
+                } 
+                catch(IOException ioe) {
+                  //[W] An IOException does not mean that the writes should be rolled back in NDB
+                  //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
+                  DBConnector.commit();
+                  isDone = true;
+                  throw ioe;
+                }
+                catch (ClusterJException e) {
                     LOG.error(e.getMessage(), e);
                     tries--;
                     DBConnector.safeRollback();
