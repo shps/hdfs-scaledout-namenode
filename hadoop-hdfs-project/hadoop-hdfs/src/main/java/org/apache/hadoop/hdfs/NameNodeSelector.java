@@ -132,15 +132,15 @@ public abstract class NameNodeSelector {
       DFSClient client = getReaderNameNode();
       LOG.debug("Next RNN: "+client.getId());
 
-      // retry for this nn
-      for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
+      // [JUDE] We won't use retry here for the same client as there is already an internal retry mechanism in ipc package
+      //for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
           return client;
         }
         else {
           LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
-      }
+      //}
 
       // Switch to next Reader nn
     }
@@ -160,15 +160,15 @@ public abstract class NameNodeSelector {
       DFSClient client = getWriterNameNode();
       LOG.debug("Next WNN: "+client.getId());
 
-      // retry for this nn
-      for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
+      // [JUDE] We won't use retry here for the same client as there is already an internal retry mechanism in ipc package
+      //for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
           return client;
         }
         else {
           LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
-      }
+      //}
 
       // Switch to next Writer nn
     }
@@ -176,7 +176,27 @@ public abstract class NameNodeSelector {
     // At this point, we have tried almost all NNs, all are not reachable. Something is wrong
     throw new IOException("getNextWriterNameNode() :: Unable to connect to any writer Namenode");
   }
-
+   void printReadersWritersNNs() {
+    String nns = "Readers: ";
+    for(DFSClient client : readerNameNodes) {
+      nns += client.getId() +", ";
+    }
+    
+    nns += " Writers: ";
+    for(DFSClient client : writerNameNodes) {
+      nns += client.getId();
+    }
+    
+    LOG.debug(nns);
+  }
+   
+   public int getTotalCountReaders() {
+     return readerNameNodes.size();
+   }
+   
+   public int getTotalCountWriters() {
+     return writerNameNodes.size();
+   }
   @Override
   public boolean equals(Object o) {
     if (o instanceof NameNodeSelector) {

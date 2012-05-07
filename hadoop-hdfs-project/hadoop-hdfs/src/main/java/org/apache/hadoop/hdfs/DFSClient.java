@@ -130,6 +130,7 @@ public class DFSClient implements java.io.Closeable {
   final LeaseRenewer leaserenewer;
   final SocketCache socketCache;
   final Conf dfsClientConf;
+  private static int counter = 10001;
   private int id=-1;
   /**
    * DFSClient configuration 
@@ -245,7 +246,7 @@ public class DFSClient implements java.io.Closeable {
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
-    this.id= (nameNodeAddr.getHostName()+nameNodeAddr.getPort()).hashCode();
+    this.id= counter++;
 
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);

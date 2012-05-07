@@ -163,78 +163,78 @@ public class TestDistributedFileSystem {
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-        dfs.dfs.leaserenewer.setGraceSleepPeriod(grace);
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        dfs.getDefaultDFSClient().leaserenewer.setGraceSleepPeriod(grace);
+        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
   
         {
           //create a file
           final FSDataOutputStream out = dfs.create(filepaths[0]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //write something
           out.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //close
           out.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.dfs.leaserenewer.isRunning()) {
+            if (dfs.getDefaultDFSClient().leaserenewer.isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.dfs.leaserenewer.isRunning());
+          assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         }
 
         {
           //create file1
           final FSDataOutputStream out1 = dfs.create(filepaths[1]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //create file2
           final FSDataOutputStream out2 = dfs.create(filepaths[2]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
 
           //write something to file1
           out1.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //close file1
           out1.close();
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
 
           //write something to file2
           out2.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //close file2
           out2.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         }
 
         {
           //create file3
           final FSDataOutputStream out3 = dfs.create(filepaths[3]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           Thread.sleep(grace/4*3);
           //passed previous grace period, should still running
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //write something to file3
           out3.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           //close file3
           out3.close();
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.dfs.leaserenewer.isRunning()) {
+            if (dfs.getDefaultDFSClient().leaserenewer.isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.dfs.leaserenewer.isRunning());
+          assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         }
 
         dfs.close();
@@ -263,15 +263,15 @@ public class TestDistributedFileSystem {
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
 
         //open and check the file
         FSDataInputStream in = dfs.open(filepaths[0]);
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         assertEquals(millis, in.readLong());
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         in.close();
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
         dfs.close();
       }
       

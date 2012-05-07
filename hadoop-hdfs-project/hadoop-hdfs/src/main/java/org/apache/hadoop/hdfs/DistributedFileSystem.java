@@ -77,7 +77,7 @@ public class DistributedFileSystem extends FileSystem {
 
   private Path workingDir;
   private URI uri;
-  DFSClient dfs;
+  //DFSClient dfs;
   List<DFSClient> readClients;
   List<DFSClient> writeClients;
   NameNodeSelector nnSelector;
@@ -170,15 +170,14 @@ public class DistributedFileSystem extends FileSystem {
     writeClients = new ArrayList<DFSClient>();
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
-    this.dfs = new DFSClient(namenode, conf, statistics);
+    //this.dfs = new DFSClient(namenode, conf, statistics);
     this.uri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
-    this.workingDir = getHomeDirectory();
-    writeClients.add(this.dfs);
+    //writeClients.add(this.dfs);
 
     createDfsClients(conf);
     nnSelector = NameNodeSelector.getInstance(conf, readClients, writeClients);
-
-
+    
+    this.workingDir = getHomeDirectory();
   }
 
   /** Permit paths which explicitly specify the default port. */
@@ -222,12 +221,14 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public long getDefaultBlockSize() {
-    return dfs.getDefaultBlockSize();
+    //return dfs.getDefaultBlockSize();
+    return getDefaultDFSClient().getDefaultBlockSize();
   }
 
   @Override
   public short getDefaultReplication() {
-    return dfs.getDefaultReplication();
+    //return dfs.getDefaultReplication();
+    return getDefaultDFSClient().getDefaultReplication();
   }
 
   private Path makeAbsolute(Path f) {
@@ -252,7 +253,8 @@ public class DistributedFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path("/user/" + dfs.ugi.getShortUserName()));
+    //return makeQualified(new Path("/user/" + dfs.ugi.getShortUserName()));
+    return makeQualified(new Path("/user/" + getDefaultDFSClient().ugi.getShortUserName()));
   }
 
   private String getPathName(Path file) {
@@ -418,7 +420,11 @@ public class DistributedFileSystem extends FileSystem {
   public boolean delete(Path f, boolean recursive) throws IOException {
     statistics.incrementWriteOps(1);
     //return dfs.delete(getPathName(f), recursive);
-    return nnSelector.getNextWriterNameNode().delete(getPathName(f), recursive);
+    nnSelector.printReadersWritersNNs();
+    DFSClient client = nnSelector.getNextWriterNameNode();
+    LOG.debug("writer used to delete: "+client.getId());
+    return client.delete(getPathName(f), recursive);
+    //return nnSelector.getNextWriterNameNode().delete(getPathName(f), recursive);
   }
 
   /** {@inheritDoc} */
@@ -617,7 +623,7 @@ public class DistributedFileSystem extends FileSystem {
   public void close() throws IOException {
     try {
       super.processDeleteOnExit();
-      dfs.close();
+      //dfs.close();
       closeAllReadersAndWriters();
     }
     finally {
@@ -647,14 +653,16 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public String toString() {
-    return "DFS[" + dfs + "]";
+    //return "DFS[" + dfs + "]";
+    return "DFS[" + getDefaultDFSClient()+ "]";
   }
 
   /** @deprecated DFSClient should not be accessed directly. */
   @InterfaceAudience.Private
   @Deprecated
   public DFSClient getClient() {
-    return dfs;
+    //return dfs;
+    return nnSelector.getWriterNameNode();  // [JUDE] Returned writer becuase you neer know what functionalities would be performed on the client from the calee function
   }
 
   /** @deprecated Use {@link org.apache.hadoop.fs.FsStatus} instead */
@@ -1035,5 +1043,9 @@ public class DistributedFileSystem extends FileSystem {
   public void setBalancerBandwidth(long bandwidth) throws IOException {
     //dfs.setBalancerBandwidth(bandwidth);
     nnSelector.getNextWriterNameNode().setBalancerBandwidth(bandwidth);
+  }
+  
+  DFSClient getDefaultDFSClient() {
+    return nnSelector.getWriterNameNode();
   }
 }

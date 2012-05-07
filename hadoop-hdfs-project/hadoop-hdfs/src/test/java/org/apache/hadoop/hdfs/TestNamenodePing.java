@@ -115,6 +115,7 @@ public class TestNamenodePing extends junit.framework.TestCase
                               }
                               catch(IOException ex)
                               {
+                                //assertEquals(ex.getClass().getName(), java.net.ConnectException.class.getName());
                                 System.out.println("We got error! Because of no Reader/Writer NNs in the system. Exception: "+ex.getMessage());
                                 ex.printStackTrace();
                               }
