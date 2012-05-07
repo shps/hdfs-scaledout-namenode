@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -104,15 +105,16 @@ class BlocksMap {
       //blocks = null;
   }
 
-  INodeFile getINode(Block b) {
+  INodeFile getINode(Block b) throws IOException {
     BlockInfo info = blocks.get(b);
     return (info != null) ? info.getINode() : null;
   }
 
   /**
    * Add block b belonging to the specified file inode to the map.
+   * @throws IOException 
    */
-  BlockInfo addINode(BlockInfo b, INodeFile iNode, boolean isTransactional) {
+  BlockInfo addINode(BlockInfo b, INodeFile iNode, boolean isTransactional) throws IOException {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
@@ -137,8 +139,9 @@ class BlocksMap {
    * Remove the block from the block map;
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
+   * @throws IOException 
    */
-  void removeBlock(Block block, boolean isTransactional) {
+  void removeBlock(Block block, boolean isTransactional) throws IOException {
     BlockInfo blockInfo = blocks.remove(block, isTransactional);
     if (blockInfo == null)
     {
@@ -151,16 +154,18 @@ class BlocksMap {
     }
   }
   
-  /** Returns the block object it it exists in the map. */
-  BlockInfo getStoredBlock(Block b) {
+  /** Returns the block object it it exists in the map. 
+   * @throws IOException */
+  BlockInfo getStoredBlock(Block b) throws IOException {
     return blocks.get(b);
   }
 
   /**
    * Searches for the block in the BlocksMap and 
    * returns Iterator that iterates through the nodes the block belongs to.
+   * @throws IOException 
    */
-  Iterator<DatanodeDescriptor> nodeIterator(Block b) {
+  Iterator<DatanodeDescriptor> nodeIterator(Block b) throws IOException {
     return nodeIterator(blocks.get(b));
   }
 
@@ -172,8 +177,9 @@ class BlocksMap {
     return new NodeIterator(storedBlock);
   }
 
-  /** counts number of containing nodes. Better than using iterator. */
-  int numNodes(Block b) {
+  /** counts number of containing nodes. Better than using iterator. 
+   * @throws IOException */
+  int numNodes(Block b) throws IOException {
     BlockInfo info = blocks.get(b);
     return info == null ? 0 : info.numNodes();
   }
@@ -182,8 +188,9 @@ class BlocksMap {
    * Remove data-node reference from the block.
    * Remove the block from the block map
    * only if it does not belong to any file and data-nodes.
+   * @throws IOException 
    */
-  boolean removeNode(Block b, DatanodeDescriptor node, boolean isTransactional) {
+  boolean removeNode(Block b, DatanodeDescriptor node, boolean isTransactional) throws IOException {
     BlockInfo info = blocks.get(b);
     if (info == null)
       return false;
@@ -198,7 +205,7 @@ class BlocksMap {
     return removed;
   }
 
-  int size() {
+  int size() throws IOException {
     return blocks.size();
   }
 
@@ -216,8 +223,9 @@ class BlocksMap {
    * The new block and the old one have the same key.
    * @param newBlock - block for replacement
    * @return new block
+   * @throws IOException 
    */
-  BlockInfo replaceBlock(BlockInfo newBlock, boolean isTransactional) {
+  BlockInfo replaceBlock(BlockInfo newBlock, boolean isTransactional) throws IOException {
 	  
     BlockInfo currentBlock = blocks.get(newBlock);
     assert currentBlock != null : "the block if not in blocksMap";

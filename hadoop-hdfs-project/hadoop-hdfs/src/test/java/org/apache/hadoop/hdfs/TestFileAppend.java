@@ -236,7 +236,6 @@ public class TestFileAppend{
    * @throws IOException an exception might be thrown
    */
   @Test
-  @Ignore //FIXME[Hooman]: This test fails due to the issue related to BlockInfoUnderConstruction.
   public void testComplexFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {

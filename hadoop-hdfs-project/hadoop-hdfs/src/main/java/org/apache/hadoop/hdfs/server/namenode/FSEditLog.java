@@ -498,8 +498,9 @@ public class FSEditLog  {
   /** 
    * Add open lease record to edit log. 
    * Records the block locations of the last block.
+   * @throws IOException 
    */
-  public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
+  public void logOpenFile(String path, INodeFileUnderConstruction newNode) throws IOException {
     AddOp op = AddOp.getInstance()
       .setPath(path)
       .setReplication(newNode.getReplication())
@@ -516,8 +517,9 @@ public class FSEditLog  {
 
   /** 
    * Add close lease record to edit log.
+   * @throws IOException 
    */
-  public void logCloseFile(String path, INodeFile newNode) {
+  public void logCloseFile(String path, INodeFile newNode) throws IOException {
     CloseOp op = CloseOp.getInstance()
       .setPath(path)
       .setReplication(newNode.getReplication())

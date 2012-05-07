@@ -51,7 +51,7 @@ public class BlocksHelper {
 	}
 
         public static void appendBlocks(INodeFile target, 
-                INodeFile [] inodes, boolean isTransactional) {
+                INodeFile [] inodes, boolean isTransactional) throws IOException {
             DBConnector.checkTransactionState(isTransactional);
             
             if (isTransactional)
@@ -67,9 +67,10 @@ public class BlocksHelper {
     /**
      * Helper function for appending an array of blocks - used by concat
      * Replacement for INodeFile.appendBlocksInternal
+     * @throws IOException 
      */
     public static void appendBlocksWithTransaction(INodeFile target, 
-            INodeFile[] inodes) {
+            INodeFile[] inodes) throws IOException {
         int tries = RETRY_COUNT;
         boolean done = false;
 
@@ -95,7 +96,7 @@ public class BlocksHelper {
     }
 
     private static void appendBlocksInternal(INodeFile target,
-            INodeFile[] inodes, Session session) {
+            INodeFile[] inodes, Session session) throws IOException {
         int index = target.getBlocks().length;
         for (INodeFile in : inodes) {
             BlockInfo[] inBlocks = in.getBlocks();
@@ -148,6 +149,13 @@ public class BlocksHelper {
 		bInfoTable.setINodeID(newblock.getINode().getID()); 
 		bInfoTable.setNumBytes(newblock.getNumBytes());
 		bInfoTable.setReplication(-1); //FIXME: see if we need to store this or not
+		
+		//added for block recovery
+		if(newblock instanceof BlockInfoUnderConstruction) {
+		  bInfoTable.setPrimaryNodeIndex(((BlockInfoUnderConstruction)newblock).getPrimaryNodeIndex());
+		  bInfoTable.setBlockRecoveryId(((BlockInfoUnderConstruction)newblock).getBlockRecoveryId());
+		}
+		
 		return bInfoTable;
 	}
 
@@ -157,7 +165,7 @@ public class BlocksHelper {
 	 * @return
 	 * @throws IOException 
 	 */
-	public static BlockInfo getBlockInfo(long blockId)  {
+	public static BlockInfo getBlockInfo(long blockId) throws IOException  {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -178,12 +186,10 @@ public class BlocksHelper {
 		return null;
 	}
 	/** When called with single=false, will not retrieve the INodes for the Block */
-	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) {
+	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
 		BlockInfoTable bit = selectBlockInfo(session, blockId);
 		if(bit == null)
-		{
 			return null;
-		}
 		else {
 			Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
 			BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
@@ -192,6 +198,8 @@ public class BlocksHelper {
 			{
 				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
 				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.COMMITTED);
+				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+				((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
 			}
 			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal())
 			{
@@ -201,18 +209,23 @@ public class BlocksHelper {
 			{
 				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
 				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
+				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
 			}
 			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_RECOVERY.ordinal())
 			{
 				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
 				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_RECOVERY);
+				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
 			}
 
 			//W: assuming that this function will only be called on an INodeFile
+		//[W] FIXME: this is a bit bizarre, and not required because INodeFile.getBlocks() is enough
 			if (single == false){ 
 				INodeFile node = (INodeFile)INodeHelper.getINode(bit.getINodeID());
 				if (node != null) { 
-					node.setBlocksList(getBlocksArrayInternal(node, session));
+					node.setBlocksList(getBlocksArrayInternal(node, session)); 
 
 					blockInfo.setINodeWithoutTransaction(node);
 					updateBlockInfoTable(node.getID(), blockInfo, session);//TODO[Hooman]: Why does it update the block info here? It should be a read-only operation.
@@ -263,48 +276,55 @@ public class BlocksHelper {
 	}
         
 	private static void putBlockInfoWithTransaction(BlockInfo binfo) {
-		int tries = RETRY_COUNT;
-		boolean done = false;
+	  int tries = RETRY_COUNT;
+	  boolean done = false;
 
-		Session session = DBConnector.obtainSession();
-		Transaction tx = session.currentTransaction();
-		while (done == false && tries > 0) {
-			try {
-				tx.begin();
-				putBlockInfo(binfo, session);
-				tx.commit();
-				session.flush();
-				done=true;
-			}
-			catch (ClusterJException e){
-                                LOG.error(e.getMessage(), e);
-                                if (tx.isActive())
-                                    tx.rollback();
-				tries--;
-			}
-		}
+	  Session session = DBConnector.obtainSession();
+	  Transaction tx = session.currentTransaction();
+	  while (done == false && tries > 0) {
+	    try {
+	      tx.begin();
+	      putBlockInfo(binfo, session);
+	      tx.commit();
+	      session.flush();
+	      done=true;
+	    }
+	    catch (ClusterJException e){
+	      LOG.error(e.getMessage(), e);
+	      if (tx.isActive())
+	        tx.rollback();
+	      tries--;
+	    }
+	  }
 	}
 	
-        private static void putBlockInfo(BlockInfo binfo, Session s){
-		
-		BlockInfoTable bit = selectBlockInfo(s, binfo.getBlockId());
-		
-		if(bit == null) { //we want to generate a timestamp only if it doesnt exist in NDB
-			bit =  s.newInstance(BlockInfoTable.class);
-			bit.setTimestamp(System.currentTimeMillis());
-		}
-		
-		bit.setBlockId(binfo.getBlockId());
-		bit.setGenerationStamp(binfo.getGenerationStamp());
-		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
+	private static void putBlockInfo(BlockInfo binfo, Session s){
 
-		if(binfo.isComplete()) {
-			INodeFile ifile = binfo.getINode();
-			long nodeID = ifile.getID();
-			bit.setINodeID(nodeID); 
-		}
-		bit.setNumBytes(binfo.getNumBytes());
-		insertBlockInfo(s, bit);
+	  BlockInfoTable bit = selectBlockInfo(s, binfo.getBlockId());
+
+	  if(bit == null) { //we want to generate a timestamp only if it doesnt exist in NDB
+	    bit =  s.newInstance(BlockInfoTable.class);
+	    bit.setTimestamp(System.currentTimeMillis());
+	  }
+
+	  bit.setBlockId(binfo.getBlockId());
+	  bit.setGenerationStamp(binfo.getGenerationStamp());
+	  bit.setBlockUCState(binfo.getBlockUCState().ordinal());
+
+	  if(binfo.isComplete()) {
+	    INodeFile ifile = binfo.getINode();
+	    long nodeID = ifile.getID();
+	    bit.setINodeID(nodeID); 
+	  }
+	  bit.setNumBytes(binfo.getNumBytes());
+	  
+	  //added for block recovery
+	  if(binfo instanceof BlockInfoUnderConstruction) {
+	    bit.setPrimaryNodeIndex(((BlockInfoUnderConstruction)binfo).getPrimaryNodeIndex());
+      bit.setBlockRecoveryId(((BlockInfoUnderConstruction)binfo).getBlockRecoveryId());
+	  }
+	  
+	  insertBlockInfo(s, bit);
 	}
 
 
@@ -353,15 +373,19 @@ public class BlocksHelper {
 	}
         
 	private static void updateIndex(int idx, BlockInfo binfo, Session s){
-		LOG.debug("Block persistance: ID:" + binfo.getBlockId() + "    index:" + idx + ", status:" + binfo.getBlockUCState() );
 		BlockInfoTable bit =  s.newInstance(BlockInfoTable.class);
 		bit.setBlockId(binfo.getBlockId());
 		bit.setGenerationStamp(binfo.getGenerationStamp());
 		bit.setINodeID(binfo.getINode().getID());
 		bit.setBlockIndex(idx); //setting the index in the table
-		LOG.debug("W: blockId"+binfo.getBlockId()+ " Index updated to" + idx );
 		bit.setNumBytes(binfo.getNumBytes());
 		bit.setBlockUCState(binfo.getBlockUCState().ordinal());
+		
+		//added for block recovery
+    if(binfo instanceof BlockInfoUnderConstruction) {
+      bit.setPrimaryNodeIndex(((BlockInfoUnderConstruction)binfo).getPrimaryNodeIndex());
+      bit.setBlockRecoveryId(((BlockInfoUnderConstruction)binfo).getBlockRecoveryId());
+    }
 		updateBlockInfoTableInternal(s, bit);
 
 	}
@@ -445,7 +469,7 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static BlockInfo[] getBlockInfoArray(INodeFile inode) {
+	public static BlockInfo[] getBlockInfoArray(INodeFile inode) throws IOException {
 		int tries = RETRY_COUNT;
 		boolean done = false;
 
@@ -467,7 +491,7 @@ public class BlocksHelper {
 		return null;
 	}
 
-	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) {
+	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) throws IOException {
 		if(inode==null)
 			return null;
 
@@ -1012,7 +1036,7 @@ public class BlocksHelper {
 	 * 
 	 * This is used by DatanodeDescriptor.BlockIterator
 	 */
-	public static List<BlockInfo> getBlockListForDatanode (String dataNodeName)
+	public static List<BlockInfo> getBlockListForDatanode (String dataNodeName) throws IOException
 	{
 		List<BlockInfo> ret = new ArrayList<BlockInfo>();
 		Session session = DBConnector.obtainSession();
@@ -1165,7 +1189,10 @@ public class BlocksHelper {
 			long genStamp, 
 			int replication, 
 			int blockUCState,
-			long timestamp) {
+			long timestamp,
+			int primaryNodeIndex,
+			long blockRecoveryId
+	    ) {
 		BlockInfoTable binfot = session.newInstance(BlockInfoTable.class);
 		binfot.setBlockId(blockID);
 		binfot.setBlockIndex(index);
@@ -1174,6 +1201,8 @@ public class BlocksHelper {
 		binfot.setGenerationStamp(genStamp);
 		binfot.setReplication(replication);
 		binfot.setTimestamp(timestamp);
+		binfot.setPrimaryNodeIndex(primaryNodeIndex);
+		binfot.setBlockRecoveryId(blockRecoveryId);
 		insertBlockInfo(session, binfot);
 	}
 
@@ -1352,8 +1381,7 @@ public class BlocksHelper {
 		return null;
 	}
 
-
-
+	
 	/** Return total blocks in BlockInfo table
 	 * @param isTransactional - If its already part of a transaction (true) or not (false)
 	 * @throws ClusterJException 
@@ -1363,6 +1391,209 @@ public class BlocksHelper {
 		BlockTotalTable blkTable = session.find(BlockTotalTable.class, BLOCKTOTAL_ID);
 		return blkTable.getTotal();
 	}
+	
+	
+	////////////////////////////////////////////////////////////////////////
+	////Methods for block recovery
+	///////////////////////////////////////////////////////////////////////
+	
+	
+	
+	
+	public static void updatePrimaryNodeIndex(long blockId, int primary, boolean isTransactional) {
+    if(isTransactional)
+      updatePrimaryNodeIndex(blockId, primary);
+    else
+      updatePrimaryNodeIndexWithTransaction(blockId, primary);
+  }
+  
+  private static void updatePrimaryNodeIndex(long blockId, int primary) {
+    Session session = DBConnector.obtainSession();
+    updatePrimaryNodeIndexInternal(session, blockId, primary);
+    session.flush();
+    
+  }
+  
+  private static void updatePrimaryNodeIndexWithTransaction(long blockId, int primary) {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    Transaction tx = session.currentTransaction();
+    while (done == false && tries > 0) {
+      try {
+        tx.begin();
+        updatePrimaryNodeIndexInternal(session, blockId, primary);
+        tx.commit();
+        session.flush();
+        done=true;
+      }
+      catch (ClusterJException e){
+        e.printStackTrace();
+        if (tx.isActive())
+          tx.rollback();
+        tries--;
+      }
+    }
+    
+  }
+  
+  private static void updatePrimaryNodeIndexInternal(Session session, long blockId, int primary) {
+    BlockInfoTable bit = session.newInstance(BlockInfoTable.class, blockId);
+    bit.setPrimaryNodeIndex(primary);
+    session.updatePersistent(bit);
+  }
+  
+  ////////////////////////////////////////////////////////
+  
+  
+  public static void updateBlockRecoveryId(long blockId, long recoveryId, boolean isTransactional) {
+    if(isTransactional)
+      updateBlockRecoveryId(blockId, recoveryId);
+    else
+      updateBlockRecoveryIdWithTransaction(blockId, recoveryId);
+  }
+  
+  private static void updateBlockRecoveryId(long blockId, long recoveryId) {
+    Session session = DBConnector.obtainSession();
+    updateBlockRecoveryIdInternal(session, blockId, recoveryId);
+    session.flush();
+    
+  }
+  
+  
+  private static void updateBlockRecoveryIdWithTransaction(long blockId, long recoveryId) {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    Transaction tx = session.currentTransaction();
+    while (done == false && tries > 0) {
+      try {
+        tx.begin();
+        updateBlockRecoveryIdInternal(session, blockId, recoveryId);
+        tx.commit();
+        session.flush();
+        done=true;
+      }
+      catch (ClusterJException e){
+        e.printStackTrace();
+        if (tx.isActive())
+          tx.rollback();
+        tries--;
+      }
+    }
+    
+  }
+  
+  private static void updateBlockRecoveryIdInternal(Session session, long blockId, long recoveryId) {
+    BlockInfoTable bit = session.newInstance(BlockInfoTable.class, blockId);
+    bit.setBlockRecoveryId(recoveryId);
+    session.updatePersistent(bit);
+  }
+  
+  
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////
+  public static void updateBlockUCState(long blockId, BlockUCState blockState, boolean isTransactional) {
+    if(isTransactional)
+      updateBlockUCState(blockId, blockState.ordinal());
+    else
+      updateBlockUCStateWithTransaction(blockId, blockState.ordinal());
+  }
+  
+  private static void updateBlockUCState(long blockId, int blockState) {
+    Session session = DBConnector.obtainSession();
+    updateBlockUCStateInternal(session, blockId, blockState);
+    session.flush();
+    
+  }
+  
+  
+  private static void updateBlockUCStateWithTransaction(long blockId, int blockState) {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    Transaction tx = session.currentTransaction();
+    while (done == false && tries > 0) {
+      try {
+        tx.begin();
+        updateBlockUCStateInternal(session, blockId, blockState);
+        tx.commit();
+        session.flush();
+        done=true;
+      }
+      catch (ClusterJException e){
+        e.printStackTrace();
+        if (tx.isActive())
+          tx.rollback();
+        tries--;
+      }
+    }
+    
+  }
+  
+  private static void updateBlockUCStateInternal(Session session, long blockId, int blockState) {
+    BlockInfoTable bit = session.newInstance(BlockInfoTable.class, blockId);
+    bit.setBlockUCState(blockState);
+    session.updatePersistent(bit);
+  }
+  
+  
+  
+  /** Updates the generationStamp and numBytes of a BlockInfo in one shot
+   * @param blockId
+   * @param newgenerationstamp
+   * @param newlength
+   * @param isTransactional
+   */
+  public static void updateGenStampAndNumBytes(long blockId, long newgenerationstamp, long newlength, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      updateGenStampAndNumBytesInternal(session, blockId, newgenerationstamp, newlength);
+      session.flush();
+    }
+    else
+      updateGenStampAndNumBytesWithTransaction(blockId, newgenerationstamp, newlength);
+  }
+
+  private static void updateGenStampAndNumBytesWithTransaction(long blockId,
+      long newgenerationstamp, long newlength) {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    Transaction tx = session.currentTransaction();
+    while (done == false && tries > 0) {
+      try {
+        tx.begin();
+        updateGenStampAndNumBytesInternal(session, blockId, newgenerationstamp, newlength);
+        tx.commit();
+        session.flush();
+        done=true;
+      }
+      catch (ClusterJException e){
+        e.printStackTrace();
+        if (tx.isActive())
+          tx.rollback();
+        tries--;
+      }
+    }
+    
+  }
+
+  private static void updateGenStampAndNumBytesInternal(Session session,
+      long blockId, long newgenerationstamp, long newlength) {
+    BlockInfoTable bit = session.newInstance(BlockInfoTable.class, blockId);
+    bit.setGenerationStamp(newgenerationstamp);
+    bit.setNumBytes(newlength);
+    updateBlockInfoTableInternal(session, bit);
+    
+  }
+  
+  
 
                       private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName)
                       {

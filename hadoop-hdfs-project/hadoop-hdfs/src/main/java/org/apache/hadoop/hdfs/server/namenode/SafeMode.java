@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 
@@ -27,8 +29,9 @@ public interface SafeMode {
    * Check safe mode conditions.
    * If the corresponding conditions are satisfied,
    * trigger the system to enter/leave safe mode.
+   * @throws IOException 
    */
-  public void checkSafeMode();
+  public void checkSafeMode() throws IOException;
 
   /** Is the system in safe mode? */
   public boolean isInSafeMode();
@@ -45,9 +48,11 @@ public interface SafeMode {
   /**
    * Increment number of blocks that reached minimal replication.
    * @param replication current replication 
+   * @throws IOException 
    */
-  public void incrementSafeBlockCount(int replication);
+  public void incrementSafeBlockCount(int replication) throws IOException;
 
-  /** Decrement number of blocks that reached minimal replication. */
-  public void decrementSafeBlockCount(Block b);
+  /** Decrement number of blocks that reached minimal replication. 
+   * @throws IOException */
+  public void decrementSafeBlockCount(Block b) throws IOException;
 }

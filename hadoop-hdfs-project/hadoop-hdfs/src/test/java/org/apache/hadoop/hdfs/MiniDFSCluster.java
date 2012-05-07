@@ -580,7 +580,6 @@ public class MiniDFSCluster {
       /*[thesis] For testing*/
       if (format)
       {
-//        DBAdmin.truncateAllTables(conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT));
           DBConnector.setConfiguration(conf);
           assert(DBConnector.formatDB());
       }

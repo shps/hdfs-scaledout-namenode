@@ -191,6 +191,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     DeprecatedUTF8.writeString(out, name);
     DeprecatedUTF8.writeString(out, storageID);
     out.writeShort(infoPort);
+    out.writeShort(ipcPort); //added by Wasif
   }
 
   /** {@inheritDoc} */
@@ -202,5 +203,6 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     // So chop off the first two bytes (and hence the signed bits) before 
     // setting the field.
     this.infoPort = in.readShort() & 0x0000ffff;
+    this.ipcPort = in.readShort() & 0x0000ffff; //added by Wasif
   }
 }

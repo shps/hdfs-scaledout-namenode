@@ -719,7 +719,15 @@ class NamenodeJspHelper {
         this.inode = null;
       } else {
         this.block = new Block(blockId);
-        this.inode = blockManager.getINode(block);
+        INodeFile inodeFile;
+        try {
+          inodeFile = blockManager.getINode(block);
+        } catch (IOException e) {
+          e.printStackTrace();
+          inodeFile = null;
+        }
+        this.inode = inodeFile;
+        
       }
     }
 

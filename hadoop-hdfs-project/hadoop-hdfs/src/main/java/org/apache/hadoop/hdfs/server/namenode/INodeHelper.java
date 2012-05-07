@@ -1044,9 +1044,60 @@ public class INodeHelper {
     private static void updateAccessTimeInternal(Session session, long inodeid, long aTime) throws ClusterJException{
             INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
             inodet.setATime(aTime);
-            session.updatePersistent(inodet);
+            session.updatePersistent(inodet); //FIXME: use updateINodeTableInternal instead
+    }
+    
+    
+    
+    
+    ////////////////////////////////
+    // Fix for the lease recovery issue
+    ///////////////////////////////
+    
+
+    public static void updateClientName(long inodeid, String newClientName, boolean isTransactional) throws ClusterJException
+    {
+      DBConnector.checkTransactionState(isTransactional);
+      if (isTransactional) {
+        Session session = DBConnector.obtainSession();
+        updateClientNameInternal(session, inodeid, newClientName);
+        session.flush();
+      }
+      else
+        updateClientNameWithTransaction(inodeid, newClientName);
     }
 
+    private static void updateClientNameWithTransaction(long inodeid,
+        String newClientName) {
+      boolean done = false;
+      int tries = RETRY_COUNT;
+
+      Session session = DBConnector.obtainSession();
+      Transaction tx = session.currentTransaction();
+      while (done == false && tries > 0) {
+        try {
+          tx.begin();
+          updateClientNameInternal(session, inodeid, newClientName);
+          tx.commit();
+          done = true;
+          session.flush();
+        } catch (ClusterJException e) {
+          if (tx.isActive()) {
+            tx.rollback();
+          }
+          e.printStackTrace();
+          tries--;
+        }
+      }
+    }
+
+    private static void updateClientNameInternal(Session session, long inodeid,
+        String newClientName) {
+      INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
+      inodet.setClientName(newClientName);
+      updateINodeTableInternal(session, inodet);
+    }
+    
 
 }
 

@@ -93,7 +93,7 @@ public class INodeFileUnderConstruction extends INodeFile {
   // converts a INodeFileUnderConstruction into a INodeFile
   // use the modification time as the access time
   //
-  INodeFile convertToInodeFile() {
+  INodeFile convertToInodeFile() throws IOException {
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
                                   getReplication(),
@@ -137,10 +137,9 @@ public class INodeFileUnderConstruction extends INodeFile {
       throw new IOException("Trying to update non-existant block. " +
           "File is empty.");
     }
-    NameNode.LOG.debug("W: setLastBlock lastBlock"+lastBlock.getBlockId());
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
-          BlockUCState.UNDER_CONSTRUCTION, targets);
+          BlockUCState.UNDER_CONSTRUCTION, targets, isTransactional);
     ucBlock.setINode(this, isTransactional);
     setBlock(numBlocks()-1, ucBlock, isTransactional);
     return ucBlock;

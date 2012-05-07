@@ -328,7 +328,7 @@ public class FSDirectory implements Closeable {
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime, boolean isTransactional) throws UnresolvedLinkException {
+      INode newNode, boolean propagateModTime, boolean isTransactional) throws IOException {
     // NOTE: This does not update space counts for parents
     INodeDirectory newParent = null;
     writeLock();
@@ -358,12 +358,13 @@ public class FSDirectory implements Closeable {
 
   /**
    * Add a block to the file. Returns a reference to the added block.
+   * @throws IOException 
    */
   BlockInfo addBlock(String path,
                      INode[] inodes,
                      Block block,
                      DatanodeDescriptor targets[], boolean isTransactional
-  ) throws QuotaExceededException {
+  ) throws IOException {
     waitForReady();
 
     writeLock();
@@ -378,12 +379,18 @@ public class FSDirectory implements Closeable {
           fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, isTransactional);
 
       // associate new last block for the file
+//      BlockInfoUnderConstruction blockInfo =
+//        new BlockInfoUnderConstruction(
+//            block,
+//            fileINode.getReplication(),
+//            BlockUCState.UNDER_CONSTRUCTION,
+//            targets);
       BlockInfoUnderConstruction blockInfo =
-        new BlockInfoUnderConstruction(
-            block,
-            fileINode.getReplication(),
-            BlockUCState.UNDER_CONSTRUCTION,
-            targets);
+          new BlockInfoUnderConstruction(
+              block,
+              fileINode.getReplication());
+      blockInfo.setBlockUCState(BlockUCState.UNDER_CONSTRUCTION);
+      blockInfo.setExpectedLocations(targets, isTransactional);
       
       getBlockManager().addINode(blockInfo, fileINode, isTransactional);
       fileINode.addBlock(blockInfo, isTransactional);
@@ -402,8 +409,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Persist the block list for the inode.
+   * @throws IOException 
    */
-  void persistBlocks(String path, INodeFileUnderConstruction file) {
+  void persistBlocks(String path, INodeFileUnderConstruction file) throws IOException {
     waitForReady();
 
     writeLock();
@@ -421,8 +429,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Close file.
+   * @throws IOException 
    */
-  void closeFile(String path, INodeFile file, boolean isTransactional) {
+  void closeFile(String path, INodeFile file, boolean isTransactional) throws IOException {
     waitForReady();
     long now = now();
     writeLock();
@@ -845,10 +854,10 @@ public class FSDirectory implements Closeable {
    * @param replication new replication
    * @param oldReplication old replication - output parameter
    * @return array of file blocks
-   * @throws QuotaExceededException
+   * @throws IOException 
    */
   Block[] setReplication(String src, short replication, short[] oldReplication, boolean isTransactional)
-      throws QuotaExceededException, UnresolvedLinkException {
+      throws IOException {
     waitForReady();
     Block[] fileBlocks = null;
     writeLock();
@@ -866,8 +875,7 @@ public class FSDirectory implements Closeable {
                                     short replication,
                                     short[] oldReplication,
                                     boolean isTransactional
-                                    ) throws QuotaExceededException, 
-                                    UnresolvedLinkException {
+                                    ) throws IOException {
     assert hasWriteLock();
 
     INode[] inodes = rootDir.getExistingPathINodes(src, true);
@@ -917,7 +925,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  boolean exists(String src) throws UnresolvedLinkException {
+  boolean exists(String src) throws IOException {
     src = normalizePath(src);
     readLock();
     try {
@@ -1023,9 +1031,10 @@ public class FSDirectory implements Closeable {
 
   /**
    * Concat all the blocks from srcs to trg and delete the srcs files
+   * @throws IOException 
    */
   public void concat(String target, String [] srcs, boolean isTransactional) 
-      throws UnresolvedLinkException {
+      throws IOException {
     writeLock();
     try {
       // actual move
@@ -1047,9 +1056,10 @@ public class FSDirectory implements Closeable {
    * @param srcs list of file to move the blocks from
    * Must be public because also called from EditLogs
    * NOTE: - it does not update quota (not needed for concat)
+   * @throws IOException 
    */
   public void unprotectedConcat(String target, String [] srcs, long timestamp, boolean isTransactional) 
-      throws UnresolvedLinkException {
+      throws IOException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
@@ -1096,9 +1106,10 @@ public class FSDirectory implements Closeable {
    * @param src Path of a directory to delete
    * @param collectedBlocks Blocks under the deleted directory
    * @return true on successful deletion; else false
+   * @throws IOException 
    */
   boolean delete(String src, List<Block>collectedBlocks, boolean isTransactional) 
-    throws UnresolvedLinkException {
+    throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1160,9 +1171,10 @@ public class FSDirectory implements Closeable {
    * <br>
    * @param src a string representation of a path to an inode
    * @param mtime the time the inode is removed
+   * @throws IOException 
    */ 
   void unprotectedDelete(String src, long mtime, boolean isTransactional) 
-    throws UnresolvedLinkException {
+    throws IOException {
     assert hasWriteLock();
     List<Block> collectedBlocks = new ArrayList<Block>();
     int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime,isTransactional);
@@ -1331,8 +1343,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Get the blocks associated with the file.
+   * @throws IOException 
    */
-  Block[] getFileBlocks(String src) throws UnresolvedLinkException {
+  Block[] getFileBlocks(String src) throws IOException {
     waitForReady();
     readLock();
     try {
@@ -2139,7 +2152,6 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
-      //inode.setModificationTimeForce(mtime);
       inode.setModificationTimeForceDB(mtime);
       status = true;
     }
@@ -2151,7 +2163,6 @@ public class FSDirectory implements Closeable {
       if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
         status =  false;
       } else {
-        //inode.setAccessTime(atime);
         inode.setAccessTimeDB(atime);
         status = true;
       }

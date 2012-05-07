@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ReplicaHelper;
 
 /**
  * Represents a block that is currently being constructed.<br>
@@ -50,6 +52,25 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * the right recovery if any of the abandoned recoveries re-appear.
    */
   private long blockRecoveryId = 0;
+  
+  /** Should only be called by BlocksHelper
+   * @param recoveryId
+   */
+  public void setBlockRecoveryId(long recoveryId) {
+    this.blockRecoveryId = recoveryId;
+  }
+  
+  /** Should only be called by BlocksHelper
+   * @param nodeIndex
+   */
+  public void setPrimaryNodeIndex(int nodeIndex) {
+    this.primaryNodeIndex = nodeIndex;
+  }
+  
+  public int getPrimaryNodeIndex() {
+    return this.primaryNodeIndex;
+  }
+  
 
   /**
    * ReplicaUnderConstruction contains information about replicas while
@@ -59,11 +80,11 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * It is not guaranteed, but expected, that data-nodes actually have
    * corresponding replicas.
    */
-  static class ReplicaUnderConstruction extends Block {
+  public static class ReplicaUnderConstruction extends Block {
     private DatanodeDescriptor expectedLocation;
     private ReplicaState state;
 
-    ReplicaUnderConstruction(Block block,
+    public ReplicaUnderConstruction(Block block,
                              DatanodeDescriptor target,
                              ReplicaState state) {
       super(block);
@@ -129,22 +150,24 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   /**
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
+   * @throws IOException 
    */
-  public BlockInfoUnderConstruction(Block blk, int replication) {
+  public BlockInfoUnderConstruction(Block blk, int replication) throws IOException {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
+   * @throws IOException 
    */
   public BlockInfoUnderConstruction(Block blk, int replication,
                              BlockUCState state,
-                             DatanodeDescriptor[] targets) {
+                             DatanodeDescriptor[] targets) throws IOException {
     super(blk, replication);
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "BlockInfoUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;
-    setExpectedLocations(targets);
+    setExpectedLocations(targets, false);
   }
 
   /**
@@ -165,30 +188,43 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return new BlockInfo(this);
   }
 
-  /** Set expected locations */ //FIXME: [thesis] replicas need to be persisted!
-  public void setExpectedLocations(DatanodeDescriptor[] targets) {
+  /** Set expected locations 
+   * @throws IOException */
+  public void setExpectedLocations(DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
     int numLocations = targets == null ? 0 : targets.length;
-    this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
-    for(int i = 0; i < numLocations; i++)
-      replicas.add(
-        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+    //this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
+    for(int i = 0; i < numLocations; i++) {
+      //replicas.add(
+      //  new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+      ReplicaHelper.add(this.getBlockId(), targets[i], ReplicaState.RBW, isTransactional);
+    }
   }
 
   /**
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
+   * @throws IOException 
    */
-  public DatanodeDescriptor[] getExpectedLocations() {
-    int numLocations = replicas == null ? 0 : replicas.size();
+  public DatanodeDescriptor[] getExpectedLocations() throws IOException {
+    //int numLocations = replicas == null ? 0 : replicas.size();
+    //DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
+    //for(int i = 0; i < numLocations; i++)
+    //  locations[i] = replicas.get(i).getExpectedLocation();
+    //return locations;
+    List<ReplicaUnderConstruction> replicasList = ReplicaHelper.getReplicas(this.getBlockId(), false);
+    int numLocations = replicasList == null ? 0 : replicasList.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
     for(int i = 0; i < numLocations; i++)
-      locations[i] = replicas.get(i).getExpectedLocation();
+      locations[i] = replicasList.get(i).getExpectedLocation();
     return locations;
+    
+    
   }
 
   /** Get the number of expected locations */
   public int getNumExpectedLocations() {
-    return replicas == null ? 0 : replicas.size();
+    //return replicas == null ? 0 : replicas.size();
+    return ReplicaHelper.size(this.getBlockId(), false);
   }
 
   /**
@@ -229,37 +265,90 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * Initialize lease recovery for this block.
    * Find the first alive data-node starting from the previous primary and
    * make it primary.
+   * @throws IOException 
    */
-  public void initializeBlockRecovery(long recoveryId) {
-    setBlockUCState(BlockUCState.UNDER_RECOVERY);
-    blockRecoveryId = recoveryId; //FIXME: this should be either persisted to database / or stored globally 
-    if (replicas.size() == 0) {
+  public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr, boolean isTransactional) throws IOException {
+
+    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), isTransactional);
+    
+    setBlockUCState(BlockUCState.UNDER_RECOVERY); 
+    BlocksHelper.updateBlockUCState(getBlockId(), BlockUCState.UNDER_RECOVERY, isTransactional);
+    
+    blockRecoveryId = recoveryId; //FIXME: this should be either persisted to database / or stored globally
+    BlocksHelper.updateBlockRecoveryId(this.getBlockId(), blockRecoveryId, isTransactional);
+    
+    if (replicasFromDB.size() == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
 
-    int previous = primaryNodeIndex; //FIXME: this should be either persisted to database / or stored globally 
-    for(int i = 1; i <= replicas.size(); i++) {
-      int j = (previous + i)%replicas.size();
-      if (replicas.get(j).isAlive()) {
+    int previous = primaryNodeIndex; //FIXME: this should be either persisted to database / or stored globally
+    
+    for(int i = 1; i <= replicasFromDB.size(); i++) {
+      int j = (previous + i)%replicasFromDB.size();
+      ReplicaUnderConstruction replica = replicasFromDB.get(j);
+      DatanodeDescriptor datanodeFromDB = replica.getExpectedLocation();
+      DatanodeDescriptor datanode = datanodeMgr.getDatanode(datanodeFromDB.getStorageID());
+      if (datanode.isAlive) { //FIXME
         primaryNodeIndex = j;
-        DatanodeDescriptor primary = replicas.get(j).getExpectedLocation(); 
-        primary.addBlockToBeRecovered(this);
+        BlocksHelper.updatePrimaryNodeIndex(this.getBlockId(), primaryNodeIndex, isTransactional);
+        
+        //DatanodeDescriptor primary = replicasFromDB.get(j).getExpectedLocation(); //FIXME 
+        //primary.addBlockToBeRecovered(this);
+        datanode.addBlockToBeRecovered(this);
         NameNode.stateChangeLog.info("BLOCK* " + this
-          + " recovery started, primary=" + primary);
+          + " recovery started, primary=" + datanode);
         return;
       }
     }
   }
+  
+//  public void initializeBlockRecoveryOld(long recoveryId) throws IOException {
+//    //[W] setBlockUCState in DB
+//    //[W] fetch replicas from DB
+//    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), false);
+//    
+//    setBlockUCState(BlockUCState.UNDER_RECOVERY);
+//    blockRecoveryId = recoveryId; //FIXME: this should be either persisted to database / or stored globally 
+//    if (replicasFromDB.size() == 0) {
+//      NameNode.stateChangeLog.warn("BLOCK*"
+//        + " INodeFileUnderConstruction.initLeaseRecovery:"
+//        + " No blocks found, lease removed.");
+//    }
+//
+//    int previous = primaryNodeIndex; //FIXME: this should be either persisted to database / or stored globally 
+//    for(int i = 1; i <= replicasFromDB.size(); i++) {
+//      int j = (previous + i)%replicasFromDB.size(); //FIXME
+//      if (replicasFromDB.get(j).isAlive()) { //FIXME
+//        primaryNodeIndex = j;
+//        DatanodeDescriptor primary = replicasFromDB.get(j).getExpectedLocation(); //FIXME 
+//        primary.addBlockToBeRecovered(this);
+//        NameNode.stateChangeLog.info("BLOCK* " + this
+//          + " recovery started, primary=" + primary);
+//        return;
+//      }
+//    }
+//  }
 
+//  void addReplicaIfNotPresentOld(DatanodeDescriptor dn,
+//                     Block block,
+//                     ReplicaState rState) {
+//    for(ReplicaUnderConstruction r : replicas)
+//      if(r.getExpectedLocation() == dn)
+//        return;
+//    replicas.add(new ReplicaUnderConstruction(block, dn, rState));
+//  }
+  
   void addReplicaIfNotPresent(DatanodeDescriptor dn,
-                     Block block,
-                     ReplicaState rState) {
-    for(ReplicaUnderConstruction r : replicas)
-      if(r.getExpectedLocation() == dn)
+      Block block,
+      ReplicaState rState, boolean isTransactional) throws IOException {
+    
+    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), false);
+    for(ReplicaUnderConstruction r : replicasFromDB)
+      if(r.getExpectedLocation().getName().equals(dn.getName()))
         return;
-    replicas.add(new ReplicaUnderConstruction(block, dn, rState));
+    ReplicaHelper.add(this.getBlockId(), dn, rState, isTransactional);
   }
 
   @Override // BlockInfo
@@ -271,7 +360,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   @Override // BlockInfo
   public boolean equals(Object obj) {
     // Sufficient to rely on super's implementation
-    return (this == obj) || super.equals(obj);
+    return (this == obj) || super.equals(obj) || (this.getBlockId() == ((BlockInfoUnderConstruction)obj).getBlockId()); //FIXME: W
   }
 
   /** {@inheritDoc} */

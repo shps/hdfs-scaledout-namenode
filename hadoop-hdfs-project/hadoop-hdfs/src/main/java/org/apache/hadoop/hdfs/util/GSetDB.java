@@ -15,6 +15,8 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import java.io.IOException;
+
 
 /**
  * This interface makes @GSet to support the option showing if a call to its methods are
@@ -29,7 +31,7 @@ public interface GSetDB<K, E extends K> extends GSet<K, E> {
      * @param isTransactional
      * @return 
      */
-    E put(E element, boolean isTransactional);
+    E put(E element, boolean isTransactional) throws IOException;
    
     /**
      * 
@@ -37,5 +39,5 @@ public interface GSetDB<K, E extends K> extends GSet<K, E> {
      * @param isTransactional
      * @return 
      */
-    E remove(K key, boolean isTransactional);
+    E remove(K key, boolean isTransactional) throws IOException;
 }

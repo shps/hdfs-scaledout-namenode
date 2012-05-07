@@ -145,7 +145,7 @@ public class TestFileAppend4 {
    * before calling completeFile, and then tries to recover
    * the lease from another thread.
    */
-  @Test /*(timeout=60000)*///TODO[Hooman]: Work on this non-functional requirement later.
+  @Test(timeout=60000) //TODO[Hooman]: Work on this non-functional requirement later.
   public void testRecoverFinalizedBlock() throws Throwable {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     //FIXME[Hooman]: This test fails because of the lease recovery.
@@ -216,7 +216,7 @@ public class TestFileAppend4 {
    * starts writing from that writer, and then has the old lease holder
    * call completeFile
    */
-  @Test/*(timeout=60000)*///TODO[Hooman]: Work on this non-functional requirement later.
+  @Test(timeout=60000)//TODO[Hooman]: Work on this non-functional requirement later.
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
     //FIXME[Hooman]: This test fails because of the lease recovery.
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();

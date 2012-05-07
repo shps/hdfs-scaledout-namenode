@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.ReplicaHelper;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -325,8 +326,9 @@ public class BlockManager {
     this.blockplacement = newpolicy;
   }
 
-  /** Dump meta data to out. */
-  public void metaSave(PrintWriter out) {
+  /** Dump meta data to out. 
+   * @throws IOException */
+  public void metaSave(PrintWriter out) throws IOException {
     assert namesystem.hasWriteLock();
     //
     // Dump contents of neededReplication
@@ -472,9 +474,10 @@ public class BlockManager {
    * @param block last block of a file under construction
    * @param status status of the block
    * @param expectedReplicas expected number of replicas
+   * @throws IOException 
    */
   private void replicateLastBlock(BlockInfoUnderConstruction block,
-		  NumberReplicas status, short expectedReplicas)
+		  NumberReplicas status, short expectedReplicas) throws IOException
   {
 	  DatanodeDescriptor[] targets = block.getExpectedLocations();
 	  final int numOfTargets = targets == null ? 0 : targets.length;
@@ -525,6 +528,9 @@ public class BlockManager {
     fileINode.setBlock(blkIndex, completeBlock, isTransactional);
     // replace block in the blocksMap
     
+    //TODO: [W] remove ReplicaUnderConstruction from DB here
+    //W: do ReplicaHelper.delete(ucBlock, isTransactional)
+    ReplicaHelper.delete(ucBlock.getBlockId(), isTransactional);
     return blocksMap.replaceBlock(completeBlock, isTransactional);
   }
 
@@ -600,8 +606,9 @@ public class BlockManager {
 
   /**
    * Get all valid locations of the block
+   * @throws IOException 
    */
-  private List<String> getValidLocations(Block block) {
+  private List<String> getValidLocations(Block block) throws IOException {
     ArrayList<String> machineSet =
       new ArrayList<String>(blocksMap.numNodes(block));
     for(Iterator<DatanodeDescriptor> it =
@@ -718,8 +725,8 @@ public class BlockManager {
 	    }
 
 	    // get block locations
-//	    final int numCorruptNodes = countNodes(blk).corruptReplicas(); //TODO: [thesis] verify if countNodes works currently
-//	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk); //TODO: [thesis]
+//	    final int numCorruptNodes = countNodes(blk).corruptReplicas(); 
+//	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
 //	    if (numCorruptNodes != numCorruptReplicas) {
 //	      LOG.warn("Inconsistent number of corrupt replicas for "
 //	          + blk + " blockMap has " + numCorruptNodes
@@ -808,7 +815,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final boolean isFileUnderConstruction,
       final long offset, final long length, final boolean needBlockToken
       ) throws IOException {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
@@ -910,9 +917,10 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
   }
 
-  /** Get all blocks with location information from a datanode. */
+  /** Get all blocks with location information from a datanode. 
+   * @throws IOException */
   private BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
-      final long size) throws UnregisteredNodeException {
+      final long size) throws IOException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
       NameNode.stateChangeLog.warn("BLOCK* getBlocks: "
@@ -953,8 +961,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   }
 
    
-  /** Remove the blocks associated to the given datanode. */
-  void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) {
+  /** Remove the blocks associated to the given datanode. 
+   * @throws IOException */
+  void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) throws IOException {
     final Iterator<? extends Block> it = node.getBlockIterator();
     
     //TODO: [thesis] this should just remove all the triplets and shrink the indexes
@@ -977,8 +986,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * Adds block to list of blocks which will be invalidated on all its
    * datanodes.
+   * @throws IOException 
    */
-  private void addToInvalidates(Block b) {
+  private void addToInvalidates(Block b) throws IOException {
     StringBuilder datanodes = new StringBuilder();
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(b); it
         .hasNext();) {
@@ -1237,9 +1247,10 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * @param block block to be replicated
    * @param priority a hint of its priority in the neededReplication queue
    * @return if the block gets replicated or not
+   * @throws IOException 
    */
   @VisibleForTesting
-  boolean computeReplicationWorkForBlock(Block block, int priority) {
+  boolean computeReplicationWorkForBlock(Block block, int priority) throws IOException {
     int requiredReplication, numEffectiveReplicas;
     List<DatanodeDescriptor> containingNodes, liveReplicaNodes;
     DatanodeDescriptor srcNode;
@@ -1434,12 +1445,13 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    *
    * In addition form a list of all nodes containing the block
    * and calculate its replication numbers.
+   * @throws IOException 
    */
   private DatanodeDescriptor chooseSourceDatanode(
                                     Block block,
                                     List<DatanodeDescriptor> containingNodes,
                                     List<DatanodeDescriptor> nodesContainingLiveReplicas,
-                                    NumberReplicas numReplicas) {
+                                    NumberReplicas numReplicas) throws IOException {
     containingNodes.clear();
     nodesContainingLiveReplicas.clear();
     DatanodeDescriptor srcNode = null;
@@ -1497,8 +1509,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * If there were any replication requests that timed out, reap them
    * and put them back into the neededReplication queue
+   * @throws IOException 
    */
-  private void processPendingReplications() {
+  private void processPendingReplications() throws IOException {
     Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
     if (timedOutItems != null) {
       namesystem.writeLock();
@@ -1691,7 +1704,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       // If block is under construction, add this replica to its list
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
         ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
-            node, iblk, reportedState);
+            node, iblk, reportedState, false);
         //and fall through to next clause
       }      
       //add replica if appropriate
@@ -1708,7 +1721,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockInfo> toCorrupt,      // add to corrupt replicas list
       Collection<StatefulBlockInfo> toUC,
-      boolean isTransactional) { // add to under-construction list
+      boolean isTransactional) throws IOException { // add to under-construction list
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     //BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -1773,6 +1786,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    *        add to corrupt replicas
    * @param toUC replicas of blocks currently under construction
    * @return
+   * @throws IOException 
    */
   private BlockInfo processReportedBlock(final DatanodeDescriptor dn, 
       final Block block, final ReplicaState reportedState, 
@@ -1780,7 +1794,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final Collection<Block> toInvalidate, 
       final Collection<BlockInfo> toCorrupt,
       final Collection<StatefulBlockInfo> toUC, 
-      boolean isTransactional) {
+      boolean isTransactional) throws IOException {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Reported block " + block
@@ -1884,7 +1898,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       ReplicaState reportedState,
       boolean isTransactional) 
   throws IOException {
-    block.addReplicaIfNotPresent(node, block, reportedState);
+    block.addReplicaIfNotPresent(node, block, reportedState, isTransactional);
     if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node, isTransactional) < 0) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
@@ -2068,8 +2082,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * For each block in the name-node verify whether it belongs to any file,
    * over or under replicated. Place it into the respective queue.
+   * @throws IOException 
    */
-  public void processMisReplicatedBlocks() {
+  public void processMisReplicatedBlocks() throws IOException {
     assert namesystem.hasWriteLock();
 
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
@@ -2136,10 +2151,11 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * Find how many of the containing nodes are "extra", if any.
    * If there are any extras, call chooseExcessReplicates() to
    * mark them in the excessReplicateMap.
+   * @throws IOException 
    */
   private void processOverReplicatedBlock(final Block block,
       final short replication, final DatanodeDescriptor addedNode,
-      DatanodeDescriptor delNodeHint) {
+      DatanodeDescriptor delNodeHint) throws IOException {
     assert namesystem.hasWriteLock();
     if (addedNode == delNodeHint) {
       delNodeHint = null;
@@ -2179,12 +2195,13 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * So removing such a replica won't remove a rack. 
    * If no such a node is available,
    * then pick a node with least free space
+   * @throws IOException 
    */
   private void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
                               Block b, short replication,
                               DatanodeDescriptor addedNode,
                               DatanodeDescriptor delNodeHint,
-                              BlockPlacementPolicy replicator) {
+                              BlockPlacementPolicy replicator) throws IOException {
     assert namesystem.hasWriteLock();
     // first form a rack to datanodes map and
     INodeFile inode = getINode(b);
@@ -2286,8 +2303,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * Modify (block-->datanode) map. Possibly generate replication tasks, if the
    * removed block is still valid.
+   * @throws IOException 
    */
-  public void removeStoredBlock(Block block, DatanodeDescriptor node, boolean isTransactional) {
+  public void removeStoredBlock(Block block, DatanodeDescriptor node, boolean isTransactional) throws IOException {
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* removeStoredBlock: "
           + block + " from " + node.getName());
@@ -2341,8 +2359,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * Get all valid locations of the block & add the block to results
    * return the length of the added block; 0 if the block is not added
+   * @throws IOException 
    */
-  private long addBlock(Block block, List<BlockWithLocations> results) {
+  private long addBlock(Block block, List<BlockWithLocations> results) throws IOException {
     final List<String> machineSet = getValidLocations(block);
     if(machineSet.size() == 0) {
       return 0;
@@ -2512,8 +2531,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
   /**
    * Return the number of nodes that are live and decommissioned.
+   * @throws IOException 
    */
-  public NumberReplicas countNodesOld(Block b) {
+  public NumberReplicas countNodesOld(Block b) throws IOException {
     int count = 0;
     int live = 0;
     int corrupt = 0;
@@ -2606,7 +2626,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   }
 
   private void logBlockReplicationInfo(Block block, DatanodeDescriptor srcNode,
-      NumberReplicas num) {
+      NumberReplicas num) throws IOException {
     int curReplicas = num.liveReplicas();
     int curExpectedReplicas = getReplication(block);
     INode fileINode = blocksMap.getINode(block);
@@ -2631,9 +2651,10 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * On stopping decommission, check if the node has excess replicas.
    * If there are any excess replicas, call processOverReplicatedBlock()
+   * @throws IOException 
    */
   void processOverReplicatedBlocksOnReCommission(
-      final DatanodeDescriptor srcNode) {
+      final DatanodeDescriptor srcNode) throws IOException {
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
@@ -2651,8 +2672,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /**
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
+   * @throws IOException 
    */
-  boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
+  boolean isReplicationInProgress(DatanodeDescriptor srcNode) throws IOException {
     boolean status = false;
     int underReplicatedBlocks = 0;
     int decommissionOnlyReplicas = 0;
@@ -2722,20 +2744,21 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
           return BlocksHelper.getTotalBlocks();
   }
 
-  public void removeBlock(Block block, boolean isTransactional) {
+  public void removeBlock(Block block, boolean isTransactional) throws IOException {
     block.setNumBytes(BlockCommand.NO_ACK); //TODO: [thesis] should be sent to DB
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block, isTransactional);
   }
 
-  public BlockInfo getStoredBlock(Block block) {
+  public BlockInfo getStoredBlock(Block block) throws IOException {
     return blocksMap.getStoredBlock(block);
   }
 
-  /** updates a block in under replication queue */
+  /** updates a block in under replication queue 
+   * @throws IOException */
   private void updateNeededReplications(final Block block,
-      final int curReplicasDelta, int expectedReplicasDelta) {
+      final int curReplicasDelta, int expectedReplicasDelta) throws IOException {
     namesystem.writeLock();
     try {
       NumberReplicas repl = countNodes(block);
@@ -2755,7 +2778,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
   }
 
-  public void checkReplication(Block block, int numExpectedReplicas) {
+  public void checkReplication(Block block, int numExpectedReplicas) throws IOException {
     // filter out containingNodes that are marked for decommission.
     NumberReplicas number = countNodes(block);
     if (isNeededReplication(block, numExpectedReplicas, number.liveReplicas())) { 
@@ -2767,7 +2790,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   }
 
   /* get replication factor of a block */
-  private int getReplication(Block block) {
+  private int getReplication(Block block) throws IOException {
     INodeFile fileINode = blocksMap.getINode(block);
     if (fileINode == null) { // block does not belong to any file
       return 0;
@@ -2797,7 +2820,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
   }
 
-  boolean blockHasEnoughRacks(Block b) {
+  boolean blockHasEnoughRacks(Block b) throws IOException {
     if (!this.shouldCheckForEnoughRacks) {
       return true;
     }
@@ -2828,7 +2851,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     return enoughRacks;
   }
 
-  boolean isNeededReplication(Block b, int expectedReplication, int curReplicas) {
+  boolean isNeededReplication(Block b, int expectedReplication, int curReplicas) throws IOException {
     if ((curReplicas >= expectedReplication) && (blockHasEnoughRacks(b))) {
       return false;
     } else {
@@ -2841,16 +2864,17 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     return this.neededReplications.getCorruptBlockSize();
   }
 
-  public BlockInfo addINode(BlockInfo block, INodeFile iNode, boolean isTransactional) {
+  public BlockInfo addINode(BlockInfo block, INodeFile iNode, boolean isTransactional) throws IOException {
     return blocksMap.addINode(block, iNode, isTransactional);
   }
 
-  public INodeFile getINode(Block b) {
+  public INodeFile getINode(Block b) throws IOException {
     return blocksMap.getINode(b);
   }
 
-  /** @return an iterator of the datanodes. */
-  public Iterator<DatanodeDescriptor> datanodeIterator(final Block block) {
+  /** @return an iterator of the datanodes. 
+   * @throws IOException */
+  public Iterator<DatanodeDescriptor> datanodeIterator(final Block block) throws IOException {
     return blocksMap.nodeIterator(block);
   }
 
@@ -2858,7 +2882,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     return corruptReplicas.numCorruptReplicas(block);
   }
 
-  public void removeBlockFromMap(Block block, boolean isTransactional) {
+  public void removeBlockFromMap(Block block, boolean isTransactional) throws IOException {
     blocksMap.removeBlock(block, isTransactional);
     // If block is removed from blocksMap remove it from corruptReplicasMap
     corruptReplicas.removeFromCorruptReplicasMap(block);
