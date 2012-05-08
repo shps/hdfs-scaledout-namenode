@@ -167,6 +167,7 @@ public class TestReplaceDatanodeOnFailure {
         try {
           in = fs.open(slowwriters[i].filepath);
           for(int j = 0, x; (x = in.read()) != -1; j++) {
+            LOG.info("x: "+x+", j: "+j);
             Assert.assertEquals(j, x);
           }
         }
