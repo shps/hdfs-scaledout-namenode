@@ -262,8 +262,9 @@ public class DatanodeManager {
   /**
    * Remove a datanode descriptor.
    * @param nodeInfo datanode descriptor.
+   * @throws IOException 
    */
-  private void removeDatanode(DatanodeDescriptor nodeInfo, boolean isTransactional) {
+  private void removeDatanode(DatanodeDescriptor nodeInfo, boolean isTransactional) throws IOException {
     assert namesystem.hasWriteLock();
     heartbeatManager.removeDatanode(nodeInfo);
     blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
@@ -295,8 +296,9 @@ public class DatanodeManager {
     }
   }
 
-  /** Remove a dead datanode. */
-  void removeDeadDatanode(final DatanodeID nodeID, boolean isTransactional) {
+  /** Remove a dead datanode. 
+   * @throws IOException */
+  void removeDeadDatanode(final DatanodeID nodeID, boolean isTransactional) throws IOException {
       synchronized(datanodeMap) {
         DatanodeDescriptor d;
         try {
@@ -492,8 +494,9 @@ public class DatanodeManager {
   /**
    * Change, if appropriate, the admin state of a datanode to 
    * decommission completed. Return true if decommission is complete.
+   * @throws IOException 
    */
-  boolean checkDecommissionState(DatanodeDescriptor node) {
+  boolean checkDecommissionState(DatanodeDescriptor node) throws IOException {
     // Check to see if all blocks in this decommissioned
     // node has reached their target replication factor.
     if (node.isDecommissionInProgress()) {

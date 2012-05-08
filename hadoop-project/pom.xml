@@ -607,15 +607,8 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
-			<!-- TODO --><exclude>**/TestLeaseRecovery2.java</exclude>
-			<!-- TODO --><exclude>**/TestLeaseRecovery.java</exclude>
-			<!-- FIXED has an issue <exclude>**/TestFileAppend.java</exclude> -->
-			<!-- TODO --><exclude>**/TestHFlush.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
-			<!-- TODO--><exclude>**/TestWriteRead.java</exclude>
-			<!-- TODO--><exclude>**/TestMultiThreadedHflush.java</exclude>
-			<!-- TODO--><exclude>**/TestPread.java</exclude>
 			<!-- TODO--><exclude>**/TestHDFSFileSystemContract.java</exclude>
 			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
@@ -624,10 +617,7 @@
 			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-			<!-- TODO--><exclude>**/TestReadWhileWriting.java</exclude>
-			<!-- TODO--><exclude>**/TestFileAppend4.java</exclude><!--recovery-id-->
 			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
-			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
 			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
 			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
@@ -637,7 +627,6 @@
 			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestFileAppend3.java</exclude>
 			<exclude>**/TestDirectoryScanner.java</exclude>
 			<exclude>**/TestFsLimits.java</exclude>
 			<exclude>**/TestRefreshUserMappings.java</exclude>

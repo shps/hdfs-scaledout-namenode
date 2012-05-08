@@ -70,8 +70,8 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		this(from, from.inode.getReplication());
 		this.inode = from.inode;
 	}
-
 	public INodeFile getINode() {
+
 		return (INodeFile) BlocksHelper.getInodeFromBlockId(this.getBlockId());
 	}
 
@@ -182,17 +182,22 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	 * Convert a complete block to an under construction block.
 	 * 
 	 * @return BlockInfoUnderConstruction -  an under construction block.
+	 * @throws IOException 
 	 */
 	public BlockInfoUnderConstruction convertToBlockUnderConstruction(
-			BlockUCState s, DatanodeDescriptor[] targets) {
+			BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
 		if(isComplete()) {
-			return new BlockInfoUnderConstruction(
-					this, getINode().getReplication(), s, targets);
+			//return new BlockInfoUnderConstruction(
+			//		this, getINode().getReplication(), s, targets);
+		  BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this, getINode().getReplication());
+		  bUc.setBlockUCState(s);
+		  bUc.setExpectedLocations(targets, isTransactional);
+		  return bUc;
 		}
 		// the block is already under construction
 		BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
 		ucBlock.setBlockUCState(s);
-		ucBlock.setExpectedLocations(targets);
+		ucBlock.setExpectedLocations(targets, isTransactional);
 		return ucBlock;
 	}
 

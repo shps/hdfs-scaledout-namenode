@@ -129,8 +129,9 @@ public class INodeFile extends INode {
 	/**
 	 * Get file blocks 
 	 * @return file blocks
+	 * @throws IOException 
 	 */
-	public BlockInfo[] getBlocks() {
+	public BlockInfo[] getBlocks() throws IOException {
 		
 		BlockInfo [] ret = BlocksHelper.getBlockInfoArray(this);
 		
@@ -155,8 +156,9 @@ public class INodeFile extends INode {
   
 	/**
 	 * append array of blocks to this.blocks
+	 * @throws IOException 
 	 */
-	void appendBlocks(INodeFile [] inodes, boolean isTransactional) {
+	void appendBlocks(INodeFile [] inodes, boolean isTransactional) throws IOException {
 		BlocksHelper.appendBlocks(this, inodes, isTransactional);
 	}
 	
@@ -318,6 +320,7 @@ public class INodeFile extends INode {
 
 	/**
 	 * Return the penultimate allocated block for this file.
+	 * @throws IOException 
 	 */
 	//FIXME: KTHFSBLOCKS
 /*	BlockInfo getPenultimateBlock() {
@@ -326,7 +329,7 @@ public class INodeFile extends INode {
 	}
 */
 	
-	BlockInfo getPenultimateBlock() {
+	BlockInfo getPenultimateBlock() throws IOException {
 		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
 		if (tempblocks == null || tempblocks.length <= 1) {
 			return null;
@@ -346,21 +349,21 @@ public class INodeFile extends INode {
 
 	}*/
 	public <T extends BlockInfo> T getLastBlock() throws IOException {
-		
-		BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
-		
-		if (tempblocks == null || tempblocks.length == 0)
-			return null;
-		T returnBlock = null;
-		try {
-                                                                                                                                                @SuppressWarnings("unchecked")  // ClassCastException is caught below
-			T tBlock = (T)tempblocks[tempblocks.length - 1];
-			returnBlock = tBlock;
-		} catch(ClassCastException cce) {
-			throw new IOException("Unexpected last block type: " 
-					+ tempblocks[tempblocks.length - 1].getClass().getSimpleName());
-		}
-		return returnBlock;
+
+	  BlockInfo [] tempblocks = BlocksHelper.getBlockInfoArray(this);
+
+	  if (tempblocks == null || tempblocks.length == 0)
+	    return null;
+	  T returnBlock = null;
+	  try {
+	    @SuppressWarnings("unchecked")  // ClassCastException is caught below
+	    T tBlock = (T)tempblocks[tempblocks.length - 1];
+	    returnBlock = tBlock;
+	  } catch(ClassCastException cce) {
+	    throw new IOException("Unexpected last block type: " 
+	        + tempblocks[tempblocks.length - 1].getClass().getSimpleName());
+	  }
+	  return returnBlock;
 	}
 	
 

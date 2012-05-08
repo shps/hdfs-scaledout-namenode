@@ -55,8 +55,9 @@ public class BlockManagerTestUtil {
   /**
    * @return a tuple of the replica state (number racks, number live
    * replicas, and number needed replicas) for the given block.
+   * @throws IOException 
    */
-  public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) {
+  public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) throws IOException {
     final BlockManager bm = namesystem.getBlockManager();
     namesystem.readLock();
     try {
@@ -72,9 +73,10 @@ public class BlockManagerTestUtil {
    * @return the number of racks over which a given block is replicated
    * decommissioning/decommissioned nodes are not counted. corrupt replicas 
    * are also ignored
+   * @throws IOException 
    */
   private static int getNumberOfRacks(final BlockManager blockManager,
-      final Block b) {
+      final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
        getCorruptReplicas(blockManager).getNodes(b);

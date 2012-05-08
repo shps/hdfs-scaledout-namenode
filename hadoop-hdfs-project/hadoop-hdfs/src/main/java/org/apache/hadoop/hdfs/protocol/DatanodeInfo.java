@@ -351,7 +351,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     super.write(out);
 
     //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
-    out.writeShort(ipcPort);
+    //out.writeShort(ipcPort); //commented out by Wasif
 
     out.writeLong(capacity);
     out.writeLong(dfsUsed);
@@ -369,7 +369,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     super.readFields(in);
 
     //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
-    this.ipcPort = in.readShort() & 0x0000ffff;
+    //this.ipcPort = in.readShort() & 0x0000ffff; //commented out by Wasif
 
     this.capacity = in.readLong();
     this.dfsUsed = in.readLong();

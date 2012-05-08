@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -136,7 +137,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 
 
 	/*KTHFS method for getting a BlockInfo from the database*/
-	public E get(final K key) {
+	public E get(final K key) throws IOException {
 		
 		//validate key
 		if (key == null) {
@@ -148,7 +149,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	}
 
 	@Override
-	public boolean contains(final K key) {
+	public boolean contains(final K key) throws IOException {
 		return get(key) != null;
 	}
         
@@ -185,7 +186,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	}
         
         @Override
-        public E put(E element, boolean isTransactional) {
+        public E put(E element, boolean isTransactional) throws IOException {
             BlockInfo binfo = (BlockInfo)element;
             BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
             BlocksHelper.putBlockInfo(binfo, isTransactional);
@@ -199,7 +200,7 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 
         @Override
         @Deprecated
-        public E put(final E element) {
+        public E put(final E element) throws IOException {
             return put(element, false);    
 	}
 

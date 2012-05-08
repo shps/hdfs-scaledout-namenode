@@ -150,7 +150,7 @@ public class TestHFlush {
     }
   }
   static void checkData(final byte[] actual, int from, int len,
-                        final byte[] expected, String message) {
+      final byte[] expected, String message) {
     for (int idx = 0; idx < len; idx++) {
       assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                    expected[from+idx]+" actual "+actual[idx],
@@ -167,7 +167,7 @@ public class TestHFlush {
     final int DATANODE_NUM = 2;
     final int fileLen = 6;
     Configuration conf = new HdfsConfiguration();
-    final int timeout = 2000;
+    final int timeout = 2000;//  2000;
     conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
         timeout);
 

@@ -327,7 +327,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  public Iterator<BlockInfo> getBlockIterator() {
+  public Iterator<BlockInfo> getBlockIterator() throws IOException {
     List<BlockInfo> listOfBlocks = BlocksHelper.getBlockListForDatanode(this.name); 
 	return new BlockIterator(listOfBlocks, this);
   }

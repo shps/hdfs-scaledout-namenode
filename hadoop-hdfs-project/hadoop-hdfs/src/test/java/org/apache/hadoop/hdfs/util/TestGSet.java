@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Random;
@@ -162,7 +163,7 @@ public class TestGSet {
   }
 
   @Test
-  public void testGSet() {
+  public void testGSet() throws IOException {
     //The parameters are: table length, data size, modulus.
     check(new GSetTestCase(1, 1 << 4, 65537));
     check(new GSetTestCase(17, 1 << 16, 17));
@@ -175,9 +176,10 @@ public class TestGSet {
    * with various data sets and parameters.
    * If you are changing the implementation,
    * please un-comment the following line in order to run the test.
+   * @throws IOException 
    */
   //@Test
-  public void runMultipleTestGSet() {
+  public void runMultipleTestGSet() throws IOException {
     for(int offset = -2; offset <= 2; offset++) {
       runTestGSet(1, offset);
       for(int i = 1; i < Integer.SIZE - 1; i++) {
@@ -186,7 +188,7 @@ public class TestGSet {
     }
   }
 
-  private static void runTestGSet(final int modulus, final int offset) {
+  private static void runTestGSet(final int modulus, final int offset) throws IOException {
     println("\n\nmodulus=" + modulus + ", offset=" + offset);
     for(int i = 0; i <= 16; i += 4) {
       final int tablelength = (1 << i) + offset;
@@ -201,7 +203,7 @@ public class TestGSet {
     }
   }
 
-  private static void check(final GSetTestCase test) {
+  private static void check(final GSetTestCase test) throws IOException {
     //check add
     print("  check add .................. ");
     for(int i = 0; i < test.data.size()/2; i++) {
@@ -283,31 +285,31 @@ public class TestGSet {
       Assert.assertEquals(0, gset.size());
     }
 
-    private boolean containsTest(IntElement key) {
+    private boolean containsTest(IntElement key) throws IOException {
       final boolean e = expected.contains(key);
       Assert.assertEquals(e, gset.containsOld(key));
       return e;
     }
     @Override
-    public boolean contains(IntElement key) {
+    public boolean contains(IntElement key) throws IOException {
       final boolean e = containsTest(key);
       check();
       return e;
     }
 
-    private IntElement getTest(IntElement key) {
+    private IntElement getTest(IntElement key) throws IOException {
       final IntElement e = expected.get(key);
       Assert.assertEquals(e.id, gset.get_old(key).id);
       return e;
     }
     @Override
-    public IntElement get(IntElement key) {
+    public IntElement get(IntElement key) throws IOException {
       final IntElement e = getTest(key);
       check();
       return e;
     }
 
-    private IntElement putTest(IntElement element) {
+    private IntElement putTest(IntElement element) throws IOException {
       final IntElement e = expected.put(element);
       if (e == null) {
         Assert.assertEquals(null, gset.put_old(element));
@@ -317,13 +319,13 @@ public class TestGSet {
       return e;
     }
     @Override
-    public IntElement put(IntElement element) {
+    public IntElement put(IntElement element) throws IOException {
       final IntElement e = putTest(element);
       check();
       return e;
     }
 
-    private IntElement removeTest(IntElement key) {
+    private IntElement removeTest(IntElement key) throws IOException {
             // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
       final IntElement e = expected.remove(key);
       if (e == null) {
@@ -336,19 +338,19 @@ public class TestGSet {
       return e;
     }
     @Override
-    public IntElement remove(IntElement key) {
+    public IntElement remove(IntElement key) throws IOException {
       final IntElement e = removeTest(key);
       check();
       return e;
     }
 
-    private int sizeTest() {
+    private int sizeTest() throws IOException {
       final int s = expected.size();
       Assert.assertEquals(s, gset.size());
       return s;
     }
     @Override
-    public int size() {
+    public int size() throws IOException {
       final int s = sizeTest();
       check();
       return s;
@@ -359,7 +361,7 @@ public class TestGSet {
       throw new UnsupportedOperationException();
     }
 
-    void check() {
+    void check() throws IOException {
       //test size
       sizeTest();
 
