@@ -22,11 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -34,16 +31,8 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.mortbay.log.Log;
 
-import se.sics.clusterj.InodeTable;
 
-import com.mysql.clusterj.ClusterJDatastoreException;
-import com.mysql.clusterj.Query;
-import com.mysql.clusterj.Session;
-import com.mysql.clusterj.Transaction;
-import com.mysql.clusterj.query.QueryBuilder;
-import com.mysql.clusterj.query.QueryDomainType;
 
 /**
  * Directory INode class.
@@ -170,10 +159,19 @@ class INodeDirectory extends INode {
 	 * @return
 	 */
 	INode getNodeFromCache(String path) {
-		if(path.equals("/"))
-			return this;
-		INodeCache cache = INodeCacheImpl.getInstance();
-		return cache.getNode(path);
+//		if(path.equals("/")) //[Hooman]: This would always return the old Inode of the root. 
+//			return this;
+            if (path.equals("/")) {
+                try {
+                    return INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
+                } catch (IOException ex) {
+                    INodeCacheImpl.LOG.error(ex.getMessage(), ex);
+                    return this; //FIXME[Hooman]: this silently returns the old version of the root.
+                }
+            }
+            
+            INodeCache cache = INodeCacheImpl.getInstance();
+            return cache.getNode(path);
 	}
 
 	INode getNode(String path, boolean resolveLink) 

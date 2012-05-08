@@ -352,8 +352,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           this.dir = new FSDirectory(fsImage, this, conf);
 
     }
+    
     // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
+    INode rootInode = INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
+    if (rootInode == null)
+        INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
+    else
+        this.dir.rootDir = (INodeDirectoryWithQuota) rootInode;
+    
     INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
     cache.putRoot(this.dir.rootDir); //added for magic cache
     

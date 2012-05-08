@@ -281,12 +281,12 @@ public class DatanodeManager {
    * @throws UnregisteredNodeException 
    */
   public void removeDatanode(final DatanodeID node
-      ) throws UnregisteredNodeException {
+      ) throws UnregisteredNodeException, IOException {
     namesystem.writeLock();
     try {
       final DatanodeDescriptor descriptor = getDatanode(node);
       if (descriptor != null) {
-        removeDatanode(descriptor);
+        removeDatanode(descriptor, false); //TODO[Hooman]: Check if it requires atomicity.
       } else {
         NameNode.stateChangeLog.warn("BLOCK* removeDatanode: "
                                      + node.getName() + " does not exist");

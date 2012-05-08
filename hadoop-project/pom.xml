@@ -607,23 +607,11 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
-			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
-			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
 			<!-- TODO--><exclude>**/TestHDFSFileSystemContract.java</exclude>
-			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeDeath.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
-			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
-			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
-			<!-- TODO--><exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--datanode storage-id-->
-			<!-- TODO--><exclude>**/TestDatanodeDescriptor.java</exclude>
-			<!-- TODO--><exclude>**/TestDeadDatanode.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeRestart.java</exclude><!--datanode storage-id-->
+			<!-- passes, takes long time--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestDataTransferProtocol.java</exclude>
-			<!-- TODO--><exclude>**/TestBlockReplacement.java</exclude> <!--Needs to be fixed -->
 			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
@@ -655,7 +643,6 @@
 			<exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
 			<exclude>**/TestOverReplicatedBlocks.java</exclude>
 			<exclude>**/TestDiskError.java</exclude>
-			<exclude>**/TestRestartDFS.java</exclude><!--Datanode storage-id should get persisted -->
 			<exclude>**/TestViewFsHdfs.java</exclude>
 			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
 			<exclude>**/TestQuota.java</exclude>

@@ -474,23 +474,21 @@ public class INodeHelper {
 		session.updatePersistent(inodet);
 	}
 
-	/** Adds a child to a directory
-	 * @param node
-	 * @param parentid
-	 */
-	public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional)
-	{
-		DBConnector.checkTransactionState(isTransactional);
-        
-        if (isTransactional)
-        {
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional) {
+        DBConnector.checkTransactionState(isTransactional);
+
+        if (isTransactional) {
             Session session = DBConnector.obtainSession();
             addChildInternal(session, node, isRoot, parentid);
             session.flush();
-        }
-        else
+        } else {
             addChildWithTransaction(node, isRoot, parentid);
-	}
+        }
+    }
 
     /** Adds a child to a directory
      * @param node
