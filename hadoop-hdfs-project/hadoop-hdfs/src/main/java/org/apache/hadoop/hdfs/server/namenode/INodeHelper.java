@@ -5,26 +5,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import se.sics.clusterj.INodeTableSimple;
-import se.sics.clusterj.InodeTable;
-
-import com.mysql.clusterj.ClusterJDatastoreException;
 import com.mysql.clusterj.ClusterJException;
-import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 
@@ -33,8 +25,6 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
-import java.security.Permission;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 
 /**
@@ -108,14 +98,14 @@ public class INodeHelper {
 			inodet.setIsUnderConstruction(false);
 			inodet.setIsDirWithQuota(false);
 			inodet.setIsDir(true);
+			inodet.setNSCount(((INodeDirectory) newChild).getNsCount());
+                        inodet.setDSCount(((INodeDirectory) newChild).getDsCount());
 		}
 		if (newChild instanceof INodeDirectoryWithQuota) {
 			inodet.setIsClosedFile(false);
-			inodet.setIsDir(false);
+			inodet.setIsDir(true);
 			inodet.setIsUnderConstruction(false);
 			inodet.setIsDirWithQuota(true);
-			inodet.setNSCount(((INodeDirectoryWithQuota) newChild).getNsCount());
-			inodet.setDSCount(((INodeDirectoryWithQuota) newChild).getDsCount());
 		}
 		updateINodeTableInternal(session, inodet);
 	}
@@ -129,17 +119,18 @@ public class INodeHelper {
 		INode inode = null;
 
 		if (inodetable.getIsDir()) {
+                    if (inodetable.getIsDirWithQuota()) {
+                            inode = new INodeDirectoryWithQuota(inodetable.getName(), ps, inodetable.getNSQuota(), inodetable.getDSQuota());
+                    } else {
 			String iname = (inodetable.getName().length() == 0) ? INodeDirectory.ROOT_NAME : inodetable.getName();
 			inode = new INodeDirectory(iname, ps);
-			inode.setAccessTime(inodetable.getATime());
-			inode.setModificationTime(inodetable.getModificationTime());
-			((INodeDirectory) (inode)).setID(inodetable.getId()); //added for simple
-		}
-		if (inodetable.getIsDirWithQuota()) {
-			inode = new INodeDirectoryWithQuota(inodetable.getName(), ps, inodetable.getNSQuota(), inodetable.getDSQuota());
-			inode.setAccessTime(inodetable.getATime());
-			inode.setModificationTime(inodetable.getModificationTime());
-			((INodeDirectoryWithQuota) (inode)).setID(inodetable.getId()); //added for simple
+                    }
+                    
+                    inode.setAccessTime(inodetable.getATime());
+                    inode.setModificationTime(inodetable.getModificationTime());
+                    ((INodeDirectory) (inode)).setID(inodetable.getId()); //added for simple
+                    ((INodeDirectory) (inode)).setSpaceConsumed(inodetable.getNSCount(), inodetable.getDSCount());
+                    ((INodeDirectory) (inode)).setID(inodetable.getId()); //added for simple
 		}
 		if (inodetable.getIsUnderConstruction()) {
 			//Get the full list of blocks for this inodeID, 
@@ -253,17 +244,6 @@ public class INodeHelper {
 		session.deletePersistent(inodet);
 	}
 
-	/** Deletes an inode from the database
-	 * @param session
-	 * @param name
-	 * @param parentID
-	 */
-	@SuppressWarnings("unused")
-	private static void deleteINodeTableInternal(Session session, String name, long parentID) {
-		INodeTableSimple inodet = selectINodeTableInternal(session, name, parentID);
-		session.deletePersistent(INodeTableSimple.class, inodet);
-	}
-
 	/** Updates an already existing inode in the database
 	 * @param session
 	 * @param inodet
@@ -276,34 +256,6 @@ public class INodeHelper {
 		session.makePersistent(inodet);
 	}
 
-	@SuppressWarnings("unused")
-	private static void insertINodeTableInternal(
-			Session session,
-			long id, String name, long parentID, boolean isDir, boolean isDirWithQuota,
-			long modificationTime, long aTime, byte[] permission, long nscount, long dscount,
-			long nsquota, long dsquota, boolean isUnderConstruction, String clientName,
-			String clientMachine, String clientNode, boolean isCloseFile, long header, byte[] symlink) {
-		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, id);
-		inodet.setName(name);
-		inodet.setParentID(parentID);
-		inodet.setIsDir(isDir);
-		inodet.setIsDirWithQuota(isDirWithQuota);
-		inodet.setModificationTime(modificationTime);
-		inodet.setATime(aTime);
-		inodet.setPermission(permission);
-		inodet.setNSCount(nscount);
-		inodet.setDSCount(dscount);
-		inodet.setNSQuota(nsquota);
-		inodet.setDSQuota(dsquota);
-		inodet.setIsUnderConstruction(isUnderConstruction);
-		inodet.setClientName(clientName);
-		inodet.setClientMachine(clientMachine);
-		inodet.setClientNode(clientNode);
-		inodet.setIsClosedFile(isCloseFile);
-		inodet.setHeader(header);
-		inodet.setSymlink(symlink);
-		session.makePersistent(inodet);
-	}
 
 	////////////////////////
 	//New functions for Simple
@@ -558,14 +510,14 @@ public class INodeHelper {
 			inode.setIsUnderConstruction(false);
 			inode.setIsDirWithQuota(false);
 			inode.setIsDir(true);
+			inode.setNSCount(((INodeDirectory) node).getNsCount());
+                        inode.setDSCount(((INodeDirectory) node).getDsCount());
 		}
 		if (node instanceof INodeDirectoryWithQuota) {
 			inode.setIsClosedFile(false);
 			inode.setIsDir(true); //why was it false earlier?	    	
 			inode.setIsUnderConstruction(false);
 			inode.setIsDirWithQuota(true);
-			inode.setNSCount(((INodeDirectoryWithQuota) node).getNsCount());
-			inode.setDSCount(((INodeDirectoryWithQuota) node).getDsCount());
 		}
 		if (node instanceof INodeFile) {
 			inode.setIsDir(false);
@@ -843,7 +795,7 @@ public class INodeHelper {
      * @param nsDelta
      * @param dsDelta 
      */
-    public static void updateNumItemsInTree(INodeDirectoryWithQuota inode, long nsDelta, long dsDelta, boolean isTransactional)
+    public static void updateNumItemsInTree(INodeDirectory inode, long nsDelta, long dsDelta, boolean isTransactional)
     {
         DBConnector.checkTransactionState(isTransactional);
         inode.updateNumItemsInTree(nsDelta, dsDelta);
