@@ -62,6 +62,7 @@ public class TestDistributedFileSystem {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
               "localhost:0");
     }
+    
     return conf;
   }
 
@@ -75,6 +76,10 @@ public class TestDistributedFileSystem {
       FileSystem.closeAll();
 
       conf = getTestConfiguration();
+      // Set the reader/writer name nodes as created by the MiniDfsCluster
+      conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, cluster.getClientConf().get(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY));
+      conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, cluster.getClientConf().get(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY));
+      
       FileSystem.setDefaultUri(conf, address);
       FileSystem.get(conf);
       FileSystem.get(conf);

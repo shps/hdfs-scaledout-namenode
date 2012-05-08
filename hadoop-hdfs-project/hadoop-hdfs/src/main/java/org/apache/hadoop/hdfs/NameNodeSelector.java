@@ -22,12 +22,10 @@ public abstract class NameNodeSelector {
   /* Retry counter for retrying next namenode incase of failure*/
   static final int RETRY_COUNT = 3;
   /* List of reader name nodes */
-  List<DFSClient> readerNameNodes;
+  protected List<DFSClient> readerNameNodes;
   /* List of writer name nodes */
-  List<DFSClient> writerNameNodes;
+  protected List<DFSClient> writerNameNodes;
   private static Log LOG = LogFactory.getLog(NameNodeSelector.class);
-  /* Actual Namenode selector logic based on policy */
-  private static NameNodeSelector nnSelectorPolicy = null;
 
   /** Loads the appropriate instance of the the NameNodeSelector from the configuration file
    * So that appropriate reader/ writer namenodes can be selected for each operation
@@ -36,18 +34,13 @@ public abstract class NameNodeSelector {
    * @param writerNamenodes - The list of writer Namenodes for write operations
    * @return NameNodeSelector - Returns the implementor of the NameNodeSelector depending on the policy as specified the configuration
    */
-  public static NameNodeSelector getInstance(Configuration conf, List<DFSClient> readerNamenodes, List<DFSClient> writerNamenodes) {
+  public static NameNodeSelector createInstance(Configuration conf, List<DFSClient> readerNamenodes, List<DFSClient> writerNamenodes) {
 
+    NameNodeSelector nnSelectorPolicy = null;
+    
     // We allow the writer to also do read operations (as it might sit idle)
     readerNamenodes.addAll(writerNamenodes);
 
-    if (nnSelectorPolicy != null) {
-      // reset all the reader / writer NNs
-      nnSelectorPolicy.readerNameNodes = readerNamenodes;
-      nnSelectorPolicy.writerNameNodes = writerNamenodes;
-      return nnSelectorPolicy;
-    }
-    else {
       boolean error = false;
 
 
@@ -108,9 +101,8 @@ public abstract class NameNodeSelector {
         LOG.info("Successfully loaded Namenode selector policy [" + nnSelectorPolicy.getClass().getName() + "]");
         return nnSelectorPolicy;
       }
-    }
   }
-
+  
   /**Gets the appropriate reader namenode for a read operation
    * @return DFSClient
    */
@@ -124,27 +116,22 @@ public abstract class NameNodeSelector {
   /**Gets the appropriate reader namenode for a read operation by policy and retries for next namenode incase of failure
    * @return DFSClient
    */
-  public final DFSClient getNextReaderNameNode() throws IOException {
+  public  DFSClient getNextReaderNameNode() throws IOException {
 
     for (int nnIndex = 1; nnIndex <= readerNameNodes.size(); nnIndex++) {
 
       // Returns next nn based on policy
       DFSClient client = getReaderNameNode();
-      LOG.debug("Next RNN: "+client.getId());
+      LOG.info("Next RNN: "+client.getId());
 
-      // [JUDE] We won't use retry here for the same client as there is already an internal retry mechanism in ipc package
-      //for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
           return client;
         }
         else {
           LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
-      //}
-
       // Switch to next Reader nn
     }
-
     // At this point, we have tried almost all NNs, all are not reachable. Something is wrong
     throw new IOException("getNextReaderNameNode() :: Unable to connect to any reader / writer Namenode");
   }
@@ -152,24 +139,20 @@ public abstract class NameNodeSelector {
   /**Gets the appropriate writer namenode for a read/write operation by policy and retries for next namenode incase of failure
    * @return DFSClient
    */
-  public final DFSClient getNextWriterNameNode() throws IOException {
+  public  DFSClient getNextWriterNameNode() throws IOException {
 
     for (int nnIndex = 1; nnIndex <= writerNameNodes.size(); nnIndex++) {
 
       // Returns next nn based on policy
       DFSClient client = getWriterNameNode();
-      LOG.debug("Next WNN: "+client.getId());
+      LOG.info("Next WNN: "+client.getId());
 
-      // [JUDE] We won't use retry here for the same client as there is already an internal retry mechanism in ipc package
-      //for (int retryIndex = RETRY_COUNT; retryIndex > 0; retryIndex--) {
         if (client.pingNamenode()) {
           return client;
         }
         else {
           LOG.warn("RNN ["+client.getId()+"] failed. Trying next RNN...");
         }
-      //}
-
       // Switch to next Writer nn
     }
 

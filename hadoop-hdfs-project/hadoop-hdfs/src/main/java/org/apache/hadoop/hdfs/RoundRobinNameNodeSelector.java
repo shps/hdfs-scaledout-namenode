@@ -1,5 +1,8 @@
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
+import java.util.List;
+
 /** An implementation of NameNodeSelector class for RoundRobin selection of read and write operations
  * So that appropriate reader/ writer namenodes can be selected for each operation
  */
@@ -7,6 +10,14 @@ public class RoundRobinNameNodeSelector extends NameNodeSelector {
 
   int currentReadIndex = 0;
   int currentWriteIndex = 0;
+
+public RoundRobinNameNodeSelector() {
+  
+}
+public RoundRobinNameNodeSelector(List<DFSClient> readerNamenodes, List<DFSClient> writerNamenodes) {
+  this.readerNameNodes = readerNamenodes;
+  this.writerNameNodes = writerNamenodes;
+}
 
   /**Gets the appropriate reader namenode for a read operation
    * @return NameNode
@@ -40,4 +51,5 @@ public class RoundRobinNameNodeSelector extends NameNodeSelector {
     }
     return client;
   }
+  
 }

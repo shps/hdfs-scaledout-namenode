@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs;
 
+import java.util.List;
 import java.util.Random;
 
 /** An implementation of NameNodeSelector class for Random Namenode selection of read and write operations

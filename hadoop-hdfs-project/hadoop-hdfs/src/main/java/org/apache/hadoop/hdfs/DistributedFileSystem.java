@@ -141,7 +141,6 @@ public class DistributedFileSystem extends FileSystem {
     }
 
     String[] readNNs = getReadNamenodes(conf);
-    System.out.println("reader NNS .lenght = "+readNNs.length);
     if (readNNs.length > 0) {
       try {
         for (int i = 0; i < readNNs.length; i++) {
@@ -169,13 +168,15 @@ public class DistributedFileSystem extends FileSystem {
     readClients = new ArrayList<DFSClient>();
     writeClients = new ArrayList<DFSClient>();
 
-    InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
+    //InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
     //this.dfs = new DFSClient(namenode, conf, statistics);
     this.uri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
     //writeClients.add(this.dfs);
 
     createDfsClients(conf);
-    nnSelector = NameNodeSelector.getInstance(conf, readClients, writeClients);
+    nnSelector = NameNodeSelector.createInstance(conf, readClients, writeClients);
+    //nnSelector = new RoundRobinNameNodeSelector(readClients, writeClients);
+    nnSelector.printReadersWritersNNs();
     
     this.workingDir = getHomeDirectory();
   }
