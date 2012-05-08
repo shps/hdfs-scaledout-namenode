@@ -188,11 +188,9 @@ public class TestFileCreation extends junit.framework.TestCase {
                  " but found to be of size " + len, 
                   len == fileSize);
       
-      //FIXME[Hooman]: Managin quotas must be fixed.
-      // verify the disk space the file occupied
-      /*long diskSpace = dfs.getContentSummary(file1.getParent()).getLength();
+      long diskSpace = dfs.getContentSummary(file1.getParent()).getLength();
       assertEquals(file1 + " should take " + fileSize + " bytes disk space " +
-          "but found to take " + diskSpace + " bytes", fileSize, diskSpace); */
+          "but found to take " + diskSpace + " bytes", fileSize, diskSpace);
       
       // Check storage usage 
       // can't check capacities for real storage since the OS file system may be changing under us.

@@ -27,9 +27,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
  */
 class INodeDirectoryWithQuota extends INodeDirectory {
   private long nsQuota; /// NameSpace quota
-  private long nsCount;
   private long dsQuota; /// disk space quota
-  private long diskspace;
   
   /** Convert an existing directory inode to one with the given quota
    * 
@@ -40,10 +38,6 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   INodeDirectoryWithQuota(long nsQuota, long dsQuota, INodeDirectory other)
   throws QuotaExceededException {
     super(other);
-    INode.DirCounts counts = new INode.DirCounts();
-    other.spaceConsumedInTree(counts);
-    this.nsCount= counts.getNsCount();
-    this.diskspace = counts.getDsCount();
     setQuota(nsQuota, dsQuota);
   }
   
@@ -55,7 +49,6 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     super(permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** constructor with no quota verification */
@@ -65,7 +58,6 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     super(name, permissions);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** Get this directory's namespace quota
@@ -82,13 +74,6 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     return dsQuota;
   }
   
-  long getNsCount() {
-	return nsCount;
-  }
-  
-  long getDsCount() {
-	  return diskspace;
-  }
   /** Set this directory's quota
    * 
    * @param nsQuota Namespace quota to be set
@@ -100,57 +85,6 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     dsQuota = newDsQuota;
   }
   
-  
-  @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
-    counts.nsCount += nsCount;
-    counts.dsCount += diskspace;
-    return counts;
-  }
-
-  /** Get the number of names in the subtree rooted at this directory
-   * @return the size of the subtree rooted at this directory
-   */
-  long numItemsInTree() {
-    return nsCount; //TODO: [thesis] should fetch from DB
-  }
-  
-  long diskspaceConsumed() {
-    return diskspace;
-  }
-  
-  /** Update the size of the tree
-   * 
-   * @param nsDelta the change of the tree size
-   * @param dsDelta change to disk space occupied
-   */
-  void updateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount += nsDelta;
-    diskspace += dsDelta;
-  }
-  
-  /** Update the size of the tree
-   * 
-   * @param nsDelta the change of the tree size
-   * @param dsDelta change to disk space occupied
-   **/
-  void unprotectedUpdateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount = nsCount + nsDelta;
-    diskspace = diskspace + dsDelta;
-  }
-  
-  /** 
-   * Sets namespace and diskspace take by the directory rooted 
-   * at this INode. This should be used carefully. It does not check 
-   * for quota violations.
-   * 
-   * @param namespace size of the directory to be set
-   * @param diskspace disk space take by all the nodes under this directory
-   */
-  void setSpaceConsumed(long namespace, long diskspace) {
-    this.nsCount = namespace;
-    this.diskspace = diskspace;
-  }
   
   /** Verify if the namespace count disk space satisfies the quota restriction 
    * @throws QuotaExceededException if the given quota is less than the count

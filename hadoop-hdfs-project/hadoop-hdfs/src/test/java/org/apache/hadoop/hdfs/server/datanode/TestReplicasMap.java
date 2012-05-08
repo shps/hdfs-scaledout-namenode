@@ -19,19 +19,22 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Unit test for ReplicasMap class
  */
 public class TestReplicasMap {
-  private static final ReplicasMap map = new ReplicasMap(TestReplicasMap.class);
-  private static final String bpid = "BP-TEST";
-  private static final  Block block = new Block(1234, 1234, 1234);
+  private ReplicasMap map = null;
+  private String bpid = null;
+  private Block block = null;
   
-  @BeforeClass
-  public static void setup() {
+  @Before
+  public void setup() {
+    map = new ReplicasMap(TestReplicasMap.class);
+    bpid = "BP-TEST";
+    block = new Block(1234, 1234, 1234);
     map.add(bpid, new FinalizedReplica(block, null, null));
   }
   

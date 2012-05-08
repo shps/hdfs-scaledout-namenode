@@ -696,8 +696,7 @@ public class TestDFSShell extends TestCase {
     return path;
   }
 
-  //FIXME: needs the ls -count functionality to be fixt first
-  public void ignoretestCount() throws Exception {
+  public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
