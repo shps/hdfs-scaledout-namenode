@@ -1551,7 +1551,7 @@ public class FSDirectory implements Closeable {
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i] instanceof INodeDirectory) { // a directory with quota
         INodeDirectory node =(INodeDirectory)inodes[i]; 
-        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, false);
+        INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
       }
     }
   }
