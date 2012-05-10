@@ -121,14 +121,14 @@ class INodeDirectory extends INode {
 	 * 
 	 * @param newChild Child node to be added
 	 */
-	void replaceChild(INode newChild) {
+	void replaceChild(INode newChild, boolean isTransactional) {
 		if ( getChildren() == null ) {
 			throw new IllegalArgumentException("The directory is empty");
 		}
 		int low = Collections.binarySearch(getChildren(), newChild.name);
 		if (low>=0) { // an old child exists so replace by the newChild
 			getChildren().set(low, newChild);
-			INodeHelper.replaceChild(this, newChild);
+			INodeHelper.replaceChild(this, newChild, isTransactional);
 		} else {
 			throw new IllegalArgumentException("No child exists to be replaced");
 		}
@@ -573,6 +573,9 @@ class INodeDirectory extends INode {
 	}
         
         void updateNumItemsInTree(long nsDelta, long dsDelta) {
+            INodeDirectory updateInst = (INodeDirectory) INodeHelper.getINode(id);
+            nsCount = updateInst.nsCount;
+            diskspace = updateInst.diskspace;
             nsCount += nsDelta;
             diskspace += dsDelta;
          }

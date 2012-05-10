@@ -2684,27 +2684,41 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  /**
-   * Set the namespace quota and diskspace quota for a directory.
-   * See {@link ClientProtocol#setQuota(String, long, long)} for the 
-   * contract.
-   */
-  void setQuota(String path, long nsQuota, long dsQuota) 
-      throws IOException, UnresolvedLinkException {
-    writeLock();
-    try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot set quota on " + path, safeMode);
-      }
-      if (isPermissionEnabled) {
-        checkSuperuserPrivilege();
-      }
-      dir.setQuota(path, nsQuota, dsQuota);
-    } finally {
-      writeUnlock();
+    /**
+     * Set the namespace quota and diskspace quota for a directory. See {@link ClientProtocol#setQuota(String, long, long)}
+     * for the contract.
+     */
+    void setQuota(String path, long nsQuota, long dsQuota)
+            throws IOException, UnresolvedLinkException {
+        writeLock();
+        boolean isDone = false;
+        int tries = DBConnector.RETRY_COUNT;
+        try {
+            // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
+            while (!isDone && tries > 0) {
+                try {
+                    
+                    DBConnector.beginTransaction();
+                    if (isInSafeMode()) {
+                        throw new SafeModeException("Cannot set quota on " + path, safeMode);
+                    }
+                    if (isPermissionEnabled) {
+                        checkSuperuserPrivilege();
+                    }
+                    dir.setQuota(path, nsQuota, dsQuota, true);
+                    DBConnector.commit();
+                    isDone = true;
+                } catch (ClusterJException e) {
+                    DBConnector.safeRollback();
+                    tries--;
+                }
+            }
+        } finally {
+            DBConnector.safeRollback();
+            writeUnlock();
+        }
+        //getEditLog().logSync();
     }
-    //getEditLog().logSync();
-  }
   
   /** Persist all metadata about this file.
    * @param src The string representation of the path
