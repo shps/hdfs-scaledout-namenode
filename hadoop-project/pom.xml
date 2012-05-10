@@ -608,17 +608,11 @@
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
 
-			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
-			<!-- TODO--><exclude>**/TestFcHdfsPermission.java</exclude>
-			<!-- TODO--><exclude>**/TestHDFSFileSystemContract.java</exclude>
-			<!-- TODO--><exclude>**/TestGetGroups.java</exclude>
+			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- FIXED <exclude>**/TestDatanodeDeath.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
-			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
-			<!-- TODO--><exclude>**/TestStickyBit.java</exclude>
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-			<!-- TODO--><exclude>**/TestFileConcurrentReader.java</exclude>
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- FIXED <exclude>**/TestFileCreationNamenodeRestart.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
 			<!-- FIXED<exclude>**/TestDatanodeDescriptor.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
@@ -628,8 +622,6 @@
 			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDirectoryScanner.java</exclude>
-			<exclude>**/TestFsLimits.java</exclude>
 			<exclude>**/TestRefreshUserMappings.java</exclude>
 			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
 			<!-- FIXED <exclude>**/TestDatanodeJsp.java</exclude>  (part of DN restart with different port and DN lookup by storageID)-->
