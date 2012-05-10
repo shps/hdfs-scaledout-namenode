@@ -116,4 +116,17 @@ public class INodeMetrics {
     public long incrInsert() {
         return this.insert.incrementAndGet();
     }
+    
+    @Override
+    public String toString()
+    {
+      return String.format("=========================================\n"
+              + "Select Using Primary Key: %d\n"
+              + "Select Using Index %d\n"
+              + "Select For Multiple Primary Keys: %d\n"
+              + "Update: %d\n"
+              + "Insert: %d\n"
+              + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(), 
+              getSelectUsingIn(), getUpdate(), getInsert(), getDelete());
+    }
 }
