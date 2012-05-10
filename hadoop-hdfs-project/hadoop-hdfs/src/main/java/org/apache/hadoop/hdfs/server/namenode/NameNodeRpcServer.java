@@ -838,4 +838,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
     LOG.debug("[thesis] clientMachine: "+clientMachine);
     return clientMachine;
   }
+  
+  /**
+ * // ClientProtocol
+ * Ping to see if we have a connection with the NN
+ * 
+ * @throws IOException
+ */
+  @Override
+  public void ping() throws IOException {
+
+  }
 }

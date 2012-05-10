@@ -919,4 +919,12 @@ public interface ClientProtocol extends VersionedProtocol {
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
+
+  /**
+   * Ping to see if we have a connection with the NN
+   * 
+   * @throws IOException
+   */
+  public void ping()
+      throws IOException;
 }

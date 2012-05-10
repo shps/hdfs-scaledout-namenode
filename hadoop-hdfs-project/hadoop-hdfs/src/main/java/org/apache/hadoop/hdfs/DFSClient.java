@@ -24,8 +24,10 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -128,7 +130,8 @@ public class DFSClient implements java.io.Closeable {
   final LeaseRenewer leaserenewer;
   final SocketCache socketCache;
   final Conf dfsClientConf;
-
+  private static int counter = 10001;
+  private int id=-1;
   /**
    * DFSClient configuration 
    */
@@ -243,6 +246,7 @@ public class DFSClient implements java.io.Closeable {
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
+    this.id= counter++;
 
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
@@ -1487,5 +1491,39 @@ public class DFSClient implements java.io.Closeable {
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
         + ", ugi=" + ugi + "]"; 
+  }
+  
+  /**
+   * Ping the name node to see if there is a connection
+   * -- A connection won't exist if it gives an IOException of type ConnectException or SocketTimeout
+   */
+  public boolean pingNamenode() {
+    try {
+    namenode.ping();
+    }
+    catch (IOException ex) {
+      if(ex instanceof ConnectException) {
+        LOG.warn("Unable to connect to Namenode. ", ex);
+        return false;
+      }
+      else if(ex instanceof SocketTimeoutException) {
+        LOG.warn("Connectivity to Namenode timed out. ", ex);
+        return false;
+      }
+      else {
+        LOG.warn("Unknown error. ", ex);
+        return false;
+      }
+    }
+    // There is a connection
+    return true;
+  }
+  
+  /**
+   * Since we have multiple reader/writer namenodes, we would like to differenciate the clients via the ID
+   * Used in NamenodeSelector
+   */
+  public int getId() {
+    return id;
   }
 }

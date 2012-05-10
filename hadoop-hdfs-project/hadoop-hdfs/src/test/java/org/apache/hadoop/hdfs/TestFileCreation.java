@@ -358,7 +358,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     try {
       cluster.waitActive();
       dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-      DFSClient client = dfs.dfs;
+      DFSClient client = dfs.getDefaultDFSClient();
 
       // create a new file.
       //
@@ -417,7 +417,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     try {
       cluster.waitActive();
       dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-      DFSClient client = dfs.dfs;
+      DFSClient client = dfs.getDefaultDFSClient();
 
       // create a new file.
       final Path f = new Path("/foo.txt");
@@ -562,7 +562,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       stm4.close();
 
       // verify that new block is associated with this file
-      DFSClient client = ((DistributedFileSystem)fs).dfs;
+      DFSClient client = ((DistributedFileSystem)fs).getDefaultDFSClient();
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       LOG.info("locations = " + locations.locatedBlockCount());
@@ -593,7 +593,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getWritingFileSystem();
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsclient = dfs.dfs;
+    DFSClient dfsclient = dfs.getDefaultDFSClient();
     try {
 
       // create a new file in home directory. Do not close it.
@@ -826,7 +826,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // wait for the lease to expire
       try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
-      LocatedBlocks locations = dfs.dfs.getNamenode().getBlockLocations(
+      LocatedBlocks locations = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(
           f, 0, Long.MAX_VALUE);
       assertEquals(1, locations.locatedBlockCount());
       LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);

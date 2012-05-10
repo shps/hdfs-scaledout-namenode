@@ -88,6 +88,8 @@ public class MiniDFSCluster {
   private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
   
   private static int nnIndex = 0; 
+  
+  private Configuration clientConf;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -623,8 +625,52 @@ public class MiniDFSCluster {
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    
+    // update reader and writer confs so that the DistributedFileSystem is aware of all reader/writer namenodes
+    updateClientConfs(conf, 0);
   }
-  
+
+  private void updateClientConfs(Configuration conf, int wIndex) {
+    // Getting URI of reader NNs
+    String readerNNURIs = "";
+    NameNodeInfo[] nnInfos = readingNameNodes.get(wIndex);
+
+    // Handle the case if there are no reader NNs
+    if (nnInfos != null && nnInfos.length > 0) {
+      for (int i = 0; i < nnInfos.length; i++) {
+        readerNNURIs += getReadingURI(wIndex, i).toString() + ",";
+      }
+      // Remove the last comma
+      readerNNURIs = readerNNURIs.substring(0, readerNNURIs.length() - 1);
+      LOG.info("ReaderNN  URIs: "+readerNNURIs);
+    }
+
+    // Getting URI of writer NNs
+    String writerNNURIs = "";
+    for (int i = 0; i < writingNameNodes.length; i++) {
+      writerNNURIs += getWritingURI(i).toString() + ",";
+    }
+    writerNNURIs = writerNNURIs.substring(0, writerNNURIs.length() - 1);
+    LOG.info("WriterNN  URIs: "+writerNNURIs);
+
+
+    /*
+    // Setting the configurations for all reader/writer namenodes
+    if (nnInfos != null && nnInfos.length > 0) {
+      for (int i = 0; i < nnInfos.length; i++) {
+        nnInfos[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, readerNNURIs);
+        nnInfos[i].conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, writerNNURIs);
+      }
+    }
+    for (int i = 0; i < writingNameNodes.length; i++) {
+      writingNameNodes[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, readerNNURIs);
+      writingNameNodes[i].conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, writerNNURIs);
+    }
+    */
+    conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY, readerNNURIs);
+    conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY, writerNNURIs);
+    clientConf = conf;
+  }
   /** Initialize configuration for federated cluster */
   private static void initFederationConf(Configuration conf,
       Collection<String> nameserviceIds, int nnPort) {
@@ -1173,6 +1219,13 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Gets the Reader NameNode for the index.  May be null.
+   */
+  public NameNode getReaderNameNode(int index) {
+    return readingNameNodes.get(0)[index].nameNode;
+  }
+
+  /**
    * Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
@@ -1569,7 +1622,8 @@ public class MiniDFSCluster {
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
   public FileSystem getWritingFileSystem(int nnIndex) throws IOException {
-    return FileSystem.get(getWritingURI(nnIndex), writingNameNodes[nnIndex].conf);
+    //return FileSystem.get(getWritingURI(nnIndex), writingNameNodes[nnIndex].conf);
+    return FileSystem.get(getWritingURI(nnIndex), clientConf);
   }
 
   /**
@@ -1584,7 +1638,8 @@ public class MiniDFSCluster {
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
   public FileSystem getReadingFileSystem(int wIndex, int rIndex) throws IOException {
-    return FileSystem.get(getReadingURI(wIndex, rIndex), readingNameNodes.get(wIndex)[rIndex].conf);
+    //return FileSystem.get(getReadingURI(wIndex, rIndex), readingNameNodes.get(wIndex)[rIndex].conf);
+    return FileSystem.get(getReadingURI(wIndex, rIndex), clientConf);
   }
 
   //TODO:kamal, extra file system creation
@@ -2080,4 +2135,7 @@ public class MiniDFSCluster {
     }
   }
 
+  public Configuration getClientConf() {
+    return clientConf;
+  }
 }

@@ -145,7 +145,8 @@ public class TestReplaceDatanodeOnFailure {
       
       //Let the slow writer writes a few more seconds
       //Everyone should have written something.
-      sleepSeconds(5);
+      //sleepSeconds(5); [JUDE] increasing the sleep time, works
+      sleepSeconds(10);
 
       //check replication and interrupt.
       for(SlowWriter s : slowwriters) {
@@ -167,6 +168,7 @@ public class TestReplaceDatanodeOnFailure {
         try {
           in = fs.open(slowwriters[i].filepath);
           for(int j = 0, x; (x = in.read()) != -1; j++) {
+            LOG.info("x: "+x+", j: "+j);
             Assert.assertEquals(j, x);
           }
         }
