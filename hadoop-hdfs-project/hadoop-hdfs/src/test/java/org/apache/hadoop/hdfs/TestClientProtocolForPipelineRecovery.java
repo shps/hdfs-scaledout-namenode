@@ -91,7 +91,8 @@ public class TestClientProtocolForPipelineRecovery {
         }
 
         // test non-lease holder
-        DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
+        //DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
+        DFSClient dfs = ((DistributedFileSystem)fileSys).getDefaultDFSClient();
         try {
           namenode.updateBlockForPipeline(firstBlock, "test" + dfs.clientName);
           Assert.fail("Cannot get a new GS for a non lease holder");

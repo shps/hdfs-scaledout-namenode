@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_DB_CONNECTOR_STRING_KEY = "dfs.dbconnector.string";
-  public static final String DFS_DB_CONNECTOR_STRING_DEFAULT = "cloud3.sics.se";
+  public static final String DFS_DB_CONNECTOR_STRING_DEFAULT = System.getenv("KTHFS_CONN_STR");
   public static final String DFS_DB_DATABASE_KEY = "dfs.dbconnector.database";
   public static final String DFS_DB_DATABASE_DEFAULT = System.getenv("KTHFS_DATABASE");
   public static final String DFS_DB_NUM_SESSION_FACTORIES = "dfs.dbconnector.num-session-factories";
@@ -285,4 +285,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_DU_RESERVED_KEY = "dfs.namenode.resource.du.reserved";
   public static final long    DFS_NAMENODE_DU_RESERVED_DEFAULT = 1024 * 1024 * 100; // 100 MB
   public static final String  DFS_NAMENODE_CHECKED_VOLUMES_KEY = "dfs.namenode.resource.checked.volumes";
+  
+  /*for client failover api*/
+  public static final String  DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY = "dfs.writenamenodes.rpc-address";
+  public static final String  DFS_READ_NAMENODES_RPC_ADDRESS_KEY = "dfs.readnamenodes.rpc-address";
+  public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
 }

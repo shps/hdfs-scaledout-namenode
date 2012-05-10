@@ -783,6 +783,7 @@ public class NameNode {
     }
   }
     
+
   /**
    */
   public static void main(String argv[]) throws Exception {
@@ -799,5 +800,5 @@ public class NameNode {
       System.exit(-1);
     }
   }
-  
+
 }

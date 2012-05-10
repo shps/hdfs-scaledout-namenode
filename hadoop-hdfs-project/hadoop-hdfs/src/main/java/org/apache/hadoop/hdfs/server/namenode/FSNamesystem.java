@@ -958,7 +958,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void concatInternal(String target, String [] srcs, boolean isTransactional) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
-
     // write permission for the target
     if (isPermissionEnabled) {
       checkPathAccess(target, FsAction.WRITE);
