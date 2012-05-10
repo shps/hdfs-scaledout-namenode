@@ -664,6 +664,7 @@
 			<exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
 			<exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
 			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
+                        <exclude>**/TestFsLimits.java</exclude>
           </excludes>
         </configuration>
       </plugin>
