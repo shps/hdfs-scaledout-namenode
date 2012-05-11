@@ -844,19 +844,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                                        boolean needBlockToken)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
 
-    for (int attempt = 0; attempt < 2; attempt++) {
-      if (attempt == 0) { // first attempt is with readlock
-        readLock();
-      }  else { // second attempt is with  write lock
-        writeLock(); // writelock is needed to set accesstime
-      }
+    //for (int attempt = 0; attempt < 2; attempt++) {
+    // if (attempt == 0) { // first attempt is with readlock
+    //    readLock();
+    //  }  else { // second attempt is with  write lock
+    //    writeLock(); // writelock is needed to set accesstime
+    //  }
 
       // if the namenode is in safemode, then do not update access time
       if (isInSafeMode()) {
         doAccessTime = false;
       }
 
-      try {
+      //try {
         long now = now();
         INodeFile inode = dir.getFileINode(src);
         if (inode == null) {
@@ -867,9 +867,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
             // restart this entire operation with the writeLock.
-            if (attempt == 0) {
-              continue;
-            }
+            //if (attempt == 0) {
+            //  continue;
+            //}
           }
           dir.setTimes(src, inode, -1, now, false);
         }
@@ -877,15 +877,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             inode.computeFileSize(false),
             inode.isUnderConstruction(),
             offset, length, needBlockToken);
-      } finally {
-        if (attempt == 0) {
-          readUnlock();
-        } else {
-          writeUnlock();
-        }
-      }
-    }
-    return null; // can never reach here
+      //} finally {
+      //  if (attempt == 0) {
+      //    readUnlock();
+      //  } else {
+      //   writeUnlock();
+      //  }
+      // }
+    //}
+    //return null; // can never reach here
   }
 
   /**

@@ -815,7 +815,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final boolean isFileUnderConstruction,
       final long offset, final long length, final boolean needBlockToken
       ) throws IOException {
-    assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
+    //assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {

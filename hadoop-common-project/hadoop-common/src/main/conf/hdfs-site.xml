@@ -14,18 +14,6 @@
   </description>
 </property>
 <property>
-  <name>dfs.dbconnector.string</name>
-  <value>cloud3.sics.se</value>
-  <description>Default block replication.
-  </description>
-</property>
-<property>
-  <name>dfs.dbconnector.database</name>
-  <value>kthfs-getblocks</value>
-  <description>Default block replication.
-  </description>
-</property>
-<property>
   <name>dfs.namenode.logging.level</name>
   <value>all</value>
   <description>logging level</description>
