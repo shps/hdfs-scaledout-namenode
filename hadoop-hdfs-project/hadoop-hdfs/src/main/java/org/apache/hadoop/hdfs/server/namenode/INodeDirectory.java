@@ -457,7 +457,9 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), isTransactional);
+    long modTime = node.getModificationTime();
+    this.modificationTime = modTime;
+		INodeHelper.updateModificationTime(this.id, modTime, isTransactional);
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());

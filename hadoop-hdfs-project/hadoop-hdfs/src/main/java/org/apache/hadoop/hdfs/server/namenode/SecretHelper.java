@@ -27,6 +27,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
 
 /**
  * @author wmalik
@@ -293,10 +294,15 @@ public class SecretHelper {
 	 * @return a row from DelegationKey table if it exists, and null otherwise
 	 */
 	private static DelegationKeyTable select(Session session, int keyId){
+    HelperMetrics.secretMetrics.incrSelectUsingPKey();
+    
 		return session.find(DelegationKeyTable.class, keyId);
 	}
 	
 	private static DelegationKeyTable select(Session session, short KEY_TYPE){
+    
+    HelperMetrics.secretMetrics.incrSelectUsingIndex();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<DelegationKeyTable> dobj = qb.createQueryDefinition(DelegationKeyTable.class);
 		PredicateOperand field = dobj.get("keyType");
@@ -320,6 +326,8 @@ public class SecretHelper {
 	 * @return all rows from the DelegationKeyTable
 	 */
 	private static List<DelegationKeyTable> selectAll(Session session){
+    HelperMetrics.secretMetrics.incrSelectAll();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<DelegationKeyTable> dobj = qb.createQueryDefinition(DelegationKeyTable.class);
 		Query<DelegationKeyTable> query = session.createQuery(dobj);
@@ -342,6 +350,8 @@ public class SecretHelper {
 			}
 		}
 		
+    HelperMetrics.secretMetrics.incrInsert();
+    
 		DelegationKeyTable dkt = session.newInstance(DelegationKeyTable.class, keyId);
 		dkt.setExpiryDate(expiryDate);
 		dkt.setKeyBytes(keyBytes);
@@ -354,6 +364,8 @@ public class SecretHelper {
 	 * @param dkt
 	 */
 	private static void update(Session session, DelegationKeyTable dkt){
+    HelperMetrics.secretMetrics.incrUpdate();
+    
 		session.updatePersistent(dkt);
 	}
 	
@@ -362,6 +374,8 @@ public class SecretHelper {
 	 * @param keyId
 	 */
 	private static void delete(Session session, int keyId){
+    HelperMetrics.secretMetrics.incrDelete();
+    
 		session.deletePersistent(DelegationKeyTable.class, keyId);
 	}
 	
@@ -369,6 +383,8 @@ public class SecretHelper {
 	 * @param session
 	 */
 	private static void deleteAll(Session session){
+    HelperMetrics.secretMetrics.incrDelete();
+    
 		session.deletePersistentAll(DelegationKeyTable.class);
 	}
 

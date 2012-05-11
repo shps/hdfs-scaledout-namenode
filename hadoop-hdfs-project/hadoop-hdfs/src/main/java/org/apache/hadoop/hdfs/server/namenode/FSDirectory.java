@@ -432,7 +432,7 @@ public class FSDirectory implements Closeable {
     try {
       // file is closed
       file.setModificationTimeForce(now);
-      INodeHelper.updateModificationTime(file.getID(), now, isTransactional);
+      INodeHelper.updateModificationTime(file.id, now, isTransactional);
       //fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
@@ -1086,10 +1086,10 @@ public class FSDirectory implements Closeable {
     }
     
     //TODO[Hooman]: The following changes can be optimized to be updated or flushed together.
-//    trgInode.setModificationTimeForce(timestamp);
-    INodeHelper.updateModificationTime(trgInode.getID(), timestamp, isTransactional);
-//    trgParent.setModificationTime(timestamp);
-    INodeHelper.updateModificationTime(trgParent.getID(), timestamp, isTransactional);
+    trgInode.setModificationTimeForce(timestamp);
+    INodeHelper.updateModificationTime(trgInode.id, timestamp, isTransactional);
+    trgParent.setModificationTime(timestamp);
+    INodeHelper.updateModificationTime(trgParent.id, timestamp, isTransactional);
     // update quota on the parent directory ('count' files removed, 0 space)
     unprotectedUpdateCount(trgINodes, trgINodes.length-1, - count, 0, isTransactional);
   }

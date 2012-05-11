@@ -3,6 +3,10 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 
+ * @author Hooman <hooman@sics.se>
+ */
 public class LeaseMetrics {
     private AtomicLong selectUsingPKey;
     private AtomicLong selectUsingIndex;
@@ -113,5 +117,18 @@ public class LeaseMetrics {
      */
     public long incrInsert() {
         return this.insert.incrementAndGet();
+    }
+    
+    @Override
+    public String toString()
+    {
+      return String.format("==================== Lease Metrics ====================\n"
+              + "Select Using Primary Key: %d\n"
+              + "Select Using Index: %d\n"
+              + "Select All: %d\n"
+              + "Update: %d\n"
+              + "Insert: %d\n"
+              + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(), 
+              getSelectUsingAll(), getUpdate(), getInsert(), getDelete());
     }
 }

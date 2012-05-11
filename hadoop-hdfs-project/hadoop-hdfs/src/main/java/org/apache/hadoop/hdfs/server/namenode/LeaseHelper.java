@@ -23,6 +23,8 @@ import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
+import org.apache.hadoop.hdfs.server.namenode.metrics.LeaseMetrics;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 
@@ -473,6 +475,8 @@ public class LeaseHelper {
 
 
 	private static List<LeaseTable> getAllLeaseTables(Session session) {
+    HelperMetrics.leaseMetrics.incrSelectUsingAll();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
 		Query<LeaseTable> query = session.createQuery(dobj);
@@ -481,6 +485,8 @@ public class LeaseHelper {
 
 	@SuppressWarnings("unused")
 	private static List<LeasePathsTable> getAllLeasePathTables(Session session) {
+    HelperMetrics.leasePathMetrics.incrSelectAll();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
 		Query<LeasePathsTable> query = session.createQuery(dobj);
@@ -636,6 +642,8 @@ public class LeaseHelper {
 	 */
 	private static void insertLeaseInternal(Session session, String holder, long lastUpdated, int holderID) {
 
+    HelperMetrics.leaseMetrics.incrInsert();
+    
 		LeaseTable leaseTable = session.newInstance(LeaseTable.class);
 		leaseTable.setHolder(holder);
 		leaseTable.setLastUpdated(lastUpdated);
@@ -652,6 +660,8 @@ public class LeaseHelper {
 	 */
 	private static void insertLeasePathsInternal(Session session, int holderID, String path) {
 
+    HelperMetrics.leasePathMetrics.incrInsert();
+    
 		LeasePathsTable leasePathsTable = session.newInstance(LeasePathsTable.class);
 		leasePathsTable.setHolderID(holderID);
 		leasePathsTable.setPath(path);
@@ -666,7 +676,8 @@ public class LeaseHelper {
 	 * @return a LeaseTable object which is held by <b>holder</b>. If there is no holder, then it returns null
 	 */
 	private static LeaseTable selectLeaseTableInternal(Session session, String holder) {
-
+    HelperMetrics.leaseMetrics.incrSelectUsingPKey();
+    
 		Object holderKey = holder;
 		return session.find(LeaseTable.class, holderKey);
 	}
@@ -681,7 +692,8 @@ public class LeaseHelper {
 	 * @return a List of LeasePathsTable objects. If no matching rows are found, a List with size = 0 is returned
 	 */
 	private static List<LeasePathsTable> selectLeasePathsTableInternal(Session session, String column, Object value){
-
+    HelperMetrics.leasePathMetrics.incrSelectUsingIndex();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
 		dobj.where(dobj.get(column).equal(dobj.param("param")));
@@ -700,6 +712,8 @@ public class LeaseHelper {
 	 * corresponding rows in LeasePaths can be deleted. Returns -1 if lease not found
 	 */
 	private static void deleteLeaseInternal(Session session, String holder) {		
+    HelperMetrics.leaseMetrics.incrDelete();
+    
 		session.deletePersistent(LeaseTable.class, holder);
 	}
 
@@ -710,7 +724,11 @@ public class LeaseHelper {
 	 */
 	@SuppressWarnings("unused")
 	private static void deleteLeasePathsAllInternal(Session session, int holderID) {
+    
 		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
+    
+    HelperMetrics.leasePathMetrics.incrDelete(); //[Hooman] It does not flush so only one roundtrip.
+    
 		for(LeasePathsTable leasePath : leasePathTables)
 			session.deletePersistent(leasePath);
 	}
@@ -727,6 +745,8 @@ public class LeaseHelper {
 		List<LeasePathsTable> leasePathTables = selectLeasePathsTableInternal(session, "holderID", holderID); 
 		for(LeasePathsTable leasePath : leasePathTables) {
 			if(leasePath.getPath().equals(src)) {
+        HelperMetrics.leasePathMetrics.incrDelete(); 
+        
 				session.deletePersistent(leasePath);
 				return true;
 			}
@@ -737,6 +757,9 @@ public class LeaseHelper {
 	private static void renewLeaseInternal(Session session, String holder) {
 		LeaseTable leaseTable = selectLeaseTableInternal(session, holder);
 		leaseTable.setLastUpdated(now());
+    
+    HelperMetrics.leaseMetrics.incrUpdate();
+    
 		session.updatePersistent(leaseTable);
 	}
 
@@ -787,6 +810,8 @@ public class LeaseHelper {
 	 * @return a LeaseTable object, returns null if not found, or if two or more rows exist with same holderID
 	 */
 	private static LeaseTable selectLeaseTableInternal(Session session, int holderID) {
+    HelperMetrics.leaseMetrics.incrSelectUsingPKey();
+    
 		QueryBuilder qb = session.getQueryBuilder();
 		QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
 

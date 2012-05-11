@@ -3,7 +3,10 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-
+/**
+ * 
+ * @author Hooman <hooman@sics.se>
+ */
 public class INodeMetrics {
 
     private AtomicLong selectUsingPKey;
@@ -120,7 +123,7 @@ public class INodeMetrics {
     @Override
     public String toString()
     {
-      return String.format("=========================================\n"
+      return String.format("===================== INode Metrics ====================\n"
               + "Select Using Primary Key: %d\n"
               + "Select Using Index %d\n"
               + "Select For Multiple Primary Keys: %d\n"
