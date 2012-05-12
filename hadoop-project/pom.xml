@@ -613,51 +613,44 @@
 			<!-- TODO--> <exclude>**/TestFsLimits.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
 			<!-- TODO--><exclude>**/TestDatanodeBlockScanner</exclude>
-			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDirectoryScanner.java</exclude>
-			<exclude>**/TestRefreshUserMappings.java</exclude>
-			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
+			<!-- TODO--><exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
+			<!-- TODO--><exclude>**/TestResolveHdfsSymlink.java</exclude>
+			<!-- TODO--><exclude>**/TestFcHdfsSymlink.java</exclude>
+			<!-- TODO--><exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
+			<!-- TODO--><exclude>**/TestNameNodeMetrics.java</exclude>
+			<!-- TODO--><exclude>**/TestDfsOverAvroRpc.java</exclude>
+			<!-- TODO--><exclude>**/TestHDFSFileContextMainOperations.java</exclude>
+			<!-- TODO--><exclude>**/TestJMXGet.java</exclude>
+			<!-- TODO--><exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
+			<!-- TODO--><exclude>**/TestDeleteBlockPool.java</exclude>
+			<!-- TODO--><exclude>**/TestDiskError.java</exclude><!-- It succeeds but doesn't terminate the test-->
+			<!-- TODO--><exclude>**/TestViewFsHdfs.java</exclude> <!-- 39/40 test-cases are passing, it's worth to fix -->
+			<!-- TODO--><exclude>**/TestFileCorruption.java</exclude>
+			<!-- TODO--><exclude>**/TestModTime.java</exclude>
+			<!-- TODO--><exclude>**/TestDataNodeVolumeFailureToleration.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
+			<!-- TODO--><exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
+			<!-- TODO--><exclude>**/TestFileLimit.java</exclude>
+
+                        <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
+			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
+			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
 			<exclude>**/TestBalancer.java</exclude>
-			<exclude>**/TestDFSStorageStateRecovery.java</exclude>
-			<exclude>**/TestResolveHdfsSymlink.java</exclude>
 			<exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
 			<exclude>**/TestDecommissioningStatus.java</exclude>
-			<exclude>**/TestDfsOverAvroRpc.java</exclude>
-			<exclude>**/TestListCorruptFileBlocks.java</exclude>
 			<exclude>**/TestInjectionForSimulatedStorage.java</exclude>
-			<exclude>**/TestNameNodeMetrics.java</exclude>
-			<exclude>**/TestHDFSFileContextMainOperations.java</exclude>
-			<exclude>**/TestClientProtocolForPipelineRecovery.java</exclude>
-			<exclude>**/TestFileLimit.java</exclude>
 			<exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
 			<exclude>**/TestDistributedUpgrade.java</exclude>
 			<exclude>**/TestDecommission.java</exclude>
-			<exclude>**/TestCrcCorruption.java</exclude>
-			<exclude>**/TestFcHdfsSymlink.java</exclude>
-			<exclude>**/TestSafeMode.java</exclude>
-			<exclude>**/TestJMXGet.java</exclude>
-			<exclude>**/TestDeleteBlockPool.java</exclude>
-			<exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
-			<exclude>**/TestOverReplicatedBlocks.java</exclude>
-			<exclude>**/TestDiskError.java</exclude>
-			<exclude>**/TestRestartDFS.java</exclude><!--Datanode storage-id should get persisted -->
-			<exclude>**/TestViewFsHdfs.java</exclude>
-			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
+			<exclude>**/TestCrcCorruption.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
+			<exclude>**/TestRestartDFS.java</exclude>
+			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
 			<exclude>**/TestMetaSave.java</exclude>
 			<exclude>**/TestWriteConfigurationToDFS.java</exclude>
-			<exclude>**/TestFileCorruption.java</exclude>
-			<exclude>**/TestModTime.java</exclude>
-			<exclude>**/TestGlobPaths.java</exclude>
-			<exclude>**/TestNNThroughputBenchmark.java</exclude>
+			<exclude>**/TestNNThroughputBenchmark.java</exclude> <!-- seems very time consuming-->
 			<exclude>**/TestDFSUpgradeFromImage.java</exclude>
-			<exclude>**/TestViewFileSystemHdfs.java</exclude>
-			<exclude>**/TestDataNodeVolumeFailureToleration.java</exclude>
 			<exclude>**/TestHDFSCLI.java</exclude>
 			<exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
 			<exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
-			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
           </excludes>
         </configuration>
       </plugin>
