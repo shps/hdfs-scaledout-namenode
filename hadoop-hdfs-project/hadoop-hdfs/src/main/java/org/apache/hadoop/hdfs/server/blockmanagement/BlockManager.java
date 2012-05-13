@@ -528,7 +528,6 @@ public class BlockManager {
     fileINode.setBlock(blkIndex, completeBlock, isTransactional);
     // replace block in the blocksMap
     
-    //TODO: [W] remove ReplicaUnderConstruction from DB here
     //W: do ReplicaHelper.delete(ucBlock, isTransactional)
     ReplicaHelper.delete(ucBlock.getBlockId(), isTransactional);
     return blocksMap.replaceBlock(completeBlock, isTransactional);
@@ -536,22 +535,22 @@ public class BlockManager {
 
   private BlockInfo completeBlock(final INodeFile fileINode,
       final BlockInfo block, boolean isTransactional) throws IOException {
-          
+
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++){
       //if(fileBlocks[idx] == block) {
-            // TODO: [Jude] This scenario should not happen. All previous blocks should have been completed (i.e. replicated)
-            if((fileBlocks[idx].getBlockId() != block.getBlockId()) && (fileBlocks[idx].getBlockUCState() == BlockUCState.COMMITTED))
-            {
-                    // try to complete the committed block if it  has reached minimum replication
-                    if(countNodes(fileBlocks[idx]).liveReplicas() >= minReplication)
-                    {
-                            // try to complete this block first
-                            LOG.warn("Block  ["+fileBlocks[idx].getBlockId()+"] was not completed. Status ["+fileBlocks[idx].getBlockUCState().name()+"]. Trying to complete block... ");
-                            completeBlock(fileINode, fileBlocks[idx], isTransactional);
-                    }
-            }
-          if(fileBlocks[idx].getBlockId() == block.getBlockId()) {
+      // TODO: [Jude] This scenario should not happen. All previous blocks should have been completed (i.e. replicated)
+      if((fileBlocks[idx].getBlockId() != block.getBlockId()) && (fileBlocks[idx].getBlockUCState() == BlockUCState.COMMITTED))
+      {
+        // try to complete the committed block if it  has reached minimum replication
+        if(countNodes(fileBlocks[idx]).liveReplicas() >= minReplication)
+        {
+          // try to complete this block first
+          LOG.warn("Block  ["+fileBlocks[idx].getBlockId()+"] was not completed. Status ["+fileBlocks[idx].getBlockUCState().name()+"]. Trying to complete block... ");
+          completeBlock(fileINode, fileBlocks[idx], isTransactional);
+        }
+      }
+      if(fileBlocks[idx].getBlockId() == block.getBlockId()) {
         return completeBlock(fileINode, idx, isTransactional);
       }
     }
@@ -690,13 +689,13 @@ public class BlockManager {
 	          + " but corrupt replicas map has " + numCorruptReplicas);
 	    }
 
-	    final int numNodes = blocksMap.numNodes(blk);
+	    final int numNodes = blocksMap.numNodes(blk); //TODO: [W] should be reimplemented using s.load()
 	    final boolean isCorrupt = numCorruptNodes == numNodes;
 	    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
 	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
 	    if (numMachines > 0) {
 	      int j = 0;
-	      for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk);
+	      for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk); //TODO: [W] should be reimplemented
 	          it.hasNext();) {
 	        final DatanodeDescriptor d = it.next();
 	        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
@@ -711,7 +710,7 @@ public class BlockManager {
   
   /** @return a LocatedBlock for the given block */
   private LocatedBlock createLocatedBlockReadNN(final BlockInfo blk, final long pos
-	      ) throws IOException { //TODO: [thesis] make changes to this function
+	      ) throws IOException {
 	    if (blk instanceof BlockInfoUnderConstruction) {
 	      if (blk.isComplete()) {
 	        throw new IOException(
@@ -724,19 +723,9 @@ public class BlockManager {
 	      return new LocatedBlock(eb, locations, pos, false);
 	    }
 
-	    // get block locations
-//	    final int numCorruptNodes = countNodes(blk).corruptReplicas(); 
-//	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
-//	    if (numCorruptNodes != numCorruptReplicas) {
-//	      LOG.warn("Inconsistent number of corrupt replicas for "
-//	          + blk + " blockMap has " + numCorruptNodes
-//	          + " but corrupt replicas map has " + numCorruptReplicas);
-//	    }
 
-	    final int numNodes = blocksMap.numNodes(blk);
-	    //final boolean isCorrupt = numCorruptNodes == numNodes;
-	    //final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
-	    final int numMachines = numNodes; //[thesis] 
+	    final int numNodes = blocksMap.numNodes(blk); //TODO: [W] should be reimplemented using s.load()
+	    final int numMachines = numNodes;
 	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
 	    if (numMachines > 0) {
 	    	if(!namesystem.isWritingNN()) {
@@ -752,17 +741,14 @@ public class BlockManager {
 	    	else {
 
 	    		int j = 0;
-	    		for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk);
+	    		for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk); //TODO: [W] should be reimplemented
 	    				it.hasNext();) {
 	    			final DatanodeDescriptor d = it.next();
-	    			//final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-	    			//if (isCorrupt || (!isCorrupt && !replicaCorrupt))
 	    			machines[j++] = d;
 	    		}
 	        }
 	    }
 	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-	    //return new LocatedBlock(eb, machines, pos, isCorrupt);
 	    return new LocatedBlock(eb, machines, pos, false);
 	  }
   
@@ -815,7 +801,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final boolean isFileUnderConstruction,
       final long offset, final long length, final boolean needBlockToken
       ) throws IOException {
-    //assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
+    //assert namesystem.hasReadOrWriteLock();
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
@@ -828,7 +814,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final BlockTokenSecretManager.AccessMode mode = needBlockToken? BlockTokenSecretManager.AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
-      LOG.info("");
       final BlockInfo last = blocks[blocks.length - 1];
       final long lastPos = last.isComplete()?
           fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()

@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -169,7 +170,7 @@ class INodeDirectory extends INode {
 	 */
 	private INode getNode(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		INodeCacheImpl.LOG.debug("Cache Miss"); //TODO: Increment the cache miss metric here
+		//INodeCacheImpl.LOG.debug("Cache Miss"); //TODO: Increment the cache miss metric here
 		INode[] inode  = new INode[1];
 		getExistingPathINodes(components, inode, resolveLink);
 		return inode[0];
@@ -199,10 +200,15 @@ class INodeDirectory extends INode {
 
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-
-		INode nodeFromCache = getNodeFromCache(path);
-		return nodeFromCache != null ?  
-				nodeFromCache : getNode(getPathComponents(path), resolveLink);
+	  if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+	    INode nodeFromCache = getNodeFromCache(path);
+	    return nodeFromCache != null ?  
+	        nodeFromCache : getNode(getPathComponents(path), resolveLink);
+	  }
+	  else 
+	    return getNode(getPathComponents(path), resolveLink);
+	    
+		
 		
 	}
 	/**
@@ -262,8 +268,6 @@ class INodeDirectory extends INode {
 		INode[] inodes = new INode[components.length]; //[thesis] for magic cache
 		inodes[0] = this; //[thesis] for magic cache
 
-		INodeCache cache = INodeCacheImpl.getInstance();
-		
 		int count = 0;
 		int index = existing.length - components.length;
 		if (index > 0) {
@@ -303,7 +307,11 @@ class INodeDirectory extends INode {
 			index++;
 
 		}
-		cache.store(inodes);
+		
+		if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+		  INodeCache cache = INodeCacheImpl.getInstance();
+		  cache.store(inodes);
+		}
 		return count;
 	}
 
@@ -642,7 +650,7 @@ class INodeDirectory extends INode {
             
             return children;
 	  } catch (IOException e) {
-             LOG.error(e);
+             e.printStackTrace();
 	  } finally {
              return children;
          }

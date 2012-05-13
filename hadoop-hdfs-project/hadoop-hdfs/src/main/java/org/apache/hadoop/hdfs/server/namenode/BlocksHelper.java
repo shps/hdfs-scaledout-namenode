@@ -191,54 +191,54 @@ public class BlocksHelper {
 	/** When called with single=false, will not retrieve the INodes for the Block */
 	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
 		BlockInfoTable bit = selectBlockInfo(session, blockId);
-		if(bit == null)
-			return null;
-		else {
-			Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
-			BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
-
-			if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMMITTED.ordinal())
-			{
-				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
-				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.COMMITTED);
-				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
-				((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
-			}
-			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal())
-			{
-				blockInfo = new BlockInfo(b, bit.getReplication());
-			}
-			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION.ordinal())
-			{
-				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
-				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
-				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
-        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
-			}
-			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_RECOVERY.ordinal())
-			{
-				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
-				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_RECOVERY);
-				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
-        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
-			}
+		return convert(bit);
+//		if(bit == null)
+//			return null;
+//		else {
+//			Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
+//			BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
+//
+//			if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMMITTED.ordinal())
+//			{
+//				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+//				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.COMMITTED);
+//				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+//				((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+//			}
+//			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal())
+//			{
+//				blockInfo = new BlockInfo(b, bit.getReplication());
+//			}
+//			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION.ordinal())
+//			{
+//				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+//				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
+//				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+//        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+//			}
+//			else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_RECOVERY.ordinal())
+//			{
+//				blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+//				((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_RECOVERY);
+//				((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+//        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+//			}
 
 			//W: assuming that this function will only be called on an INodeFile
 		//[W] FIXME: this is a bit bizarre, and not required because INodeFile.getBlocks() is enough
-			if (single == false){ 
-				INodeFile node = (INodeFile)INodeHelper.getINode(bit.getINodeID());
-				if (node != null) { 
-					node.setBlocksList(getBlocksArrayInternal(node, session)); 
-
-					blockInfo.setINodeWithoutTransaction(node);
-					updateBlockInfoTable(node.getID(), blockInfo, session);//FIXME[Hooman]: Why does it update the block info here? It should be a read-only operation.
-				}
-			}
-			blockInfo.setBlockIndex(bit.getBlockIndex()); 
-			blockInfo.setTimestamp(bit.getTimestamp());
-
-			return blockInfo;
-		}
+//			if (single == false){ 
+//				INodeFile node = (INodeFile)INodeHelper.getINode(bit.getINodeID());
+//				if (node != null) { 
+//					node.setBlocksList(getBlocksArrayInternal(node, session)); 
+//
+//					blockInfo.setINodeWithoutTransaction(node);
+//					updateBlockInfoTable(node.getID(), blockInfo, session);//TODO[Hooman]: Why does it update the block info here? It should be a read-only operation.
+//				}
+//			}
+//			blockInfo.setBlockIndex(bit.getBlockIndex()); 
+//			blockInfo.setTimestamp(bit.getTimestamp());
+//			return blockInfo;
+//		}
 
 	}
 	/** Returns a BlockInfo object without any Inodes set for it (single=true) */
@@ -473,25 +473,24 @@ public class BlocksHelper {
 	}
 
 	public static BlockInfo[] getBlockInfoArray(INodeFile inode) throws IOException {
-		int tries = RETRY_COUNT;
-		boolean done = false;
+	  int tries = RETRY_COUNT;
+	  boolean done = false;
 
-		Session session = DBConnector.obtainSession();
-		while (done == false && tries > 0) {
-			try {
-				BlockInfo[] ret = getBlocksArrayInternal(inode, session);
-                                session.flush(); //Sets INode inside
-				done=true;
-				return ret;
-			}
-			catch (ClusterJException e){
-				//System.err.println("getBlocksArray failed " + e.getMessage());
-				LOG.error(e.getMessage(), e);
-				tries--;
-			}
+	  Session session = DBConnector.obtainSession();
+	  while (done == false && tries > 0) {
+	    try {
+	      BlockInfo[] ret = getBlocksArrayInternal(inode, session);
+	      session.flush(); //Sets INode inside
+	      done=true;
+	      return ret;
+	    }
+	    catch (ClusterJException e){
+	      e.printStackTrace();
+	      tries--;
+	    }
 
-		}
-		return null;
+	  }
+	  return null;
 	}
 
 	public static BlockInfo[] getBlocksArrayInternal(INodeFile inode, Session session) throws IOException {
@@ -508,9 +507,10 @@ public class BlocksHelper {
 
 		for(int i=0; i<blocksArray.length; i++) {
 			// Now we're effectively calling getBlockInfoSingle()
-			blocksArray[i] = getBlockInfo(session, blocksList.get(i).getBlockId(), true);
+			//blocksArray[i] = getBlockInfo(session, blocksList.get(i).getBlockId(), true);
+		  blocksArray[i] = convert(blocksList.get(i));
 			blocksArray[i].setINodeWithoutTransaction(inode);
-			updateBlockInfoTable(inode.getID(), blocksArray[i], session);
+			//updateBlockInfoTable(inode.getID(), blocksArray[i], session);
 		}
 		//sorting the array in descending order w.r.t blockIndex
 		Arrays.sort(blocksArray, new BlockInfoComparator());
@@ -1267,13 +1267,11 @@ public class BlocksHelper {
       HelperMetrics.tripleteMetrics.incrUpdate();
       
 			session.savePersistent(tt);
-			LOG.debug("W: Triplet about to be updated: " + tt.getBlockId() + " DN: " + tt.getDatanodeName());
 		}
 		else {
       HelperMetrics.tripleteMetrics.incrInsert();
       
 			session.makePersistent(tt);
-			LOG.debug("W: Triplet about to be inserted: " + tt.getBlockId() + " DN: " + tt.getDatanodeName());
 		}
 	}
 
@@ -1622,17 +1620,59 @@ public class BlocksHelper {
     bit.setGenerationStamp(newgenerationstamp);
     bit.setNumBytes(newlength);
     updateBlockInfoTableInternal(session, bit);
-    
-  }
-  
-  
 
-  private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName) {
-    HelperMetrics.tripleteMetrics.incrUpdate();
-    
+  }
+
+
+
+  private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName)
+  {
     record.setDatanodeName(dnName);
     session.updatePersistent(record);
   }
+  
+  /** When called with single=false, will not retrieve the INodes for the Block */
+  private static BlockInfo convert(BlockInfoTable bit) throws IOException {
+    if(bit == null)
+      return null;
+    else {
+      Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
+      BlockInfo blockInfo = new BlockInfo(b, bit.getReplication());
+
+      if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMMITTED.ordinal())
+      {
+        blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.COMMITTED);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal())
+      {
+        blockInfo = new BlockInfo(b, bit.getReplication());
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION.ordinal())
+      {
+        blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_RECOVERY.ordinal())
+      {
+        blockInfo = new BlockInfoUnderConstruction(b, bit.getReplication());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_RECOVERY);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+
+      blockInfo.setBlockIndex(bit.getBlockIndex()); 
+      blockInfo.setTimestamp(bit.getTimestamp());
+
+      return blockInfo;
+    }
+
+  }
+  
 }
 
 

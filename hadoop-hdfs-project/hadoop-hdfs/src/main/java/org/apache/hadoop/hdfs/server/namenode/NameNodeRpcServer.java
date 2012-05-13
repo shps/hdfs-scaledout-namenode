@@ -235,6 +235,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                                           long length) 
       throws IOException {
     metrics.incrGetBlockLocations();
+    LOG.info("getBlockLocations for " + src);
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
   }

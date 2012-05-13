@@ -134,6 +134,7 @@ public class INodeFile extends INode {
 	public BlockInfo[] getBlocks() throws IOException {
 		
 		BlockInfo [] ret = BlocksHelper.getBlockInfoArray(this);
+		this.blocks = ret;
 		
 		if (ret == null) {
 			return new BlockInfo[0];

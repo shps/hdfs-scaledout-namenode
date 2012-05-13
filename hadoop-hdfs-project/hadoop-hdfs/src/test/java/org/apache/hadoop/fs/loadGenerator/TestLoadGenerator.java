@@ -63,7 +63,7 @@ public class TestLoadGenerator extends Configured implements Tool {
   }
 
   /** Test if the structure generator works fine */ 
-  @Test
+  //@Test
   public void testStructureGenerator() throws Exception {
     StructureGenerator sg = new StructureGenerator();
     String[] args = new String[]{"-maxDepth", "2", "-minWidth", "1",

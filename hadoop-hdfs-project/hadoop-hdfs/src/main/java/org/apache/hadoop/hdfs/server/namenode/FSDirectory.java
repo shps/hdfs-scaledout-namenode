@@ -1285,13 +1285,13 @@ public class FSDirectory implements Closeable {
       INode targetNode = rootDir.getNode(srcs, true);
 
       if (targetNode == null)
-	return null;
+        return null;
 
 
       if (!targetNode.isDirectory()) {
-	return new DirectoryListing(
-	    new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-		targetNode, needLocation)}, 0);
+        return new DirectoryListing(
+            new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
+                targetNode, needLocation)}, 0);
       }
 
       // Else its a directory
@@ -1302,11 +1302,11 @@ public class FSDirectory implements Closeable {
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing; i++) {
-	INode cur = contents.get(startChild+i);
-	listing[i] = createFileStatus(cur.name, cur, needLocation);
+        INode cur = contents.get(startChild+i);
+        listing[i] = createFileStatus(cur.name, cur, needLocation);
       }
       return new DirectoryListing(
-	  listing, totalNumChildren-startChild-numOfListing);
+          listing, totalNumChildren-startChild-numOfListing);
     } finally {
       readUnlock();
     }
@@ -2121,28 +2121,31 @@ public class FSDirectory implements Closeable {
    * Sets the access time on the file. Logs it in the transaction log.
    */
   void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) {
-    boolean status = false;
-    writeLock();
-    try {
-      status = unprotectedSetTimes(src, inode, mtime, atime, force);
-    } finally {
-      writeUnlock();
-    }
-    if (status) {
+    
+    unprotectedSetTimes(src, inode, mtime, atime, force);
+    //boolean status = false;
+    //writeLock();
+    //try {
+    //  status = unprotectedSetTimes(src, inode, mtime, atime, force);
+    //} finally {
+    //  writeUnlock();
+    //}
+    //if (status) {
       //fsImage.getEditLog().logTimes(src, mtime, atime);
-    }
+    //}
   }
 
+  //unused
   boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
       throws UnresolvedLinkException {
-    assert hasWriteLock();
+    //assert hasWriteLock();
     INodeFile inode = getFileINode(src);
     return unprotectedSetTimes(src, inode, mtime, atime, force);
   }
 
   private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
                                       long atime, boolean force) {
-    assert hasWriteLock();
+    //assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
       inode.setModificationTimeForceDB(mtime);

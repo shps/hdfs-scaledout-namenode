@@ -309,8 +309,9 @@ public class DistributedFileSystem extends FileSystem {
     statistics.incrementReadOps(1);
     //return new DFSClient.DFSDataInputStream(
     //        dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
+    System.err.println("Open - getblocklocations");
     return new DFSClient.DFSDataInputStream(
-            nnSelector.getNextWriterNameNode().open(getPathName(f), bufferSize, verifyChecksum, statistics));
+            nnSelector.getNextReaderNameNode().open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }
 
   /** This optional operation is not yet supported. */
@@ -480,7 +481,8 @@ public class DistributedFileSystem extends FileSystem {
 
     // fetch the first batch of entries in the directory
     //DirectoryListing thisListing = dfs.listPaths(src, HdfsFileStatus.EMPTY_NAME);
-    DirectoryListing thisListing = nnSelector.getNextReaderNameNode().listPaths(src, HdfsFileStatus.EMPTY_NAME);
+    DFSClient nextReaderNameNode = nnSelector.getNextReaderNameNode();
+    DirectoryListing thisListing = nextReaderNameNode.listPaths(src, HdfsFileStatus.EMPTY_NAME);
     
     if (thisListing == null) { // the directory does not exist
       throw new FileNotFoundException("File " + p + " does not exist.");
@@ -511,7 +513,7 @@ public class DistributedFileSystem extends FileSystem {
     // now fetch more entries
     do {
       //thisListing = dfs.listPaths(src, thisListing.getLastName());
-      thisListing = nnSelector.getNextReaderNameNode().listPaths(src, thisListing.getLastName());
+      thisListing = nextReaderNameNode.listPaths(src, thisListing.getLastName());
 
       if (thisListing == null) { // the directory is deleted
         throw new FileNotFoundException("File " + p + " does not exist.");
@@ -689,7 +691,7 @@ public class DistributedFileSystem extends FileSystem {
   public FsStatus getStatus(Path p) throws IOException {
     statistics.incrementReadOps(1);
     //return dfs.getDiskStatus();
-    return nnSelector.getNextReaderNameNode().getDiskStatus();
+    return nnSelector.getNextWriterNameNode().getDiskStatus();
   }
 
   /** Return the disk usage of the filesystem, including total capacity,
@@ -699,7 +701,7 @@ public class DistributedFileSystem extends FileSystem {
   @Deprecated
   public DiskStatus getDiskStatus() throws IOException {
     //return new DiskStatus(dfs.getDiskStatus());
-    return new DiskStatus(nnSelector.getNextReaderNameNode().getDiskStatus());
+    return new DiskStatus(nnSelector.getNextWriterNameNode().getDiskStatus());
   }
 
   /** Return the total raw capacity of the filesystem, disregarding
@@ -709,7 +711,7 @@ public class DistributedFileSystem extends FileSystem {
   @Deprecated
   public long getRawCapacity() throws IOException {
     //return dfs.getDiskStatus().getCapacity();
-    return nnSelector.getNextReaderNameNode().getDiskStatus().getCapacity();
+    return nnSelector.getNextWriterNameNode().getDiskStatus().getCapacity();
   }
 
   /** Return the total raw used space in the filesystem, disregarding
@@ -719,7 +721,7 @@ public class DistributedFileSystem extends FileSystem {
   @Deprecated
   public long getRawUsed() throws IOException {
     //return dfs.getDiskStatus().getUsed();
-    return nnSelector.getNextReaderNameNode().getDiskStatus().getUsed();
+    return nnSelector.getNextWriterNameNode().getDiskStatus().getUsed();
   }
 
   /**
@@ -730,7 +732,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   public long getMissingBlocksCount() throws IOException {
     //return dfs.getMissingBlocksCount();
-    return nnSelector.getNextReaderNameNode().getMissingBlocksCount();
+    return nnSelector.getNextWriterNameNode().getMissingBlocksCount();
   }
 
   /**
@@ -752,7 +754,7 @@ public class DistributedFileSystem extends FileSystem {
   public long getCorruptBlocksCount() throws IOException {
     //return dfs.getCorruptBlocksCount();
     // TODO: Pesis corrupt blocks and then switch this to reader nn
-    return nnSelector.getNextReaderNameNode().getCorruptBlocksCount();
+    return nnSelector.getNextWriterNameNode().getCorruptBlocksCount();
   }
 
   /**
@@ -853,7 +855,7 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     //return dfs.getServerDefaults();
-    return nnSelector.getNextReaderNameNode().getServerDefaults();
+    return nnSelector.getNextWriterNameNode().getServerDefaults();
   }
 
   /**
@@ -975,7 +977,7 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(String renewer) throws IOException {
     //Token<DelegationTokenIdentifier> result = dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
-    Token<DelegationTokenIdentifier> result = nnSelector.getNextReaderNameNode().getDelegationToken(renewer == null ? null : new Text(renewer));
+    Token<DelegationTokenIdentifier> result = nnSelector.getNextWriterNameNode().getDelegationToken(renewer == null ? null : new Text(renewer));
     result.setService(new Text(getCanonicalServiceName()));
     return result;
   }
@@ -996,7 +998,7 @@ public class DistributedFileSystem extends FileSystem {
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
           throws IOException {
     //return dfs.getDelegationToken(renewer);
-    return nnSelector.getNextReaderNameNode().getDelegationToken(renewer);
+    return nnSelector.getNextWriterNameNode().getDelegationToken(renewer);
   }
 
   @Override // FileSystem

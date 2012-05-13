@@ -90,7 +90,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
 		else {
 			// Pick a random sessionFactory
 			Random r = new Random();
-			System.err.println("NUM_SESS_FACTS: " + NUM_SESSION_FACTORIES);
+			LOG.info("New session object being obtained for threadId:" + threadId + " name:" + Thread.currentThread().getName());
 			Session session = sessionFactory[r.nextInt(NUM_SESSION_FACTORIES)].getSession();
 			sessionPool.put(threadId, session);
 			return session;

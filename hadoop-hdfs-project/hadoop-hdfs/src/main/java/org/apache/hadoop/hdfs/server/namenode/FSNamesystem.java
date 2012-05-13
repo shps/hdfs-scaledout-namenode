@@ -106,6 +106,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -324,6 +325,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
     DBConnector.setConfiguration(conf);
+    LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     this.fsLock = new ReentrantReadWriteLock(true); // fair locking
@@ -360,8 +362,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     else
         this.dir.rootDir = (INodeDirectoryWithQuota) rootInode;
     
-    INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
-    cache.putRoot(this.dir.rootDir); //added for magic cache
+    if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
+      cache.putRoot(this.dir.rootDir); //added for magic cache
+    }
     
     this.safeMode = new SafeModeInfo(conf);
   }
@@ -850,7 +854,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     //  }  else { // second attempt is with  write lock
     //    writeLock(); // writelock is needed to set accesstime
     //  }
-
       // if the namenode is in safemode, then do not update access time
       if (isInSafeMode()) {
         doAccessTime = false;
@@ -2579,64 +2582,64 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create all the necessary directories
    */
   boolean mkdirs(String src, PermissionStatus permissions,
-                       boolean createParent) throws IOException, UnresolvedLinkException
-        {
+      boolean createParent) throws IOException, UnresolvedLinkException
+      {
     boolean status = false;
-                if (NameNode.stateChangeLog.isDebugEnabled())
-                {
+    if (NameNode.stateChangeLog.isDebugEnabled())
+    {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
     writeLock();
-                try
-                {
-                        boolean isDone = false;
-                        int tries = DBConnector.RETRY_COUNT;
-                        try
-                        {
-                                while (!isDone && tries > 0)
-                                {
-                                        try
-                                        {
-                                                DBConnector.beginTransaction();
-                                                status = mkdirsInternal(src, permissions, createParent, true);
-                                                
-                                                DBConnector.commit();
-                                                isDone = true;
-                                        }
-                                        catch(ClusterJException ex)
-                                        {
-                                                if(!isDone)
-                                                {
-                                                        DBConnector.safeRollback();
-                                                        tries--;
-                                                        FSNamesystem.LOG.error("mkdirs() :: failed to make a directory "+src+". Exception: "+ex.getMessage(), ex);
-                                                }
-                                        }
-                                }
-                        }
-                        finally
-                        {
-                                if(!isDone)
-                                {
-                                        DBConnector.safeRollback();
-                                }
-                        }
-                }
-                finally
-                {
+    try
+    {
+      boolean isDone = false;
+      int tries = DBConnector.RETRY_COUNT;
+      try
+      {
+        while (!isDone && tries > 0)
+        {
+          try
+          {
+            DBConnector.beginTransaction();
+            status = mkdirsInternal(src, permissions, createParent, true);
+
+            DBConnector.commit();
+            isDone = true;
+          }
+          catch(ClusterJException ex)
+          {
+            if(!isDone)
+            {
+              DBConnector.safeRollback();
+              tries--;
+              FSNamesystem.LOG.error("mkdirs() :: failed to make a directory "+src+". Exception: "+ex.getMessage(), ex);
+            }
+          }
+        }
+      }
+      finally
+      {
+        if(!isDone)
+        {
+          DBConnector.safeRollback();
+        }
+      }
+    }
+    finally
+    {
       writeUnlock();
     }
     //getEditLog().logSync();
-                if (status && auditLog.isInfoEnabled() && isExternalInvocation())
-                {
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation())
+    {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
-                    "mkdirs", src, null, stat);
+          Server.getRemoteIp(),
+          "mkdirs", src, null, stat);
     }
     return status;
-  }
-    
+      }
+
   /**
    * Create all the necessary directories
    */
@@ -3081,7 +3084,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
     	
     	if (isPermissionEnabled) {
-    		LOG.info("Checking permissions..");
             if (dir.isDir(src)) {
               checkPathAccess(src, FsAction.READ_EXECUTE);
             } else {

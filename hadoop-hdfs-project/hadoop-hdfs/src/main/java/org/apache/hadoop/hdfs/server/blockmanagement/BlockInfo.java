@@ -71,7 +71,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		this.inode = from.inode;
 	}
 	public INodeFile getINode() {
-
 		return (INodeFile) BlocksHelper.getInodeFromBlockId(this.getBlockId());
 	}
 

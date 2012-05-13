@@ -48,8 +48,14 @@ public class HelperMetrics {
     LOG.info(tripleteMetrics.toString());
     LOG.info(leaseMetrics.toString());
     LOG.info(leasePathMetrics.toString());
-    LOG.info(totalMetrics.toString());
+    //LOG.info(totalMetrics.toString());
     LOG.info(replicaMetrics.toString());
-    LOG.info(secretMetrics.toString());
+    //LOG.info(secretMetrics.toString());
   }
+  
+  public static void printAllAndReset(String opName) {
+    printAll(opName);
+    reset();
+  }
+  
 }

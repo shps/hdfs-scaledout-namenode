@@ -206,11 +206,6 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * @throws IOException 
    */
   public DatanodeDescriptor[] getExpectedLocations() throws IOException {
-    //int numLocations = replicas == null ? 0 : replicas.size();
-    //DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
-    //for(int i = 0; i < numLocations; i++)
-    //  locations[i] = replicas.get(i).getExpectedLocation();
-    //return locations;
     List<ReplicaUnderConstruction> replicasList = ReplicaHelper.getReplicas(this.getBlockId(), false);
     int numLocations = replicasList == null ? 0 : replicasList.size();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
