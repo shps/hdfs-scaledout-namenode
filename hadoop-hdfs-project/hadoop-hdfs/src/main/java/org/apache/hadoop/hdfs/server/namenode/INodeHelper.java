@@ -387,23 +387,21 @@ public class INodeHelper {
     return results;
   }
 
-	/**Updates the modification time of an inode in the database
-	 * @param inodeid
-	 * @param modTime
-	 */
-	public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException
-	{
-            DBConnector.checkTransactionState(isTransactional);
-        
-            if (isTransactional)
-            {
-                Session session = DBConnector.obtainSession();
-                updateModificationTimeInternal(session, inodeid, modTime);
-                session.flush();
-            }
-            else
-                updateModificationTimeWithTransaction(inodeid, modTime);
-	}
+  /**Updates the modification time of an inode in the database
+   * @param inodeid
+   * @param modTime
+   */
+  public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      updateModificationTimeInternal(session, inodeid, modTime);
+      session.flush();
+    } else {
+      updateModificationTimeWithTransaction(inodeid, modTime);
+    }
+  }
 
 	/**Updates the modification time of an inode in the database
 	 * @param inodeid

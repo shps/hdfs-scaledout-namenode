@@ -3,7 +3,10 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-
+/**
+ * 
+ * @author Hooman <hooman@sics.se>
+ */
 public class BlockMetrics {
     
 
@@ -102,5 +105,15 @@ public class BlockMetrics {
         return this.insert.incrementAndGet();
     }
 
-    
+    @Override
+    public String toString()
+    {
+      return String.format("==================== Block Metrics ====================\n"
+              + "Select Using Primary Key: %d\n"
+              + "Select Using Index: %d\n"
+              + "Update: %d\n"
+              + "Insert: %d\n"
+              + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(), 
+              getUpdate(), getInsert(), getDelete());
+    }
 }

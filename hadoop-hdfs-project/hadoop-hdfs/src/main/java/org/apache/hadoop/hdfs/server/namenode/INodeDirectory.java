@@ -180,19 +180,21 @@ class INodeDirectory extends INode {
 	 * @return
 	 */
 	INode getNodeFromCache(String path) {
-//		if(path.equals("/")) //[Hooman]: This would always return the old Inode of the root. 
-//			return this;
-            if (path.equals("/")) {
-                try {
-                    return INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
-                } catch (IOException ex) {
-                    INodeCacheImpl.LOG.error(ex.getMessage(), ex);
-                    return this; //FIXME[Hooman]: this silently returns the old version of the root.
-                }
-            }
-            
-            INodeCache cache = INodeCacheImpl.getInstance();
-            return cache.getNode(path);
+    if (path.equals("/")) //[Hooman]: This would always return the old Inode of the root, won't work in parallel writer nodes. 
+    {
+      return this;
+    }
+//            if (path.equals("/")) {
+//                try {
+//                    return INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
+//                } catch (IOException ex) {
+//                    INodeCacheImpl.LOG.error(ex.getMessage(), ex);
+//                    return this; //FIXME[Hooman]: this silently returns the old version of the root.
+//                }
+//            }
+
+    INodeCache cache = INodeCacheImpl.getInstance();
+    return cache.getNode(path);
 	}
 
 	INode getNode(String path, boolean resolveLink) 
@@ -455,7 +457,9 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), isTransactional);
+    long modTime = node.getModificationTime();
+    this.modificationTime = modTime;
+		INodeHelper.updateModificationTime(this.id, modTime, isTransactional);
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
