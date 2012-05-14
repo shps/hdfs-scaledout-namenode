@@ -102,7 +102,7 @@ public class TestPrintMetrics {
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
     DBConnector.setConfiguration(conf);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());
     return cluster;
