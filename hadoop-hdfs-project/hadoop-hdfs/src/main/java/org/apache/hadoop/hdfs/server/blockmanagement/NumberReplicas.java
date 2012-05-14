@@ -26,13 +26,19 @@ public class NumberReplicas {
   private int decommissionedReplicas;
   private int corruptReplicas;
   private int excessReplicas;
+  private DatanodeDescriptor [] liveDatanodes;
 
   NumberReplicas() {
     initialize(0, 0, 0, 0);
   }
-
+/*
   NumberReplicas(int live, int decommissioned, int corrupt, int excess) {
     initialize(live, decommissioned, corrupt, excess);
+  }
+*/
+  NumberReplicas(int live, int decommissioned, int corrupt, int excess, DatanodeDescriptor [] dnds) {
+    initialize(live, decommissioned, corrupt, excess);
+    liveDatanodes = dnds;
   }
 
   void initialize(int live, int decommissioned, int corrupt, int excess) {
@@ -55,6 +61,9 @@ public class NumberReplicas {
     return excessReplicas;
   }
   
+  public DatanodeDescriptor[] getLiveReplicas() {
+    return liveDatanodes;
+  }
     /**
      * @return total number of replicas
      */

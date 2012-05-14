@@ -183,7 +183,7 @@ class BlocksMap {
     BlockInfo info = blocks.get(b);
     return info == null ? 0 : info.numNodes();
   }
-
+  
   /**
    * Remove data-node reference from the block.
    * Remove the block from the block map

@@ -121,6 +121,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 		return BlocksHelper.numDatanodesForBlock(this.getBlockId());
 	}
 
+	/**
+	 * Gets all the data-nodes the block belongs to.
+	 */
+	DatanodeDescriptor[] getDatanodes() {
+		return BlocksHelper.getDataNodesFromBlock(this.getBlockId());
+	}
 
 	  /**
 	* Add data-node this block belongs to.
