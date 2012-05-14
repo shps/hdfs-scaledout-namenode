@@ -42,7 +42,7 @@ public class ReplicaHelper {
 
   public static void add(long blockId, DatanodeDescriptor expLocation, ReplicaState repState, boolean isTrans) 
       throws IOException {
-    
+    //FIXME[Hooman]: should assert the state of transaction if it's active or not.
     if(isTrans)
       add(blockId, expLocation, repState);
     else
@@ -210,7 +210,7 @@ public class ReplicaHelper {
    * @throws IOException 
    */
   public static List<ReplicaUnderConstruction> getReplicas(long blockId, boolean isTransactional) throws IOException { 
-    if(isTransactional)
+    if(isTransactional) //FIXME[Hooman]: Why is this using isTransactional? There is no need for a read operation.
       return getReplicas(blockId);
     else
       return getReplicasWithTransaction(blockId);

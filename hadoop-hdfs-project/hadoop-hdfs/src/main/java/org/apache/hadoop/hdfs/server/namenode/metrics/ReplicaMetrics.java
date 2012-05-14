@@ -68,10 +68,14 @@ public class ReplicaMetrics {
 
   @Override
   public String toString() {
-    return String.format("==================== Replica Metrics ====================\n"
+    long suIndex = getSelectUsingIndex();
+    long insrt = getInsert();
+    long dlt = getDelete();
+    return String.format("\n==================== Replica Metrics ====================\n"
             + "Select Using Index: %d\n"
             + "Insert: %d\n"
-            + "Delete: %d\n", getSelectUsingIndex(),
-            getInsert(), getDelete());
+            + "Delete: %d\n"
+            +"Total: %d\n", suIndex, insrt, dlt,
+            suIndex + insrt + dlt);
   }
 }

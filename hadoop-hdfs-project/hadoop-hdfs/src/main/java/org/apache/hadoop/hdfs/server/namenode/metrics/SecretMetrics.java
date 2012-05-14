@@ -107,13 +107,20 @@ public class SecretMetrics {
 
   @Override
   public String toString() {
-    return String.format("==================== Secret Metrics ====================\n"
+    long supKey = getSelectUsingPKey();
+    long suIndex = getSelectUsingIndex();
+    long suAll = getSelectAll();
+    long updt = getUpdate();
+    long insrt = getInsert();
+    long dlt = getDelete();
+    return String.format("\n==================== Secret Metrics ====================\n"
             + "Select Using Primary Key: %d\n"
             + "Select Using Index: %d\n"
             + "Select All: %d\n"
             + "Update: %d\n"
             + "Insert: %d\n"
-            + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(),
-            getSelectAll(), getUpdate(), getInsert(), getDelete());
+            + "Delete: %d\n"
+            + "Total: %d\n", supKey, suIndex, suAll, updt, insrt, dlt,
+              supKey + suIndex + suAll + updt + insrt + dlt);
   }
 }

@@ -122,13 +122,20 @@ public class LeaseMetrics {
     @Override
     public String toString()
     {
-      return String.format("==================== Lease Metrics ====================\n"
+      long supKey = getSelectUsingPKey();
+      long suIndex = getSelectUsingIndex();
+      long suAll = getSelectUsingAll();
+      long updt = getUpdate();
+      long insrt = getInsert();
+      long dlt = getDelete();
+      return String.format("\n==================== Lease Metrics ====================\n"
               + "Select Using Primary Key: %d\n"
               + "Select Using Index: %d\n"
               + "Select All: %d\n"
               + "Update: %d\n"
               + "Insert: %d\n"
-              + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(), 
-              getSelectUsingAll(), getUpdate(), getInsert(), getDelete());
+              + "Delete: %d\n"
+              + "Total: %d\n", supKey, suIndex, suAll, updt, insrt, dlt,
+              supKey + suIndex + suAll + updt + insrt + dlt);
     }
 }

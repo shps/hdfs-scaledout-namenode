@@ -39,9 +39,12 @@ public class BlockTotalMetrics{
 
   @Override
   public String toString() {
-    return String.format("==================== BlockTotal Metrics ====================\n"
+    long slct = getSelect();
+    long updt = getUpdate();
+    return String.format("\n==================== BlockTotal Metrics ====================\n"
             + "Select: %d\n"
-            + "Update: %d\n",
-            getSelect(), getUpdate());
+            + "Update: %d\n"
+            + "Total: %d\n",
+            slct, updt, slct + updt);
   }
 }
