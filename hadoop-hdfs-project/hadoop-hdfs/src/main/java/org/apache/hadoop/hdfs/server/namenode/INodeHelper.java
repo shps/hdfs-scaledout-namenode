@@ -220,7 +220,7 @@ public class INodeHelper {
 	 */
 	private static INodeTableSimple selectINodeTableInternal(Session session, String name, long parentid) {
             
-            HelperMetrics.inodeMetrics.getSelectUsingIndex();
+            HelperMetrics.inodeMetrics.incrSelectUsingIndex();
 
             QueryBuilder qb = session.getQueryBuilder();
             QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);

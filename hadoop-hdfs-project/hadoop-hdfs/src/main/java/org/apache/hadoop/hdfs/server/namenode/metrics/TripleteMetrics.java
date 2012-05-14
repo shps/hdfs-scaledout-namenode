@@ -98,12 +98,18 @@ public class TripleteMetrics {
 
   @Override
   public String toString() {
-    return String.format("==================== Triplete Metrics ====================\n"
+    long supKey = getSelectUsingPKey();
+    long suIndex = getSelectUsingIndex();
+    long updt = getUpdate();
+    long insrt = getInsert();
+    long dlt = getDelete();
+    return String.format("\n==================== Triplete Metrics ====================\n"
             + "Select Using Primary Key: %d\n"
             + "Select Using Index: %d\n"
             + "Update: %d\n"
             + "Insert: %d\n"
-            + "Delete: %d\n", getSelectUsingPKey(), getSelectUsingIndex(),
-            getUpdate(), getInsert(), getDelete());
+            + "Delete: %d\n" 
+            + "Total: %d\n", supKey, suIndex, updt, insrt, dlt,
+              supKey + suIndex + updt + insrt + dlt);
   }
 }
