@@ -328,7 +328,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public Iterator<BlockInfo> getBlockIterator() throws IOException {
-    List<BlockInfo> listOfBlocks = BlocksHelper.getBlockListForDatanode(this.name); 
+    //List<BlockInfo> listOfBlocks = BlocksHelper.getBlockListForDatanode(this.name);  // Changed by Jude to find blocks via storageID
+    List<BlockInfo> listOfBlocks = BlocksHelper.getBlockListForDatanode(this.getStorageID()); 
 	return new BlockIterator(listOfBlocks, this);
   }
   

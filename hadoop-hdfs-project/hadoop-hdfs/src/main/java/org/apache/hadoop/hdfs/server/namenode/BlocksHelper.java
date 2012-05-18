@@ -587,7 +587,7 @@ public class BlocksHelper {
 		//TODO: [thesis] this update can be done in one shot TODO TODO TODO
 		if (triplet != null) {
 			LOG.debug("WASIF triplet exists for blkid:"+blockId + "index:" + index);
-			triplet.setDatanodeName(name);
+			//triplet.setDatanodeName(name);
                         triplet.setStorageId(storageId);
 			triplet.setIndex(index);
 			insertTriplet(session, triplet, true);
@@ -596,7 +596,7 @@ public class BlocksHelper {
 			LOG.debug("WASIF new triplet being created for blkid:"+blockId + "index:" + index);
 			TripletsTable newTriplet = session.newInstance(TripletsTable.class);
 			newTriplet.setBlockId(blockId);
-			newTriplet.setDatanodeName(name);
+			//newTriplet.setDatanodeName(name);
                         newTriplet.setStorageId(storageId);
 			newTriplet.setIndex(index);
 			insertTriplet(session, newTriplet, true); //TODO: this should be false rite?
@@ -659,7 +659,9 @@ public class BlocksHelper {
 		DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
 		int i = 0;
 		for (TripletsTable t: result){
-			DatanodeID dn = new DatanodeID(t.getDatanodeName(), t.getStorageId(), -1, -1);
+                                                                        //int ipcPort = Integer.parseInt(t.getDatanodeName().substring(t.getDatanodeName().indexOf(":")+1));
+			//DatanodeID dn = new DatanodeID(t.getDatanodeName(), t.getStorageId(), -1, ipcPort);
+                                                                        DatanodeID dn = DatanodeHelper.getDatanodeDescriptorByStorageId(t.getStorageId());
 			nodeDescriptor[i] = new DatanodeDescriptor(dn);
 			i++;
 		}
@@ -762,7 +764,7 @@ public class BlocksHelper {
 			{				
 				TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
 				replacementEntry.setBlockId(t.getBlockId());
-				replacementEntry.setDatanodeName(t.getDatanodeName());
+				//replacementEntry.setDatanodeName(t.getDatanodeName());
                                 replacementEntry.setStorageId(t.getStorageId());
 				replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
 				deleteTriplet(session, t.getBlockId(), t.getIndex());
@@ -840,7 +842,7 @@ public class BlocksHelper {
                             {				
                                     TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
                                     replacementEntry.setBlockId(t.getBlockId());
-                                    replacementEntry.setDatanodeName(t.getDatanodeName());
+                                    //replacementEntry.setDatanodeName(t.getDatanodeName());
                                     replacementEntry.setStorageId(t.getStorageId());
                                     replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
                                     deleteTriplet(session, t.getBlockId(), t.getIndex());
@@ -954,18 +956,20 @@ public class BlocksHelper {
       //			}
 
       TripletsTable record = results.get(0);
-
+      record.getIndex();
+      
       // check if the dn addresses have changed
-      if (node.getName().trim().compareTo(record.getDatanodeName().trim()) == 0) {
-        return record.getIndex();
-      } else {
-        updateDatanodeNameInTriplets(session, blockId, record.getIndex(), node.getName(), isTransactional);
-        return results.get(0).getIndex(); //FIXME: this should only return a datanode which is connected to this NN
-      }
+//      if (node.getName().trim().compareTo(record.getDatanodeName().trim()) == 0) {
+//        return record.getIndex();
+//      } else {
+//        updateDatanodeNameInTriplets(session, blockId, record.getIndex(), node.getName(), isTransactional);
+//        return results.get(0).getIndex(); //FIXME: this should only return a datanode which is connected to this NN
+//      }
     }
     return -1;
   }
 
+         /*
   private static void updateDatanodeNameInTriplets(Session session, long blockId, int index, String dnName, boolean isTransactional) {
     TripletsTable triplet = selectTriplet(session, blockId, index);
 
@@ -996,7 +1000,7 @@ public class BlocksHelper {
       }
     }
   }
-
+*/
 	/*
 	 * Find the number of datanodes to which a block of blockId belongs to.
 	 * 
@@ -1016,8 +1020,9 @@ public class BlocksHelper {
 			// Sort by index, so the highest index is last.
 			for (TripletsTable t: results)
 			{
-				if (t.getDatanodeName() != null) //FIXME: [thesis] this should be dnManager.getDatanodeByName(t.getDatanodeName()) != null
-				{
+				//if (t.getDatanodeName() != null) //FIXME: [thesis] this should be dnManager.getDatanodeByName(t.getDatanodeName()) != null
+				if (t.getStorageId() !=null) //FIXME: [thesis] this should be dnManager.getDatanodeByName(t.getDatanodeName()) != null{
+                                                                                                {
 					count++;
 				}
 			}
@@ -1030,12 +1035,27 @@ public class BlocksHelper {
 	 * 
 	 * This is used by DatanodeDescriptor.BlockIterator
 	 */
-	public static List<BlockInfo> getBlockListForDatanode (String dataNodeName) throws IOException
+                        
+	public static List<BlockInfo> getBlockListForDatanode (String storageId) throws IOException
 	{
 		List<BlockInfo> ret = new ArrayList<BlockInfo>();
 		Session session = DBConnector.obtainSession();
 
-		List<TripletsTable> tripletsForDatanode = getTripletsListUsingFieldInternal("datanodeName", dataNodeName, session);
+		List<TripletsTable> tripletsForDatanode = getTripletsListUsingFieldInternal("storageId", storageId, session);
+		for (TripletsTable t: tripletsForDatanode)
+		{
+			ret.add(getBlockInfo(session, t.getBlockId(), false));
+		}
+		return ret;
+	}
+                        
+                        @Deprecated // Use above method as it searches via storageId instead of datanode name
+	public static List<BlockInfo> getBlockListForDatanodeOld (String datanodeName) throws IOException
+	{
+		List<BlockInfo> ret = new ArrayList<BlockInfo>();
+		Session session = DBConnector.obtainSession();
+
+		List<TripletsTable> tripletsForDatanode = getTripletsListUsingFieldInternal("datanodeName", datanodeName, session);
 		for (TripletsTable t: tripletsForDatanode)
 		{
 			ret.add(getBlockInfo(session, t.getBlockId(), false));
@@ -1283,7 +1303,7 @@ public class BlocksHelper {
 		TripletsTable tt = session.newInstance(TripletsTable.class);
 		tt.setBlockId(blkid);
 		tt.setIndex(index);
-		tt.setDatanodeName(datanodeName);
+		//tt.setDatanodeName(datanodeName);
                 tt.setStorageId(storageId);
 		insertTriplet(session, tt, update);
 	}
@@ -1384,6 +1404,8 @@ public class BlocksHelper {
 	 * @param blockId
 	 * @return a list of ip:port pairs if they exist in NDB, and null otherwise
 	 */
+        // Not required any more
+                        /*
 	public static List<String> getDatanodeAddr(long blockId) {
 		int tries = RETRY_COUNT;
 		boolean done = false;
@@ -1408,7 +1430,7 @@ public class BlocksHelper {
 		}
 		return null;
 	}
-
+                      */
 	
 	/** Return total blocks in BlockInfo table
 	 * @param isTransactional - If its already part of a transaction (true) or not (false)
@@ -1624,13 +1646,13 @@ public class BlocksHelper {
   }
 
 
-
+/*
   private static void updateDatanodeNameInTripletsInternal(Session session, TripletsTable record, String dnName)
   {
     record.setDatanodeName(dnName);
     session.updatePersistent(record);
   }
-  
+  */
   /** When called with single=false, will not retrieve the INodes for the Block */
   private static BlockInfo convert(BlockInfoTable bit) throws IOException {
     if(bit == null)

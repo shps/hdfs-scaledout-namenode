@@ -670,73 +670,75 @@ public class BlockManager {
 
   /** @return a LocatedBlock for the given block */
   //private LocatedBlock createLocatedBlockWriteNN(final BlockInfo blk, final long pos
-  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos
-	      ) throws IOException { 
-	    if (blk instanceof BlockInfoUnderConstruction) {
-	      if (blk.isComplete()) {
-	        throw new IOException(
-	            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
-	            + ", blk=" + blk);
-	      }
-	      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
-	      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
-	      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-	      return new LocatedBlock(eb, locations, pos, false);
-	    }
+  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos) throws IOException {
+    if (blk instanceof BlockInfoUnderConstruction) {
+      if (blk.isComplete()) {
+        throw new IOException(
+                "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
+                + ", blk=" + blk);
+      }
+      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction) blk;
+      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+      return new LocatedBlock(eb, locations, pos, false);
+    }
 
 
-                            /*
-	    final int numNodes = blocksMap.numNodes(blk); //TODO: [W] should be reimplemented using s.load()
-	    final boolean isCorrupt = numCorruptNodes == numNodes;
-	    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
-	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
-	    if (numMachines > 0) {
-	      int j = 0;
-	      for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk); //TODO: [W] should be reimplemented
-	          it.hasNext();) {
-	        final DatanodeDescriptor d = it.next();
-	        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-	        if (isCorrupt || (!isCorrupt && !replicaCorrupt))
-	          machines[j++] = d;
-	      }
-	    }
-                            */
-                          /**
-                           * 1. Get all datanodes for the block (not just the count)
-                           * 2. Iterate via 'for-each' and not using iterator-impl
-                           * 3. In each iteration check if the block is corrupted or not
-                           * 4. return (uncorrupted) datanodes
-                           */
-                          // get block locations  
-                          NumberReplicas replicas = countNodes(blk);                                                                          // Only here we take a round trip
-                          final int numCorruptNodes = replicas.corruptReplicas();
-                          final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);       // [FIXME] For the reader namenode, this will be returning empty. Need to persist to ndb
-                          if (numCorruptNodes != numCorruptReplicas) {
-                            LOG.warn("Inconsistent number of corrupt replicas for "
-                                     + blk + " blockMap has " + numCorruptNodes
-                                     + " but corrupt replicas map has " + numCorruptReplicas);
-                          }
-                          // Get all datanodes for the block
-                          final DatanodeDescriptor[] dnd = replicas.getLiveReplicas();
-                          // Get the count
-                          final int numNodes = dnd.length;
-                          // Check for corrupt replicas
-                          final boolean isCorrupt = numCorruptNodes == numNodes;
-                          // Filter datanodes from corrupt replicas
-                          final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
-                          final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
-                          if (numMachines > 0) {
-                            int j = 0;
-                            for (int dndIndex = 0; dndIndex < dnd.length; dndIndex++) {
-                              final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, dnd[dndIndex]);
-                              if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
-                                machines[j++] = dnd[dndIndex];
-                              }
-                            }
-                          }
-    	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-	    return new LocatedBlock(eb, machines, pos, isCorrupt);
-	  }
+//    final int numNodes = blocksMap.numNodes(blk); //TODO: [W] should be reimplemented using s.load()
+//    final boolean isCorrupt = numCorruptNodes == numNodes;
+//    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
+//    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+//    if (numMachines > 0) {
+//    int j = 0;
+//    for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk); //TODO: [W] should be reimplemented
+//    it.hasNext();) {
+//    final DatanodeDescriptor d = it.next();
+//    final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
+//    if (isCorrupt || (!isCorrupt && !replicaCorrupt))
+//    machines[j++] = d;
+//    }
+//    }
+     
+    /**
+     * 1. Get all datanodes for the block (not just the count)
+     * 2. Iterate via 'for-each' and not using iterator-impl
+     * 3. In each iteration check if the block is corrupted or not
+     * 4. return (uncorrupted) datanodes
+     */
+    // get block locations  
+    NumberReplicas replicas = countNodes(blk);                          // Only here we take a round trip   // Problem here, we need DatanodeManager to get ipcPort of the Datanode otherwise some test cases like TestInterDatanodeProtocol will fail
+    final int numCorruptNodes = replicas.corruptReplicas();
+    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);       // [FIXME] For the reader namenode, this will be returning empty. Need to persist to ndb
+    if (numCorruptNodes != numCorruptReplicas) {
+      LOG.warn("Inconsistent number of corrupt replicas for "
+               + blk + " blockMap has " + numCorruptNodes
+               + " but corrupt replicas map has " + numCorruptReplicas);
+    }
+    // Get all datanodes for the block
+    final DatanodeDescriptor[] dnd = replicas.getLiveReplicas();
+    // Get the count
+    final int numNodes = dnd.length;
+    // Check for corrupt replicas
+    final boolean isCorrupt = numCorruptNodes == numNodes;
+    // Filter datanodes from corrupt replicas
+    final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
+    System.out.print("num-corruptNodes: "+numCorruptNodes+", numCorruptReplicas: "+numCorruptReplicas+", liveDNs: "+numNodes+", isCorrupt: "+isCorrupt+", numMachines-required: "+numMachines);
+    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+    if (numMachines > 0) {
+      int j = 0;
+      for (int dndIndex = 0; dndIndex < dnd.length; dndIndex++) {
+        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, dnd[dndIndex]);
+        if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
+          machines[j++] = dnd[dndIndex];
+        }
+      }
+    }
+    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+    if(namesystem.isWritingNN())
+      return new LocatedBlock(eb, machines, pos, isCorrupt);
+    else
+      return new LocatedBlock(eb, machines, pos, false);
+  }
 
   /** @return a LocatedBlock for the given block */
   /*
@@ -1746,7 +1748,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
-    List<BlockInfo> existingBlocks = BlocksHelper.getBlockListForDatanode(dn.name);
+    //List<BlockInfo> existingBlocks = BlocksHelper.getBlockListForDatanode(dn.name); // Changed by Jude to find blocks via storageID
+    List<BlockInfo> existingBlocks = BlocksHelper.getBlockListForDatanode(dn.getStorageID()); 
 
     while(itBR.hasNext()) {
       Block iblk = itBR.next();

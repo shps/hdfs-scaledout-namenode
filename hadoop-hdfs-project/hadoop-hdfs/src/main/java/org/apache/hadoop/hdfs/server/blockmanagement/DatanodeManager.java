@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
@@ -215,15 +216,18 @@ public class DatanodeManager {
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) { //TODO: KTHFS needs this!
     return host2DatanodeMap.getDatanodeByHost(host);
+    //return DatanodeHelper.getDatanodeDescriptorByHostname(host);
   }
   
   public DatanodeDescriptor getDatanodeByName(final String hostName) { //TODO: KTHFS needs this!
-	  return host2DatanodeMap.getDatanodeByName(hostName);
+    //return DatanodeHelper.getDatanodeDescriptorByName(hostName);
+	return host2DatanodeMap.getDatanodeByName(hostName);
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
   public DatanodeDescriptor getDatanode(final String storageID) {
     return datanodeMap.get(storageID);
+    // return DatanodeHelper.getDatanodeDescriptorByStorageId(storageID);
   }
 
   /**
@@ -274,6 +278,7 @@ public class DatanodeManager {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
     namesystem.checkSafeMode();
+    DatanodeHelper.removeDatanode(nodeInfo.getStorageID(), isTransactional);
   }
 
   /**
@@ -515,6 +520,7 @@ public class DatanodeManager {
           node.numBlocks() +  " blocks.");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
+      DatanodeHelper.updateDatanodeInfo(node, false);
       
       // all the blocks that reside on this node have to be replicated.
       checkDecommissionState(node);
@@ -527,6 +533,8 @@ public class DatanodeManager {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
       blockManager.processOverReplicatedBlocksOnReCommission(node);
+      
+      DatanodeHelper.updateDatanodeInfo(node, false);
     }
   }
 
@@ -629,6 +637,9 @@ public class DatanodeManager {
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
       checkDecommissioning(nodeS, dnAddress);
+      
+      // [KTHFS] Update this in database
+      DatanodeHelper.updateDatanodeInfo(nodeN, false);
       return;
     } 
 
@@ -654,6 +665,9 @@ public class DatanodeManager {
     // no need to update its timestamp
     // because its is done when the descriptor is created
     heartbeatManager.addDatanode(nodeDescr);
+    
+    // [KTHFS] Update this in database
+    DatanodeHelper.registerDatanode(nodeDescr, false);
   }
 
   /**
