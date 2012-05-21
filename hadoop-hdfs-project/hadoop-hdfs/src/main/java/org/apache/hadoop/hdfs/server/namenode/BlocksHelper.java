@@ -656,7 +656,7 @@ public class BlocksHelper {
 
 	private static DatanodeDescriptor[] getDataNodesFromBlockInternal (long blockId, Session session){
 		List<TripletsTable> result = selectTriplet(session, blockId);
-		DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
+                                                DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
 		int i = 0;
 		for (TripletsTable t: result){
                                                                         //int ipcPort = Integer.parseInt(t.getDatanodeName().substring(t.getDatanodeName().indexOf(":")+1));
@@ -945,9 +945,11 @@ public class BlocksHelper {
 		return -1;
 	}
 	 public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId, boolean isTransactional) {
+           
     Session session = DBConnector.obtainSession();
     //List<TripletsTable> results = selectTriplets(node.name, blockId, session);
     List<TripletsTable> results = selectTripletsByStorageId(node.getStorageID(), blockId, session);
+    
     if (results != null && results.size() > 0) {
       Collections.sort(results, new TripletsTableComparator());
       //			for(int i=0; i<results.size(); i++) {
@@ -956,7 +958,7 @@ public class BlocksHelper {
       //			}
 
       TripletsTable record = results.get(0);
-      record.getIndex();
+      return record.getIndex();
       
       // check if the dn addresses have changed
 //      if (node.getName().trim().compareTo(record.getDatanodeName().trim()) == 0) {

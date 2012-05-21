@@ -151,10 +151,7 @@ public class DatanodeHelper {
   private static DatanodeInfoTable getDatanodeInternal(String storageId)
   {
     Session session = DBConnector.obtainSession();
-    DatanodeInfoTable dn = session.newInstance(DatanodeInfoTable.class);
-    dn.setStorageId(storageId);
-    dn = session.load(dn);
-    return dn;
+    return session.find(DatanodeInfoTable.class, storageId);
   }
   
   /*
@@ -163,7 +160,6 @@ public class DatanodeHelper {
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public static DatanodeDescriptor getDatanodeDescriptorByStorageId(String storageId)
   {
-    Session session = DBConnector.obtainSession();
     DatanodeInfoTable dn = getDatanodeInternal(storageId);
     return convertToHDFSDatanod(dn);
   }

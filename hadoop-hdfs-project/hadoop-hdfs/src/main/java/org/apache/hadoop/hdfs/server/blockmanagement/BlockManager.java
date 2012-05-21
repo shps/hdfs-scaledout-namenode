@@ -722,7 +722,6 @@ public class BlockManager {
     final boolean isCorrupt = numCorruptNodes == numNodes;
     // Filter datanodes from corrupt replicas
     final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
-    System.out.print("num-corruptNodes: "+numCorruptNodes+", numCorruptReplicas: "+numCorruptReplicas+", liveDNs: "+numNodes+", isCorrupt: "+isCorrupt+", numMachines-required: "+numMachines);
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
     if (numMachines > 0) {
       int j = 0;
@@ -2010,7 +2009,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
 
     // Now check for completion of blocks and safe block count
-    NumberReplicas num = countNodes(storedBlock);
+      NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
     int numCurrentReplica = numLiveReplicas + curReplicaDelta//[thesis] confirm this value!
       + pendingReplications.getNumReplicas(storedBlock);

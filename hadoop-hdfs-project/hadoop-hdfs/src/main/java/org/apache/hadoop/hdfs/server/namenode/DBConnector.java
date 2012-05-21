@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import se.sics.clusterj.DatanodeInfoTable;
 import se.sics.clusterj.BlockTotalTable;
 import com.mysql.clusterj.ClusterJException;
 import se.sics.clusterj.BlockInfoTable;
@@ -152,6 +153,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             session.deletePersistentAll(DelegationKeyTable.class);
             BlocksHelper.resetTotalBlocks(true);
             session.deletePersistentAll(ReplicaUcTable.class);
+            session.deletePersistentAll(DatanodeInfoTable.class);
             tx.commit();
             session.flush();
             return true;
