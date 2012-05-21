@@ -1877,9 +1877,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Allocate a new block and record it in the INode. 
     /*writeLock();
     try {*/
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot add block to " + src, safeMode);
-      }
+//      if (isInSafeMode()) {
+//        throw new SafeModeException("Cannot add block to " + src, safeMode);
+//      }
       INode[] pathINodes = dir.getExistingPathINodes(src);
       //[Hooman]: These checkings are not necessary when doing all in one writelock and one transaction.
       /*int inodesLen = pathINodes.length;
@@ -1887,9 +1887,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFileUnderConstruction pendingFile  = (INodeFileUnderConstruction) 
                                                 pathINodes[inodesLen - 1];*/ 
                                                            
-      if (!checkFileProgress(pendingFile, false)) {
-        throw new NotReplicatedYetException("Not replicated yet:" + src);
-      }
+      //[Hooman]: -1 selectUsingIndex
+//      if (!checkFileProgress(pendingFile, false)) {
+//        throw new NotReplicatedYetException("Not replicated yet:" + src);
+//      }
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pathINodes, targets, isTransactional);
