@@ -64,7 +64,8 @@ public class TestNodeCount extends TestCase {
       final Path FILE_PATH = new Path("/testfile");
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
+      //ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, FILE_PATH); // [1] This is a bug in this test case:  cannot be cast to Comparable
+      Block block = DFSTestUtil.getFirstBlock(fs, FILE_PATH).getLocalBlock();
 
       // keep a copy of all datanode descriptor
       final DatanodeDescriptor[] datanodes = hm.getDatanodes();
@@ -97,13 +98,14 @@ public class TestNodeCount extends TestCase {
       
       // check if excessive replica is detected (transient)
       initializeTimeout(TIMEOUT);
-      while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() == 0) {
+      //while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() == 0) {
+      while (countNodes(block, namesystem).excessReplicas() == 0) { // Modification in changes to the bug [1]
         checkTimeout("excess replicas not detected");
       }
       
       // find out a non-excess node
-      final Iterator<DatanodeDescriptor> iter = bm.blocksMap
-          .nodeIterator(block.getLocalBlock());
+      //final Iterator<DatanodeDescriptor> iter = bm.blocksMap.nodeIterator(block.getLocalBlock());
+      final Iterator<DatanodeDescriptor> iter = bm.blocksMap.nodeIterator(block); // Modification in changes to the bug [1]
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
@@ -131,7 +133,8 @@ public class TestNodeCount extends TestCase {
 
       // The block should be replicated
       initializeTimeout(TIMEOUT);
-      while (countNodes(block.getLocalBlock(), namesystem).liveReplicas() != REPLICATION_FACTOR) {
+      //while (countNodes(block.getLocalBlock(), namesystem).liveReplicas() != REPLICATION_FACTOR) { // Modification in changes to the bug [1]
+      while (countNodes(block, namesystem).liveReplicas() != REPLICATION_FACTOR) { 
         checkTimeout("live replica count not correct", 1000);
       }
 
@@ -141,7 +144,8 @@ public class TestNodeCount extends TestCase {
 
       // check if excessive replica is detected (transient)
       initializeTimeout(TIMEOUT);
-      while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() != 2) {
+      //while (countNodes(block.getLocalBlock(), namesystem).excessReplicas() != 2) { // Modification in changes to the bug [1]
+      while (countNodes(block, namesystem).excessReplicas() != 2) {
         checkTimeout("excess replica count not equal to 2");
       }
 

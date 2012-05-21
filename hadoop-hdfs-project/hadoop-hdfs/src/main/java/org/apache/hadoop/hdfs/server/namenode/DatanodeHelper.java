@@ -123,26 +123,34 @@ public class DatanodeHelper {
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public static void updateDatanodeInfo(DatanodeDescriptor datanode, boolean isTransactional) throws IOException
   {
-    Session session = DBConnector.obtainSession();
-    DBConnector.checkTransactionState(isTransactional);
     
     DatanodeInfoTable dn = getDatanodeInternal(datanode.getStorageID());
-    
-    dn.setHostname(datanode.getHostName());
-    dn.setInfoPort(datanode.getInfoPort());
-    dn.setIpcPort(datanode.getIpcPort());
-    dn.setLocalPort(datanode.getPort());
-    dn.setLocation(datanode.getNetworkLocation());
-    dn.setStatus(datanode.getAdminState().ordinal());
-    dn.setHost(datanode.getHost());
-    
-    if(isTransactional)
+    if(dn == null)
     {
-      updateDatanodeInfoInternal(session, dn);
+      // This means that this is a datanode that was stopped / crashed and now is restarted
+      registerDatanode(datanode, isTransactional);
     }
     else
     {
-      updateDatanodeWithTransaction(session, dn);
+      Session session = DBConnector.obtainSession();
+      DBConnector.checkTransactionState(isTransactional);
+
+      dn.setHostname(datanode.getHostName());
+      dn.setInfoPort(datanode.getInfoPort());
+      dn.setIpcPort(datanode.getIpcPort());
+      dn.setLocalPort(datanode.getPort());
+      dn.setLocation(datanode.getNetworkLocation());
+      dn.setStatus(datanode.getAdminState().ordinal());
+      dn.setHost(datanode.getHost());
+
+      if(isTransactional)
+      {
+        updateDatanodeInfoInternal(session, dn);
+      }
+      else
+      {
+        updateDatanodeWithTransaction(session, dn);
+      }
     }
   }
   

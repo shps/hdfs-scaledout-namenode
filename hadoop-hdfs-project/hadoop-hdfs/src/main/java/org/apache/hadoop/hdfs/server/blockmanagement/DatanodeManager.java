@@ -639,7 +639,7 @@ public class DatanodeManager {
       checkDecommissioning(nodeS, dnAddress);
       
       // [KTHFS] Update this in database
-      DatanodeHelper.updateDatanodeInfo(nodeN, false);
+      DatanodeHelper.updateDatanodeInfo(nodeS, false);
       return;
     } 
 
