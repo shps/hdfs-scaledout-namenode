@@ -22,15 +22,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -51,7 +49,8 @@ import org.apache.hadoop.util.ToolRunner;
 public class DataGenerator extends Configured implements Tool {
   private File inDir = StructureGenerator.DEFAULT_STRUCTURE_DIRECTORY;
   private Path root = DEFAULT_ROOT;
-  private FileContext fc;
+  //private FileContext fc;
+  private FileSystem dfs;
   final static private long BLOCK_SIZE = 10;
   final static private String USAGE = "java DataGenerator " +
   		"-inDir <inDir> " +
@@ -81,7 +80,8 @@ public class DataGenerator extends Configured implements Tool {
   /** Parse the command line arguments and initialize the data */
   private int init(String[] args) {
     try { // initialize file system handle
-      fc = FileContext.getFileContext(getConf());
+      //fc = FileContext.getFileContext(getConf());
+      dfs = FileSystem.get(getConf());
     } catch (IOException ioe) {
       System.err.println("Can not initialize the file system: " + 
           ioe.getLocalizedMessage());
@@ -112,7 +112,8 @@ public class DataGenerator extends Configured implements Tool {
             StructureGenerator.DIR_STRUCTURE_FILE_NAME)));
     String line;
     while ((line=in.readLine()) != null) {
-      fc.mkdir(new Path(root+line), FileContext.DEFAULT_PERM, true);
+      //fc.mkdir(new Path(root+line), FileContext.DEFAULT_PERM, true);
+      dfs.mkdirs(new Path(root+line), FileContext.DEFAULT_PERM);
     }
   }
 
@@ -140,10 +141,11 @@ public class DataGenerator extends Configured implements Tool {
    * a length of <code>fileSize</code>. The file is filled with character 'a'.
    */
   private void genFile(Path file, long fileSize) throws IOException {
-    FSDataOutputStream out = fc.create(file,
-        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-        CreateOpts.createParent(), CreateOpts.bufferSize(4096),
-        CreateOpts.repFac((short) 3));
+//    FSDataOutputStream out = fc.create(file,
+//        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
+//        CreateOpts.createParent(), CreateOpts.bufferSize(4096),
+//        CreateOpts.repFac((short) 3));
+    FSDataOutputStream out = dfs.create(file, true, 4096);
     for(long i=0; i<fileSize; i++) {
       out.writeByte('a');
     }
