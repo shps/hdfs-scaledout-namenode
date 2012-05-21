@@ -12,7 +12,7 @@ public class LeasePathMetrics {
   private AtomicLong selectUsingIndex;
   private AtomicLong delete;
   private AtomicLong insert;
-
+  
   public LeasePathMetrics() {
     this.selectUsingIndex = new AtomicLong();
     this.selectAll = new AtomicLong();

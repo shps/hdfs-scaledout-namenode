@@ -10,7 +10,7 @@ public class BlockTotalMetrics{
 
   private AtomicLong select;
   private AtomicLong update;
-
+  
   public BlockTotalMetrics() {
     select = new AtomicLong();
     update = new AtomicLong();

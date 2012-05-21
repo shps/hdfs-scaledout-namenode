@@ -38,7 +38,7 @@ import org.junit.Test;
 public class TestPrintMetrics {
 
   private static final int BLOCK_SIZE = 1024;
-  private static final int FILE_SIZE = 2 * BLOCK_SIZE;
+  private static final int FILE_SIZE = 1 * BLOCK_SIZE;
   private final byte[] rawData = new byte[FILE_SIZE];
 
   {
@@ -102,7 +102,7 @@ public class TestPrintMetrics {
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
     DBConnector.setConfiguration(conf);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());
     return cluster;

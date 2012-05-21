@@ -14,7 +14,7 @@ public class SecretMetrics {
   private AtomicLong delete;
   private AtomicLong update;
   private AtomicLong insert;
-
+  
   public SecretMetrics() {
     this.selectUsingIndex = new AtomicLong();
     this.selectUsingPKey = new AtomicLong();
