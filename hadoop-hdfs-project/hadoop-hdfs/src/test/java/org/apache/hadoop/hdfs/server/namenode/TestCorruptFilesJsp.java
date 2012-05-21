@@ -56,7 +56,7 @@ public class TestCorruptFilesJsp  {
       // datanode sends block reports
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
       cluster = new MiniDFSCluster.Builder(conf).build();
-      cluster.waitActive();
+       cluster.waitActive();
 
       FileSystem fs = cluster.getWritingFileSystem();
 

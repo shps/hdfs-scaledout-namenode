@@ -706,7 +706,9 @@ public class BlockManager {
      * 4. return (uncorrupted) datanodes
      */
     // get block locations  
-    NumberReplicas replicas = countNodes(blk);                          // Only here we take a round trip   // Problem here, we need DatanodeManager to get ipcPort of the Datanode otherwise some test cases like TestInterDatanodeProtocol will fail
+    DatanodeDescriptor [] dnd = BlocksHelper.getDataNodesFromBlock(blk.getBlockId());
+    NumberReplicas replicas = countNodes(blk, dnd);                                                                        // Only here we take a round trip
+    
     final int numCorruptNodes = replicas.corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);       // [FIXME] For the reader namenode, this will be returning empty. Need to persist to ndb
     if (numCorruptNodes != numCorruptReplicas) {
@@ -714,18 +716,18 @@ public class BlockManager {
                + blk + " blockMap has " + numCorruptNodes
                + " but corrupt replicas map has " + numCorruptReplicas);
     }
-    // Get all datanodes for the block
-    final DatanodeDescriptor[] dnd = replicas.getLiveReplicas();
-    // Get the count
     final int numNodes = dnd.length;
-    // Check for corrupt replicas
-    final boolean isCorrupt = numCorruptNodes == numNodes;
+    // Check for corrupt replicas                                                                                                                   // [thesis] We don't need to check for replicas because countNodes() given us all this information
     // Filter datanodes from corrupt replicas
+    final boolean isCorrupt = numNodes == numCorruptNodes;
     final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
+    
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
     if (numMachines > 0) {
       int j = 0;
-      for (int dndIndex = 0; dndIndex < dnd.length; dndIndex++) {
+      
+      // Loop through all the datanodes (live and corrupt)
+      for (int dndIndex = 0; dndIndex < numNodes; dndIndex++) {
         final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, dnd[dndIndex]);
         if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
           machines[j++] = dnd[dndIndex];
@@ -2511,8 +2513,43 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                     + " deleted: " + deleted);
         }
     }
-
-    /**
+    
+  /**
+   * Return the number of nodes that are live and decommissioned.
+   */
+  public NumberReplicas countNodes(Block b, DatanodeDescriptor dnDescriptors[]) {
+    int count = 0;
+    int live = 0;
+    int corrupt = 0;
+    int excess = 0;
+    
+    
+    //Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(b);
+    List<DatanodeDescriptor> liveDescriptors = new ArrayList<DatanodeDescriptor>();
+    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
+    //while (nodeIter.hasNext()) {
+    for(int i=0; i < dnDescriptors.length; i++){
+      //DatanodeDescriptor node = nodeIter.next();
+           DatanodeDescriptor node = dnDescriptors[i];
+      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+        corrupt++;
+      } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+        count++;
+      } else {
+        Collection<Block> blocksExcess =
+          excessReplicateMap.get(node.getStorageID());
+        if (blocksExcess != null && blocksExcess.contains(b)) {
+          excess++;
+        } else {
+          live++;
+          liveDescriptors.add(node);
+        }
+      }
+    }
+    return new NumberReplicas(live, count, corrupt, excess, liveDescriptors.toArray(new DatanodeDescriptor[live]));
+  }
+    
+  /**
    * Return the number of nodes that are live and decommissioned.
    */
   public NumberReplicas countNodes(Block b) {

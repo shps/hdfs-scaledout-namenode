@@ -55,6 +55,10 @@ public interface DatanodeInfoTable {
 
   @Column(name = "location")
   String getLocation();
-
   void setLocation(String location);
+  
+    @Column(name = "host")
+    String getHost();
+    void setHost(String host);
+  
 }

@@ -38,6 +38,7 @@ public class DatanodeHelper {
     dn.setLocalPort(datanode.getPort());
     dn.setLocation(datanode.getNetworkLocation());
     dn.setStatus(datanode.getAdminState().ordinal());
+    dn.setHost(datanode.getHost());
     
     if(isTransactional)
     {
@@ -133,6 +134,7 @@ public class DatanodeHelper {
     dn.setLocalPort(datanode.getPort());
     dn.setLocation(datanode.getNetworkLocation());
     dn.setStatus(datanode.getAdminState().ordinal());
+    dn.setHost(datanode.getHost());
     
     if(isTransactional)
     {
@@ -210,7 +212,7 @@ public class DatanodeHelper {
       datanode.startDecommission();
     }
     // Will also set the local port
-     datanode.setName(dn.getHostname()+":"+dn.getLocalPort());
+     datanode.setName(dn.getHost()+":"+dn.getLocalPort());
      return datanode;
   }
   ///////////////////////////////////////////////////////////////////// 

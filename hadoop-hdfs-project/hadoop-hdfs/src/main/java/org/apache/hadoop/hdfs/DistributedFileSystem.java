@@ -309,7 +309,6 @@ public class DistributedFileSystem extends FileSystem {
     statistics.incrementReadOps(1);
     //return new DFSClient.DFSDataInputStream(
     //        dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
-    System.err.println("Open - getblocklocations");
     return new DFSClient.DFSDataInputStream(
             nnSelector.getNextReaderNameNode().open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }

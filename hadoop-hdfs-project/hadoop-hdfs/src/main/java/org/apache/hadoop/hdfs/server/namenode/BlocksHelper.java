@@ -661,8 +661,10 @@ public class BlocksHelper {
 		for (TripletsTable t: result){
                                                                         //int ipcPort = Integer.parseInt(t.getDatanodeName().substring(t.getDatanodeName().indexOf(":")+1));
 			//DatanodeID dn = new DatanodeID(t.getDatanodeName(), t.getStorageId(), -1, ipcPort);
-                                                                        DatanodeID dn = DatanodeHelper.getDatanodeDescriptorByStorageId(t.getStorageId());
-			nodeDescriptor[i] = new DatanodeDescriptor(dn);
+                                                                        //nodeDescriptor[i] = new DatanodeDescriptor(dn);
+                                                                        DatanodeDescriptor dn = DatanodeHelper.getDatanodeDescriptorByStorageId(t.getStorageId());
+			//nodeDescriptor[i] = new DatanodeDescriptor(dn);
+                                                                        nodeDescriptor[i] = dn;
 			i++;
 		}
 		return nodeDescriptor;
