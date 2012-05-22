@@ -326,7 +326,7 @@ public class TestBlockManager {
 
   private BlockInfo blockOnNodes(long blkId, List<DatanodeDescriptor> nodes) {
     Block block = new Block(blkId);
-    BlockInfo blockInfo = new BlockInfo(block, 3);
+    BlockInfo blockInfo = new BlockInfo(block);
 
     for (DatanodeDescriptor dn : nodes) {
             
@@ -358,7 +358,7 @@ public class TestBlockManager {
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
 
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    bm.blocksMap.addINode(blockInfo, iNode, false);
+//    bm.addINode(blockInfo, iNode, false);
     return blockInfo;
   }
   

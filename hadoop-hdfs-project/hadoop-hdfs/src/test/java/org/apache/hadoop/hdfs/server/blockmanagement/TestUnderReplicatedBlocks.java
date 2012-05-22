@@ -45,10 +45,10 @@ public class TestUnderReplicatedBlocks extends TestCase {
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
+      DatanodeDescriptor dn = bm.blocksMap.nodeIterator((BlockInfo)b.getLocalBlock()).next();
       bm.addToInvalidates(b.getLocalBlock(), dn);
       // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      bm.blocksMap.removeNode(b.getLocalBlock(), dn, false);
+      bm.removeNode(b.getLocalBlock(), dn, false);
       
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

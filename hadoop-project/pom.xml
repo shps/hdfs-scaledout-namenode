@@ -612,7 +612,7 @@
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--> <exclude>**/TestFsLimits.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeBlockScanner</exclude>
+			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
 			<!-- TODO--><exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
 			<!-- TODO--><exclude>**/TestResolveHdfsSymlink.java</exclude>
 			<!-- TODO--><exclude>**/TestFcHdfsSymlink.java</exclude>

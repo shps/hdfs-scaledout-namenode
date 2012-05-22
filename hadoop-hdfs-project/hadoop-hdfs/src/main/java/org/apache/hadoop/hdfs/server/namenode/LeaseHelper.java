@@ -27,7 +27,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 
 /** This is a helper class for manipulating the Leases stored in DB. 
- *  All methods ending with "Internal" in this class must be wrapped with tx.begin() and tx.commit(). 
+ *  All methods ending with "Internal" in this class must be wrapped with DBConnector.beginTransaction() and DBConnector.commit(). 
  *  This gives us an opportunity to pack multiple operations in a single transaction to reduce round-trips
  * 
  *  @author wmalik
@@ -189,10 +189,10 @@ public class LeaseHelper {
 
 		while(done == false && tries > 0) {
 			try {	
-				tx.begin();
+				DBConnector.beginTransaction();
 				LeaseHelper.insertLeaseInternal(session, holder, lastUpd, holderID);
 				LeaseHelper.insertLeasePathsInternal(session, holderID, src);
-				tx.commit();
+				DBConnector.commit();
 				session.flush();
 
 				Lease lease = LeaseHelper.getLease(holder);
@@ -201,7 +201,7 @@ public class LeaseHelper {
 			}
 			catch(ClusterJException e) {
                                 if (tx.isActive())
-                                    tx.rollback();
+                                    DBConnector.safeRollback();
 				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
@@ -242,15 +242,15 @@ public class LeaseHelper {
 
 		while(done == false && tries > 0) {
 			try{	
-				tx.begin();
+				DBConnector.beginTransaction();
 				LeaseHelper.renewLeaseInternal(session, holder);
-				tx.commit();
+				DBConnector.commit();
                                 done = true;
 				session.flush();
 			}
 			catch(ClusterJException e) {
                                 if (tx.isActive())
-                                    tx.rollback();
+                                    DBConnector.safeRollback();
 				LOG.error(e.getMessage(), e);
 				tries--;
 			}
@@ -300,14 +300,14 @@ public class LeaseHelper {
 		Transaction tx = session.currentTransaction();
 		while(done == false && tries > 0) {
 			try{
-				tx.begin();
+				DBConnector.beginTransaction();
 				insertLeasePathsInternal(session, holderID, src);
 				done = true;
-				tx.commit();
+				DBConnector.commit();
 			}
 			catch(ClusterJException e) {
 				if(tx.isActive())
-					tx.rollback();
+					DBConnector.safeRollback();
 				//LeaseHelper.LOG.error("ClusterJException in addPathToLease: " + e.getMessage());
 				e.printStackTrace();
 				tries--;
@@ -355,11 +355,11 @@ public class LeaseHelper {
 
 		while(done == false && tries > 0) {
 			try{	
-				tx.begin();
+				DBConnector.beginTransaction();
 				LeaseHelper.renewLeaseInternal(session, holder);
 				LeaseHelper.insertLeasePathsInternal(session, holderID, src);
 				done = true;
-				tx.commit();
+				DBConnector.commit();
 				session.flush();
 				//fetching a fresh Lease object from the database which reflects the new changes
 				Lease lease = getLease(holder);
@@ -368,7 +368,7 @@ public class LeaseHelper {
 			}
 			catch(ClusterJException e) {
                                 if (tx.isActive()) //[Hooman]: This is necessary to be checked, because some exceptions close the transaction.
-                                    tx.rollback();
+                                    DBConnector.safeRollback();
 				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
@@ -400,14 +400,14 @@ public class LeaseHelper {
 			boolean done = false;
 			while(done == false && tries > 0) {
 				try{
-					tx.begin();
+					DBConnector.beginTransaction();
 					deleteLeasePathsInternal(session, holderID, oldpath);
 					insertLeasePathsInternal(session, holderID, newpath);
 					done = true;
-					tx.commit();
+					DBConnector.commit();
 				}
 				catch(ClusterJException e) {
-					tx.rollback();
+					DBConnector.safeRollback();
 					LeaseHelper.LOG.error("ClusterJException in replacePath: " + e.getMessage());
 					tries--;
 				}
@@ -454,16 +454,16 @@ public class LeaseHelper {
 
 		while(done == false && tries > 0) {
 			try{
-				tx.begin();
+				DBConnector.beginTransaction();
 				found = deleteLeasePathsInternal(session, holderID, src);
 				done = true;
-				tx.commit();
+				DBConnector.commit();
                                 session.flush();
 				return found;
 			}
 			catch(ClusterJException e) {
 				LOG.error(e.getMessage(), e);
-                                tx.rollback();
+                                DBConnector.safeRollback();
 				tries--;
 			}
 		}
@@ -601,15 +601,15 @@ public class LeaseHelper {
 		
 		while(done == false && tries > 0) {
 			try {
-			tx.begin();
+			DBConnector.beginTransaction();
 			deleteLeaseInternal(session, holder);
 			done = true;
-			tx.commit();
+			DBConnector.commit();
                         session.flush();
 			} catch(ClusterJException e) {
                             LOG.error("ClusterJException in deleteLease: " + e.getMessage());
                             if (tx.isActive())
-                                tx.rollback();
+                                DBConnector.safeRollback();
                             tries--;
 			}
 		}
@@ -629,7 +629,7 @@ public class LeaseHelper {
 
 	/**
 	 * This method inserts a record (or updates if holder is already present) in the Lease table. 
-	 * The call to this method should be wrapped in  tx.begin() and tx.commit() calls.
+	 * The call to this method should be wrapped in  DBConnector.beginTransaction() and DBConnector.commit() calls.
 	 * 
 	 * @param holder
 	 * @param lastUpdated
@@ -645,7 +645,7 @@ public class LeaseHelper {
 
 	/**
 	 * This method inserts a record in the Lease table. The call to this method should be wrapped in
-	 * tx.begin() and tx.commit calls
+	 * DBConnector.beginTransaction() and DBConnector.commit calls
 	 * @param session
 	 * @param holderID
 	 * @param path

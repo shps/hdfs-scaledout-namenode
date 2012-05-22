@@ -299,40 +299,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Iterates over the list of blocks belonging to the datanode.
-   */
-   public static class BlockIterator implements Iterator<BlockInfo> {
-    private List<BlockInfo> list;
-    private DatanodeDescriptor node;
-    private int iteratorIndex;
-      
-    BlockIterator(List<BlockInfo> l, DatanodeDescriptor dn) {
-      this.list = l;
-      this.node = dn;
-      this.iteratorIndex = 0;
-    }
-
-    public boolean hasNext() {
-      return iteratorIndex != list.size();
-    }
-
-    public BlockInfo next() {
-      BlockInfo res = list.get(iteratorIndex);
-      iteratorIndex++;
-      return res;
-    }
-
-    public void remove()  {
-      throw new UnsupportedOperationException("Sorry. can't remove.");
-    }
-  }
-
-  public Iterator<BlockInfo> getBlockIterator() throws IOException {
-    List<BlockInfo> listOfBlocks = BlocksHelper.getBlockListForDatanode(this.name); 
-	return new BlockIterator(listOfBlocks, this);
-  }
-  
-  /**
    * Store block replication work.
    */
   void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {

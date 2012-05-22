@@ -151,10 +151,9 @@ public class FSEditLogLoader {
             for (int i = 0; i < addCloseOp.blocks.length; i++) {
               if(addCloseOp.opCode == FSEditLogOpCodes.OP_ADD
                  && i == addCloseOp.blocks.length-1) {
-                blocks[i] = new BlockInfoUnderConstruction(addCloseOp.blocks[i],
-                                                           replication);
+                blocks[i] = new BlockInfoUnderConstruction(addCloseOp.blocks[i]);
               } else {
-                blocks[i] = new BlockInfo(addCloseOp.blocks[i], replication);
+                blocks[i] = new BlockInfo(addCloseOp.blocks[i]);
               }
             }
 
@@ -206,11 +205,11 @@ public class FSEditLogLoader {
                                         node.getReplication(),
                                         node.getModificationTime(),
                                         node.getPreferredBlockSize(),
-                                        node.getBlocks(),
                                         node.getPermissionStatus(),
                                         addCloseOp.clientName,
                                         addCloseOp.clientMachine,
                                         null);
+              cons.setBlocks(node.getBlocks());
               //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
               fsDir.replaceNode(addCloseOp.path, node, cons, false);
               //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.

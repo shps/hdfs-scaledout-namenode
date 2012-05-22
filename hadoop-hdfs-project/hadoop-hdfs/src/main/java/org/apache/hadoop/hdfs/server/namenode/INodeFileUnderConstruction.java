@@ -41,7 +41,7 @@ public class INodeFileUnderConstruction extends INodeFile {
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(permissions.applyUMask(UMASK), 0, replication, modTime, modTime,
+    super(permissions.applyUMask(UMASK), replication, modTime, modTime,
         preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
@@ -52,12 +52,11 @@ public class INodeFileUnderConstruction extends INodeFile {
                              short blockReplication,
                              long modificationTime,
                              long preferredBlockSize,
-                             BlockInfo[] blocks,
                              PermissionStatus perm,
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(perm, blocks, blockReplication, modificationTime, modificationTime,
+    super(perm, blockReplication, modificationTime, modificationTime,
           preferredBlockSize);
     setLocalName(name);
     this.clientName = clientName;
@@ -95,7 +94,6 @@ public class INodeFileUnderConstruction extends INodeFile {
   //
   INodeFile convertToInodeFile() throws IOException {
     INodeFile obj = new INodeFile(getPermissionStatus(),
-                                  getBlocks(),
                                   getReplication(),
                                   getModificationTime(),
                                   getModificationTime(),
@@ -103,6 +101,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     obj.setID(getID()); //for simple
     obj.setLocalName(getLocalName()); //for simple
     obj.setParentIDLocal(getParentIDLocal()); //for simple
+    obj.setBlocks(getBlocks());
     return obj;
     
   }
@@ -112,18 +111,15 @@ public class INodeFileUnderConstruction extends INodeFile {
    * the last one on the list.
    */
   void removeLastBlock(Block oldblock) throws IOException {
-    if (blocks == null) {
+    if (getBlocks().isEmpty()) {
       throw new IOException("Trying to delete non-existant block " + oldblock);
     }
-    int size_1 = blocks.length - 1;
-    if (!blocks[size_1].equals(oldblock)) {
+    int size_1 = getBlocks().size() - 1;
+    if (!getBlocks().get(size_1).equals(oldblock)) {
       throw new IOException("Trying to delete non-last block " + oldblock);
     }
-
-    //copy to a new list
-    BlockInfo[] newlist = new BlockInfo[size_1];
-    System.arraycopy(blocks, 0, newlist, 0, size_1);
-    blocks = newlist;
+    
+    getBlocks().remove(size_1);
   }
 
   /**
@@ -133,15 +129,15 @@ public class INodeFileUnderConstruction extends INodeFile {
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
                                           DatanodeDescriptor[] targets, boolean isTransactional)
   throws IOException {
-    if (blocks == null || blocks.length == 0) {
+    if (getBlocks().isEmpty()) {
       throw new IOException("Trying to update non-existant block. " +
           "File is empty.");
     }
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, targets, isTransactional);
-    ucBlock.setINode(this, isTransactional);
-    setBlock(numBlocks()-1, ucBlock, isTransactional);
+    ucBlock.setINode(this);
+    addBlock(ucBlock);
     return ucBlock;
   }
 }

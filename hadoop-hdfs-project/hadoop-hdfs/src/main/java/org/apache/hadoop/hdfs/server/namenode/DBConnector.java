@@ -29,6 +29,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 
 /* 
@@ -105,6 +106,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             Session session = obtainSession();
 //            session.setLockMode(LockMode.SHARED);
             session.currentTransaction().begin();
+            EntityManager.getInstance().begin();
         }
         
         /**
@@ -117,6 +119,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             if (!tx.isActive())
                 throw new ClusterJUserException("The transaction is not began!");
             
+            EntityManager.getInstance().commit();
             tx.commit();
             session.flush();
         }
@@ -130,6 +133,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             Transaction tx = session.currentTransaction();
             if (tx.isActive())
                 tx.rollback();
+            EntityManager.getInstance().rollback();
         }
         
         /**

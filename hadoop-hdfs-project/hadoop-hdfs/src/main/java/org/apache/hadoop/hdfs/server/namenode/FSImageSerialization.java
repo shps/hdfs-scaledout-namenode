@@ -22,6 +22,8 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -90,13 +92,13 @@ public class FSImageSerialization {
     int i = 0;
     for (; i < numBlocks-1; i++) {
       blk.readFields(in);
-      blocks[i] = new BlockInfo(blk, blockReplication);
+      blocks[i] = new BlockInfo(blk);
     }
     // last block is UNDER_CONSTRUCTION
     if(numBlocks > 0) {
       blk.readFields(in);
       blocks[i] = new BlockInfoUnderConstruction(
-        blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
+        blk, BlockUCState.UNDER_CONSTRUCTION, null);
     }
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);
@@ -110,15 +112,22 @@ public class FSImageSerialization {
       locations[i].readFields(in);
     }
 
-    return new INodeFileUnderConstruction(name, 
+    INodeFileUnderConstruction ifuc = new INodeFileUnderConstruction(name, 
                                           blockReplication, 
                                           modificationTime,
                                           preferredBlockSize,
-                                          blocks,
                                           perm,
                                           clientName,
                                           clientMachine,
                                           null);
+    List<BlockInfo> blks = new ArrayList<BlockInfo>();
+    
+    for (BlockInfo block : blocks) {
+      blks.add(block);
+      block.setINode(ifuc);
+    }
+    ifuc.setBlocks(blks);
+    return ifuc;
   }
 
   // Helper function that writes an INodeUnderConstruction
@@ -132,10 +141,10 @@ public class FSImageSerialization {
     out.writeShort(cons.getReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
-    int nrBlocks = cons.getBlocks().length;
+    int nrBlocks = cons.getBlocks().size();
     out.writeInt(nrBlocks);
     for (int i = 0; i < nrBlocks; i++) {
-      cons.getBlocks()[i].write(out);
+      cons.getBlocks().get(i).write(out);
     }
     cons.getPermissionStatus().write(out);
     writeString(cons.getClientName(), out);
@@ -182,8 +191,8 @@ public class FSImageSerialization {
       out.writeLong(fileINode.getModificationTime());
       out.writeLong(fileINode.getAccessTime());
       out.writeLong(fileINode.getPreferredBlockSize());
-      Block[] blocks = fileINode.getBlocks();
-      out.writeInt(blocks.length);
+      List<BlockInfo> blocks = fileINode.getBlocks();
+      out.writeInt(blocks.size());
       for (Block blk : blocks)
         blk.write(out);
       filePerm.fromShort(fileINode.getFsPermissionShort());

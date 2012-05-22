@@ -336,7 +336,7 @@ class FSImageFormat {
         (imgVersion < -9 && numBlocks >= 0)) {
       blocks = new BlockInfo[numBlocks];
       for (int j = 0; j < numBlocks; j++) {
-        blocks[j] = new BlockInfo(replication);
+        blocks[j] = new BlockInfo(null);
         if (-14 < imgVersion) {
           blocks[j].set(in.readLong(), in.readLong(), 
                         GenerationStamp.GRANDFATHER_GENERATION_STAMP);
@@ -381,8 +381,9 @@ class FSImageFormat {
         permissions = PermissionStatus.read(in);
       }
   
-      return INode.newINode(permissions, blocks, symlink, replication,
-          modificationTime, atime, nsQuota, dsQuota, blockSize);
+//      return INode.newINode(permissions, blocks, symlink, replication,
+//          modificationTime, atime, nsQuota, dsQuota, blockSize);
+      return null;
     }
 
     private void loadDatanodes(DataInputStream in)

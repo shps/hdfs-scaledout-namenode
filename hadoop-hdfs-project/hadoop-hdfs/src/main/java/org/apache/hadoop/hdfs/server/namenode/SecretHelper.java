@@ -63,15 +63,15 @@ public class SecretHelper {
 		
 		while(done == false && tries > 0) {
 			try {	
-				tx.begin();
+				DBConnector.beginTransaction();
 				insert(session, keyId, blockKey.getExpiryDate(), keyBytes.getData(), KEY_TYPE);
-				tx.commit();
+				DBConnector.commit();
 				session.flush();
 				done = true;
 			}
 			catch(ClusterJException e) {
 				if(tx.isActive())
-					tx.rollback();
+					DBConnector.safeRollback();
 				//LOG.error("ClusterJException in put(): " + e.getMessage());
 				e.printStackTrace();
 				tries--;
@@ -187,16 +187,16 @@ public class SecretHelper {
 		
 		while(done == false && tries > 0) {
 			try {	
-				tx.begin();
+				DBConnector.beginTransaction();
 				delete(session, keyId);
-				tx.commit();
+				DBConnector.commit();
 				session.flush();
 				done = true;
 				return;
 			}
 			catch(ClusterJException e) {
 				if(tx.isActive())
-					tx.rollback();
+					DBConnector.safeRollback();
 				//LOG.error(tries + " ClusterJException in removeKey(): " + e.getMessage());
 				e.printStackTrace();
 				tries--;

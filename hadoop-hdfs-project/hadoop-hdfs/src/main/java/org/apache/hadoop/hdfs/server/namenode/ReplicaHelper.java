@@ -27,6 +27,7 @@ import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 
 /** This is a helper class for manipulating the ReplicasUnderConstruction stored in DB. 
@@ -96,15 +97,15 @@ public class ReplicaHelper {
     
     while(done == false && tries > 0) {
       try {   
-        tx.begin();
+        DBConnector.beginTransaction();
         insert(session, blockId, expBytes.getData(), repStateBuf.getData());
-        tx.commit();
+        DBConnector.commit();
         session.flush();
         done = true;
       }
       catch(ClusterJException e) {
         if(tx.isActive())
-          tx.rollback();
+          DBConnector.safeRollback();
         e.printStackTrace();
         tries--;
       }
@@ -140,15 +141,15 @@ public class ReplicaHelper {
 
     while(done == false && tries > 0) {
       try {   
-        tx.begin();
+        DBConnector.beginTransaction();
         delete(session, blockId);
-        tx.commit();
+        DBConnector.commit();
         session.flush();
         done = true;
       }
       catch(ClusterJException e) {
         if(tx.isActive())
-          tx.rollback();
+          DBConnector.safeRollback();
         e.printStackTrace();
         tries--;
       } 
@@ -267,7 +268,7 @@ public class ReplicaHelper {
 
     for (ReplicaUcTable rept : reptList) {
       // fetching a blockinfo from database and upcasting to Block
-      Block block = (Block)BlocksHelper.getBlockInfoSingle(rept.getBlockId());
+      Block block = (Block)EntityManager.getInstance().findBlockById(rept.getBlockId());
 
       //Deserializing the datanode descriptor
       DataInputStream dis = new DataInputStream(

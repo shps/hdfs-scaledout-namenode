@@ -89,15 +89,15 @@ public class TestBlockUnderConstruction {
         " isUnderConstruction = " + inode.isUnderConstruction() +
         " expected to be " + isFileOpen,
         inode.isUnderConstruction() == isFileOpen);
-    BlockInfo[] blocks = inode.getBlocks();
+    List<BlockInfo> blocks = inode.getBlocks();
     assertTrue("File does not have blocks: " + inode.toString(),
-        blocks != null && blocks.length > 0);
+        blocks != null && !blocks.isEmpty());
     
     int idx = 0;
     BlockInfo curBlock;
     // all blocks but the last two should be regular blocks
-    for(; idx < blocks.length - 2; idx++) {
-      curBlock = blocks[idx];
+    for(; idx < blocks.size() - 2; idx++) {
+      curBlock = blocks.get(idx);
       assertTrue("Block is not complete: " + curBlock,
           curBlock.isComplete());
       assertTrue("Block is not in BlocksMap: " + curBlock,
@@ -107,7 +107,7 @@ public class TestBlockUnderConstruction {
     // the penultimate block is either complete or
     // committed if the file is not closed
     if(idx > 0) {
-      curBlock = blocks[idx-1]; // penultimate block
+      curBlock = blocks.get(idx-1); // penultimate block
       assertTrue("Block " + curBlock +
           " isUnderConstruction = " + inode.isUnderConstruction() +
           " expected to be " + isFileOpen,
@@ -121,7 +121,7 @@ public class TestBlockUnderConstruction {
 
     // The last block is complete if the file is closed.
     // If the file is open, the last block may be complete or not. 
-    curBlock = blocks[idx]; // last block
+    curBlock = blocks.get(idx); // last block
     if (!isFileOpen) {
       assertTrue("Block " + curBlock + ", isFileOpen = " + isFileOpen,
           curBlock.isComplete());

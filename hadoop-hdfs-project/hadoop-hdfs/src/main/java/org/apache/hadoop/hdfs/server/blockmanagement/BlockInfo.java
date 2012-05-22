@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
@@ -23,221 +22,222 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
-import org.mortbay.log.Log;
+import se.sics.clusterj.BlockInfoTable;
 
 /**
  * Internal class for block metadata.
  */
 public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
-	private INodeFile inode;
 
-	/** For implementing {@link LightWeightGSet.LinkedElement} interface */
-	private LightWeightGSet.LinkedElement nextLinkedElement;
+  private INodeFile inode;
+  /**
+   * For implementing {@link LightWeightGSet.LinkedElement} interface
+   */
+  private LightWeightGSet.LinkedElement nextLinkedElement;
+  private int blockIndex = -1; //added for KTHFS
+  private long timestamp = 1;
+  
+  public BlockInfo(Block blk) {
+    super(blk);
+    if (blk instanceof BlockInfo)
+      this.inode = ((BlockInfo)blk).inode;
+  }
 
-	private int blockIndex = -1; //added for KTHFS
-	private long timestamp = 1;
+  public INodeFile getINode() {
+    if (inode == null)
+      inode = (INodeFile) BlocksHelper.getInodeFromBlockId(getBlockId());
+    
+    return inode;
+  }
 
-	/**
-	 * Construct an entry for blocksmap
-	 * @param replication the block's replication factor
-	 */
-	public BlockInfo(int replication) {
-		this.inode = null;
-	}
+  public void setINode(INodeFile inode) {
+    this.inode = inode;
+  }
 
-	public BlockInfo(Block blk, int replication) {
-		super(blk);
-		this.inode = null;
+  public void setINodeWithoutTransaction(INodeFile inode) {
+    this.inode = inode;
+  }
 
-                //[Hooman]: What does these four lines mean to do?!!
-		this.getBlockId(); 
-		this.getBlockName();
-		this.getNumBytes(); 
-		this.getGenerationStamp();
-                                
-	}
+  public DatanodeDescriptor getDatanode(int index) {
+    assert index >= 0;
+    DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index); //[thesis] this should return a DND with ip:port
+    assert node == null
+            || DatanodeDescriptor.class.getName().equals(node.getClass().getName()) :
+            "DatanodeDescriptor is expected at " + index * 3;
+    return node;
+  }
 
-	/**
-	 * Copy construction.
-	 * This is used to convert BlockInfoUnderConstruction
-	 * @param from BlockInfo to copy from.
-	 */
-	protected BlockInfo(BlockInfo from) {
-		this(from, from.inode.getReplication());
-		this.inode = from.inode;
-	}
-	public INodeFile getINode() {
+  void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
+    assert index >= 0;
+    if (node != null) {
+      BlocksHelper.setDatanode(this.getBlockId(), index, node.name, node.storageID, isTransactional);
+    }
+  }
 
-		return (INodeFile) BlocksHelper.getInodeFromBlockId(this.getBlockId());
-	}
+  /**
+   * Checks the size of the triplets and how many more, we can add (in theory)
+   */
+  int getCapacity() {
+    int length = BlocksHelper.getTripletsForBlockLength(this);
+    return length;
+  }
 
-	public void setINode(INodeFile inode, boolean isTransactional) {
-		this.inode = inode;
-		if(inode!=null) //FIXME: W: no need for this check 
-			BlocksHelper.updateBlockInfoInDB(inode.getID(), this, isTransactional);
-	}
-	
-	public void setINodeWithoutTransaction(INodeFile inode) {	
-		this.inode = inode;	
-	}
+  /**
+   * Ensure that there is enough space to include num more triplets.
+   *
+   * @return first free triplet index.
+   */
+  private int ensureCapacity(int num) {
+    int last = numNodes();
+    return last;
+  }
 
-	public DatanodeDescriptor getDatanode(int index) {
-		assert index >= 0;
-		DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index); //[thesis] this should return a DND with ip:port
-		assert node == null || 
-				DatanodeDescriptor.class.getName().equals(node.getClass().getName()) : 
-					"DatanodeDescriptor is expected at " + index*3;
-				return node;
-	}
+  /**
+   * Count the number of data-nodes the block belongs to.
+   */
+  int numNodes() {
+    return BlocksHelper.numDatanodesForBlock(this.getBlockId());
+  }
 
-	void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
-		assert index >= 0;
-		if(node != null)
-			BlocksHelper.setDatanode(this.getBlockId(), index, node.name, node.storageID, isTransactional);
-	}
-
-	/** Checks the size of the triplets and how many more, we can add (in theory) */
-	int getCapacity() {
-		int length = BlocksHelper.getTripletsForBlockLength(this);
-		return length;
-	}
-
-	/**
-	 * Ensure that there is enough  space to include num more triplets.
-	 * @return first free triplet index.
-	 */
-	private int ensureCapacity(int num) {
-		int last = numNodes();
-		return last;
-	}
-
-	/**
-	 * Count the number of data-nodes the block belongs to.
-	 */
-	int numNodes() {
-		return BlocksHelper.numDatanodesForBlock(this.getBlockId());
-	}
+  /**
+   * Add data-node this block belongs to.
+   */
+  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
+    if (findDatanode(node, isTransactional) >= 0) // the node is already there
+    {
+      return false;
+    }
 
 
-	  /**
-	* Add data-node this block belongs to.
-	*/
-	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
-	    if(findDatanode(node, isTransactional) >= 0) // the node is already there
-	      return false;
-	    
-	    
-	    // find the last available datanode index
-	    int lastNode = ensureCapacity(1);
-	    setDatanode(lastNode, node, isTransactional);	    
-	    return true;
-	  }
+    // find the last available datanode index
+    int lastNode = ensureCapacity(1);
+    setDatanode(lastNode, node, isTransactional);
+    return true;
+  }
 
-	  /**
-	* Remove data-node from the block.
-	*/
-	  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
-	    int dnIndex = findDatanode(node, isTransactional);
-                                                    if(dnIndex < 0) // the node is not found
-	      return false;
+  /**
+   * Remove data-node from the block.
+   */
+  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
+    int dnIndex = findDatanode(node, isTransactional);
+    if (dnIndex < 0) // the node is not found
+    {
+      return false;
+    }
 
-	    BlocksHelper.removeTriplets(this,dnIndex, isTransactional);
-	    return true;
-	  }
+    BlocksHelper.removeTriplets(this, dnIndex, isTransactional);
+    return true;
+  }
 
+  /**
+   * Find specified DatanodeDescriptor.
+   *
+   * @param dn
+   * @return index or -1 if not found.
+   */
+  int findDatanode(DatanodeDescriptor dn, boolean isTransactional) {
+    return BlocksHelper.findDatanodeForBlock(dn, this.getBlockId(), isTransactional);
+  }
 
-	/**
-	 * Find specified DatanodeDescriptor.
-	 * @param dn
-	 * @return index or -1 if not found.
-	 */
-	int findDatanode(DatanodeDescriptor dn, boolean isTransactional) {
-		return BlocksHelper.findDatanodeForBlock(dn, this.getBlockId(), isTransactional);
-	}
+  /**
+   * BlockInfo represents a block that is not being constructed. In order to
+   * start modifying the block, the BlockInfo should be converted to {@link BlockInfoUnderConstruction}.
+   *
+   * @return {@link BlockUCState#COMPLETE}
+   */
+  public BlockUCState getBlockUCState() {
+    return BlockUCState.COMPLETE;
+  }
 
-	/**
-	 * BlockInfo represents a block that is not being constructed.
-	 * In order to start modifying the block, the BlockInfo should be converted
-	 * to {@link BlockInfoUnderConstruction}.
-	 * @return {@link BlockUCState#COMPLETE}
-	 */
-	public BlockUCState getBlockUCState() {
-		return BlockUCState.COMPLETE;
-	}
+  /**
+   * Is this block complete?
+   *
+   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
+   */
+  public boolean isComplete() {
+    return getBlockUCState().equals(BlockUCState.COMPLETE);
+  }
 
-	/**
-	 * Is this block complete?
-	 * 
-	 * @return true if the state of the block is {@link BlockUCState#COMPLETE}
-	 */
-	public boolean isComplete() {
-		return getBlockUCState().equals(BlockUCState.COMPLETE);
-	}
+  /**
+   * Convert a complete block to an under construction block.
+   *
+   * @return BlockInfoUnderConstruction - an under construction block.
+   * @throws IOException
+   */
+  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
+          BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
+    if (isComplete()) {
+      //return new BlockInfoUnderConstruction(
+      //		this, getINode().getReplication(), s, targets);
+      BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this);
+      bUc.setBlockUCState(s);
+      bUc.setExpectedLocations(targets, isTransactional);
+      return bUc;
+    }
+    // the block is already under construction
+    BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) this;
+    ucBlock.setBlockUCState(s);
+    ucBlock.setExpectedLocations(targets, isTransactional);
+    return ucBlock;
+  }
 
-	/**
-	 * Convert a complete block to an under construction block.
-	 * 
-	 * @return BlockInfoUnderConstruction -  an under construction block.
-	 * @throws IOException 
-	 */
-	public BlockInfoUnderConstruction convertToBlockUnderConstruction(
-			BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
-		if(isComplete()) {
-			//return new BlockInfoUnderConstruction(
-			//		this, getINode().getReplication(), s, targets);
-		  BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this, getINode().getReplication());
-		  bUc.setBlockUCState(s);
-		  bUc.setExpectedLocations(targets, isTransactional);
-		  return bUc;
-		}
-		// the block is already under construction
-		BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
-		ucBlock.setBlockUCState(s);
-		ucBlock.setExpectedLocations(targets, isTransactional);
-		return ucBlock;
-	}
+  @Override
+  public int hashCode() {
+    // Super implementation is sufficient
+    return super.hashCode();
+  }
 
-	@Override
-	public int hashCode() {
-		// Super implementation is sufficient
-		return super.hashCode();
-	}
+  @Override
+  public boolean equals(Object obj) {
+    // Sufficient to rely on super's implementation
+    return (this == obj) || super.equals(obj);
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		// Sufficient to rely on super's implementation
-		return (this == obj) || super.equals(obj);
-	}
+  @Override
+  public LightWeightGSet.LinkedElement getNext() {
+    return nextLinkedElement;
+  }
 
-	@Override
-	public LightWeightGSet.LinkedElement getNext() {
-		return nextLinkedElement;
-	}
+  @Override
+  public void setNext(LightWeightGSet.LinkedElement next) {
+    this.nextLinkedElement = next;
+  }
 
-	@Override
-	public void setNext(LightWeightGSet.LinkedElement next) {
-		this.nextLinkedElement = next;
-	}
+  /*
+   * added for KTHFS
+   */
+  public int getBlockIndex() {
+    return this.blockIndex;
+  }
+  /*
+   * added for KTHFS
+   */
 
-	/*added for KTHFS*/
-	public int getBlockIndex() {
-		return this.blockIndex;
-	}
-	/*added for KTHFS*/
-	public void setBlockIndex(int bindex) {
-		this.blockIndex = bindex;
-	}
- 
-	/*added for KTHFS*/
-	public long getTimestamp() {
-		return this.timestamp;
-	}
-	/*added for KTHFS*/
-	public void setTimestamp(long ts) {
-		this.timestamp = ts;
-	}
+  public void setBlockIndex(int bindex) {
+    this.blockIndex = bindex;
+  }
+
+  /*
+   * added for KTHFS
+   */
+  public long getTimestamp() {
+    return this.timestamp;
+  }
+  /*
+   * added for KTHFS
+   */
+
+  public void setTimestamp(long ts) {
+    this.timestamp = ts;
+  }
+  
+  public void toPersistable(BlockInfoTable persistable) {
+    
+  }
+  
+  
+  
 }

@@ -103,7 +103,7 @@ public class TestNodeCount extends TestCase {
       
       // find out a non-excess node
       final Iterator<DatanodeDescriptor> iter = bm.blocksMap
-          .nodeIterator(block.getLocalBlock());
+          .nodeIterator((BlockInfo)block.getLocalBlock());
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();

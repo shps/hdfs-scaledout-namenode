@@ -430,8 +430,8 @@ public class TestFsck extends TestCase {
       INodeFile node = 
         (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(fileName,
                                                                true);
-      assertEquals(node.blocks.length, 1);
-      node.blocks[0].setNumBytes(-1L);  // set the block length to be negative
+      assertEquals(node.getBlocks().size(), 1);
+      node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative
       
       // run fsck and expect a failure with -1 as the error code
       String outStr = runFsck(conf, -1, true, fileName);

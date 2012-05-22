@@ -142,6 +142,7 @@ import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -186,6 +187,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     FSNamesystemMBean, NameNodeMXBean {
   static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
+  EntityManager em = EntityManager.getInstance();
+  
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {
       protected StringBuilder initialValue() {
@@ -987,14 +990,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     INodeFile trgInode = (INodeFile) inode;
 
     // per design trg shouldn't be empty and all the blocks same size
-    if(trgInode.blocks.length == 0) {
+    if(trgInode.getBlocks().isEmpty()) {
       throw new IllegalArgumentException("concat: "+ target + " file is empty");
     }
 
     long blockSize = trgInode.getPreferredBlockSize();
 
     // check the end block to be full
-    if(blockSize != trgInode.blocks[trgInode.blocks.length-1].getNumBytes()) {
+    if(blockSize != trgInode.getBlocks().get(trgInode.getBlocks().size() - 1).getNumBytes()) {
       throw new IllegalArgumentException(target + " blocks size should be the same");
     }
 
@@ -1013,7 +1016,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(src.isEmpty() 
           || srcInode == null
           || srcInode.isUnderConstruction()
-          || srcInode.blocks.length == 0) {
+          || srcInode.getBlocks().isEmpty()) {
         throw new IllegalArgumentException("concat: file " + src + 
         " is invalid or empty or underConstruction");
       }
@@ -1028,10 +1031,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //boolean endBlock=false;
       // verify that all the blocks are of the same length as target
       // should be enough to check the end blocks
-      int idx = srcInode.blocks.length-1;
+      int idx = srcInode.getBlocks().size()-1;
       if(endSrc)
-        idx = srcInode.blocks.length-2; // end block of endSrc is OK not to be full
-      if(idx >= 0 && srcInode.blocks[idx].getNumBytes() != blockSize) {
+        idx = srcInode.getBlocks().size()-2; // end block of endSrc is OK not to be full
+      if(idx >= 0 && srcInode.getBlocks().get(idx).getNumBytes() != blockSize) {
         throw new IllegalArgumentException("concat: blocks sizes of " + 
             src + " and " + target + " should all be the same");
       }
@@ -1449,7 +1452,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                         node.getReplication(),
                                         node.getModificationTime(),
                                         node.getPreferredBlockSize(),
-                                        node.getBlocks(),
                                         node.getPermissionStatus(),
                                         holder,
                                         clientMachine,
@@ -1458,6 +1460,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         cons.setLocalName(node.getLocalName());
         cons.setParentIDLocal(node.getParentIDLocal());
         cons.setID(node.getID());
+        cons.setBlocks(node.getBlocks());
+        for (BlockInfo blk : node.getBlocks()) {
+          blk.setINode(cons);
+        }
         dir.replaceNode(src, node, cons, isTransactional);
         leaseManager.addLease(cons.getClientName(), src, isTransactional);
 
@@ -1648,7 +1654,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         else
         {
-          BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
+          BlockInfo lastBlock = pendingFile.getLastBlock();
           if (lastBlock != null && lastBlock.getBlockUCState()
               == BlockUCState.UNDER_RECOVERY)
           {
@@ -2155,10 +2161,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void checkReplicationFactor(INodeFile file) throws IOException {
 
     int numExpectedReplicas = file.getReplication();
-    Block[] pendingBlocks = file.getBlocks();
-    int nrBlocks = pendingBlocks.length;
-    for (int i = 0; i < nrBlocks; i++) {
-      blockManager.checkReplication(pendingBlocks[i], numExpectedReplicas);
+    List<BlockInfo> pendingBlocks = file.getBlocks();
+    for (BlockInfo blockInfo : pendingBlocks) {
+      blockManager.checkReplication(blockInfo, numExpectedReplicas);
     }
   }
     
@@ -2781,13 +2786,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
-    int nrBlocks = pendingFile.numBlocks();
-    BlockInfo[] blocks = pendingFile.getBlocks();
+    int nrBlocks = pendingFile.getBlocks().size();
 
     int nrCompleteBlocks;
     BlockInfo curBlock = null;
     for(nrCompleteBlocks = 0; nrCompleteBlocks < nrBlocks; nrCompleteBlocks++) {
-      curBlock = blocks[nrCompleteBlocks];
+      curBlock = pendingFile.getBlocks().get(nrCompleteBlocks);
       if(!curBlock.isComplete())
         break;
       assert blockManager.checkMinReplication(curBlock) :
@@ -2818,7 +2822,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // no we know that the last block is not COMPLETE, and
     // that the penultimate block if exists is either COMPLETE or COMMITTED
-    BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
+    BlockInfoUnderConstruction lastBlock = (BlockInfoUnderConstruction) pendingFile.getLastBlock();
     BlockUCState lastBlockState = lastBlock.getBlockUCState();
     BlockInfo penultimateBlock = pendingFile.getPenultimateBlock();
     boolean penultimateBlockMinReplication;
@@ -2869,6 +2873,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long blockRecoveryId = nextGenerationStamp();
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
       lastBlock.initializeBlockRecovery(blockRecoveryId, getBlockManager().getDatanodeManager(), isTransactional);
+      em.persist(lastBlock);
       leaseManager.renewLease(lease, isTransactional);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -2989,12 +2994,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (deleteblock) {
         pendingFile.removeLastBlock(ExtendedBlock.getLocalBlock(lastblock));
         blockManager.removeBlockFromMap(storedBlock, false);
+        em.remove(storedBlock);
       }
       else {
         // update last block
-        storedBlock.setGenerationStamp(newgenerationstamp); //FIXME: [thesis] should be sent to DB
-        storedBlock.setNumBytes(newlength); //FIXME: [thesis] should be sent to DB
-        BlocksHelper.updateGenStampAndNumBytes(storedBlock.getBlockId(), newgenerationstamp, newlength, false);
+        storedBlock.setGenerationStamp(newgenerationstamp); 
+        storedBlock.setNumBytes(newlength); 
+        em.persist(storedBlock);
 
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
@@ -3018,6 +3024,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         // add pipeline locations into the INodeUnderConstruction
         pendingFile.setLastBlock(storedBlock, descriptors, false);
+        em.persist(storedBlock);
       }
 
       src = leaseManager.findPath(pendingFile);
@@ -4014,10 +4021,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           assert node.isUnderConstruction() :
             "Found a lease for file that is not under construction.";
           INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          BlockInfo[] blocks = cons.getBlocks();
-          if(blocks == null)
+          if(cons.getBlocks().isEmpty())
             continue;
-          for(BlockInfo b : blocks) {
+          for(BlockInfo b : cons.getBlocks()) {
             if(!b.isComplete())
               numUCBlocks++;
           }
@@ -4240,7 +4246,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   @Metric
   public int getBlockCapacity() {
-    return isWritingNN() ? blockManager.getCapacity() : -1;
+    return Integer.MAX_VALUE;
   }
 
   @Override // FSNamesystemMBean
@@ -4424,7 +4430,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // check the vadility of the block and lease holder name
     final INodeFileUnderConstruction pendingFile = 
       checkUCBlock(oldBlock, clientName);
-    final BlockInfoUnderConstruction blockinfo = pendingFile.getLastBlock();
+    final BlockInfoUnderConstruction blockinfo = (BlockInfoUnderConstruction) pendingFile.getLastBlock();
 
     // check new GS & length: this is not expected
     if (newBlock.getGenerationStamp() <= blockinfo.getGenerationStamp() ||

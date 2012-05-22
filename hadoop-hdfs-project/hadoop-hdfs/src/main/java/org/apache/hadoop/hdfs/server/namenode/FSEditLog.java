@@ -51,6 +51,8 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
 
@@ -507,7 +509,7 @@ public class FSEditLog  {
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
-      .setBlocks(newNode.getBlocks())
+      .setBlocks((BlockInfo[])newNode.getBlocks().toArray())
       .setPermissionStatus(newNode.getPermissionStatus())
       .setClientName(newNode.getClientName())
       .setClientMachine(newNode.getClientMachine());
@@ -526,7 +528,7 @@ public class FSEditLog  {
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
-      .setBlocks(newNode.getBlocks())
+      .setBlocks((Block[])newNode.getBlocks().toArray())
       .setPermissionStatus(newNode.getPermissionStatus());
     
     logEdit(op);

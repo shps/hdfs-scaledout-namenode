@@ -144,7 +144,8 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 			throw new NullPointerException("key == null");
 		}
 		Block binfo = (Block)key;
-		return (E)BlocksHelper.getBlockInfo(binfo.getBlockId());
+//		return (E)BlocksHelper.getBlockInfo(binfo.getBlockId());
+    return null;
 
 	}
 
@@ -187,15 +188,16 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
         
         @Override
         public E put(E element, boolean isTransactional) throws IOException {
-            BlockInfo binfo = (BlockInfo)element;
-            BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
-            BlocksHelper.putBlockInfo(binfo, isTransactional);
-            if(existing == null) {
-		return null;
-            }
-            else {
-		return (E)existing;
-            }
+//            BlockInfo binfo = (BlockInfo)element;
+//            BlockInfo existing = BlocksHelper.getBlockInfo(binfo.getBlockId());
+//            BlocksHelper.putBlockInfo(binfo, isTransactional);
+//            if(existing == null) {
+//		return null;
+//            }
+//            else {
+//		return (E)existing;
+//            }
+          return element;
         }
 
         @Override
@@ -256,8 +258,9 @@ public class LightWeightGSet<K, E extends K> implements GSetDB<K, E> {
 	@SuppressWarnings("unchecked")
 	private E remove(final int index, final K key, boolean isTransactional) {
 		Block b = (Block)key;
-		BlockInfo bi = BlocksHelper.removeBlocks(b, isTransactional);
-		return (E)bi;
+//		BlockInfo bi = BlocksHelper.removeBlocks(b, isTransactional);
+//		return (E)bi;
+    return null;
 	}
 	
 	@Override

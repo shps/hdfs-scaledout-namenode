@@ -26,11 +26,12 @@ import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * This class provides the CRUD operations for inodes stored in database. 
  * It also provides helper methods for conversion from/to HDFS/ClusterJ data structures 
- * All methods ending with "Internal" in this class must be wrapped with tx.begin() and tx.commit(). 
+ * All methods ending with "Internal" in this class must be wrapped with DBConnector.beginTransaction() and DBConnector.commit(). 
  * This gives us an opportunity to pack multiple operations in a single transaction to reduce round-trips 
  */
 public class INodeHelper {
@@ -67,16 +68,16 @@ public class INodeHelper {
 
 		while (done == false && tries > 0) {
 			try {
-				tx.begin();
+				DBConnector.beginTransaction();
 
                 replaceChildInternal(thisInode, newChild, session);
 
-                tx.commit();
+                DBConnector.commit();
                 session.flush();
                 done = true;
             } catch (ClusterJException e) {
                 LOG.error(e.getMessage(), e);
-                tx.rollback();
+                DBConnector.safeRollback();
                 tries--;
             }
         }
@@ -143,16 +144,11 @@ public class INodeHelper {
                     ((INodeDirectory) (inode)).setID(inodetable.getId()); //added for simple
 		}
 		if (inodetable.getIsUnderConstruction()) {
-			//Get the full list of blocks for this inodeID, 
-			// at this point no blocks have no INode reference
-			BlockInfo[] blocks = new BlockInfo[1];
-			blocks[0] = new BlockInfo(1);
 
 			inode = new INodeFileUnderConstruction(inodetable.getName().getBytes(),
 					getReplicationFromHeader(inodetable.getHeader()),
 					inodetable.getModificationTime(),
 					getPreferredBlockSize(inodetable.getHeader()),
-					blocks,
 					ps,
 					inodetable.getClientName(),
 					inodetable.getClientMachine(),
@@ -160,12 +156,11 @@ public class INodeHelper {
 
 			((INodeFile) (inode)).setID(inodetable.getId());
 
-			BlockInfo[] blocksArray = BlocksHelper.getBlocksArrayInternal((INodeFile) inode, DBConnector.obtainSession());
-			((INodeFile) (inode)).setBlocksList(blocksArray);
+      List<BlockInfo> blocks = EntityManager.getInstance().findBlocksByInodeId(inode.getID());
+			((INodeFile) (inode)).setBlocks(blocks);
 		}
 		if (inodetable.getIsClosedFile()) {
 			inode = new INodeFile(ps,
-					0,
 					getReplicationFromHeader(inodetable.getHeader()),
 					inodetable.getModificationTime(),
 					inodetable.getATime(), getPreferredBlockSize(inodetable.getHeader()));
@@ -174,8 +169,9 @@ public class INodeHelper {
 			((INodeFile) (inode)).setHeader(inodetable.getHeader());
 
 			((INodeFile) (inode)).setID(inodetable.getId());
-			BlockInfo[] blocksArray = BlocksHelper.getBlocksArrayInternal((INodeFile) inode, DBConnector.obtainSession());
-			((INodeFile) (inode)).setBlocksList(blocksArray);
+      List<BlockInfo> blocks = EntityManager.getInstance().findBlocksByInodeId(inode.getID());
+      
+			((INodeFile) (inode)).setBlocks(blocks);
 		}
 
 		inode.setLocalName(inodetable.getName()); //added for simple
@@ -409,14 +405,14 @@ public class INodeHelper {
 		Transaction tx = session.currentTransaction();
 		while (done == false && tries > 0) {
 			try {
-				tx.begin();
+				DBConnector.beginTransaction();
 				updateModificationTimeInternal(session, inodeid, modTime);
-				tx.commit();
+				DBConnector.commit();
 				done = true;
 				session.flush();
 			} catch (ClusterJException e) {
 				if (tx.isActive()) {
-					tx.rollback();
+					DBConnector.safeRollback();
 				}
 				System.err.println("updateModificationTime threw error " + e.getMessage());
 				tries--;
@@ -467,16 +463,16 @@ public class INodeHelper {
 
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
 
                 addChildInternal(session, node, isRoot, parentid);
-                tx.commit();
+                DBConnector.commit();
                 session.flush();
                 done = true;
             } catch (ClusterJException e) {
                 LOG.error(e.getMessage(), e);
                 if (tx.isActive())
-                    tx.rollback();
+                    DBConnector.safeRollback();
                 tries--;
             }
         }
@@ -592,14 +588,14 @@ public class INodeHelper {
 
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
                 deleteINodeTableInternal(session, inodeid);
-                tx.commit();
+                DBConnector.commit();
                 done = true;
                 session.flush();
             } catch (ClusterJException e) {
                 if (tx.isActive()) {
-                    tx.rollback();
+                    DBConnector.safeRollback();
                 }
                 LOG.error(e.getMessage(), e);
                 tries--;
@@ -659,14 +655,14 @@ public class INodeHelper {
         Transaction tx = session.currentTransaction();
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
                 updateHeaderInternal(session, inodeid, header);
-                tx.commit();
+                DBConnector.commit();
                 done = true;
                 session.flush();
                 return done;
             } catch (ClusterJException e) {
-                tx.rollback();
+                DBConnector.safeRollback();
                 System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
                 tries--;
             }
@@ -828,13 +824,13 @@ public class INodeHelper {
 
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
                 updateQuotaInternal(session, inodeId, nsQuota, dsQuota);
-                tx.commit();
+                DBConnector.commit();
                 session.flush();
                 done = true;
             } catch (ClusterJException e) {
-                tx.rollback();
+                DBConnector.safeRollback();
                 System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
                 tries--;
             }
@@ -885,13 +881,13 @@ public class INodeHelper {
 
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
                 updateNumItemsInTreeInternal(session, inodeId, nsDelta, dsDelta);
-                tx.commit();
+                DBConnector.commit();
                 session.flush();
                 done = true;
             } catch (ClusterJException e) {
-                tx.rollback();
+                DBConnector.safeRollback();
                 System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
                 tries--;
             }
@@ -952,14 +948,14 @@ public class INodeHelper {
         Transaction tx = session.currentTransaction();
         while (done == false && tries > 0) {
             try {
-                tx.begin();
+                DBConnector.beginTransaction();
                 setPermissionInternal(session, inodeId, permissionStatus);
-                tx.commit();
+                DBConnector.commit();
                 session.flush();
                 done = true;
                 return done;
             } catch (ClusterJException e) {
-                tx.rollback();
+                DBConnector.safeRollback();
                 LOG.error(e.getMessage(), e);
                 tries--;
             }
@@ -1031,14 +1027,14 @@ public class INodeHelper {
       Transaction tx = session.currentTransaction();
       while (done == false && tries > 0) {
         try {
-          tx.begin();
+          DBConnector.beginTransaction();
           updateAccessTimeInternal(session, inodeid, aTime);
-          tx.commit();
+          DBConnector.commit();
           done = true;
           session.flush();
         } catch (ClusterJException e) {
           if (tx.isActive()) {
-            tx.rollback();
+            DBConnector.safeRollback();
           }
           e.printStackTrace();
           tries--;
@@ -1087,14 +1083,14 @@ public class INodeHelper {
       Transaction tx = session.currentTransaction();
       while (done == false && tries > 0) {
         try {
-          tx.begin();
+          DBConnector.beginTransaction();
           updateClientNameInternal(session, inodeid, newClientName);
-          tx.commit();
+          DBConnector.commit();
           done = true;
           session.flush();
         } catch (ClusterJException e) {
           if (tx.isActive()) {
-            tx.rollback();
+            DBConnector.safeRollback();
           }
           e.printStackTrace();
           tries--;

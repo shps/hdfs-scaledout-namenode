@@ -646,10 +646,10 @@ class INodeDirectory extends INode {
 		return childrenFromDB;
 	}
 
-	//TODO: [thesis] should delete everything in one transaction to reduce latency of this operation
+  @Override
 	int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
 		int total = 1;
-		List<INode> childrenTemp = getChildren(); //TODO: confirm if raw can be used here
+		List<INode> childrenTemp = getChildren(); 
 		
 		if (childrenTemp == null) {
 			return total;

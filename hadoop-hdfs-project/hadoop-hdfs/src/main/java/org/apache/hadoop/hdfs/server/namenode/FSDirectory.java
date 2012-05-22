@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 /*************************************************
@@ -82,6 +83,8 @@ public class FSDirectory implements Closeable {
   // lock to protect the directory and BlockMap
   private ReentrantReadWriteLock dirLock;
   private Condition cond;
+  
+  private static EntityManager em = EntityManager.getInstance();
 
   // utility methods to acquire and release read lock and write lock
   void readLock() {
@@ -295,7 +298,7 @@ public class FSDirectory implements Closeable {
     if (blocks == null)
       newNode = new INodeDirectory(permissions, modificationTime);
     else {
-      newNode = new INodeFile(permissions, blocks.length, replication,
+      newNode = new INodeFile(permissions, replication,
                               modificationTime, atime, preferredBlockSize);
       diskspace = ((INodeFile)newNode).diskspaceConsumed(blocks);
     }
@@ -307,9 +310,14 @@ public class FSDirectory implements Closeable {
           int nrBlocks = blocks.length;
           // Add file->block mapping
           INodeFile newF = (INodeFile)newNode;
+          List<BlockInfo> blks = new ArrayList<BlockInfo>();
           for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF, isTransactional), isTransactional);
+            blocks[i].setINode(newF);
+            blks.add(blocks[i]);
+            em.persist(blocks[i]);
           }
+          newF.setBlocks(blks);
+          
         }
       } catch (IOException e) {
         return null;
@@ -336,14 +344,6 @@ public class FSDirectory implements Closeable {
       }
       if(newParent == null)
         return null;
-      if(!newNode.isDirectory() && !newNode.isLink()) {
-        // Add file->block mapping
-        INodeFile newF = (INodeFile)newNode;
-        BlockInfo[] blocks = newF.getBlocks();
-        for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF, isTransactional), isTransactional);
-        }
-      }
     } finally {
       writeUnlock();
     }
@@ -381,14 +381,12 @@ public class FSDirectory implements Closeable {
 //            targets);
       BlockInfoUnderConstruction blockInfo =
           new BlockInfoUnderConstruction(
-              block,
-              fileINode.getReplication());
+              block);
       blockInfo.setBlockUCState(BlockUCState.UNDER_CONSTRUCTION);
       blockInfo.setExpectedLocations(targets, isTransactional);
-      
-      getBlockManager().addINode(blockInfo, fileINode, isTransactional);
-      fileINode.addBlock(blockInfo, isTransactional);
-      
+      blockInfo.setINode(fileINode);
+      fileINode.addBlock(blockInfo);
+      em.persist(blockInfo);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
             + path + " with " + block
@@ -413,7 +411,7 @@ public class FSDirectory implements Closeable {
       //fsImage.getEditLog().logOpenFile(path, file);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
-            +path+" with "+ file.getBlocks().length 
+            +path+" with "+ file.getBlocks().size() 
             +" blocks is persisted to the file system");
       }
     } finally {
@@ -436,7 +434,7 @@ public class FSDirectory implements Closeable {
       //fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
-            +path+" with "+ file.getBlocks().length 
+            +path+" with "+ file.getBlocks().size() 
             +" blocks is persisted to the file system");
       }
     } finally {
@@ -456,7 +454,7 @@ public class FSDirectory implements Closeable {
       // modify file-> block and blocksMap
       fileNode.removeLastBlock(block);
       getBlockManager().removeBlockFromMap(block, isTransactional);
-
+      em.remove(block);
       // write modified block locations to log
       //fsImage.getEditLog().logOpenFile(path, fileNode);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -893,7 +891,7 @@ public class FSDirectory implements Closeable {
     if (oldReplication != null) {
       oldReplication[0] = oldRepl;
     }
-    return fileNode.getBlocks();
+    return (Block[])fileNode.getBlocks().toArray();
   }
 
   /**
@@ -1063,34 +1061,24 @@ public class FSDirectory implements Closeable {
     INodeFile trgInode = (INodeFile) trgINodes[trgINodes.length-1];
     INodeDirectory trgParent = (INodeDirectory)trgINodes[trgINodes.length-2];
     
-    INodeFile [] allSrcInodes = new INodeFile[srcs.length];
-    int i = 0;
-//    int totalBlocks = 0;
     for(String src : srcs) {
       INodeFile srcInode = getFileINode(src);
-      allSrcInodes[i++] = srcInode;
-//      totalBlocks += srcInode.blocks.length;  //TODO[Hooman]: No more used.
-    }
-    trgInode.appendBlocks(allSrcInodes, isTransactional); // copy the blocks
-    
-    // since we are in the same dir - we can use same parent to remove files
-    int count = 0;
-    for(INodeFile nodeToRemove: allSrcInodes) {
-      if(nodeToRemove == null) continue;
-      
-      nodeToRemove.blocks = null;
-      
-      trgParent.removeChild(nodeToRemove, isTransactional);
-      count++;
+     for (BlockInfo block : srcInode.getBlocks()) {
+       trgInode.addBlock(block);
+       block.setINode(trgInode);
+       em.persist(block);
+     }
+     srcInode.getBlocks().clear();
+     trgParent.removeChild(srcInode, isTransactional);
+     em.remove(srcInode);
     }
     
-    //TODO[Hooman]: The following changes can be optimized to be updated or flushed together.
-//    trgInode.setModificationTimeForce(timestamp);
-    INodeHelper.updateModificationTime(trgInode.getID(), timestamp, isTransactional);
-//    trgParent.setModificationTime(timestamp);
-    INodeHelper.updateModificationTime(trgParent.getID(), timestamp, isTransactional);
-    // update quota on the parent directory ('count' files removed, 0 space)
-    unprotectedUpdateCount(trgINodes, trgINodes.length-1, - count, 0, isTransactional);
+    em.persist(trgParent);
+    
+    trgInode.setModificationTime(timestamp);
+    trgParent.setModificationTime(timestamp);
+    
+    unprotectedUpdateCount(trgINodes, trgINodes.length-1, - srcs.length, 0, isTransactional);
   }
 
   /**
@@ -1349,7 +1337,7 @@ public class FSDirectory implements Closeable {
         return null;
       if (targetNode.isLink()) 
         return null;
-      return ((INodeFile)targetNode).getBlocks();
+      return (Block[])((INodeFile)targetNode).getBlocks().toArray();
     } finally {
       readUnlock();
     }

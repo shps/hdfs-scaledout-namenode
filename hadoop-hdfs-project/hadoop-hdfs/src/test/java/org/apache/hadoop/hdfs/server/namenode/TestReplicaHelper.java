@@ -41,6 +41,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.mysql.clusterj.ClusterJException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * Tests the ReplicaHelper class
@@ -75,11 +76,10 @@ public class TestReplicaHelper {
     
     //create a block info under construction with expected locations
     Block block = new Block(123, 32, 1001);
-    BlockInfoUnderConstruction bInfoUc = new BlockInfoUnderConstruction(block, 1);
+    BlockInfoUnderConstruction bInfoUc = new BlockInfoUnderConstruction(block);
     bInfoUc.setBlockUCState(BlockUCState.UNDER_CONSTRUCTION);
     bInfoUc.setExpectedLocations(targets, false);
-    BlocksHelper.putBlockInfo(bInfoUc, false);
-    
+    EntityManager.getInstance().persist(bInfoUc);
     //fetch the values and verify
     DatanodeDescriptor[] actualTargets = bInfoUc.getExpectedLocations();
     assertEquals("wasif:31337", actualTargets[0].getName());

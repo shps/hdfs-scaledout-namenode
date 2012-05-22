@@ -80,7 +80,7 @@ public class BlockManagerTestUtil {
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
        getCorruptReplicas(blockManager).getNodes(b);
-    for (Iterator<DatanodeDescriptor> it = blockManager.blocksMap.nodeIterator(b); 
+    for (Iterator<DatanodeDescriptor> it = blockManager.blocksMap.nodeIterator((BlockInfo)b); 
          it.hasNext();) {
       DatanodeDescriptor cur = it.next();
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
