@@ -614,17 +614,17 @@
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
 
-<<<<<<< HEAD
+
 			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- FIXED <exclude>**/TestDatanodeDeath.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
-=======
+
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
->>>>>>> thesis-HA
+
 			<!-- TODO--><exclude>**/TestFsck.java</exclude>
 			<!-- TODO--> <exclude>**/TestFsLimits.java</exclude>
 			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-<<<<<<< HEAD
+
 			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
 			<!-- FIXED <exclude>**/TestFileCreationNamenodeRestart.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
 			<!-- FIXED<exclude>**/TestDatanodeDescriptor.java</exclude> (part of DN restart with different port and DN lookup by storageID) -->
@@ -637,7 +637,7 @@
 			<exclude>**/TestRefreshUserMappings.java</exclude>
 			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
 			<!-- FIXED <exclude>**/TestDatanodeJsp.java</exclude>  (part of DN restart with different port and DN lookup by storageID)-->
-=======
+
 			<!-- TODO--><exclude>**/TestDatanodeBlockScanner</exclude>
 			<!-- TODO--><exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
 			<!-- TODO--><exclude>**/TestResolveHdfsSymlink.java</exclude>
@@ -660,7 +660,7 @@
                         <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
 			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
 			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
->>>>>>> thesis-HA
+
 			<exclude>**/TestBalancer.java</exclude>
 			<exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
 			<exclude>**/TestDecommissioningStatus.java</exclude>
@@ -668,7 +668,7 @@
 			<exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
 			<exclude>**/TestDistributedUpgrade.java</exclude>
 			<exclude>**/TestDecommission.java</exclude>
-<<<<<<< HEAD
+
 			<exclude>**/TestCrcCorruption.java</exclude>
 			<exclude>**/TestFcHdfsSymlink.java</exclude>
 			<exclude>**/TestSafeMode.java</exclude>
@@ -680,11 +680,11 @@
 			<exclude>**/TestViewFsHdfs.java</exclude>
 			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
 			<exclude>**/TestQuota.java</exclude>
-=======
+
 			<exclude>**/TestCrcCorruption.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
 			<exclude>**/TestRestartDFS.java</exclude>
 			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
->>>>>>> thesis-HA
+
 			<exclude>**/TestMetaSave.java</exclude>
 			<exclude>**/TestWriteConfigurationToDFS.java</exclude>
 			<exclude>**/TestNNThroughputBenchmark.java</exclude> <!-- seems very time consuming-->
@@ -692,11 +692,10 @@
 			<exclude>**/TestHDFSCLI.java</exclude>
 			<exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
 			<exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
-<<<<<<< HEAD
+
 			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
                         <exclude>**/TestFsLimits.java</exclude>
-=======
->>>>>>> thesis-HA
+
           </excludes>
         </configuration>
       </plugin>
