@@ -283,26 +283,28 @@ public class FSEditLogLoader {
                                       setOwnerOp.groupname, false);
             break;
           }
+            //[Hooman]TODO: This is done in its own transaction.
           case OP_SET_NS_QUOTA: {
             SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
             fsDir.unprotectedSetQuota(setNSQuotaOp.src,
                                       setNSQuotaOp.nsQuota,
-                                      HdfsConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_DONT_SET, false);
             break;
           }
+            //[Hooman]TODO: This is done in its own transaction.
           case OP_CLEAR_NS_QUOTA: {
             ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
             fsDir.unprotectedSetQuota(clearNSQuotaOp.src,
                                       HdfsConstants.QUOTA_RESET,
-                                      HdfsConstants.QUOTA_DONT_SET);
+                                      HdfsConstants.QUOTA_DONT_SET, false);
             break;
           }
-
+            //[Hooman]TODO: This is done in its own transaction.
           case OP_SET_QUOTA:
             SetQuotaOp setQuotaOp = (SetQuotaOp)op;
             fsDir.unprotectedSetQuota(setQuotaOp.src,
                                       setQuotaOp.nsQuota,
-                                      setQuotaOp.dsQuota);
+                                      setQuotaOp.dsQuota, false);
             break;
 
           case OP_TIMES: {

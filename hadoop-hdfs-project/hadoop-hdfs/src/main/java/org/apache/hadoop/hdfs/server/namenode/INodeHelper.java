@@ -47,7 +47,19 @@ public class INodeHelper {
 		INodeHelper.dnm = dnm;
 	}
 
-	public static void replaceChild(INode thisInode, INode newChild) {
+	public static void replaceChild(INode thisInode, INode newChild, boolean isTransactional) {
+            DBConnector.checkTransactionState(isTransactional);
+            
+            if (isTransactional) {
+                Session session = DBConnector.obtainSession();
+                replaceChildInternal(thisInode, newChild, session);
+                session.flush();
+            } else {
+                replaceChildWithTransaction(thisInode, newChild);
+            }
+        }
+
+	public static void replaceChildWithTransaction(INode thisInode, INode newChild) {
 		boolean done = false;
 		int tries = RETRY_COUNT;
 
@@ -58,7 +70,7 @@ public class INodeHelper {
 			try {
 				tx.begin();
 
-                replaceChild(thisInode, newChild, session);
+                replaceChildInternal(thisInode, newChild, session);
 
                 tx.commit();
                 session.flush();
@@ -70,9 +82,7 @@ public class INodeHelper {
             }
         }
     }
-
-	//TODO: for simple, this should update the times of parent also
-	private static void replaceChild(INode thisInode, INode newChild, Session session) {
+	private static void replaceChildInternal(INode thisInode, INode newChild, Session session) {
 
         INodeTableSimple inodet = selectINodeTableInternal(session, newChild.getLocalName(), thisInode.getID());
         assert inodet != null : "Child not found in database";
@@ -809,8 +819,57 @@ public class INodeHelper {
 		}
 		return inodetSorted;
 	}
+        
+ 
+    public static void updateQuota(INodeDirectoryWithQuota inode, long nsQuota, long dsQuota, boolean isTransactional)
+    {
+        DBConnector.checkTransactionState(isTransactional);
+        inode.setQuota(nsQuota, dsQuota);
+        if (isTransactional)
+        {
+            Session session = DBConnector.obtainSession();
+            updateQuotaInternal(session,
+                    inode.getID(), inode.getNsQuota(), inode.getDsQuota());
+            session.flush();
+        }
+        else
+            updateQuotaWithTransaction(inode.getID(), 
+                    inode.getNsQuota(), inode.getDsQuota());
+    }
+    
+
+    private static void updateQuotaWithTransaction(long inodeId, long nsQuota, long dsQuota) {
+        boolean done = false;
+        int tries = RETRY_COUNT;
+
+        Session session = DBConnector.obtainSession();
+        Transaction tx = session.currentTransaction();
+
+        while (done == false && tries > 0) {
+            try {
+                tx.begin();
+                updateQuotaInternal(session, inodeId, nsQuota, dsQuota);
+                tx.commit();
+                session.flush();
+                done = true;
+            } catch (ClusterJException e) {
+                tx.rollback();
+                System.err.println("INodeTableSimpleHelper.addChild() threw error " + e.getMessage());
+                tries--;
+            }
+        }
+    }
+
+    private static void updateQuotaInternal(Session session, long inodeId, long nsQuota, long dsQuota) {
+        INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
+        inodet.setNSQuota(nsQuota);
+        inodet.setDSQuota(dsQuota);
+        session.updatePersistent(inodet);
+    }
+
+
 	
-	/**
+    /**
      * Updates number of items and diskspace of the inode directory in DB.
      * @param inodeId
      * @param nsDelta

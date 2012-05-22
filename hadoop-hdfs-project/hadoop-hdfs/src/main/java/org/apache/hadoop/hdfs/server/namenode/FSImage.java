@@ -639,7 +639,7 @@ public class FSImage implements Closeable {
     }
 
     // update the counts
-    getFSNamesystem().dir.updateCountForINodeWithQuota();    
+    getFSNamesystem().dir.updateCountForINodeDirecotry();    
     return numLoaded;
   }
 

@@ -626,7 +626,6 @@ public class FSDirectory implements Closeable {
                         }
                         srcChildName = srcChild.getLocalName();
                         srcChild.setLocalName(dstComponents[dstInodes.length - 1]);
-
                         // add src to the destination
                         dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
                                                         srcChild, UNKNOWN_DISK_SPACE, false, true, isTransactional);
@@ -1496,41 +1495,9 @@ public class FSDirectory implements Closeable {
     }
     
     for(int i = 0; i < numOfINodes; i++) {
-      if (inodes[i] instanceof INodeDirectory) { // a directory with quota
+      if (inodes[i] instanceof INodeDirectory) { // a directory
         INodeDirectory node =(INodeDirectory)inodes[i];
         INodeHelper.updateNumItemsInTree(node, nsDelta, dsDelta, isTransactional);
-      }
-    }
-  }
-  
-  /** update count of each inode with quota
-   * 
-   * @param inodes an array of inodes on a path
-   * @param numOfINodes the number of inodes to update starting from index 0
-   * @param nsDelta the delta change of namespace
-   * @param dsDelta the delta change of diskspace
-   * @param checkQuota if true then check if quota is exceeded
-   * @throws QuotaExceededException if the new count violates any quota limit
-   */
-  private void updateCountOld(INode[] inodes, int numOfINodes, 
-                           long nsDelta, long dsDelta, boolean checkQuota)
-                           throws QuotaExceededException {
-    assert hasWriteLock();
-    if (!ready) {
-      //still initializing. do not check or update quotas.
-      return;
-    }
-    if (numOfINodes>inodes.length) {
-      numOfINodes = inodes.length;
-    }
-    if (checkQuota) {
-      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
-    }
-    
-    for(int i = 0; i < numOfINodes; i++) {
-      if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.updateNumItemsInTree(nsDelta, dsDelta);
       }
     }
   }
@@ -1755,7 +1722,7 @@ public class FSDirectory implements Closeable {
     try {
       // check existing components in the path  
       for(; i >= 0; i--) {
-        if (commonAncestor == inodes[i]) {
+        if (commonAncestor != null && commonAncestor.equals(inodes[i])) {
           // Moving an existing node. Stop checking for quota when common
           // ancestor is reached
           return;
@@ -1787,7 +1754,7 @@ public class FSDirectory implements Closeable {
     }
     INode srcInode = srcInodes[srcInodes.length - 1];
     INode commonAncestor = null;
-    for(int i =0;srcInodes[i] == dstInodes[i]; i++) {
+    for(int i =0;srcInodes[i].equals(dstInodes[i]); i++) {
       commonAncestor = srcInodes[i];
     }
     INode.DirCounts srcCounts = new INode.DirCounts();
@@ -1950,8 +1917,8 @@ public class FSDirectory implements Closeable {
    * This is an update of existing state of the filesystem and does not
    * throw QuotaExceededException.
    */
-  void updateCountForINodeWithQuota() {
-    updateCountForINodeWithQuota(rootDir, new INode.DirCounts(), 
+  void updateCountForINodeDirecotry() {
+    updateCountForINodeDirectory(rootDir, new INode.DirCounts(), 
                                  new ArrayList<INode>(50));
   }
   
@@ -1966,7 +1933,7 @@ public class FSDirectory implements Closeable {
    * @param counters counters for name space and disk space
    * @param nodesInPath INodes for the each of components in the path.
    */
-  private static void updateCountForINodeWithQuota(INodeDirectory dir, 
+  private static void updateCountForINodeDirectory(INodeDirectory dir, 
                                                INode.DirCounts counts,
                                                ArrayList<INode> nodesInPath) {
     long parentNamespace = counts.nsCount;
@@ -1981,7 +1948,7 @@ public class FSDirectory implements Closeable {
     
     for (INode child : dir.getChildren()) {
       if (child.isDirectory()) {
-        updateCountForINodeWithQuota((INodeDirectory)child, 
+        updateCountForINodeDirectory((INodeDirectory)child, 
                                      counts, nodesInPath);
       } else if (child.isLink()) {
         counts.nsCount += 1;
@@ -1991,8 +1958,8 @@ public class FSDirectory implements Closeable {
       }
     }
       
-    if (dir.isQuotaSet()) {
-      ((INodeDirectoryWithQuota)dir).setSpaceConsumed(counts.nsCount,
+    if (dir instanceof INodeDirectory) {
+      ((INodeDirectory)dir).setSpaceConsumed(counts.nsCount,
                                                       counts.dsCount);
 
       // check if quota is violated for some reason.
@@ -2030,7 +1997,7 @@ public class FSDirectory implements Closeable {
    *                                greater than the given quota
    * @throws UnresolvedLinkException if a symlink is encountered in src.
    */
-  INodeDirectory unprotectedSetQuota(String src, long nsQuota, long dsQuota)
+  INodeDirectory unprotectedSetQuota(String src, long nsQuota, long dsQuota, boolean isTransactional)
     throws FileNotFoundException, QuotaExceededException, 
       UnresolvedLinkException {
     assert hasWriteLock();
@@ -2067,14 +2034,7 @@ public class FSDirectory implements Closeable {
 
       if (dirNode instanceof INodeDirectoryWithQuota) { 
         // a directory with quota; so set the quota to the new value
-        ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
-        if (!dirNode.isQuotaSet()) {
-          // will not come here for root because root's nsQuota is always set
-          INodeDirectory newNode = new INodeDirectory(dirNode);
-          INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
-          dirNode = newNode;
-          parent.replaceChild(newNode);
-        }
+        INodeHelper.updateQuota((INodeDirectoryWithQuota)dirNode, nsQuota, dsQuota, isTransactional);
       } else {
         // a non-quota directory; so replace it with a directory with quota
         INodeDirectoryWithQuota newNode = 
@@ -2082,7 +2042,7 @@ public class FSDirectory implements Closeable {
         // non-root directory node; parent != null
         INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
         dirNode = newNode;
-        parent.replaceChild(newNode);
+        parent.replaceChild(newNode, isTransactional);
       }
       return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }
@@ -2093,12 +2053,12 @@ public class FSDirectory implements Closeable {
    * contract.
    * @see #unprotectedSetQuota(String, long, long)
    */
-  void setQuota(String src, long nsQuota, long dsQuota) 
+  void setQuota(String src, long nsQuota, long dsQuota, boolean isTransactional) 
     throws FileNotFoundException, QuotaExceededException,
     UnresolvedLinkException { 
     writeLock();
     try {
-      INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota);
+      INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota, isTransactional);
       if (dir != null) {
         //fsImage.getEditLog().logSetQuota(src, dir.getNsQuota(), 
         //                                 dir.getDsQuota());
