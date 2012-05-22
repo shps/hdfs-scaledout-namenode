@@ -252,7 +252,9 @@ public class BlockInfoUnderConstruction extends BlockInfo {
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
-    BlocksHelper.updateBlockInfoInDB(this.getINode().getID(),this, isTransactional);
+//    BlocksHelper.updateBlockInfoInDB(this.getINode().getID(),this, isTransactional);
+    //[Hooman] Atleast -1 selectUsingPKey on BlockInfoTable
+    BlocksHelper.updateBlockInfoInDB(this.getINodeFromMemory().getID(),this, isTransactional);
   }
   
 

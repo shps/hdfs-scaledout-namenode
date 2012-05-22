@@ -188,6 +188,30 @@ public class BlocksHelper {
 		}
 		return null;
 	}
+  
+  private static List<BlockInfo> getBlockInfos(Session session, Long[] blockIds) throws IOException
+  {
+    HelperMetrics.blockMetrics.incrSelectUsingPKey();
+    
+    QueryBuilder qBuilder = session.getQueryBuilder();
+    QueryDomainType<BlockInfoTable> qdt = qBuilder.createQueryDefinition(BlockInfoTable.class);
+    PredicateOperand field = qdt.get("blockId");
+		PredicateOperand values = qdt.param("param");
+    Predicate predicate = field.in(values);
+		qdt.where(predicate);
+		Query<BlockInfoTable> query = session.createQuery(qdt);
+		query.setParameter("param", blockIds);
+		List<BlockInfoTable> results = query.getResultList();
+    
+    List<BlockInfo> bInfos = new ArrayList<BlockInfo>();
+    for (BlockInfoTable bInfo : results)
+    {
+      bInfos.add(convert(bInfo));
+    }
+    
+    return bInfos;
+  }
+  
 	/** When called with single=false, will not retrieve the INodes for the Block */
 	private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
 		BlockInfoTable bit = selectBlockInfo(session, blockId);
@@ -335,18 +359,17 @@ public class BlocksHelper {
 	 * @param idx index of the BlockInfo
 	 * @param binfo BlockInfo object that already exists in the database
 	 */
-	public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
-            DBConnector.checkTransactionState(isTransactional);
-            
-            if (isTransactional)
-            {
-                Session session = DBConnector.obtainSession();
-                updateIndex(idx, binfo, session);
-                session.flush();
-            }
-            else
-                updateIndexWithTransaction(idx, binfo);
-        }
+  public static void updateIndex(int idx, BlockInfo binfo, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      updateIndex(idx, binfo, session);
+      session.flush();
+    } else {
+      updateIndexWithTransaction(idx, binfo);
+    }
+  }
         
 	/** Update index for a BlockInfo object in the DB. Begins a new transaction.
 	 * @param idx index of the BlockInfo
@@ -399,18 +422,17 @@ public class BlocksHelper {
 	 * @param iNodeID
 	 * @param binfo
 	 */
-	public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional){
-            DBConnector.checkTransactionState(isTransactional);
-            
-            if (isTransactional)
-            {
-                Session session = DBConnector.obtainSession();
-                updateBlockInfoTable(iNodeID, binfo, session);
-                session.flush();
-            }
-            else
-                updateBlockInfoInDBWithTransaction(iNodeID, binfo);
-        }
+  public static void updateBlockInfoInDB(long iNodeID, BlockInfo binfo, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      updateBlockInfoTable(iNodeID, binfo, session);
+      session.flush();
+    } else {
+      updateBlockInfoInDBWithTransaction(iNodeID, binfo);
+    }
+  }
 	
 	/** Updates an already existing BlockInfo object in DB. Begins a new transaction.
 	 * @param iNodeID
@@ -1046,11 +1068,21 @@ public class BlocksHelper {
 		Session session = DBConnector.obtainSession();
 
 		List<TripletsTable> tripletsForDatanode = getTripletsListUsingFieldInternal("storageId", storageId, session);
-		for (TripletsTable t: tripletsForDatanode)
+		Long[] blockIds = new Long[tripletsForDatanode.size()];
+		for (int i=0; i<tripletsForDatanode.size(); i++)
 		{
-			ret.add(getBlockInfo(session, t.getBlockId(), false));
+			blockIds[i] = tripletsForDatanode.get(i).getBlockId();
 		}
+		ret = getBlockInfos(session, blockIds);
 		return ret;
+
+		//[Hooman] decreasing roundtrips in O(number of blocks)
+		//		for (TripletsTable t: tripletsForDatanode)
+		//		{
+		//      
+		//			ret.add(getBlockInfo(session, t.getBlockId(), false));
+		//		}
+
 	}
                         
                         @Deprecated // Use above method as it searches via storageId instead of datanode name
