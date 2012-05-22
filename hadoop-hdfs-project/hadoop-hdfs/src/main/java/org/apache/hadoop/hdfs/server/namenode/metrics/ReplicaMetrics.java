@@ -11,7 +11,7 @@ public class ReplicaMetrics {
   private AtomicLong selectUsingIndex;
   private AtomicLong delete;
   private AtomicLong insert;
-
+  
   public ReplicaMetrics() {
     this.selectUsingIndex = new AtomicLong();
     this.delete = new AtomicLong();

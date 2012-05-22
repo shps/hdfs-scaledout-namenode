@@ -515,7 +515,9 @@ public class BlockManager {
                 
     if(blkIndex < 0)
       return null;
-    BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
+//    BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
+    //[Hooman] -1 selectUsingIndex from BlockInfoTable
+    BlockInfo curBlock = fileINode.getBlocksFromMemory()[blkIndex];
     if(curBlock.isComplete())
       return curBlock;
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
@@ -537,6 +539,7 @@ public class BlockManager {
       final BlockInfo block, boolean isTransactional) throws IOException {
 
     BlockInfo[] fileBlocks = fileINode.getBlocks();
+    
     for(int idx = 0; idx < fileBlocks.length; idx++){
       //if(fileBlocks[idx] == block) {
       // TODO: [Jude] This scenario should not happen. All previous blocks should have been completed (i.e. replicated)

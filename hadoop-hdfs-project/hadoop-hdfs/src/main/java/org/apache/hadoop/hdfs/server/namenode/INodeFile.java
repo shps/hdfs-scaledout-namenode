@@ -143,6 +143,11 @@ public class INodeFile extends INode {
 			return ret;
 		}
 	}
+  
+  public BlockInfo[] getBlocksFromMemory()
+  {
+    return this.blocks;
+  }
 
 	/**
 	 * Set the {@link FsPermission} of this {@link INodeFile}.

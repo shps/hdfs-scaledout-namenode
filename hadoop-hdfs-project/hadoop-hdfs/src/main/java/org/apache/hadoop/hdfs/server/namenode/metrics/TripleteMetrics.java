@@ -9,7 +9,7 @@ public class TripleteMetrics {
   private AtomicLong update;
   private AtomicLong delete;
   private AtomicLong insert;
-
+  
   public TripleteMetrics() {
     this.selectUsingIndex = new AtomicLong();
     this.selectUsingPKey = new AtomicLong();
