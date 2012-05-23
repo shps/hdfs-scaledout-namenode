@@ -213,24 +213,21 @@ public class LeaseHelper {
 
 	}
 
-        /**Updates the lastUpdated time in database
-	 * Roundtrips: 2
-	 * @param holder
-	 */
-	public static void renewLease(String holder, boolean isTransactional) {
-		DBConnector.checkTransactionState(isTransactional);
-                
-                if (isTransactional)
-                {
-                    Session session = DBConnector.obtainSession();
-                    LeaseHelper.renewLeaseInternal(session, holder);
-                    session.flush();
-                }
-                else
-                {
-                    renewLeaseWithTransaction(holder);
-                }
-	}
+  /**Updates the lastUpdated time in database
+   * Roundtrips: 2
+   * @param holder
+   */
+  public static void renewLease(String holder, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      LeaseHelper.renewLeaseInternal(session, holder);
+      session.flush();
+    } else {
+      renewLeaseWithTransaction(holder);
+    }
+  }
         
 	/**Updates the lastUpdated time in database
 	 * Roundtrips: 2
