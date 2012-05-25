@@ -1186,7 +1186,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
 
               final short[] oldReplication = new short[1];
-              final Block[] blocks = dir.setReplication(src, replication, oldReplication, true);
+              final List<BlockInfo> blocks = dir.setReplication(src, replication, oldReplication, true);
               isFile = blocks != null;
               if (isFile) {
                 blockManager.setReplication(oldReplication[0], replication, src, blocks);
@@ -1244,7 +1244,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       final short[] oldReplication = new short[1];
-      final Block[] blocks = dir.setReplication(src, replication, oldReplication, false);
+      final List<BlockInfo> blocks = dir.setReplication(src, replication, oldReplication, false);
       isFile = blocks != null;
       if (isFile) {
         blockManager.setReplication(oldReplication[0], replication, src, blocks);

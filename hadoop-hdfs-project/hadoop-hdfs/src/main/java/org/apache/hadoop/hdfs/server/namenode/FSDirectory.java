@@ -847,10 +847,10 @@ public class FSDirectory implements Closeable {
    * @return array of file blocks
    * @throws IOException 
    */
-  Block[] setReplication(String src, short replication, short[] oldReplication, boolean isTransactional)
+  List<BlockInfo> setReplication(String src, short replication, short[] oldReplication, boolean isTransactional)
       throws IOException {
     waitForReady();
-    Block[] fileBlocks = null;
+    List<BlockInfo> fileBlocks = null;
     writeLock();
     try {
       fileBlocks = unprotectedSetReplication(src, replication, oldReplication, isTransactional);
@@ -862,7 +862,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  Block[] unprotectedSetReplication(String src, 
+  List<BlockInfo> unprotectedSetReplication(String src, 
                                     short replication,
                                     short[] oldReplication,
                                     boolean isTransactional
@@ -891,7 +891,7 @@ public class FSDirectory implements Closeable {
     if (oldReplication != null) {
       oldReplication[0] = oldRepl;
     }
-    return (Block[])fileNode.getBlocks().toArray();
+    return fileNode.getBlocks();
   }
 
   /**

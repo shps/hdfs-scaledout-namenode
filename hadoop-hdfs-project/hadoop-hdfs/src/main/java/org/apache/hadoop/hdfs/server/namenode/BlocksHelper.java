@@ -24,6 +24,7 @@ import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.avro.generic.GenericData;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -712,7 +713,7 @@ public class BlocksHelper {
         }
     }
 
-    public static DatanodeDescriptor getDatanode(long blockId, int index) {
+    public DatanodeDescriptor getDatanode(long blockId, int index) {
         int tries = RETRY_COUNT;
         boolean done = false;
 
@@ -731,7 +732,7 @@ public class BlocksHelper {
         return null;
     }
 
-    private static DatanodeDescriptor getDataDescriptorInternal(long blockId, int index, Session session) {
+    private DatanodeDescriptor getDataDescriptorInternal(long blockId, int index, Session session) {
         TripletsTable triplet = selectTriplet(session, blockId, index);
 
         if (triplet != null && triplet.getStorageId() != null) {
@@ -741,14 +742,14 @@ public class BlocksHelper {
         return null;
     }
 
-    public static DatanodeDescriptor[] getDataNodesFromBlock(long blockId) {
+    public static List<DatanodeDescriptor> getDataNodesFromBlock(long blockId) {
         int tries = RETRY_COUNT;
         boolean done = false;
 
         Session session = DBConnector.obtainSession();
         while (done == false && tries > 0) {
             try {
-                DatanodeDescriptor[] ret = getDataNodesFromBlockInternal(blockId, session);
+              List<DatanodeDescriptor> ret = getDataNodesFromBlockInternal(blockId, session);
                 done = true;
                 return ret;
             } catch (ClusterJException e) {
@@ -760,14 +761,12 @@ public class BlocksHelper {
         return null;
     }
 
-    private static DatanodeDescriptor[] getDataNodesFromBlockInternal(long blockId, Session session) {
+    private static List<DatanodeDescriptor> getDataNodesFromBlockInternal(long blockId, Session session) {
         List<TripletsTable> result = selectTriplet(session, blockId);
-        DatanodeDescriptor[] nodeDescriptor = new DatanodeDescriptor[result.size()];
-        int i = 0;
+        List<DatanodeDescriptor> nodeDescriptor = new ArrayList<DatanodeDescriptor>(result.size());
         for (TripletsTable t : result) {
             DatanodeID dn = new DatanodeID(t.getDatanodeName(), t.getStorageId(), -1, -1);
-            nodeDescriptor[i] = new DatanodeDescriptor(dn);
-            i++;
+            nodeDescriptor.add(new DatanodeDescriptor(dn));
         }
         return nodeDescriptor;
     }

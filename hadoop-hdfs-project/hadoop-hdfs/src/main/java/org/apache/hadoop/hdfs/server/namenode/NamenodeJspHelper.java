@@ -801,12 +801,11 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-        for(final Iterator<DatanodeDescriptor> it = blockManager.datanodeIterator(block);
-            it.hasNext(); ) {
+                List<DatanodeDescriptor> dataNodes = blockManager.getStoredBlock(block).getDataNodes();
+        
+        for (DatanodeDescriptor dd : dataNodes) {
+
           doc.startTag("replica");
-
-          DatanodeDescriptor dd = it.next();
-
           doc.startTag("host_name");
           doc.pcdata(dd.getHostName());
           doc.endTag();

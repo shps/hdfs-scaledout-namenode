@@ -22,11 +22,11 @@ public class BlockInfoFactory {
     persistable.setINodeID(block.getINode().getID());
     persistable.setTimestamp(block.getTimestamp());
     persistable.setBlockIndex(block.getBlockIndex());
+    persistable.setBlockUCState(block.getBlockUCState().ordinal());
     if (block instanceof BlockInfoUnderConstruction) {
-      BlockInfoUnderConstruction ucBlocks = (BlockInfoUnderConstruction) block;
-      persistable.setBlockUCState(ucBlocks.getBlockUCState().ordinal());
-      persistable.setPrimaryNodeIndex(ucBlocks.getPrimaryNodeIndex());
-      persistable.setBlockRecoveryId(ucBlocks.getBlockRecoveryId());
+      BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) block;
+      persistable.setPrimaryNodeIndex(ucBlock.getPrimaryNodeIndex());
+      persistable.setBlockRecoveryId(ucBlock.getBlockRecoveryId());
     }
 
   }
@@ -42,14 +42,14 @@ public class BlockInfoFactory {
       ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
     } else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal()) {
       blockInfo = new BlockInfo(b);
-    } 
-    
+    }
+
     blockInfo.setTimestamp(bit.getTimestamp());
     blockInfo.setBlockIndex(bit.getBlockIndex());
 
     return blockInfo;
   }
-  
+
   public static List<BlockInfo> createBlockInfoList(List<BlockInfoTable> bitList) throws IOException {
     List<BlockInfo> blocks = new ArrayList<BlockInfo>();
     for (BlockInfoTable bit : bitList) {

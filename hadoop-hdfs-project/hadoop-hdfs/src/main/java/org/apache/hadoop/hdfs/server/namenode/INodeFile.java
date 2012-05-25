@@ -18,6 +18,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsAction;
@@ -113,8 +114,11 @@ public class INodeFile extends INode {
    * @throws IOException
    */
   public List<BlockInfo> getBlocks() {
-    if (blocks == null)
+    if (blocks == null) {
       blocks = EntityManager.getInstance().findBlocksByInodeId(id);
+    }
+    
+    Collections.sort(blocks, BlockInfo.Order.ByBlockIndex);
     return blocks;
   }
   

@@ -5,11 +5,11 @@ import com.mysql.clusterj.Session;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.TripletsTable;
@@ -20,11 +20,11 @@ import se.sics.clusterj.TripletsTable;
  */
 public class TransactionContext {
 
+  private static Log logger = LogFactory.getLog(TransactionContext.class);
   private Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
-  
   private boolean allBlocksRead = false;
   private boolean activeTxExpected = false;
   private boolean externallyMngedTx = true;
@@ -41,6 +41,9 @@ public class TransactionContext {
 
   void begin() {
     activeTxExpected = true;
+    
+    if (logger.isDebugEnabled())
+      logger.debug("Tx begin");
   }
 
   public void commit() throws TransactionContextException {
@@ -58,11 +61,17 @@ public class TransactionContext {
       session.savePersistent(newInstance);
     }
 
+    if (logger.isDebugEnabled())
+      logger.debug("`Tx commit");
+    
     resetContext();
   }
 
   void rollback() {
     resetContext();
+    
+    if (logger.isDebugEnabled())
+      logger.debug("Tx rollback");
   }
 
   public void persist(Object obj) throws TransactionContextException {
@@ -75,7 +84,19 @@ public class TransactionContext {
       if (removedBlocks.containsKey(block.getBlockId())) {
         throw new TransactionContextException("Removed block passed to be persisted");
       }
+
+      BlockInfo contextInstance = blocks.get(block.getBlockId());
       
+      if (logger.isDebugEnabled()) {
+        if (contextInstance == null)
+          logger.debug("Block = " + block.getBlockId() + " is new instance");
+        else if (contextInstance == block) {
+          logger.debug("Block = " + block.getBlockId() + " is mraked modified.");
+        } else {
+          logger.debug("Block =" + block.getBlockId() + " instance changed to " + ((block instanceof BlockInfoUnderConstruction) ? "UnderConstruction" : "BlockInfo"));
+        }
+      }
+
       blocks.put(block.getBlockId(), block);
       modifiedBlocks.put(block.getBlockId(), block);
 

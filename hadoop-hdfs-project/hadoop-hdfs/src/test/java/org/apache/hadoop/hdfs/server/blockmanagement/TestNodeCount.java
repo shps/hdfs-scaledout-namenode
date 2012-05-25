@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
@@ -102,13 +103,11 @@ public class TestNodeCount extends TestCase {
       }
       
       // find out a non-excess node
-      final Iterator<DatanodeDescriptor> iter = bm.blocksMap
-          .nodeIterator((BlockInfo)block.getLocalBlock());
+      List<DatanodeDescriptor> dataNodes = ((BlockInfo) block.getLocalBlock()).getDataNodes();
       DatanodeDescriptor nonExcessDN = null;
-      while (iter.hasNext()) {
-        DatanodeDescriptor dn = iter.next();
+      for (DatanodeDescriptor dn : dataNodes) {
         Collection<Block> blocks = bm.excessReplicateMap.get(dn.getStorageID());
-        if (blocks == null || !blocks.contains(block) ) {
+        if (blocks == null || !blocks.contains(block)) {
           nonExcessDN = dn;
           break;
         }

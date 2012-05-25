@@ -17,26 +17,61 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.util.LightWeightGSet;
 import se.sics.clusterj.BlockInfoTable;
+
+
 
 /**
  * Internal class for block metadata.
  */
-public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
+public class BlockInfo extends Block {
 
+  public static enum Order implements Comparator<BlockInfo> {
+
+    ByBlockIndex() {
+
+      public int compare(BlockInfo o1, BlockInfo o2) {
+        if (o1.getBlockIndex() < o2.getBlockIndex()) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+    },
+    ByGenerationStamp() {
+
+      public int compare(BlockInfo o1, BlockInfo o2) {
+        if (o1.getGenerationStamp() < o2.getGenerationStamp()) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+    };
+
+    public abstract int compare(BlockInfo o1, BlockInfo o2);
+
+    public Comparator acsending() {
+      return this;
+    }
+
+    public Comparator descending() {
+      return Collections.reverseOrder(this);
+    }
+  }
   private INodeFile inode;
   /**
    * For implementing {@link LightWeightGSet.LinkedElement} interface
    */
-  private LightWeightGSet.LinkedElement nextLinkedElement;
   private int blockIndex = -1; //added for KTHFS
   private long timestamp = 1;
   
@@ -60,14 +95,9 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   public void setINodeWithoutTransaction(INodeFile inode) {
     this.inode = inode;
   }
-
-  public DatanodeDescriptor getDatanode(int index) {
-    assert index >= 0;
-    DatanodeDescriptor node = BlocksHelper.getDatanode(this.getBlockId(), index); //[thesis] this should return a DND with ip:port
-    assert node == null
-            || DatanodeDescriptor.class.getName().equals(node.getClass().getName()) :
-            "DatanodeDescriptor is expected at " + index * 3;
-    return node;
+  
+  public List<DatanodeDescriptor> getDataNodes() {
+    return BlocksHelper.getDataNodesFromBlock(getBlockId());
   }
 
   void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
@@ -194,16 +224,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   public boolean equals(Object obj) {
     // Sufficient to rely on super's implementation
     return (this == obj) || super.equals(obj);
-  }
-
-  @Override
-  public LightWeightGSet.LinkedElement getNext() {
-    return nextLinkedElement;
-  }
-
-  @Override
-  public void setNext(LightWeightGSet.LinkedElement next) {
-    this.nextLinkedElement = next;
   }
 
   /*
