@@ -25,6 +25,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
 
@@ -178,6 +179,14 @@ public class INodeHelper {
 			BlockInfo[] blocksArray = BlocksHelper.getBlocksArrayInternal((INodeFile) inode, DBConnector.obtainSession());
 			((INodeFile) (inode)).setBlocksList(blocksArray);
 		}
+    
+    if (inodetable.getSymlink() != null)
+    {
+//      String linkValue = DFSUtil.bytes2String(inodetable.getSymlink());
+      inode = new INodeSymlink(inodetable.getSymlink(), inodetable.getModificationTime(), 
+              inodetable.getATime(), ps);
+      inode.setID(inodetable.getId());
+    }
 
 		inode.setLocalName(inodetable.getName()); //added for simple
 		inode.setParentIDLocal(inodetable.getParentID());
@@ -568,7 +577,8 @@ public class INodeHelper {
 			}
 		}
 		if (node instanceof INodeSymlink) {
-			inode.setSymlink(((INodeSymlink) node).getSymlink());
+      String linkValue = DFSUtil.bytes2String(((INodeSymlink) node).getSymlink());
+			inode.setSymlink(linkValue);
 		}
 
 		if (isRoot) {

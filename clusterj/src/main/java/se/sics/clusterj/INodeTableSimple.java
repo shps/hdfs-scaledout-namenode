@@ -113,7 +113,7 @@ public interface INodeTableSimple {
     
     //INodeSymlink
     @Column (name = "symlink")
-    byte[] getSymlink ();
-    void setSymlink(byte[] symlink);
+    String getSymlink ();
+    void setSymlink(String symlink);
    
 }
