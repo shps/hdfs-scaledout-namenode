@@ -280,8 +280,7 @@ public class LeaseHelper {
 				return lease;
 
 			} catch(ClusterJException e) {
-				//LeaseHelper.LOG.error("ClusterJException in getLease: " + e.getMessage());
-				e.printStackTrace();
+				LeaseHelper.LOG.error(e.getMessage(), e);
 				tries--;
 			}
 		}

@@ -644,9 +644,7 @@
 			<!-- TODO--><exclude>**/TestNameNodeMetrics.java</exclude>
 			<!-- TODO--><exclude>**/TestDfsOverAvroRpc.java</exclude>
 			<!-- TODO--><exclude>**/TestJMXGet.java</exclude>
-			<!-- TODO--><exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
 			<!-- TODO--><exclude>**/TestDeleteBlockPool.java</exclude>
-			<!-- TODO--><exclude>**/TestDiskError.java</exclude><!-- It succeeds but doesn't terminate the test-->
 			<!-- TODO--><exclude>**/TestViewFsHdfs.java</exclude> <!-- 39/40 test-cases are passing, it's worth to fix -->
 			<!-- TODO--><exclude>**/TestFileCorruption.java</exclude>
 			<!-- TODO--><exclude>**/TestModTime.java</exclude>

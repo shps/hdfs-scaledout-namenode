@@ -3188,12 +3188,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
     writeLock();
+    int tries = DBConnector.RETRY_COUNT;
+    boolean done = false;
     try {
-      getBlockManager().getDatanodeManager().registerDatanode(nodeReg);
-      checkSafeMode();
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true);
+          checkSafeMode();
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
+      }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
+    
+    //TODO[H]: This exception should be more informative.
+    if (!done)
+      throw new IOException("Registration failed for the datanode " + nodeReg.name);
   }
   
   /**

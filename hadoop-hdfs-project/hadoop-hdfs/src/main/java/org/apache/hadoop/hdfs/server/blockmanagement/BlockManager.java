@@ -1762,7 +1762,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                                   toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
       
       // move block to the head of the list
-      if(storedBlock != null && storedBlock.findDatanode(dn, isTransactional) >= 0)
+      if(storedBlock != null && storedBlock.findDatanode(dn) >= 0)
           existingBlocks.remove(storedBlock);
     }
     // collect blocks that have not been reported
@@ -1836,7 +1836,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
-      assert storedBlock.findDatanode(dn, isTransactional) < 0 : "Block " + block
+      assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         + " in recentInvalidatesSet should not appear in DN " + dn;
       return storedBlock;
     }
@@ -1854,7 +1854,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
     //add replica if appropriate
     if (reportedState == ReplicaState.FINALIZED
-        && storedBlock.findDatanode(dn, isTransactional) < 0) {
+        && storedBlock.findDatanode(dn) < 0) {
       toAdd.add(storedBlock);
     }
     return storedBlock;
@@ -1921,7 +1921,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       boolean isTransactional) 
   throws IOException {
     block.addReplicaIfNotPresent(node, block, reportedState, isTransactional);
-    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node, isTransactional) < 0) {
+    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
   }
@@ -2492,7 +2492,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                                 DBConnector.safeRollback();
                                 tries--;
                                 LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
-                                ex.printStackTrace();
                             }
                         }
                     }

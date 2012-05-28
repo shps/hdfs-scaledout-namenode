@@ -137,7 +137,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	* Add data-node this block belongs to.
 	*/
 	  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
-	    if(findDatanode(node, isTransactional) >= 0) // the node is already there
+	    if(findDatanode(node) >= 0) // the node is already there
 	      return false;
 	    
 	    
@@ -147,18 +147,18 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	    return true;
 	  }
 
-	  /**
-	* Remove data-node from the block.
-	*/
-	  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
-	    int dnIndex = findDatanode(node, isTransactional);
-                                                    if(dnIndex < 0) { // the node is not found 
-	      return false;
-                                                    }
+  /**
+   * Remove data-node from the block.
+   */
+  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
+    int dnIndex = findDatanode(node);
+    if (dnIndex < 0) { // the node is not found 
+      return false;
+    }
 
-	    BlocksHelper.removeTriplets(this,dnIndex, isTransactional);
-	    return true;
-	  }
+    BlocksHelper.removeTriplets(this, dnIndex, isTransactional);
+    return true;
+  }
 
 
 	/**
@@ -166,8 +166,8 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 	 * @param dn
 	 * @return index or -1 if not found.
 	 */
-	int findDatanode(DatanodeDescriptor dn, boolean isTransactional) {
-		return BlocksHelper.findDatanodeForBlock(dn, this.getBlockId(), isTransactional);
+	int findDatanode(DatanodeDescriptor dn) {
+		return BlocksHelper.findDatanodeForBlock(dn, this.getBlockId());
 	}
 
 	/**

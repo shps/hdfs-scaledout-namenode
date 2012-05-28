@@ -797,26 +797,24 @@ public class BlocksHelper {
 		}
 	}
         
-        /**
-         * 
-         * @param blockInfo
-         * @param index 
-         */
-	public static void removeTriplets(BlockInfo blockInfo, int index,
-               boolean isTransactional)
-	{ 
-            DBConnector.checkTransactionState(isTransactional);
-            
-            if (isTransactional)
-            {
-                Session session = DBConnector.obtainSession();
-                removeTripletesInternal(blockInfo, index, 
-                        session);
-                session.flush();
-            }
-            else
-                removeTripletsWithTransaction(blockInfo, index);
-        }
+  /**
+   * 
+   * @param blockInfo
+   * @param index 
+   */
+  public static void removeTriplets(BlockInfo blockInfo, int index,
+          boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      removeTripletesInternal(blockInfo, index,
+              session);
+      session.flush();
+    } else {
+      removeTripletsWithTransaction(blockInfo, index);
+    }
+  }
         /**
          * 
          * @param blockInfo
@@ -847,33 +845,31 @@ public class BlocksHelper {
             }
 	}
 
-        private static void removeTripletesInternal(BlockInfo blockInfo, int index,
-                Session session)
-        {
-            deleteTriplet(session, blockInfo.getBlockId(), index);
-                    // The triplets entries in the DB for a block have an ordered list of
-                    // indices. Removal of an entry of an index X means that all entries
-                    // with index greater than X needs to be corrected (decremented by 1
-                    // basically).
-                    //TODO: wowowowo!!! lots of stuff happening here, later!
-                    List<TripletsTable> results = selectTriplet(session, blockInfo.getBlockId());
-                    Collections.sort(results, new TripletsTableComparator());
-                    for (TripletsTable t: results)	{
-                            long oldIndex = t.getIndex();
+  private static void removeTripletesInternal(BlockInfo blockInfo, int index,
+          Session session) {
+    deleteTriplet(session, blockInfo.getBlockId(), index);
+    // The triplets entries in the DB for a block have an ordered list of
+    // indices. Removal of an entry of an index X means that all entries
+    // with index greater than X needs to be corrected (decremented by 1
+    // basically).
+    //TODO: wowowowo!!! lots of stuff happening here, later!
+    List<TripletsTable> results = selectTriplet(session, blockInfo.getBlockId());
+    Collections.sort(results, new TripletsTableComparator());
+    for (TripletsTable t : results) {
+      long oldIndex = t.getIndex();
 
-                            // entry that needs its index corrected
-                            if (index < oldIndex)
-                            {				
-                                    TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
-                                    replacementEntry.setBlockId(t.getBlockId());
-                                    //replacementEntry.setDatanodeName(t.getDatanodeName());
-                                    replacementEntry.setStorageId(t.getStorageId());
-                                    replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
-                                    deleteTriplet(session, t.getBlockId(), t.getIndex());
-                                    insertTriplet(session, replacementEntry, false);
-                            }
-                    }
-        }
+      // entry that needs its index corrected
+      if (index < oldIndex) {
+        TripletsTable replacementEntry = session.newInstance(TripletsTable.class);
+        replacementEntry.setBlockId(t.getBlockId());
+        //replacementEntry.setDatanodeName(t.getDatanodeName());
+        replacementEntry.setStorageId(t.getStorageId());
+        replacementEntry.setIndex(t.getIndex() - 1); // Correct the index
+        deleteTriplet(session, t.getBlockId(), t.getIndex());
+        insertTriplet(session, replacementEntry, false);
+      }
+    }
+  }
         
 	/**
 	 * A Comparator to sort the Triplets according to index
@@ -968,7 +964,7 @@ public class BlocksHelper {
 		}
 		return -1;
 	}
-	 public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId, boolean isTransactional) {
+	 public static int findDatanodeForBlock(DatanodeDescriptor node, long blockId) {
            
     Session session = DBConnector.obtainSession();
     //List<TripletsTable> results = selectTriplets(node.name, blockId, session);
