@@ -2351,14 +2351,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + src + " to " + dst);
     }
     writeLock();
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      renameToInternal(src, dst, options);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(dst, false); 
+      while (!done && tries > 0)
+      {
+        try {
+          DBConnector.beginTransaction();
+          renameToInternal(src, dst, true, options);
+          DBConnector.commit();
+          done = true;
+          if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            resultingStat = dir.getFileInfo(dst, false);
+          }
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
       }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
+    
+    if (!done)
+       throw new IOException("rename from " + src + " to " + dst + " failed.");
+    
     //getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       StringBuilder cmd = new StringBuilder("rename options=");
@@ -2370,8 +2389,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void renameToInternal(String src, String dst,
-      Options.Rename... options) throws IOException {
+  private void renameToInternal(String src, String dst, 
+          boolean transactional, Options.Rename... options) throws IOException {
     assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
@@ -2387,8 +2406,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     
-    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    dir.renameTo(src, dst, false, options);
+    dir.renameTo(src, dst, transactional, options);
     unprotectedChangeLease(src, dst, dinfo, false); // update lease with new filename
   }
   

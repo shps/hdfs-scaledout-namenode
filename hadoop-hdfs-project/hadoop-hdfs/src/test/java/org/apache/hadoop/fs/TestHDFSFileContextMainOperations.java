@@ -44,11 +44,13 @@ public class TestHDFSFileContextMainOperations extends
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
+  private static int wNNPort = 0;
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
+    wNNPort = cluster.getNameNodePort();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getWritingURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
@@ -61,8 +63,8 @@ public class TestHDFSFileContextMainOperations extends
       cluster.shutdown();
       cluster = null;
     }
-    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
-                                              .format(false).build();
+    cluster = new MiniDFSCluster.Builder(CONF).wNameNodePort(wNNPort)
+            .numDataNodes(1).format(false).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getWritingURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 

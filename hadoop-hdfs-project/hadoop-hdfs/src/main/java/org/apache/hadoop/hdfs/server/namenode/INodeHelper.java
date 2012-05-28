@@ -260,18 +260,18 @@ public class INodeHelper {
             }
 	}
 
-	/** Deletes an inode from the database
-	 * @param session
-	 * @param inodeid
-	 */
-	private static void deleteINodeTableInternal(Session session, long inodeid){
-            
-            HelperMetrics.inodeMetrics.incrDelete();
-            
-		LOG.debug("Removing " + inodeid);
-		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
-		session.deletePersistent(inodet);
-	}
+  /** Deletes an inode from the database
+   * @param session
+   * @param inodeid
+   */
+  private static void deleteINodeTableInternal(Session session, long inodeid) {
+
+    HelperMetrics.inodeMetrics.incrDelete();
+
+    LOG.debug("Removing " + inodeid);
+    INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
+    session.deletePersistent(inodet);
+  }
 
   /** Updates an already existing inode in the database
    * @param session
@@ -517,7 +517,7 @@ public class INodeHelper {
 	private static void addChildInternal(Session session, INode node, boolean isRoot, long parentid) {
 		boolean entry_exists;
 		//TODO: this check seems redundant, remove this
-		INodeTableSimple inode = selectINodeTableInternal(session, node.getLocalName(), parentid);
+		INodeTableSimple inode = selectINodeTableInternal(session, node.getID());
 		entry_exists = true;
 		if (inode == null) {
 			inode = session.newInstance(INodeTableSimple.class);
@@ -590,22 +590,20 @@ public class INodeHelper {
 		}
 
 	}
-	/** Deletes an inode from the database 
-	 * @param inodeid the inodeid to remove
-	 */
-	public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional)
-	{
-            DBConnector.checkTransactionState(isTransactional);
-        
-            if (isTransactional)
-            {
-               Session session = DBConnector.obtainSession();
-               deleteINodeTableInternal(session, inodeid);
-               session.flush();
-            }
-            else
-               removeChildWithTransaction(inodeid);
-	}
+  /** Deletes an inode from the database 
+   * @param inodeid the inodeid to remove
+   */
+  public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      deleteINodeTableInternal(session, inodeid);
+      session.flush();
+    } else {
+      removeChildWithTransaction(inodeid);
+    }
+  }
 
 /** Deletes an inode from the database
      * @param inodeid the inodeid to remove
@@ -1140,5 +1138,3 @@ public class INodeHelper {
     
 
 }
-
-//TODO: replace all syserr with LOG.error
