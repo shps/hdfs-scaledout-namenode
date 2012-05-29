@@ -76,6 +76,7 @@ public class TestFileAppend4 {
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();
+    
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }

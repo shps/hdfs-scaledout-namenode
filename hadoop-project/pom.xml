@@ -665,13 +665,10 @@
 			<exclude>**/TestDecommission.java</exclude>
 
 			<exclude>**/TestCrcCorruption.java</exclude>
-			<exclude>**/TestFcHdfsSymlink.java</exclude>
 			<exclude>**/TestSafeMode.java</exclude>
 			<exclude>**/TestJMXGet.java</exclude>
 			<exclude>**/TestDeleteBlockPool.java</exclude>
-			<exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
 			<exclude>**/TestOverReplicatedBlocks.java</exclude>
-			<exclude>**/TestDiskError.java</exclude>
 			<exclude>**/TestViewFsHdfs.java</exclude>
 			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
 			<exclude>**/TestQuota.java</exclude>
