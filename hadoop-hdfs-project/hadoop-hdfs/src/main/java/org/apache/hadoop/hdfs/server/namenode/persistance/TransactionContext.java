@@ -167,7 +167,7 @@ public class TransactionContext {
         Query<TripletsTable> query = session.createQuery(dobj);
         query.setParameter("param", id);
         List<TripletsTable> triplets = query.getResultList();
-        List<Replica> replicas = DatanodeDescriptorFactory.createReplicaList(triplets);
+        List<Replica> replicas = ReplicaFactory.createReplicaList(triplets);
         blockReplicas.put(id, replicas);
         return replicas;
       }
