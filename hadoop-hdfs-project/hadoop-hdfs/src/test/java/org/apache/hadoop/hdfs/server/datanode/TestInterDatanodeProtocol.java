@@ -148,12 +148,13 @@ public class TestInterDatanodeProtocol {
           DFSClientAdapter.getDFSClient(dfs).getNamenode(), filestr);
       DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
       assertTrue(datanodeinfo.length > 0);
-
+      
       //connect to a data node
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
+      assertTrue(datanode != null);
       InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
           datanodeinfo[0], conf, datanode.socketTimeout);
-      assertTrue(datanode != null);
+      
       
       //stop block scanner, so we could compare lastScanTime
       if (datanode.blockScanner != null) {

@@ -110,9 +110,9 @@ public class EntityManager {
     return null;
   }
 
-  public List<BlockInfo> findBlocksByDatanodeName(String name) throws IOException {
+  public List<BlockInfo> findBlocksByStorageId(String name) throws IOException {
     try {
-      return context().findBlocksByDatanodeName(name);
+      return context().findBlocksByStorageId(name);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

@@ -136,6 +136,7 @@ public class DFSInputStream extends FSInputStream {
     lastBlockBeingWrittenLength = 0;
     if (!locatedBlocks.isLastBlockComplete()) {
       final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
+      
       if (last != null) {
         final long len = readBlockLength(last);
         last.getBlock().setNumBytes(len);

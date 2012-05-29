@@ -235,6 +235,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                                           long length) 
       throws IOException {
     metrics.incrGetBlockLocations();
+    LOG.info("getBlockLocations for " + src);
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
   }
@@ -561,13 +562,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public boolean restoreFailedStorage(String arg) 
+  public boolean restoreFailedStorage(String arg)
       throws AccessControlException {
+    //[H] This operation seems useless in KTHFS.
     return namesystem.restoreFailedStorage(arg);
   }
 
   @Override // ClientProtocol
   public void saveNamespace() throws IOException {
+    //[H] This operation seems useless in KTHFS.
     namesystem.saveNamespace();
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.mysql.clusterj.ClusterJException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.Closeable;
@@ -423,7 +424,7 @@ public class FSDirectory implements Closeable {
     try {
       // file is closed
       file.setModificationTimeForce(now);
-      INodeHelper.updateModificationTime(file.getID(), now, isTransactional);
+      INodeHelper.updateModificationTime(file.id, now, isTransactional);
       //fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
@@ -525,135 +526,118 @@ public class FSDirectory implements Closeable {
    * @throws FileAlreadyExistsException if the src is a symlink that points to dst
    * @deprecated See {@link #renameTo(String, String)}
    */
-        @Deprecated
-        boolean unprotectedRenameTo(String src, String dst, long timestamp, boolean isTransactional)
-                throws QuotaExceededException, UnresolvedLinkException,
-                       FileAlreadyExistsException
-        {
-                assert hasWriteLock();
-                INode[] srcInodes = rootDir.getExistingPathINodes(src, false);
-                for (int i = 0; i < srcInodes.length; i++)
-                {
-                        NameNode.LOG.debug("srcInodes: " + srcInodes[i]);
-                }
-                INode srcInode = srcInodes[srcInodes.length - 1];
+  @Deprecated
+  boolean unprotectedRenameTo(String src, String dst, long timestamp, boolean isTransactional)
+          throws QuotaExceededException, UnresolvedLinkException,
+          FileAlreadyExistsException {
+    assert hasWriteLock();
+    INode[] srcInodes = rootDir.getExistingPathINodes(src, false);
+    for (int i = 0; i < srcInodes.length; i++) {
+      NameNode.LOG.debug("srcInodes: " + srcInodes[i]);
+    }
+    INode srcInode = srcInodes[srcInodes.length - 1];
 
-                // check the validation of the source
-                if (srcInode == null)
-                {
-                        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                                     + "failed to rename " + src + " to " + dst
-                                                     + " because source does not exist");
-                        return false;
-                }
-                if (srcInodes.length == 1)
-                {
-                        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                                     + "failed to rename " + src + " to " + dst + " because source is the root");
-                        return false;
-                }
-                if (isDir(dst))
-                {
-                        dst += Path.SEPARATOR + new Path(src).getName();
-                }
+    // check the validation of the source
+    if (srcInode == null) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst
+              + " because source does not exist");
+      return false;
+    }
+    if (srcInodes.length == 1) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst + " because source is the root");
+      return false;
+    }
+    if (isDir(dst)) {
+      dst += Path.SEPARATOR + new Path(src).getName();
+    }
 
-                // check the validity of the destination
-                if (dst.equals(src))
-                {
-                        return true;
-                }
-                if (srcInode.isLink()
-                    && dst.equals(((INodeSymlink) srcInode).getLinkValue()))
-                {
-                        throw new FileAlreadyExistsException(
-                                "Cannot rename symlink " + src + " to its target " + dst);
-                }
+    // check the validity of the destination
+    if (dst.equals(src)) {
+      return true;
+    }
+    if (srcInode.isLink()
+            && dst.equals(((INodeSymlink) srcInode).getLinkValue())) {
+      throw new FileAlreadyExistsException(
+              "Cannot rename symlink " + src + " to its target " + dst);
+    }
 
-                // dst cannot be directory or a file under src
-                if (dst.startsWith(src)
-                    && dst.charAt(src.length()) == Path.SEPARATOR_CHAR)
-                {
-                        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                                     + "failed to rename " + src + " to " + dst
-                                                     + " because destination starts with src");
-                        return false;
-                }
+    // dst cannot be directory or a file under src
+    if (dst.startsWith(src)
+            && dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst
+              + " because destination starts with src");
+      return false;
+    }
 
-                byte[][] dstComponents = INode.getPathComponents(dst);
-                INode[] dstInodes = new INode[dstComponents.length];
-                rootDir.getExistingPathINodes(dstComponents, dstInodes, false);
-                if (dstInodes[dstInodes.length - 1] != null)
-                {
-                        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                                     + "failed to rename " + src + " to " + dst
-                                                     + " because destination exists");
-                        return false;
-                }
-                if (dstInodes[dstInodes.length - 2] == null)
-                {
-                        NameNode.stateChangeLog.warn("DIRsession.savePersistent(result);* FSDirectory.unprotectedRenameTo: "
-                                                     + "failed to rename " + src + " to " + dst
-                                                     + " because destination's parent does not exist");
-                        return false;
-                }
+    byte[][] dstComponents = INode.getPathComponents(dst);
+    INode[] dstInodes = new INode[dstComponents.length];
+    rootDir.getExistingPathINodes(dstComponents, dstInodes, false);
+    if (dstInodes[dstInodes.length - 1] != null) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst
+              + " because destination exists");
+      return false;
+    }
+    if (dstInodes[dstInodes.length - 2] == null) {
+      NameNode.stateChangeLog.warn("DIRsession.savePersistent(result);* FSDirectory.unprotectedRenameTo: "
+              + "failed to rename " + src + " to " + dst
+              + " because destination's parent does not exist");
+      return false;
+    }
 
-                // Ensure dst has quota to accommodate rename
-                verifyQuotaForRename(srcInodes, dstInodes);
+    // Ensure dst has quota to accommodate rename
+    verifyQuotaForRename(srcInodes, dstInodes);
 
-                INode dstChild = null;
-                INode srcChild = null;
-                String srcChildName = null;
-                try
-                {
-                        // remove src
-                        srcChild = removeChild(srcInodes, srcInodes.length - 1, isTransactional);
-                        srcChild = srcInodes[srcInodes.length - 1];
-                        if (srcChild == null)
-                        {
-                                NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                                             + "failed to rename " + src + " to " + dst
-                                                             + " because the source can not be removed");
-                                return false;
-                        }
-                        srcChildName = srcChild.getLocalName();
-                        srcChild.setLocalName(dstComponents[dstInodes.length - 1]);
-                        // add src to the destination
-                        dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
-                                                        srcChild, UNKNOWN_DISK_SPACE, false, true, isTransactional);
-                        //[KTHFS] We do not add child, but update previous node in DB
-                        //dstChild = INodeHelper.updateSrcDst(src, dst); //for simple
+    INode dstChild = null;
+    INode srcChild = null;
+    String srcChildName = null;
+    try {
+      // remove src
+      srcChild = removeChild(srcInodes, srcInodes.length - 1, isTransactional);
+      srcChild = srcInodes[srcInodes.length - 1];
+      if (srcChild == null) {
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                + "failed to rename " + src + " to " + dst
+                + " because the source can not be removed");
+        return false;
+      }
+      srcChildName = srcChild.getLocalName();
+      srcChild.setLocalName(dstComponents[dstInodes.length - 1]);
+      // add src to the destination
+      dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
+              srcChild, UNKNOWN_DISK_SPACE, false, true, isTransactional);
+      //[KTHFS] We do not add child, but update previous node in DB
+      //dstChild = INodeHelper.updateSrcDst(src, dst); //for simple
 
-                        if (dstChild != null)
-                        {
-                                srcChild = null;
-                                if (NameNode.stateChangeLog.isDebugEnabled())
-                                {
-                                        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
-                                                                      + src + " is renamed to " + dst);
-                                }
-                                // update modification time of dst and the parent of src
-                                srcInodes[srcInodes.length - 2].setModificationTime(timestamp); //FIXME: should be persisted to DB
-                                dstInodes[dstInodes.length - 2].setModificationTime(timestamp); //FIXME: should be persisted to DB
-
-                                // [Stateless] Update fullpath and parents for all subtrees
-                                //INodeHelper.updateParentAcrossSubTree(src, dst); //for simple
-                                return true;
-                        }
-                }
-                finally
-                {
-                        if (dstChild == null && srcChild != null)
-                        {
-                                // put it back
-                                srcChild.setLocalName(srcChildName);
-                                addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, srcChild,
-                                                     UNKNOWN_DISK_SPACE, false, true, isTransactional);
-                        }
-                }
-                NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                             + "failed to rename " + src + " to " + dst);
-                return false;
+      if (dstChild != null) {
+        srcChild = null;
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
+                  + src + " is renamed to " + dst);
         }
+        // update modification time of dst and the parent of src
+        srcInodes[srcInodes.length - 2].setModificationTime(timestamp); //FIXME: should be persisted to DB
+        dstInodes[dstInodes.length - 2].setModificationTime(timestamp); //FIXME: should be persisted to DB
+
+        // [Stateless] Update fullpath and parents for all subtrees
+        //INodeHelper.updateParentAcrossSubTree(src, dst); //for simple
+        return true;
+      }
+    } finally {
+      if (dstChild == null && srcChild != null) {
+        // put it back
+        srcChild.setLocalName(srcChildName);
+        addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, srcChild,
+                UNKNOWN_DISK_SPACE, false, true, isTransactional);
+      }
+    }
+    NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + "failed to rename " + src + " to " + dst);
+    return false;
+  }
 
   /**
    * Rename src to dst.
@@ -778,8 +762,8 @@ public class FSDirectory implements Closeable {
     INode removedDst = null;
     try {
       if (dstInode != null) { // dst exists remove it
-        //removedDst = removeChild(dstInodes, dstInodes.length - 1);
-        removedDst = dstInodes[dstInodes.length-1];
+        removedDst = removeChild(dstInodes, dstInodes.length - 1, isTransactional);//[H]: We should remove dst here.
+//        removedDst = dstInodes[dstInodes.length-1];
         dstChildName = removedDst.getLocalName();
       }
 
@@ -806,25 +790,32 @@ public class FSDirectory implements Closeable {
           removedDst = null;
           List<Block> collectedBlocks = new ArrayList<Block>();
           
+          if (rmdst instanceof INodeDirectory)
+            filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks, isTransactional);
+          else if (rmdst instanceof INodeFile)
+            filesDeleted = ((INodeFile)rmdst).collectSubtreeBlocksAndClearNoDelete(collectedBlocks, isTransactional);
           
-          filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks, isTransactional); 
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks, isTransactional);
         }
         return filesDeleted >0;
       }
-    } finally {
-      if (removedSrc != null) {
-        // Rename failed - restore src
-        removedSrc.setLocalName(srcChildName);
-        addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, removedSrc, 
-            UNKNOWN_DISK_SPACE, false, true, isTransactional);
-      }
-      if (removedDst != null) {
-        // Rename failed - restore dst
-        removedDst.setLocalName(dstChildName);
-        addChildNoQuotaCheck(dstInodes, dstInodes.length - 1, removedDst, 
-            UNKNOWN_DISK_SPACE, false, true, isTransactional);
-      }
+    } catch (ClusterJException e) {
+      throw e;
+    }
+    finally {
+      //[H]: This is unnecessary in transaction. It rolls back in case of failure. 
+//      if (removedSrc != null) {
+//        // Rename failed - restore src
+//        removedSrc.setLocalName(srcChildName);
+//        addChildNoQuotaCheck(srcInodes, srcInodes.length - 1, removedSrc, 
+//            UNKNOWN_DISK_SPACE, false, true, isTransactional);
+//      }
+//      if (removedDst != null) {
+//        // Rename failed - restore dst
+//        removedDst.setLocalName(dstChildName);
+//        addChildNoQuotaCheck(dstInodes, dstInodes.length - 1, removedDst, 
+//            UNKNOWN_DISK_SPACE, false, true, isTransactional);
+//      }
     }
     NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
         + "failed to rename " + src + " to " + dst);
@@ -1054,23 +1045,27 @@ public class FSDirectory implements Closeable {
     INodeFile trgInode = (INodeFile) trgINodes[trgINodes.length-1];
     INodeDirectory trgParent = (INodeDirectory)trgINodes[trgINodes.length-2];
     
-    for(String src : srcs) {
+    for (String src : srcs) {
       INodeFile srcInode = getFileINode(src);
-     for (BlockInfo block : srcInode.getBlocks()) {
-       trgInode.addBlock(block);
-       block.setINode(trgInode);
-       em.persist(block);
-     }
-     srcInode.getBlocks().clear();
-     trgParent.removeChild(srcInode, isTransactional);
-     em.remove(srcInode);
+      
+      for (BlockInfo block : srcInode.getBlocks()) {
+        trgInode.addBlock(block);
+        block.setINode(trgInode);
+        em.persist(block);
+      }
+      srcInode.getBlocks().clear();
+      trgParent.removeChild(srcInode, isTransactional);
+      em.remove(srcInode);
     }
     
     em.persist(trgParent);
     
-    trgInode.setModificationTime(timestamp);
+    //TODO[Hooman]: The following changes can be optimized to be updated or flushed together.
+    trgInode.setModificationTimeForce(timestamp);
+    INodeHelper.updateModificationTime(trgInode.id, timestamp, isTransactional);
     trgParent.setModificationTime(timestamp);
-    
+    INodeHelper.updateModificationTime(trgParent.id, timestamp, isTransactional);
+    // update quota on the parent directory ('count' files removed, 0 space)
     unprotectedUpdateCount(trgINodes, trgINodes.length-1, - srcs.length, 0, isTransactional);
   }
 
@@ -1201,7 +1196,7 @@ public class FSDirectory implements Closeable {
     if(targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota)
                                                 
     	filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks, isTransactional);
-    else //since we have already deleted the inode, we just need to clear the blocks
+    else if (targetNode instanceof INodeFile)//since we have already deleted the inode, we just need to clear the blocks
     	filesRemoved = ((INodeFile)targetNode).collectSubtreeBlocksAndClearNoDelete(collectedBlocks, isTransactional);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
@@ -1265,13 +1260,13 @@ public class FSDirectory implements Closeable {
       INode targetNode = rootDir.getNode(srcs, true);
 
       if (targetNode == null)
-	return null;
+        return null;
 
 
       if (!targetNode.isDirectory()) {
-	return new DirectoryListing(
-	    new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-		targetNode, needLocation)}, 0);
+        return new DirectoryListing(
+            new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
+                targetNode, needLocation)}, 0);
       }
 
       // Else its a directory
@@ -1282,11 +1277,11 @@ public class FSDirectory implements Closeable {
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing; i++) {
-	INode cur = contents.get(startChild+i);
-	listing[i] = createFileStatus(cur.name, cur, needLocation);
+        INode cur = contents.get(startChild+i);
+        listing[i] = createFileStatus(cur.name, cur, needLocation);
       }
       return new DirectoryListing(
-	  listing, totalNumChildren-startChild-numOfListing);
+          listing, totalNumChildren-startChild-numOfListing);
     } finally {
       readUnlock();
     }
@@ -1839,7 +1834,6 @@ public class FSDirectory implements Closeable {
       int pos, T child, long childDiskspace, boolean inheritPermission, boolean reuseID, boolean isTransactional) {
     T inode = null;
     try {
-        //TODO[Hooman]: add isTransactional whenever you reach this method from the callers.
       inode = addChild(pathComponents, pos, child, childDiskspace,
           inheritPermission, false, reuseID, isTransactional);
     } catch (QuotaExceededException e) {
@@ -2062,28 +2056,31 @@ public class FSDirectory implements Closeable {
    * Sets the access time on the file. Logs it in the transaction log.
    */
   void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) {
-    boolean status = false;
-    writeLock();
-    try {
-      status = unprotectedSetTimes(src, inode, mtime, atime, force);
-    } finally {
-      writeUnlock();
-    }
-    if (status) {
+    
+    unprotectedSetTimes(src, inode, mtime, atime, force);
+    //boolean status = false;
+    //writeLock();
+    //try {
+    //  status = unprotectedSetTimes(src, inode, mtime, atime, force);
+    //} finally {
+    //  writeUnlock();
+    //}
+    //if (status) {
       //fsImage.getEditLog().logTimes(src, mtime, atime);
-    }
+    //}
   }
 
+  //unused
   boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
       throws UnresolvedLinkException {
-    assert hasWriteLock();
+    //assert hasWriteLock();
     INodeFile inode = getFileINode(src);
     return unprotectedSetTimes(src, inode, mtime, atime, force);
   }
 
   private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
                                       long atime, boolean force) {
-    assert hasWriteLock();
+    //assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
       inode.setModificationTimeForceDB(mtime);

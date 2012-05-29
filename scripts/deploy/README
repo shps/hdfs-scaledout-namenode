@@ -1,0 +1,7 @@
+
+Please follow these steps to deploy/run/test KTHFS:
+
+./broadcast.sh cloud7 cloud6 cloud5
+./start-kthfs.sh cloud7 cloud6 cloud5 
+./start-loadgens.sh cloud7
+

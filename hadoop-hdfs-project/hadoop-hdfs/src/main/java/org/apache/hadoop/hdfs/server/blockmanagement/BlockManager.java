@@ -33,7 +33,6 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -74,6 +72,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.mysql.clusterj.ClusterJException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
@@ -478,7 +477,9 @@ public class BlockManager {
     completeBlock.setINode(fileINode);
     em.persist(completeBlock);
     // replace block in the blocksMap
-    return completeBlock;
+    //W: do ReplicaHelper.delete(ucBlock, isTransactional)
+    ReplicaHelper.delete(ucBlock.getBlockId(), isTransactional);
+    return completeBlock;    
   }
   
   private BlockInfo completeBlock(final INodeFile fileINode,
@@ -598,12 +599,8 @@ public class BlockManager {
 
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos,
     final BlockTokenSecretManager.AccessMode mode) throws IOException {
-    //final LocatedBlock lb = createLocatedBlock(blk, pos);
 	  final LocatedBlock lb;
-    if(namesystem.isWritingNN())
-    	lb = createLocatedBlockWriteNN(blk, pos);
-    else
-    	lb = createLocatedBlockReadNN(blk, pos);
+    lb = createLocatedBlock(blk, pos);
     if (mode != null) {
       setBlockToken(lb, mode);
     }
@@ -611,51 +608,7 @@ public class BlockManager {
   }
 
   /** @return a LocatedBlock for the given block */
-  private LocatedBlock createLocatedBlockWriteNN(final BlockInfo blk, final long pos
-	      ) throws IOException { 
-	    if (blk instanceof BlockInfoUnderConstruction) {
-	      if (blk.isComplete()) {
-	        throw new IOException(
-	            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
-	            + ", blk=" + blk);
-	      }
-	      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
-	      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
-	      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-	      return new LocatedBlock(eb, locations, pos, false);
-	    }
-
-	    // get block locations
-	    final int numCorruptNodes = countNodes(blk).corruptReplicas();
-	    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
-	    if (numCorruptNodes != numCorruptReplicas) {
-	      LOG.warn("Inconsistent number of corrupt replicas for "
-	          + blk + " blockMap has " + numCorruptNodes
-	          + " but corrupt replicas map has " + numCorruptReplicas);
-	    }
-
-	    final int numNodes = getStoredBlock(blk).getReplicas().size();
-	    final boolean isCorrupt = numCorruptNodes == numNodes;
-	    final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
-	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
-    if (numMachines > 0) {
-      int j = 0;
-      List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(blk));
-
-      for (DatanodeDescriptor d : dataNodes) {
-        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-        if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
-          machines[j++] = d;
-        }
-      }
-    }
-	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-	    return new LocatedBlock(eb, machines, pos, isCorrupt);
-	  }
-
-  
-  /** @return a LocatedBlock for the given block */
-  private LocatedBlock createLocatedBlockReadNN(final BlockInfo blk, final long pos) throws IOException { //TODO: [thesis] make changes to this function
+  private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos) throws IOException {
     if (blk instanceof BlockInfoUnderConstruction) {
       if (blk.isComplete()) {
         throw new IOException(
@@ -668,10 +621,22 @@ public class BlockManager {
       return new LocatedBlock(eb, locations, pos, false);
     }
 
+    NumberReplicas replicas = countNodes(blk);
+    
+    final int numCorruptNodes = replicas.corruptReplicas();
+    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);       
+    if (numCorruptNodes != numCorruptReplicas) {
+      LOG.warn("Inconsistent number of corrupt replicas for "
+               + blk + " blockMap has " + numCorruptNodes
+               + " but corrupt replicas map has " + numCorruptReplicas);
+    }
     final int numNodes = getStoredBlock(blk).getReplicas().size();
-    //final boolean isCorrupt = numCorruptNodes == numNodes;
-    //final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
-    final int numMachines = numNodes; //[thesis] 
+    // [thesis] We don't need to check for replicas because countNodes() given us all this information
+    // Check for corrupt replicas                                                                                                                   
+    // Filter datanodes from corrupt replicas
+    final boolean isCorrupt = numNodes == numCorruptNodes;
+    final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
+    
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
     if (numMachines > 0) {
       if (!namesystem.isWritingNN()) {
@@ -699,8 +664,52 @@ public class BlockManager {
     //return new LocatedBlock(eb, machines, pos, isCorrupt);
     return new LocatedBlock(eb, machines, pos, false);
   }
-  
-  
+
+  /** @return a LocatedBlock for the given block */
+  /*
+  private LocatedBlock createLocatedBlockReadNN(final BlockInfo blk, final long pos
+	      ) throws IOException {
+	    if (blk instanceof BlockInfoUnderConstruction) {
+	      if (blk.isComplete()) {
+	        throw new IOException(
+	            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
+	            + ", blk=" + blk);
+	      }
+	      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
+	      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
+	      final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	      return new LocatedBlock(eb, locations, pos, false);
+	    }
+
+
+	    final int numNodes = blocksMap.numNodes(blk); //TODO: [W] should be reimplemented using s.load()
+	    final int numMachines = numNodes;
+	    final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+	    if (numMachines > 0) {
+	    	if(!namesystem.isWritingNN()) {
+	    		List<String> ipPorts = BlocksHelper.getDatanodeAddr(blk.getBlockId());
+	    		int w = 0;
+	    		for(String ipPort : ipPorts) {
+	    			machines[w++] = new DatanodeDescriptor(
+	    					new DatanodeID(ipPort,"DUMMY-STORAGE-ID",-1,Integer.parseInt(ipPort.substring(ipPort.indexOf(":")+1))),
+	    					"",
+	    					ipPort);
+	    		}
+	    	}
+	    	else {
+
+	    		int j = 0;
+	    		for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk); //TODO: [W] should be reimplemented
+	    				it.hasNext();) {
+	    			final DatanodeDescriptor d = it.next();
+	    			machines[j++] = d;
+	    		}
+	        }
+	    }
+	    final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
+	    return new LocatedBlock(eb, machines, pos, false);
+	  }
+ */
   @SuppressWarnings("unused")
 private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       ) throws IOException { 
@@ -750,7 +759,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final boolean isFileUnderConstruction,
       final long offset, final long length, final boolean needBlockToken
       ) throws IOException {
-    assert namesystem.hasReadOrWriteLock(); //SHOULD BE HERE
+    //assert namesystem.hasReadOrWriteLock();
     if (blocks == null) {
       return null;
     } else if (blocks.isEmpty()) {
@@ -763,7 +772,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final BlockTokenSecretManager.AccessMode mode = needBlockToken? BlockTokenSecretManager.AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
-      LOG.info("");
       final BlockInfo last = blocks.get(blocks.size() - 1);
       final long lastPos = last.isComplete()?
           fileSizeExcludeBlocksUnderConstruction - last.getNumBytes()
@@ -868,7 +876,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
-    Iterator<BlockInfo> iter = em.findBlocksByDatanodeName(node.name).iterator();
+    Iterator<BlockInfo> iter = em.findBlocksByStorageId(node.name).iterator();
     int startBlock = DFSUtil.getRandom().nextInt(numBlocks); // starting from a random block
     // skip blocks
     for(int i=0; i<startBlock; i++) {
@@ -883,7 +891,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
-      iter = em.findBlocksByDatanodeName(node.name).iterator();
+      iter = em.findBlocksByStorageId(node.name).iterator();
       for(int i=0; i<startBlock&&totalSize<size; i++) {
         curBlock = iter.next();
         if(!curBlock.isComplete())  continue;
@@ -899,7 +907,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /** Remove the blocks associated to the given datanode. 
    * @throws IOException */
   void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) throws IOException {
-    final Iterator<? extends Block> it = em.findBlocksByDatanodeName(node.name).iterator();
+    final Iterator<? extends Block> it = em.findBlocksByStorageId(node.name).iterator();
     
     //TODO: [thesis] this should just remove all the triplets and shrink the indexes
     while(it.hasNext()) {
@@ -1673,7 +1681,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
-    List<BlockInfo> existingBlocks = em.findBlocksByDatanodeName(dn.name);
+    List<BlockInfo> existingBlocks = em.findBlocksByStorageId(dn.getStorageID());
 
     while(itBR.hasNext()) {
       Block iblk = itBR.next();
@@ -1929,7 +1937,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
 
     // Now check for completion of blocks and safe block count
-    NumberReplicas num = countNodes(storedBlock);
+      NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
     int numCurrentReplica = numLiveReplicas + curReplicaDelta//[thesis] confirm this value!
       + pendingReplications.getNumReplicas(storedBlock);
@@ -2434,7 +2442,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                                 DBConnector.safeRollback();
                                 tries--;
                                 LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
-                                ex.printStackTrace();
                             }
                         }
                     }
@@ -2458,8 +2465,43 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
                     + " deleted: " + deleted);
         }
     }
-
-    /**
+    
+  /**
+   * Return the number of nodes that are live and decommissioned.
+   */
+  public NumberReplicas countNodes(Block b, DatanodeDescriptor dnDescriptors[]) {
+    int count = 0;
+    int live = 0;
+    int corrupt = 0;
+    int excess = 0;
+    
+    
+    //Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(b);
+    List<DatanodeDescriptor> liveDescriptors = new ArrayList<DatanodeDescriptor>();
+    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
+    //while (nodeIter.hasNext()) {
+    for(int i=0; i < dnDescriptors.length; i++){
+      //DatanodeDescriptor node = nodeIter.next();
+           DatanodeDescriptor node = dnDescriptors[i];
+      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+        corrupt++;
+      } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+        count++;
+      } else {
+        Collection<Block> blocksExcess =
+          excessReplicateMap.get(node.getStorageID());
+        if (blocksExcess != null && blocksExcess.contains(b)) {
+          excess++;
+        } else {
+          live++;
+          liveDescriptors.add(node);
+        }
+      }
+    }
+    return new NumberReplicas(live, count, corrupt, excess);
+  }
+    
+  /**
    * Return the number of nodes that are live and decommissioned.
    */
   public NumberReplicas countNodes(Block b) throws IOException {
@@ -2495,6 +2537,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * Return the number of nodes that are live and decommissioned.
    * @throws IOException 
    */
+  @Deprecated
   public NumberReplicas countNodesOld(Block b) throws IOException {
     int count = 0;
     int live = 0;
@@ -2590,7 +2633,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    */
   void processOverReplicatedBlocksOnReCommission(
       final DatanodeDescriptor srcNode) throws IOException {
-    final Iterator<? extends Block> it = em.findBlocksByDatanodeName(srcNode.name).iterator();
+    final Iterator<? extends Block> it = em.findBlocksByStorageId(srcNode.name).iterator();
     while(it.hasNext()) {
       final Block block = it.next();
       INodeFile fileINode = getINode(block);
@@ -2614,7 +2657,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     int underReplicatedBlocks = 0;
     int decommissionOnlyReplicas = 0;
     int underReplicatedInOpenFiles = 0;
-    final Iterator<? extends Block> it = em.findBlocksByDatanodeName(srcNode.name).iterator();
+    final Iterator<? extends Block> it = em.findBlocksByStorageId(srcNode.name).iterator();
     while(it.hasNext()) {
       final Block block = it.next();
       INode fileINode = getINode(block);

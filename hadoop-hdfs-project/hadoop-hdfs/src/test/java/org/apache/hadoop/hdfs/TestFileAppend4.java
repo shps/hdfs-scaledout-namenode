@@ -76,6 +76,7 @@ public class TestFileAppend4 {
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();
+    
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -148,7 +149,6 @@ public class TestFileAppend4 {
   @Test(timeout=60000) //TODO[Hooman]: Work on this non-functional requirement later.
   public void testRecoverFinalizedBlock() throws Throwable {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
-    //FIXME[Hooman]: This test fails because of the lease recovery.
     try {
       cluster.waitActive();
       NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
@@ -218,7 +218,6 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)//TODO[Hooman]: Work on this non-functional requirement later.
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
-    //FIXME[Hooman]: This test fails because of the lease recovery.
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
     try {

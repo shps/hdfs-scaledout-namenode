@@ -15,13 +15,13 @@
 </property>
 <property>
   <name>dfs.dbconnector.string</name>
-  <value>cloud3.sics.se</value>
+  <value>cloud11.sics.se</value>
   <description>Default block replication.
   </description>
 </property>
 <property>
   <name>dfs.dbconnector.database</name>
-  <value>kthfs-getblocks</value>
+  <value>hooman</value>
   <description>Default block replication.
   </description>
 </property>

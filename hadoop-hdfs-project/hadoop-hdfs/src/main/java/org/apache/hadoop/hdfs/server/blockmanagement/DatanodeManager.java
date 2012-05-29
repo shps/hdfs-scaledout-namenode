@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.mysql.clusterj.ClusterJException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.IOException;
@@ -50,6 +51,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -218,15 +221,18 @@ public class DatanodeManager {
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) { //TODO: KTHFS needs this!
     return host2DatanodeMap.getDatanodeByHost(host);
+    //return DatanodeHelper.getDatanodeDescriptorByHostname(host);
   }
   
   public DatanodeDescriptor getDatanodeByName(final String hostName) { //TODO: KTHFS needs this!
-	  return host2DatanodeMap.getDatanodeByName(hostName);
+    //return DatanodeHelper.getDatanodeDescriptorByName(hostName);
+	return host2DatanodeMap.getDatanodeByName(hostName);
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
   public DatanodeDescriptor getDatanode(final String storageID) {
     return datanodeMap.get(storageID);
+    // return DatanodeHelper.getDatanodeDescriptorByStorageId(storageID);
   }
 
   /**
@@ -269,6 +275,7 @@ public class DatanodeManager {
    */
   private void removeDatanode(DatanodeDescriptor nodeInfo, boolean isTransactional) throws IOException {
     assert namesystem.hasWriteLock();
+    //FIXME[H]: Important! What happens if dnd info is removed from in memory datastructures but it fails to remove them from DB?
     heartbeatManager.removeDatanode(nodeInfo);
     blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
     networktopology.remove(nodeInfo);
@@ -277,24 +284,38 @@ public class DatanodeManager {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
     namesystem.checkSafeMode();
+    DatanodeHelper.removeDatanode(nodeInfo.getStorageID(), isTransactional);
   }
 
   /**
    * Remove a datanode
    * @throws UnregisteredNodeException 
    */
-  public void removeDatanode(final DatanodeID node
-      ) throws UnregisteredNodeException {
+  public void removeDatanode(final DatanodeID node) throws UnregisteredNodeException, IOException {
     namesystem.writeLock();
+    int tries = DBConnector.RETRY_COUNT;
+    boolean done = false;
     try {
       final DatanodeDescriptor descriptor = getDatanode(node);
       if (descriptor != null) {
-        removeDatanode(descriptor);
+        while (!done && tries > 0) {
+          try {
+            DBConnector.beginTransaction();
+            removeDatanode(descriptor, true);
+            DBConnector.commit();
+            done = true;
+          } catch (ClusterJException e) {
+            tries--;
+            DBConnector.safeRollback();
+            LOG.error(e.getMessage(), e);
+          }
+        }
       } else {
         NameNode.stateChangeLog.warn("BLOCK* removeDatanode: "
-                                     + node.getName() + " does not exist");
+                + node.getName() + " does not exist");
       }
     } finally {
+      DBConnector.safeRollback();
       namesystem.writeUnlock();
     }
   }
@@ -518,6 +539,7 @@ public class DatanodeManager {
           node.numBlocks() +  " blocks.");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
+      DatanodeHelper.updateDatanodeInfo(node, false);
       
       // all the blocks that reside on this node have to be replicated.
       checkDecommissionState(node);
@@ -530,6 +552,8 @@ public class DatanodeManager {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
       blockManager.processOverReplicatedBlocksOnReCommission(node);
+      
+      DatanodeHelper.updateDatanodeInfo(node, false);
     }
   }
 
@@ -551,8 +575,8 @@ public class DatanodeManager {
     return newID;
   }
 
-  public void registerDatanode(DatanodeRegistration nodeReg
-      ) throws IOException {
+  public void registerDatanode(DatanodeRegistration nodeReg,
+      boolean transactional) throws IOException {
     String dnAddress = Server.getRemoteAddress();
     if (dnAddress == null) {
       // Mostly called inside an RPC.
@@ -588,7 +612,7 @@ public class DatanodeManager {
                         + "node from name: " + nodeN.getName());
       // nodeN previously served a different data storage, 
       // which is not served by anybody anymore.
-      removeDatanode(nodeN);
+      removeDatanode(nodeN, transactional);
       // physically remove node from datanodeMap
       wipeDatanode(nodeN);
       nodeN = null;
@@ -632,6 +656,8 @@ public class DatanodeManager {
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
       checkDecommissioning(nodeS, dnAddress);
+      
+      DatanodeHelper.updateDatanodeInfo(nodeS, transactional);
       return;
     } 
 
@@ -657,6 +683,8 @@ public class DatanodeManager {
     // no need to update its timestamp
     // because its is done when the descriptor is created
     heartbeatManager.addDatanode(nodeDescr);
+    
+    DatanodeHelper.registerDatanode(nodeDescr, transactional);
   }
 
   /**

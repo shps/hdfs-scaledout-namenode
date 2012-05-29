@@ -203,7 +203,7 @@ public class TestDataNodeVolumeFailureReporting {
     assertTrue("Couldn't chmod local vol", dn3Vol2.setExecutable(false));
     Path file3 = new Path("/test3");
     DFSTestUtil.createFile(fs, file3, 1024, (short)3, 1L);
-    DFSTestUtil.waitReplication(fs, file3, (short)2);
+    DFSTestUtil.waitReplication(fs, file3, (short)2); //FIXME[Hooman]: Sometimes it stuck here and cannot satisfy the replication factor 2.
 
     // The DN should consider itself dead
     DFSTestUtil.waitForDatanodeDeath(dns.get(2));

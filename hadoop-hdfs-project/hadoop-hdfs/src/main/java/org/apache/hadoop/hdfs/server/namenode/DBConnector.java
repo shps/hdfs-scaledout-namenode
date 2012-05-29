@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import se.sics.clusterj.DatanodeInfoTable;
 import se.sics.clusterj.BlockTotalTable;
 import com.mysql.clusterj.ClusterJException;
 import se.sics.clusterj.BlockInfoTable;
@@ -91,7 +92,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
 		else {
 			// Pick a random sessionFactory
 			Random r = new Random();
-			System.err.println("NUM_SESS_FACTS: " + NUM_SESSION_FACTORIES);
+			LOG.info("New session object being obtained for threadId:" + threadId + " name:" + Thread.currentThread().getName());
 			Session session = sessionFactory[r.nextInt(NUM_SESSION_FACTORIES)].getSession();
 			sessionPool.put(threadId, session);
 			return session;
@@ -156,6 +157,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             session.deletePersistentAll(DelegationKeyTable.class);
             BlocksHelper.resetTotalBlocks(true);
             session.deletePersistentAll(ReplicaUcTable.class);
+            session.deletePersistentAll(DatanodeInfoTable.class);
             tx.commit();
             session.flush();
             return true;

@@ -479,7 +479,8 @@ public class DFSClient implements java.io.Closeable {
       String src, long start, long length) 
       throws IOException {
     try {
-      return namenode.getBlockLocations(src, start, length);
+      LocatedBlocks blocks = namenode.getBlockLocations(src, start, length);
+      return blocks;
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,

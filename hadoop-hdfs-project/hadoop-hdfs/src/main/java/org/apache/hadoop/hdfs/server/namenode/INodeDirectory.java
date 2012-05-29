@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -97,13 +98,13 @@ class INodeDirectory extends INode {
 		return true;
 	}
 
-	INode removeChild(INode node, boolean isTransactional) {
-		assert getChildren() != null;
-                                                                                                 
-                INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
-                INodeHelper.removeChild(node.getID(), isTransactional);
-                return removedNode;
-	}
+  INode removeChild(INode node, boolean isTransactional) {
+    assert getChildren() != null;
+
+    INode removedNode = INodeHelper.getINode(node.getID()); //FIXME: write a light weight version which only checks if the inode is in DB or not
+    INodeHelper.removeChild(node.getID(), isTransactional);
+    return removedNode;
+  }
 
 	@Deprecated
 	INode removeChildOld(INode node) {
@@ -169,7 +170,7 @@ class INodeDirectory extends INode {
 	 */
 	private INode getNode(byte[][] components, boolean resolveLink) 
 			throws UnresolvedLinkException {
-		INodeCacheImpl.LOG.debug("Cache Miss"); //TODO: Increment the cache miss metric here
+		//INodeCacheImpl.LOG.debug("Cache Miss"); //TODO: Increment the cache miss metric here
 		INode[] inode  = new INode[1];
 		getExistingPathINodes(components, inode, resolveLink);
 		return inode[0];
@@ -180,18 +181,34 @@ class INodeDirectory extends INode {
 	 * @return
 	 */
 	INode getNodeFromCache(String path) {
-		if(path.equals("/"))
-			return this;
-		INodeCache cache = INodeCacheImpl.getInstance();
-		return cache.getNode(path);
+    if (path.equals("/")) //[Hooman]: This would always return the old Inode of the root, won't work in parallel writer nodes. 
+    {
+      return this;
+    }
+//            if (path.equals("/")) {
+//                try {
+//                    return INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
+//                } catch (IOException ex) {
+//                    INodeCacheImpl.LOG.error(ex.getMessage(), ex);
+//                    return this; //FIXME[Hooman]: this silently returns the old version of the root.
+//                }
+//            }
+
+    INodeCache cache = INodeCacheImpl.getInstance();
+    return cache.getNode(path);
 	}
 
 	INode getNode(String path, boolean resolveLink) 
 			throws UnresolvedLinkException {
-
-		INode nodeFromCache = getNodeFromCache(path);
-		return nodeFromCache != null ?  
-				nodeFromCache : getNode(getPathComponents(path), resolveLink);
+	  if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+	    INode nodeFromCache = getNodeFromCache(path);
+	    return nodeFromCache != null ?  
+	        nodeFromCache : getNode(getPathComponents(path), resolveLink);
+	  }
+	  else 
+	    return getNode(getPathComponents(path), resolveLink);
+	    
+		
 		
 	}
 	/**
@@ -251,8 +268,6 @@ class INodeDirectory extends INode {
 		INode[] inodes = new INode[components.length]; //[thesis] for magic cache
 		inodes[0] = this; //[thesis] for magic cache
 
-		INodeCache cache = INodeCacheImpl.getInstance();
-		
 		int count = 0;
 		int index = existing.length - components.length;
 		if (index > 0) {
@@ -292,7 +307,11 @@ class INodeDirectory extends INode {
 			index++;
 
 		}
-		cache.store(inodes);
+		
+		if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+		  INodeCache cache = INodeCacheImpl.getInstance();
+		  cache.store(inodes);
+		}
 		return count;
 	}
 
@@ -446,7 +465,9 @@ class INodeDirectory extends INode {
 		}
 		node.parent = this;
 		//Update its parent's modification time
-		INodeHelper.updateModificationTime(this.id, node.getModificationTime(), isTransactional);
+    long modTime = node.getModificationTime();
+    this.modificationTime = modTime;
+		INodeHelper.updateModificationTime(this.id, modTime, isTransactional);
 
 		if (node.getGroupName() == null) {
 			node.setGroup(getGroupName());
@@ -632,7 +653,7 @@ class INodeDirectory extends INode {
             
             return children;
 	  } catch (IOException e) {
-             LOG.error(e);
+             e.printStackTrace();
 	  } finally {
              return children;
          }

@@ -7,6 +7,7 @@ import com.mysql.clusterj.annotation.Column;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 import com.mysql.clusterj.annotation.Index;
+import com.mysql.clusterj.annotation.Lob;
 
 
 /** Optimized version of INodeTable which does not store the full path name of a file
@@ -112,7 +113,7 @@ public interface INodeTableSimple {
     
     //INodeSymlink
     @Column (name = "symlink")
-    byte[] getSymlink ();
-    void setSymlink(byte[] symlink);
+    String getSymlink ();
+    void setSymlink(String symlink);
    
 }

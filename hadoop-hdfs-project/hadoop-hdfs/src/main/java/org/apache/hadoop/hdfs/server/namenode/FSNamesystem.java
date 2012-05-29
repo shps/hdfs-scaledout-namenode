@@ -106,6 +106,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -322,6 +323,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
     DBConnector.setConfiguration(conf);
+    LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     this.fsLock = new ReentrantReadWriteLock(true); // fair locking
@@ -349,10 +351,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           this.dir = new FSDirectory(fsImage, this, conf);
 
     }
+    
     // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
-    INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
-    cache.putRoot(this.dir.rootDir); //added for magic cache
+    INode rootInode = INodeHelper.getINode(INodeDirectory.ROOT_NAME, -1L);
+    if (rootInode == null)
+        INodeHelper.addChild(this.dir.rootDir, true, -1L, false);
+    else
+        this.dir.rootDir = (INodeDirectoryWithQuota) rootInode;
+    
+    if(DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
+      cache.putRoot(this.dir.rootDir); //added for magic cache
+    }
     
     this.safeMode = new SafeModeInfo(conf);
   }
@@ -835,19 +845,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                                        boolean needBlockToken)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
 
-    for (int attempt = 0; attempt < 2; attempt++) {
-      if (attempt == 0) { // first attempt is with readlock
-        readLock();
-      }  else { // second attempt is with  write lock
-        writeLock(); // writelock is needed to set accesstime
-      }
-
+    //for (int attempt = 0; attempt < 2; attempt++) {
+    // if (attempt == 0) { // first attempt is with readlock
+    //    readLock();
+    //  }  else { // second attempt is with  write lock
+    //    writeLock(); // writelock is needed to set accesstime
+    //  }
       // if the namenode is in safemode, then do not update access time
       if (isInSafeMode()) {
         doAccessTime = false;
       }
 
-      try {
+      //try {
         long now = now();
         INodeFile inode = dir.getFileINode(src);
         if (inode == null) {
@@ -858,9 +867,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
             // restart this entire operation with the writeLock.
-            if (attempt == 0) {
-              continue;
-            }
+            //if (attempt == 0) {
+            //  continue;
+            //}
           }
           dir.setTimes(src, inode, -1, now, false);
         }
@@ -868,15 +877,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             inode.computeFileSize(false),
             inode.isUnderConstruction(),
             offset, length, needBlockToken);
-      } finally {
-        if (attempt == 0) {
-          readUnlock();
-        } else {
-          writeUnlock();
-        }
-      }
-    }
-    return null; // can never reach here
+      //} finally {
+      //  if (attempt == 0) {
+      //    readUnlock();
+      //  } else {
+      //   writeUnlock();
+      //  }
+      // }
+    //}
+    //return null; // can never reach here
   }
 
   /**
@@ -1092,15 +1101,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     HdfsFileStatus resultingStat = null;
     writeLock();
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      if (!createParent) {
-        verifyParentDir(link);
-      }
-      createSymlinkInternal(target, link, dirPerms, createParent);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(link, false);
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          if (!createParent) {
+            verifyParentDir(link);
+          }
+          createSymlinkInternal(target, link, dirPerms, createParent, true);
+          DBConnector.commit();
+          done = true;
+          if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            resultingStat = dir.getFileInfo(link, false);
+          }
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
       }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
     //getEditLog().logSync();
@@ -1115,7 +1138,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a symbolic link.
    */
   private void createSymlinkInternal(String target, String link,
-      PermissionStatus dirPerms, boolean createParent)
+      PermissionStatus dirPerms, boolean createParent, boolean transactional)
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1139,8 +1162,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkFsObjectLimit();
 
     // add symbolic link to namespace
-    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    dir.addSymlink(link, target, dirPerms, createParent, false);
+    dir.addSymlink(link, target, dirPerms, createParent, transactional);
   }
   
   /**
@@ -1504,73 +1526,56 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   boolean recoverLease(String src, String holder, String clientMachine)
-                throws IOException
-        {
-                if (!isWritingNN())
-                  throw new ImproperUsageException();
+          throws IOException {
+    if (!isWritingNN()) {
+      throw new ImproperUsageException();
+    }
     writeLock();
-                try
-                {
-                        if (isInSafeMode())
-                        {
+    try {
+      if (isInSafeMode()) {
         throw new SafeModeException(
-            "Cannot recover the lease of " + src, safeMode);
+                "Cannot recover the lease of " + src, safeMode);
       }
-                        if (!DFSUtil.isValidName(src))
-                        {
+      if (!DFSUtil.isValidName(src)) {
         throw new IOException("Invalid file name: " + src);
       }
-  
+
       INode inode = dir.getFileINode(src);
-                        if (inode == null)
-                        {
+      if (inode == null) {
         throw new FileNotFoundException("File not found " + src);
       }
-  
-                        if (!inode.isUnderConstruction())
-                        {
+
+      if (!inode.isUnderConstruction()) {
         return true;
       }
-                        if (isPermissionEnabled)
-                        {
+      if (isPermissionEnabled) {
         checkPathAccess(src, FsAction.WRITE);
       }
 
-                        boolean isDone = false;
-                        int tries = DBConnector.RETRY_COUNT;
-                        try
-                        {
-                                while (!isDone && tries > 0)
-                                {
-                                        try
-                                        {
-                                                DBConnector.beginTransaction();
-                                                recoverLeaseInternal(inode, src, holder, clientMachine, true, true);
-                                                DBConnector.commit();
-                                                isDone = true;
-                                        }
-                                        catch(ClusterJException ex)
-                                        {
-                                                if(!isDone)
-                                                {
-                                                        DBConnector.safeRollback();
-                                                        tries--;
-                                                        FSNamesystem.LOG.error("recoverLease() :: failed to recover lease "+src+". Exception: "+ex.getMessage(), ex);
-                                                }
-                                        }
-                                }
-                        }
-                        finally
-                        {
-                                if(!isDone)
-                                {
-                                        DBConnector.safeRollback();
-                                }
-                        }
-                        
-                }
-                finally
-                {
+      boolean isDone = false;
+      int tries = DBConnector.RETRY_COUNT;
+      try {
+        while (!isDone && tries > 0) {
+          try {
+            DBConnector.beginTransaction();
+            recoverLeaseInternal(inode, src, holder, clientMachine, true, true);
+            DBConnector.commit();
+            isDone = true;
+          } catch (ClusterJException ex) {
+            if (!isDone) {
+              DBConnector.safeRollback();
+              tries--;
+              FSNamesystem.LOG.error("recoverLease() :: failed to recover lease " + src + ". Exception: " + ex.getMessage(), ex);
+            }
+          }
+        }
+      } finally {
+        if (!isDone) {
+          DBConnector.safeRollback();
+        }
+      }
+
+    } finally {
       writeUnlock();
     }
     return false;
@@ -1868,9 +1873,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Allocate a new block and record it in the INode. 
     /*writeLock();
     try {*/
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot add block to " + src, safeMode);
-      }
+//      if (isInSafeMode()) {
+//        throw new SafeModeException("Cannot add block to " + src, safeMode);
+//      }
       INode[] pathINodes = dir.getExistingPathINodes(src);
       //[Hooman]: These checkings are not necessary when doing all in one writelock and one transaction.
       /*int inodesLen = pathINodes.length;
@@ -1878,9 +1883,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFileUnderConstruction pendingFile  = (INodeFileUnderConstruction) 
                                                 pathINodes[inodesLen - 1];*/ 
                                                            
-      if (!checkFileProgress(pendingFile, false)) {
-        throw new NotReplicatedYetException("Not replicated yet:" + src);
-      }
+      //[Hooman]: -1 selectUsingIndex
+//      if (!checkFileProgress(pendingFile, false)) {
+//        throw new NotReplicatedYetException("Not replicated yet:" + src);
+//      }
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pathINodes, targets, isTransactional);
@@ -2344,14 +2350,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + src + " to " + dst);
     }
     writeLock();
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      renameToInternal(src, dst, options);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(dst, false); 
+      while (!done && tries > 0)
+      {
+        try {
+          DBConnector.beginTransaction();
+          renameToInternal(src, dst, true, options);
+          DBConnector.commit();
+          done = true;
+          if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            resultingStat = dir.getFileInfo(dst, false);
+          }
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
       }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
+    
+    if (!done)
+       throw new IOException("rename from " + src + " to " + dst + " failed.");
+    
     //getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       StringBuilder cmd = new StringBuilder("rename options=");
@@ -2363,8 +2388,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void renameToInternal(String src, String dst,
-      Options.Rename... options) throws IOException {
+  private void renameToInternal(String src, String dst, 
+          boolean transactional, Options.Rename... options) throws IOException {
     assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
@@ -2380,8 +2405,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     
-    // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-    dir.renameTo(src, dst, false, options);
+    dir.renameTo(src, dst, transactional, options);
     unprotectedChangeLease(src, dst, dinfo, false); // update lease with new filename
   }
   
@@ -2572,64 +2596,64 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create all the necessary directories
    */
   boolean mkdirs(String src, PermissionStatus permissions,
-                       boolean createParent) throws IOException, UnresolvedLinkException
-        {
+      boolean createParent) throws IOException, UnresolvedLinkException
+      {
     boolean status = false;
-                if (NameNode.stateChangeLog.isDebugEnabled())
-                {
+    if (NameNode.stateChangeLog.isDebugEnabled())
+    {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
     writeLock();
-                try
-                {
-                        boolean isDone = false;
-                        int tries = DBConnector.RETRY_COUNT;
-                        try
-                        {
-                                while (!isDone && tries > 0)
-                                {
-                                        try
-                                        {
-                                                DBConnector.beginTransaction();
-                                                status = mkdirsInternal(src, permissions, createParent, true);
-                                                
-                                                DBConnector.commit();
-                                                isDone = true;
-                                        }
-                                        catch(ClusterJException ex)
-                                        {
-                                                if(!isDone)
-                                                {
-                                                        DBConnector.safeRollback();
-                                                        tries--;
-                                                        FSNamesystem.LOG.error("mkdirs() :: failed to make a directory "+src+". Exception: "+ex.getMessage(), ex);
-                                                }
-                                        }
-                                }
-                        }
-                        finally
-                        {
-                                if(!isDone)
-                                {
-                                        DBConnector.safeRollback();
-                                }
-                        }
-                }
-                finally
-                {
+    try
+    {
+      boolean isDone = false;
+      int tries = DBConnector.RETRY_COUNT;
+      try
+      {
+        while (!isDone && tries > 0)
+        {
+          try
+          {
+            DBConnector.beginTransaction();
+            status = mkdirsInternal(src, permissions, createParent, true);
+
+            DBConnector.commit();
+            isDone = true;
+          }
+          catch(ClusterJException ex)
+          {
+            if(!isDone)
+            {
+              DBConnector.safeRollback();
+              tries--;
+              FSNamesystem.LOG.error("mkdirs() :: failed to make a directory "+src+". Exception: "+ex.getMessage(), ex);
+            }
+          }
+        }
+      }
+      finally
+      {
+        if(!isDone)
+        {
+          DBConnector.safeRollback();
+        }
+      }
+    }
+    finally
+    {
       writeUnlock();
     }
     //getEditLog().logSync();
-                if (status && auditLog.isInfoEnabled() && isExternalInvocation())
-                {
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation())
+    {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
-                    "mkdirs", src, null, stat);
+          Server.getRemoteIp(),
+          "mkdirs", src, null, stat);
     }
     return status;
-  }
-    
+      }
+
   /**
    * Create all the necessary directories
    */
@@ -2709,6 +2733,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 } catch (ClusterJException e) {
                     DBConnector.safeRollback();
                     tries--;
+                    FSNamesystem.LOG.error(e.getMessage(), e);
                 }
             }
         } finally {
@@ -3056,16 +3081,34 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Renew the lease(s) held by the given client
    */
   void renewLease(String holder) throws ImproperUsageException, IOException {
-    if (!isWritingNN())
-        throw new ImproperUsageException();
+    if (!isWritingNN()) {
+      throw new ImproperUsageException();
+    }
     writeLock();
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
+      while (!done && tries > 0) {
+        try
+        {
+          DBConnector.beginTransaction();
+          if (isInSafeMode()) {
+            throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
+          }
+          leaseManager.renewLease(holder, true);
+          DBConnector.commit();
+          done = true;
+        }
+        catch (ClusterJException e)
+        {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
       }
-      leaseManager.renewLease(holder);
     } finally {
       writeUnlock();
+      DBConnector.safeRollback();
     }
   }
 
@@ -3091,7 +3134,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
     	
     	if (isPermissionEnabled) {
-    		LOG.info("Checking permissions..");
             if (dir.isDir(src)) {
               checkPathAccess(src, FsAction.READ_EXECUTE);
             } else {
@@ -3148,12 +3190,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
     writeLock();
+    int tries = DBConnector.RETRY_COUNT;
+    boolean done = false;
     try {
-      getBlockManager().getDatanodeManager().registerDatanode(nodeReg);
-      checkSafeMode();
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true);
+          checkSafeMode();
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
+        }
+      }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
+    
+    //TODO[H]: This exception should be more informative.
+    if (!done)
+      throw new IOException("Registration failed for the datanode " + nodeReg.name);
   }
   
   /**

@@ -237,7 +237,7 @@ public class TransactionContext {
     }
   }
 
-  public List<BlockInfo> findBlocksByDatanodeName(String name) throws IOException, TransactionContextException {
+  public List<BlockInfo> findBlocksByStorageId(String name) throws IOException, TransactionContextException {
     beforeTxCheck();
     try {
       List<BlockInfo> ret = new ArrayList<BlockInfo>();
@@ -245,7 +245,7 @@ public class TransactionContext {
 
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
-      dobj.where(dobj.get("datanodeName").equal(dobj.param("param")));
+      dobj.where(dobj.get("storageId").equal(dobj.param("param")));
       Query<TripletsTable> query = session.createQuery(dobj);
       query.setParameter("param", name);
       List<TripletsTable> triplets = query.getResultList();

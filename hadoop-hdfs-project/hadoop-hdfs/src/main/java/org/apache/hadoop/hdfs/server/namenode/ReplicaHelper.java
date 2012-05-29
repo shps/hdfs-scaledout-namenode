@@ -28,6 +28,7 @@ import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
 
 
 /** This is a helper class for manipulating the ReplicasUnderConstruction stored in DB. 
@@ -42,7 +43,7 @@ public class ReplicaHelper {
 
   public static void add(long blockId, DatanodeDescriptor expLocation, ReplicaState repState, boolean isTrans) 
       throws IOException {
-    
+    //FIXME[Hooman]: should assert the state of transaction if it's active or not.
     if(isTrans)
       add(blockId, expLocation, repState);
     else
@@ -210,7 +211,7 @@ public class ReplicaHelper {
    * @throws IOException 
    */
   public static List<ReplicaUnderConstruction> getReplicas(long blockId, boolean isTransactional) throws IOException { 
-    if(isTransactional)
+    if(isTransactional) //FIXME[Hooman]: Why is this using isTransactional? There is no need for a read operation.
       return getReplicas(blockId);
     else
       return getReplicasWithTransaction(blockId);
@@ -318,6 +319,8 @@ public class ReplicaHelper {
    * @param repState
    */
   private static void insert(Session session, long blockId, byte[] expLocation, byte[] repState) {
+    HelperMetrics.replicaMetrics.incrInsert();
+    
     ReplicaUcTable rept = session.newInstance(ReplicaUcTable.class);
     rept.setBlockId(blockId);
     rept.setExpectedLocation(expLocation);
@@ -335,6 +338,8 @@ public class ReplicaHelper {
    * @return a list of ReplicaUcTable objects
    */
   private static List<ReplicaUcTable> select(Session session, long blockId) {
+    HelperMetrics.replicaMetrics.incrSelectUsingIndex();
+    
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<ReplicaUcTable> dobj = qb.createQueryDefinition(ReplicaUcTable.class);
     dobj.where(dobj.get("blockId").equal(dobj.param("param")));
@@ -350,6 +355,9 @@ public class ReplicaHelper {
    */
   private static void delete(Session session, long blockId) {		
     List<ReplicaUcTable> replicas = select(session, blockId);
+    
+    HelperMetrics.replicaMetrics.incrDelete(); //[Hooman]: it does not flush, considered as one roundtrip.
+    
     for(ReplicaUcTable rept : replicas)
       session.deletePersistent(rept);
   }

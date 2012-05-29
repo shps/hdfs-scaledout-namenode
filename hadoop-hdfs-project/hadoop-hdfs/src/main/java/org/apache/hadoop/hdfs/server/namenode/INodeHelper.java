@@ -25,8 +25,10 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
 
 /**
  * This class provides the CRUD operations for inodes stored in database. 
@@ -173,6 +175,14 @@ public class INodeHelper {
       
 			((INodeFile) (inode)).setBlocks(blocks);
 		}
+    
+    if (inodetable.getSymlink() != null)
+    {
+//      String linkValue = DFSUtil.bytes2String(inodetable.getSymlink());
+      inode = new INodeSymlink(inodetable.getSymlink(), inodetable.getModificationTime(), 
+              inodetable.getATime(), ps);
+      inode.setID(inodetable.getId());
+    }
 
 		inode.setLocalName(inodetable.getName()); //added for simple
 		inode.setParentIDLocal(inodetable.getParentID());
@@ -211,7 +221,10 @@ public class INodeHelper {
 	 * @return the tuple if it exists, null otherwise
 	 */
 	private static INodeTableSimple selectINodeTableInternal(Session session, long inodeid) {
-		return session.find(INodeTableSimple.class, inodeid);
+            
+            HelperMetrics.inodeMetrics.incrSelectUsingPKey();
+                
+            return session.find(INodeTableSimple.class, inodeid);
 	}
 
 	/** Fetch a tuple from the database using name|parentID
@@ -221,44 +234,55 @@ public class INodeHelper {
 	 * @return the tuple if it exists, null otherwise. 
 	 */
 	private static INodeTableSimple selectINodeTableInternal(Session session, String name, long parentid) {
-		QueryBuilder qb = session.getQueryBuilder();
-		QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
-		Predicate pred1 = dobj.get("name").equal(dobj.param("name"));
-		Predicate pred2 = dobj.get("parentID").equal(dobj.param("parentID"));
-		dobj.where(pred1.and(pred2));
-		Query<INodeTableSimple> query = session.createQuery(dobj);
-		query.setParameter("name", name);
-		query.setParameter("parentID", parentid);
-		List<INodeTableSimple> results = query.getResultList();
-		if (results.size() > 1) {
-			LOG.error(results.size() + " row(s) with same name|parentID. Not good!");
-			return results.get(0);
-		} else if (results.size() == 0) {
-			return null;
-		} else {
-			return results.get(0);
-		}
+            
+            HelperMetrics.inodeMetrics.incrSelectUsingIndex();
+
+            QueryBuilder qb = session.getQueryBuilder();
+            QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+            Predicate pred1 = dobj.get("name").equal(dobj.param("name"));
+            Predicate pred2 = dobj.get("parentID").equal(dobj.param("parentID"));
+            dobj.where(pred1.and(pred2));
+            Query<INodeTableSimple> query = session.createQuery(dobj);
+            query.setParameter("name", name);
+            query.setParameter("parentID", parentid);
+            List<INodeTableSimple> results = query.getResultList();
+            if (results.size() > 1) {
+                    LOG.error(results.size() + " row(s) with same name|parentID. Not good!");
+                    return results.get(0);
+            } else if (results.size() == 0) {
+                    return null;
+            } else {
+                    return results.get(0);
+            }
 	}
 
-	/** Deletes an inode from the database
-	 * @param session
-	 * @param inodeid
-	 */
-	private static void deleteINodeTableInternal(Session session, long inodeid){
-		LOG.debug("Removing " + inodeid);
-		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
-		session.deletePersistent(inodet);
-	}
+  /** Deletes an inode from the database
+   * @param session
+   * @param inodeid
+   */
+  private static void deleteINodeTableInternal(Session session, long inodeid) {
 
-	/** Updates an already existing inode in the database
-	 * @param session
-	 * @param inodet
-	 */
-	private static void updateINodeTableInternal(Session session, INodeTableSimple inodet) {
-		session.updatePersistent(inodet);
-	}
+    HelperMetrics.inodeMetrics.incrDelete();
+
+    LOG.debug("Removing " + inodeid);
+    INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
+    session.deletePersistent(inodet);
+  }
+
+  /** Updates an already existing inode in the database
+   * @param session
+   * @param inodet
+   */
+  private static void updateINodeTableInternal(Session session, INodeTableSimple inodet) {
+    
+    HelperMetrics.inodeMetrics.incrUpdate();
+    session.updatePersistent(inodet);
+  }
 
 	private static void insertINodeTableInternal(Session session, INodeTableSimple inodet) {
+    
+    HelperMetrics.inodeMetrics.incrInsert();
+    
 		session.makePersistent(inodet);
 	}
 
@@ -359,40 +383,41 @@ public class INodeHelper {
 		return null;
 	}
 
-	/**Fetches all the children of a parent from the database
-	 * @param session
-	 * @param parentid
-	 * @return a list of children
-	 * @throws IOException
-	 */
-	private static List<INodeTableSimple> getChildrenInternal(Session session, long parentid) throws IOException {
-		QueryBuilder qb = session.getQueryBuilder();
-		QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
-		Predicate pred1 = dobj.get("parentID").equal(dobj.param("parentID"));
-		dobj.where(pred1);
-		Query<INodeTableSimple> query = session.createQuery(dobj);
-		query.setParameter("parentID", parentid);
-		List<INodeTableSimple> results = query.getResultList();
-		return results;
-	}
+  /**Fetches all the children of a parent from the database
+   * @param session
+   * @param parentid
+   * @return a list of children
+   * @throws IOException
+   */
+  private static List<INodeTableSimple> getChildrenInternal(Session session, long parentid) throws IOException {
 
-	/**Updates the modification time of an inode in the database
-	 * @param inodeid
-	 * @param modTime
-	 */
-	public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException
-	{
-            DBConnector.checkTransactionState(isTransactional);
-        
-            if (isTransactional)
-            {
-                Session session = DBConnector.obtainSession();
-                updateModificationTimeInternal(session, inodeid, modTime);
-                session.flush();
-            }
-            else
-                updateModificationTimeWithTransaction(inodeid, modTime);
-	}
+    HelperMetrics.inodeMetrics.incrSelectUsingIndex();
+
+    QueryBuilder qb = session.getQueryBuilder();
+    QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+    Predicate pred1 = dobj.get("parentID").equal(dobj.param("parentID"));
+    dobj.where(pred1);
+    Query<INodeTableSimple> query = session.createQuery(dobj);
+    query.setParameter("parentID", parentid);
+    List<INodeTableSimple> results = query.getResultList();
+    return results;
+  }
+
+  /**Updates the modification time of an inode in the database
+   * @param inodeid
+   * @param modTime
+   */
+  public static void updateModificationTime(long inodeid, long modTime, boolean isTransactional) throws ClusterJException {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      updateModificationTimeInternal(session, inodeid, modTime);
+      session.flush();
+    } else {
+      updateModificationTimeWithTransaction(inodeid, modTime);
+    }
+  }
 
 	/**Updates the modification time of an inode in the database
 	 * @param inodeid
@@ -428,28 +453,29 @@ public class INodeHelper {
 	 * @param modTime
 	 */
 	private static void updateModificationTimeInternal(Session session, long inodeid, long modTime) throws ClusterJException{
+            
+            HelperMetrics.inodeMetrics.incrUpdate();
+            
 		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
 		inodet.setModificationTime(modTime);
 		session.updatePersistent(inodet);
 	}
 
-	/** Adds a child to a directory
-	 * @param node
-	 * @param parentid
-	 */
-	public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional)
-	{
-		DBConnector.checkTransactionState(isTransactional);
-        
-        if (isTransactional)
-        {
+    /** Adds a child to a directory
+     * @param node
+     * @param parentid
+     */
+    public static void addChild(INode node, boolean isRoot, long parentid, boolean isTransactional) {
+        DBConnector.checkTransactionState(isTransactional);
+
+        if (isTransactional) {
             Session session = DBConnector.obtainSession();
             addChildInternal(session, node, isRoot, parentid);
             session.flush();
-        }
-        else
+        } else {
             addChildWithTransaction(node, isRoot, parentid);
-	}
+        }
+    }
 
     /** Adds a child to a directory
      * @param node
@@ -488,7 +514,7 @@ public class INodeHelper {
 	private static void addChildInternal(Session session, INode node, boolean isRoot, long parentid) {
 		boolean entry_exists;
 		//TODO: this check seems redundant, remove this
-		INodeTableSimple inode = selectINodeTableInternal(session, node.getLocalName(), parentid);
+		INodeTableSimple inode = selectINodeTableInternal(session, node.getID());
 		entry_exists = true;
 		if (inode == null) {
 			inode = session.newInstance(INodeTableSimple.class);
@@ -548,7 +574,8 @@ public class INodeHelper {
 			}
 		}
 		if (node instanceof INodeSymlink) {
-			inode.setSymlink(((INodeSymlink) node).getSymlink());
+      String linkValue = DFSUtil.bytes2String(((INodeSymlink) node).getSymlink());
+			inode.setSymlink(linkValue);
 		}
 
 		if (isRoot) {
@@ -560,22 +587,20 @@ public class INodeHelper {
 		}
 
 	}
-	/** Deletes an inode from the database 
-	 * @param inodeid the inodeid to remove
-	 */
-	public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional)
-	{
-            DBConnector.checkTransactionState(isTransactional);
-        
-            if (isTransactional)
-            {
-               Session session = DBConnector.obtainSession();
-               deleteINodeTableInternal(session, inodeid);
-               session.flush();
-            }
-            else
-               removeChildWithTransaction(inodeid);
-	}
+  /** Deletes an inode from the database 
+   * @param inodeid the inodeid to remove
+   */
+  public static /*synchronized*/ void removeChild(long inodeid, boolean isTransactional) {
+    DBConnector.checkTransactionState(isTransactional);
+
+    if (isTransactional) {
+      Session session = DBConnector.obtainSession();
+      deleteINodeTableInternal(session, inodeid);
+      session.flush();
+    } else {
+      removeChildWithTransaction(inodeid);
+    }
+  }
 
 /** Deletes an inode from the database
      * @param inodeid the inodeid to remove
@@ -606,26 +631,25 @@ public class INodeHelper {
 
 
 	 /**
-     * Updates the header of an inode in database
-     * @param inodeid
-     * @param header
-     * @param isTransactional This operation is a part of a transaction.
-     */
-    public static void updateHeader(long inodeid, long header, boolean isTransactional){
-        Session session = DBConnector.obtainSession();
-        boolean isActive = session.currentTransaction().isActive();
-        assert isActive == isTransactional :
-                "Current transaction's isActive value is " + isActive +
-                " but isTransactional's value is " + isTransactional;
+   * Updates the header of an inode in database
+   * @param inodeid
+   * @param header
+   * @param isTransactional This operation is a part of a transaction.
+   */
+  public static void updateHeader(long inodeid, long header, boolean isTransactional) {
+    Session session = DBConnector.obtainSession();
+    boolean isActive = session.currentTransaction().isActive();
+    assert isActive == isTransactional :
+            "Current transaction's isActive value is " + isActive
+            + " but isTransactional's value is " + isTransactional;
 
-        if (isTransactional)
-		{
-            updateHeaderInternal(session, inodeid, header);
-			session.flush();
-		}
-        else
-            updateHeaderOld(inodeid, header);
+    if (isTransactional) {
+      updateHeaderInternal(session, inodeid, header);
+      session.flush();
+    } else {
+      updateHeaderOld(inodeid, header);
     }
+  }
 
 
 	/** Updates the header of an inode in database
@@ -636,7 +660,7 @@ public class INodeHelper {
 	private static void updateHeaderInternal(Session session, long inodeid, long header) {
 		INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
 		inodet.setHeader(header);
-		session.updatePersistent(inodet);
+		updateINodeTableInternal(session, inodet);
 	}
 	
     /** Updates the header of an inode in database
@@ -734,6 +758,9 @@ public class INodeHelper {
 	}
 
 	private static List<INodeTableSimple> selectINodesInternal(Session session, INodeEntry[] entries) throws IOException {
+    
+    HelperMetrics.inodeMetrics.incrSelectUsingIn();
+    
 		Long[] IDs = new Long[entries.length];
 		for (int i = 0; i < entries.length; i++) {
 			IDs[i] = entries[i].id;
@@ -907,7 +934,7 @@ public class INodeHelper {
         INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeId);
         inodet.setNSCount(nsDelta);
         inodet.setDSCount(dsDelta);
-        session.updatePersistent(inodet);
+        updateINodeTableInternal(session, inodet);
     }
 
 
@@ -978,7 +1005,7 @@ public class INodeHelper {
         DataOutputBuffer permissionString = new DataOutputBuffer();
         permissionStatus.write(permissionString);
         inodet.setPermission(permissionString.getData());
-        session.updatePersistent(inodet);
+        updateINodeTableInternal(session, inodet);
     }
     
     /** Sorts the sibling inodes according to their natural order
@@ -1052,7 +1079,7 @@ public class INodeHelper {
     private static void updateAccessTimeInternal(Session session, long inodeid, long aTime) throws ClusterJException{
             INodeTableSimple inodet = session.newInstance(INodeTableSimple.class, inodeid);
             inodet.setATime(aTime);
-            session.updatePersistent(inodet); //FIXME: use updateINodeTableInternal instead
+            updateINodeTableInternal(session, inodet);
     }
     
     
@@ -1108,5 +1135,3 @@ public class INodeHelper {
     
 
 }
-
-//TODO: replace all syserr with LOG.error

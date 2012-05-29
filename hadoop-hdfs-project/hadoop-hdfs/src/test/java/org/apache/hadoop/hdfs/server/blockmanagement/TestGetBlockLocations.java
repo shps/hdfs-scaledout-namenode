@@ -60,7 +60,7 @@ public class TestGetBlockLocations {
         totalRead += nRead;
       }
     } catch (IOException e) {
-    	e.printStackTrace(System.err);
+      e.printStackTrace(System.err);
       return false;
     }
     assertEquals("Cannot read file.", toRead.length, totalRead);
@@ -94,42 +94,42 @@ public class TestGetBlockLocations {
 
   // get a conf for testing
   /**
- * @param numDataNodes
- * @param tokens enable tokens?
- * @return
- * @throws IOException
- */
-private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
+   * @param numDataNodes
+   * @param tokens enable tokens?
+   * @return
+   * @throws IOException
+   */
+  private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
     Configuration conf = new Configuration();
     if(tokens)
-    	conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+      conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
     conf.setBoolean("dfs.support.append", true);
-    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT); // Don't set this By value!!
+    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
     return conf;
   }
-  
+
   private MiniDFSCluster startCluster(boolean tokens) throws IOException {
-	    MiniDFSCluster cluster = null;
-	    int numDataNodes = 2;
-	    Configuration conf = getConf(numDataNodes, tokens);
-	    DBConnector.setConfiguration(conf);
-	    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
-	    cluster.waitActive();
-	    assertEquals(numDataNodes, cluster.getDataNodes().size());
-	    return cluster;
-}
-  
-   
+    MiniDFSCluster cluster = null;
+    int numDataNodes = 2;
+    Configuration conf = getConf(numDataNodes, tokens);
+    DBConnector.setConfiguration(conf);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
+    cluster.waitActive();
+    assertEquals(numDataNodes, cluster.getDataNodes().size());
+    return cluster;
+  }
+
+
   @Test
   public void testReadNnWithoutTokens() throws Exception{
-	  
-	  MiniDFSCluster cluster = null;
-	  try {
+
+    MiniDFSCluster cluster = null;
+    try {
       cluster = startCluster(false);
       FileSystem writeFs = cluster.getWritingFileSystem();
       FileSystem readFs = cluster.getReadingFileSystem();
@@ -141,11 +141,11 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
       assertTrue(writeFs.mkdirs(filePath1));
       assertTrue(writeFs.mkdirs(filePath2));
       assertTrue(writeFs.mkdirs(filePath3));
-      
+
       //check if the directories were created successfully
       FileStatus lfs = writeFs.getFileStatus(filePath1);
       assertTrue(lfs.getPath().getName().equals("testDir1"));
-      
+
       //write a new file on the writeNn and confirm if it can be read
       Path fileTxt = new Path("/file.txt");
       createFile(writeFs, fileTxt);
@@ -154,29 +154,24 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = readFs.open(fileTxt);
-	  assertTrue(checkFile1(in2));
-	  
-	  readFs.close();
-	  writeFs.close();
-	  } finally {
-		  if (cluster != null) {
-			  cluster.shutdown();
-		  }
-	  }
+      assertTrue(checkFile1(in2));
+
+      readFs.close();
+      writeFs.close();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
 
 
   }
-  
-  //TODO: Currently, it is not possible to start a MiniDFSCluster after a shutdown
-  //      because of the following error:
-  //      java.io.IOException: Cannot lock storage 
-  //      /home/wmalik/hadoopnn/kthfs/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs/rName1. 
-  //      The directory is already locked.
+
   @Test
   public void testReadNnWithTokens() throws Exception{
-	  
-	  MiniDFSCluster cluster = null;
-	  try {
+
+    MiniDFSCluster cluster = null;
+    try {
       cluster = startCluster(true); //use tokens
       FileSystem writeFs = cluster.getWritingFileSystem();
       FileSystem readFs = cluster.getReadingFileSystem();
@@ -188,11 +183,11 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
       assertTrue(writeFs.mkdirs(filePath1));
       assertTrue(writeFs.mkdirs(filePath2));
       assertTrue(writeFs.mkdirs(filePath3));
-      
+
       //check if the directories were created successfully
       FileStatus lfs = writeFs.getFileStatus(filePath1);
       assertTrue(lfs.getPath().getName().equals("testDir1"));
-      
+
       //write a new file on the writeNn and confirm if it can be read
       Path fileTxt = new Path("/file.txt");
       createFile(writeFs, fileTxt);
@@ -201,13 +196,13 @@ private static Configuration getConf(int numDataNodes, boolean tokens) throws IO
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = readFs.open(fileTxt);
-	  assertTrue(checkFile1(in2));
+      assertTrue(checkFile1(in2));
 
-	  } finally {
-		  if (cluster != null) {
-			  cluster.shutdown();
-		  }
-	  }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
 
 
   }

@@ -30,7 +30,7 @@ public class NumberReplicas {
   NumberReplicas() {
     initialize(0, 0, 0, 0);
   }
-
+  
   NumberReplicas(int live, int decommissioned, int corrupt, int excess) {
     initialize(live, decommissioned, corrupt, excess);
   }

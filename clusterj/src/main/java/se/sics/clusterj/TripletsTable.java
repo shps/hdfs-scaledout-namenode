@@ -18,19 +18,15 @@ public interface TripletsTable {
 
     @PrimaryKey
     @Column(name = "blockId")
-    long getBlockId();     
+    long getBlockId();
     void setBlockId(long bid);
-    
+
     @PrimaryKey
     @Column(name = "index")
     int getIndex();
     void setIndex(int index);
-    
-      
-    @Column(name = "datanodeName")
-    String getDatanodeName();
-    void setDatanodeName(String name);
-    
+
+
     @Column(name = "storageId")
     @Index(name="idx_datanodeStorage")
     String getStorageId();

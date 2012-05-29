@@ -1083,6 +1083,7 @@ public class MiniDFSCluster {
                                   racks[i-curDatanodesNum]);
       }
       dn.runDatanodeDaemon();
+      System.out.println("StartDN: listener-port: "+dn.ipcServer.getListenerAddress().getPort() + ", own-port: "+dn.getIpcPort());
       dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs));
     }
     curDatanodesNum += numDataNodes;
@@ -1251,6 +1252,7 @@ public class MiniDFSCluster {
   /** @return the datanode having the ipc server listen port */
   public DataNode getDataNode(int ipcPort) {
     for(DataNode dn : getDataNodes()) {
+      System.out.println("ipcPort to find: "+ipcPort+", dn-ipc-port: "+dn.ipcServer.getListenerAddress().getPort() + ", localPort: "+dn.getDatanodeId().getPort());
       if (dn.ipcServer.getListenerAddress().getPort() == ipcPort) {
         return dn;
       }

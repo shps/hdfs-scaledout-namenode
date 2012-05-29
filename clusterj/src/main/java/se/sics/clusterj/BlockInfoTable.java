@@ -29,7 +29,7 @@ public interface BlockInfoTable {
 
 
   @Column(name = "iNodeID")
-  @Index(name="idx_iNodeID")
+  @Index(name="idx_inodeid")
   long getINodeID();
   void setINodeID(long iNodeID);
 
