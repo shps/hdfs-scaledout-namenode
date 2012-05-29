@@ -18,5 +18,11 @@ public class ReplicaFactory {
     }
     return replicas;
   }
+
+  public static void createPersistable(Replica replica, TripletsTable newInstance) {
+    newInstance.setBlockId(replica.getBlockId());
+    newInstance.setIndex(replica.getIndex());
+    newInstance.setStorageId(replica.getStorageId());
+  }
   
 }

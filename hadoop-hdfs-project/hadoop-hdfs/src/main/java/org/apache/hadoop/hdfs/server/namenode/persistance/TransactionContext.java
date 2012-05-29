@@ -12,7 +12,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.TripletsTable;
 
@@ -69,7 +68,20 @@ public class TransactionContext {
       BlockInfoFactory.createPersistable(block, newInstance);
       session.savePersistent(newInstance);
     }
+    
+    for (Replica replica : removedReplicas.values()) {
+      Object[] pk = new Object[2];
+      pk[0] = replica.getBlockId();
+      pk[1] = replica.getIndex();
+      session.deletePersistent(TripletsTable.class, pk);
+    }
 
+    for (Replica replica : modifiedReplicas.values()) {
+      TripletsTable newInstance = session.newInstance(TripletsTable.class);
+      ReplicaFactory.createPersistable(replica, newInstance);
+      session.savePersistent(newInstance);
+    }
+    
     if (logger.isDebugEnabled()) {
       logger.debug("`Tx commit");
     }
@@ -145,7 +157,12 @@ public class TransactionContext {
         modifiedBlocks.remove(block.getBlockId());
         removedBlocks.put(block.getBlockId(), attachedBlock);
 
-      } else {
+      } else if (obj instanceof Replica) {
+        Replica replica = (Replica) obj;
+        
+        modifiedReplicas.remove(replica.cacheKey());
+        removedReplicas.put(replica.cacheKey(), replica);
+      }else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
       }
