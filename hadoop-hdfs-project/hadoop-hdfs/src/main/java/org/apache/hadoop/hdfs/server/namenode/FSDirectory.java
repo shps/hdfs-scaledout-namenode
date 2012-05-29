@@ -372,13 +372,6 @@ public class FSDirectory implements Closeable {
       updateCount(inodes, inodes.length-1, 0,
           fileINode.getPreferredBlockSize()*fileINode.getReplication(), true, isTransactional);
 
-      // associate new last block for the file
-//      BlockInfoUnderConstruction blockInfo =
-//        new BlockInfoUnderConstruction(
-//            block,
-//            fileINode.getReplication(),
-//            BlockUCState.UNDER_CONSTRUCTION,
-//            targets);
       BlockInfoUnderConstruction blockInfo =
           new BlockInfoUnderConstruction(
               block);

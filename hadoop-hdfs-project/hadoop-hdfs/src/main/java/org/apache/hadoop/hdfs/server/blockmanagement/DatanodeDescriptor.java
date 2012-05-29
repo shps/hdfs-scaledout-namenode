@@ -217,48 +217,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
         failedVolumes);
   }
 
-  /**
-   * Add datanode to the block.
-   * Add block to the head of the list of blocks belonging to the data-node.
-   */
-  public boolean addBlock(BlockInfo b, boolean isTransactional) {
-    if(!b.addNode(this, isTransactional))
-      return false;
-    // add to the head of the data-node list
-    //blockList = b.listInsert(blockList, this);
-    numBlocks++;
-    return true;
-  }
-  
-  /**
-   * Remove block from the list of blocks belonging to the data-node.
-   * Remove datanode from the block.
-   */
-  public boolean removeBlock(BlockInfo b, boolean isTransactional) {
-    //blockList = b.listRemove(blockList, this);
-    if ( b.removeNode(this, isTransactional) ) {	
-      numBlocks--;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Move block to the head of the list of blocks belonging to the data-node.
-   */
-  void moveBlockToHead(BlockInfo b) {
-    //blockList = b.listRemove(blockList, this);
-    //blockList = b.listInsert(blockList, this);
-  }
-
   public void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
     this.blockPoolUsed = 0;
     this.dfsUsed = 0;
     this.xceiverCount = 0;
-    //this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
   }
@@ -267,6 +231,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return numBlocks;
   }
 
+  public void increamentBlocks() {
+    numBlocks++;
+  }
+  
+  public void decrementBlocks() {
+    numBlocks--;
+  }
   /**
    * Updates stats from datanode heartbeat.
    */

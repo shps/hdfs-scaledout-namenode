@@ -44,6 +44,7 @@ public class BlockInfoFactory {
       blockInfo = new BlockInfo(b);
     }
 
+    blockInfo.setINodeId(bit.getINodeID());
     blockInfo.setTimestamp(bit.getTimestamp());
     blockInfo.setBlockIndex(bit.getBlockIndex());
 

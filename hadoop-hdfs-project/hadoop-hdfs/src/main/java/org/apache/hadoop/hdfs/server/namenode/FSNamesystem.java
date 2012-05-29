@@ -128,12 +128,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
+import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -338,8 +333,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         this.registerMBean(); // register the MBean for the FSNamesystemState
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
         INodeHelper.initialize(blockManager.getDatanodeManager());
-        BlocksHelper.initialize(blockManager.getDatanodeManager());
-      LeaseHelper.initialize(leaseManager);
+        LeaseHelper.initialize(leaseManager);
     }
     }
     //TODO: truncate the DB tables when StartupOption.FORMAT
@@ -3019,7 +3013,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           // blocksReceived from Datanodes take a long time to arrive.
           for (int i = 0; i < descriptors.length; i++) {
             //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-            descriptors[i].addBlock(storedBlock, false);
+            Replica replica = storedBlock.addReplica(descriptors[i]);
+            em.persist(replica);
           }
         }
         // add pipeline locations into the INodeUnderConstruction

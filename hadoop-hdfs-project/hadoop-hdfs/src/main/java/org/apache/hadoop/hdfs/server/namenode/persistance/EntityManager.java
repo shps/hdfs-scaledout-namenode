@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 
 /**
  *
@@ -24,7 +25,6 @@ public class EntityManager {
 
     return instance;
   }
-  
   ThreadLocal<TransactionContext> contexts = new ThreadLocal<TransactionContext>();
 
   private TransactionContext context() {
@@ -36,7 +36,7 @@ public class EntityManager {
     }
     return context;
   }
-  
+
   public void persist(Object o) {
     try {
       context().persist(o);
@@ -48,7 +48,7 @@ public class EntityManager {
   public void begin() {
     context().begin();
   }
-  
+
   public void commit() {
     try {
       context().commit();
@@ -56,7 +56,7 @@ public class EntityManager {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
   }
-  
+
   public void rollback() {
     context().rollback();
   }
@@ -68,8 +68,17 @@ public class EntityManager {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
   }
+  
+  public List<Replica> findReplicasByBlockId(long id) {
+    try {
+      return context().findReplicasByBlockId(id);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return null;
+  }
 
-  public List<BlockInfo> findBlocksByInodeId(long id){
+  public List<BlockInfo> findBlocksByInodeId(long id) {
     try {
       try {
         return context().findBlocksByInodeId(id);
@@ -97,19 +106,18 @@ public class EntityManager {
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
-    
+
     return null;
   }
 
-  public List<BlockInfo> findBlocksByDatanodeName(String name) throws IOException{
+  public List<BlockInfo> findBlocksByDatanodeName(String name) throws IOException {
     try {
       return context().findBlocksByDatanodeName(name);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
-    
+
     return null;
   }
-
 
 }

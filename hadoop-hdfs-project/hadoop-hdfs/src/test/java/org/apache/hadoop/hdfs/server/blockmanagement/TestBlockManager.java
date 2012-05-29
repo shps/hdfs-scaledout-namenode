@@ -44,6 +44,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 public class TestBlockManager {
   private final List<DatanodeDescriptor> nodes = ImmutableList.of( 
@@ -329,9 +330,9 @@ public class TestBlockManager {
     BlockInfo blockInfo = new BlockInfo(block);
 
     for (DatanodeDescriptor dn : nodes) {
-            
       // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      blockInfo.addNode(dn, false);
+      Replica replica = blockInfo.addReplica(dn);
+      EntityManager.getInstance().persist(replica);
     }
     return blockInfo;
   }

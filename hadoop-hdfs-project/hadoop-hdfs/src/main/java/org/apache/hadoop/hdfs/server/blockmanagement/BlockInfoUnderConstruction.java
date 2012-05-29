@@ -71,7 +71,6 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return this.primaryNodeIndex;
   }
   
-
   /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.

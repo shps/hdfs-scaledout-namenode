@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -801,7 +802,7 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-                List<DatanodeDescriptor> dataNodes = blockManager.getStoredBlock(block).getDataNodes();
+                List<DatanodeDescriptor> dataNodes = blockManager.getDatanodes(blockManager.getStoredBlock(block));
         
         for (DatanodeDescriptor dd : dataNodes) {
 

@@ -10,7 +10,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.TripletsTable;
 
@@ -21,13 +23,19 @@ import se.sics.clusterj.TripletsTable;
 public class TransactionContext {
 
   private static Log logger = LogFactory.getLog(TransactionContext.class);
+  
+  private boolean activeTxExpected = false;
+  private boolean externallyMngedTx = true;
+  
   private Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
   private boolean allBlocksRead = false;
-  private boolean activeTxExpected = false;
-  private boolean externallyMngedTx = true;
+  
+  private Map<String, Replica> modifiedReplicas = new HashMap<String, Replica>();
+  private Map<String, Replica> removedReplicas = new HashMap<String, Replica>();
+  private Map<Long, List<Replica>> blockReplicas = new HashMap<Long, List<Replica>>();
 
   private void resetContext() {
     blocks.clear();
@@ -41,9 +49,10 @@ public class TransactionContext {
 
   void begin() {
     activeTxExpected = true;
-    
-    if (logger.isDebugEnabled())
+
+    if (logger.isDebugEnabled()) {
       logger.debug("Tx begin");
+    }
   }
 
   public void commit() throws TransactionContextException {
@@ -61,17 +70,19 @@ public class TransactionContext {
       session.savePersistent(newInstance);
     }
 
-    if (logger.isDebugEnabled())
+    if (logger.isDebugEnabled()) {
       logger.debug("`Tx commit");
-    
+    }
+
     resetContext();
   }
 
   void rollback() {
     resetContext();
-    
-    if (logger.isDebugEnabled())
+
+    if (logger.isDebugEnabled()) {
       logger.debug("Tx rollback");
+    }
   }
 
   public void persist(Object obj) throws TransactionContextException {
@@ -86,11 +97,11 @@ public class TransactionContext {
       }
 
       BlockInfo contextInstance = blocks.get(block.getBlockId());
-      
+
       if (logger.isDebugEnabled()) {
-        if (contextInstance == null)
+        if (contextInstance == null) {
           logger.debug("Block = " + block.getBlockId() + " is new instance");
-        else if (contextInstance == block) {
+        } else if (contextInstance == block) {
           logger.debug("Block = " + block.getBlockId() + " is mraked modified.");
         } else {
           logger.debug("Block =" + block.getBlockId() + " instance changed to " + ((block instanceof BlockInfoUnderConstruction) ? "UnderConstruction" : "BlockInfo"));
@@ -100,7 +111,14 @@ public class TransactionContext {
       blocks.put(block.getBlockId(), block);
       modifiedBlocks.put(block.getBlockId(), block);
 
-    } else {
+    } else if (obj instanceof Replica) {
+      Replica replica = (Replica) obj;
+      
+      if (removedReplicas.containsKey(replica.cacheKey()))
+        throw new TransactionContextException("Removed replica passed to be persisted");
+      
+      modifiedReplicas.put(replica.cacheKey(), replica);
+    }else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
   }
@@ -135,6 +153,28 @@ public class TransactionContext {
       afterTxCheck(done);
     }
   }
+  
+  List<Replica> findReplicasByBlockId(long id) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (blockReplicas.containsKey(id)) {
+        return blockReplicas.get(id);
+      } else {
+        Session session = DBConnector.obtainSession();
+        QueryBuilder qb = session.getQueryBuilder();
+        QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
+        dobj.where(dobj.get("blockId").equal(dobj.param("param")));
+        Query<TripletsTable> query = session.createQuery(dobj);
+        query.setParameter("param", id);
+        List<TripletsTable> triplets = query.getResultList();
+        List<Replica> replicas = DatanodeDescriptorFactory.createReplicaList(triplets);
+        blockReplicas.put(id, replicas);
+        return replicas;
+      }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
 
   public List<BlockInfo> findBlocksByInodeId(long id) throws IOException, TransactionContextException {
     beforeTxCheck();
@@ -149,7 +189,7 @@ public class TransactionContext {
         Query<BlockInfoTable> query = session.createQuery(dobj);
         query.setParameter("param", id);
         List<BlockInfoTable> resultList = query.getResultList();
-        List<BlockInfo> syncedList = syncInstances(BlockInfoFactory.createBlockInfoList(resultList));
+        List<BlockInfo> syncedList = syncBlockInfoInstances(BlockInfoFactory.createBlockInfoList(resultList));
         inodeBlocks.put(id, syncedList);
         return syncedList;
       }
@@ -188,7 +228,7 @@ public class TransactionContext {
         QueryDomainType<BlockInfoTable> dobj = qb.createQueryDefinition(BlockInfoTable.class);
         Query<BlockInfoTable> query = session.createQuery(dobj);
         List<BlockInfoTable> resultList = query.getResultList();
-        List<BlockInfo> syncedList = syncInstances(BlockInfoFactory.createBlockInfoList(resultList));
+        List<BlockInfo> syncedList = syncBlockInfoInstances(BlockInfoFactory.createBlockInfoList(resultList));
         allBlocksRead = true;
         return syncedList;
       }
@@ -219,7 +259,7 @@ public class TransactionContext {
     }
   }
 
-  private List<BlockInfo> syncInstances(List<BlockInfo> newBlocks) {
+  private List<BlockInfo> syncBlockInfoInstances(List<BlockInfo> newBlocks) {
     List<BlockInfo> finalList = new ArrayList<BlockInfo>();
 
     for (BlockInfo blockInfo : newBlocks) {
@@ -253,4 +293,5 @@ public class TransactionContext {
       }
     }
   }
+
 }

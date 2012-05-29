@@ -24,11 +24,10 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeHelper;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import se.sics.clusterj.BlockInfoTable;
-
-
 
 /**
  * Internal class for block metadata.
@@ -69,107 +68,102 @@ public class BlockInfo extends Block {
     }
   }
   private INodeFile inode;
+  private List<Replica> replicas;
   /**
    * For implementing {@link LightWeightGSet.LinkedElement} interface
    */
   private int blockIndex = -1; //added for KTHFS
   private long timestamp = 1;
   
+  protected long inodeId;
+  
   public BlockInfo(Block blk) {
     super(blk);
-    if (blk instanceof BlockInfo)
-      this.inode = ((BlockInfo)blk).inode;
+    if (blk instanceof BlockInfo) {
+      this.inode = ((BlockInfo) blk).inode;
+    }
+    
   }
 
   public INodeFile getINode() {
-    if (inode == null)
-      inode = (INodeFile) BlocksHelper.getInodeFromBlockId(getBlockId());
-    
+    if (inode == null) {
+      inode = (INodeFile) INodeHelper.getINode(inodeId);
+    }
+
     return inode;
   }
 
-  public void setINode(INodeFile inode) {
-    this.inode = inode;
-  }
-
-  public void setINodeWithoutTransaction(INodeFile inode) {
-    this.inode = inode;
+  public void setINodeId(long id) {
+    this.inodeId = id;
   }
   
-  public List<DatanodeDescriptor> getDataNodes() {
-    return BlocksHelper.getDataNodesFromBlock(getBlockId());
+  public void setINode(INodeFile inode) {
+    this.inode = inode;
+    this.inodeId = inode.getID();
   }
 
-  void setDatanode(int index, DatanodeDescriptor node, boolean isTransactional) {
-    assert index >= 0;
-    if (node != null) {
-      BlocksHelper.setDatanode(this.getBlockId(), index, node.name, node.storageID, isTransactional);
+  public List<Replica> getReplicas() {
+    if (replicas == null) {
+      replicas = EntityManager.getInstance().findReplicasByBlockId(getBlockId());
     }
+
+    return replicas;
   }
 
   /**
-   * Checks the size of the triplets and how many more, we can add (in theory)
+   * Adds new replica for this block.
    */
-  int getCapacity() {
-    int length = BlocksHelper.getTripletsForBlockLength(this);
-    return length;
+  public Replica addReplica(DatanodeDescriptor dn) {
+    if (hasReplicaIn(dn.getStorageID())) {
+      return null;
+    }
+
+    Replica replica = new Replica(getBlockId(), dn.getStorageID(), getReplicas().size());
+    replicas.add(replica);
+    dn.increamentBlocks();
+    return replica;
   }
 
   /**
-   * Ensure that there is enough space to include num more triplets.
+   * removes a replica of this block related to storageId
    *
-   * @return first free triplet index.
+   * @param storageId
+   * @return
    */
-  private int ensureCapacity(int num) {
-    int last = numNodes();
-    return last;
+  public Replica removeReplica(DatanodeDescriptor dn) {
+    Replica replica = null;
+    int index = -1;
+    
+    for (int i = 0; i < getReplicas().size(); i++) {
+      if (replicas.get(i).getStorageId().equals(dn.getStorageID())) {
+        index = i;
+        break;
+      }
+    }
+    
+    if (index >= 0) {
+      replica = replicas.remove(index);
+      dn.decrementBlocks();
+      
+      for (int i = index; i < replicas.size(); i++) {
+        Replica r1 = replicas.get(i);
+        r1.setIndex(i);
+        EntityManager.getInstance().persist(r1);
+      }
+    }
+    
+    return replica;
+
   }
 
-  /**
-   * Count the number of data-nodes the block belongs to.
-   */
-  int numNodes() {
-    return BlocksHelper.numDatanodesForBlock(this.getBlockId());
-  }
-
-  /**
-   * Add data-node this block belongs to.
-   */
-  public boolean addNode(DatanodeDescriptor node, boolean isTransactional) {
-    if (findDatanode(node, isTransactional) >= 0) // the node is already there
-    {
-      return false;
+  boolean hasReplicaIn(String storageId) {
+    for (Replica replica : getReplicas()) {
+      if (replica.getStorageId().equals(storageId)) {
+        return true;
+      }
     }
 
-
-    // find the last available datanode index
-    int lastNode = ensureCapacity(1);
-    setDatanode(lastNode, node, isTransactional);
-    return true;
-  }
-
-  /**
-   * Remove data-node from the block.
-   */
-  public boolean removeNode(DatanodeDescriptor node, boolean isTransactional) {
-    int dnIndex = findDatanode(node, isTransactional);
-    if (dnIndex < 0) // the node is not found
-    {
-      return false;
-    }
-
-    BlocksHelper.removeTriplets(this, dnIndex, isTransactional);
-    return true;
-  }
-
-  /**
-   * Find specified DatanodeDescriptor.
-   *
-   * @param dn
-   * @return index or -1 if not found.
-   */
-  int findDatanode(DatanodeDescriptor dn, boolean isTransactional) {
-    return BlocksHelper.findDatanodeForBlock(dn, this.getBlockId(), isTransactional);
+    return false;
   }
 
   /**
@@ -253,11 +247,7 @@ public class BlockInfo extends Block {
   public void setTimestamp(long ts) {
     this.timestamp = ts;
   }
-  
+
   public void toPersistable(BlockInfoTable persistable) {
-    
   }
-  
-  
-  
 }

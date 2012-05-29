@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTar
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -82,6 +83,8 @@ public class DatanodeManager {
   private final BlockManager blockManager;
 
   private final HeartbeatManager heartbeatManager;
+  
+  private static EntityManager em = EntityManager.getInstance();
 
   /**
    * Stores the datanode -> block map.  

@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * This class tests that methods in DatanodeDescriptor
@@ -55,33 +56,47 @@ public class TestDatanodeDescriptor extends TestCase {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
     DBConnector.setConfiguration(conf);
+    EntityManager em = EntityManager.getInstance();
     
     DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
     BlockInfo blk = new BlockInfo(new Block(1L));
     BlockInfo blk1 = new BlockInfo(new Block(2L));
+    em.persist(blk);
+    em.persist(blk1);
     // add first block
-    assertTrue(dd.addBlock(blk, false));
+    Replica r1 = blk.addReplica(dd);
+    assertNotNull(r1);
+    em.persist(r1);
+    
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    assertFalse(dd.removeBlock(blk1, false));
+    Replica removeReplica = blk1.removeReplica(dd);
+    assertNull(removeReplica);
     assertEquals(1, dd.numBlocks());
     // add an existent block
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    assertFalse(dd.addBlock(blk, false));
+    r1 = blk.addReplica(dd);
+    assertNull(r1);
     assertEquals(1, dd.numBlocks());
     // add second block
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    assertTrue(dd.addBlock(blk1, false));
+    r1 = blk1.addReplica(dd);
+    assertNotNull(r1);
+    em.persist(r1);
     assertEquals(2, dd.numBlocks());
     // remove first block
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    assertTrue(dd.removeBlock(blk, false));
+    removeReplica = blk.removeReplica(dd);
+    assertNotNull(removeReplica);
+    em.remove(removeReplica);
     assertEquals(1, dd.numBlocks());
     // remove second block
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    assertTrue(dd.removeBlock(blk1, false));
+    removeReplica = blk1.removeReplica(dd);
+    assertNotNull(removeReplica);
+    em.remove(removeReplica);
     assertEquals(0, dd.numBlocks());    
   }
 }
