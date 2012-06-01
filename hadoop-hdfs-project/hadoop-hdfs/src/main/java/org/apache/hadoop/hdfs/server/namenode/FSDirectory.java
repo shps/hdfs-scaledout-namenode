@@ -446,9 +446,7 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       // modify file-> block and blocksMap
-      fileNode.removeLastBlock(block);
       getBlockManager().removeBlockFromMap(block, isTransactional);
-      em.remove(block);
       // write modified block locations to log
       //fsImage.getEditLog().logOpenFile(path, fileNode);
       if(NameNode.stateChangeLog.isDebugEnabled()) {

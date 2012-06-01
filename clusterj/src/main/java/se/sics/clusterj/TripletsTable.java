@@ -21,12 +21,12 @@ public interface TripletsTable {
     long getBlockId();
     void setBlockId(long bid);
 
-    @PrimaryKey
     @Column(name = "index")
     int getIndex();
     void setIndex(int index);
 
 
+    @PrimaryKey
     @Column(name = "storageId")
     @Index(name="idx_datanodeStorage")
     String getStorageId();

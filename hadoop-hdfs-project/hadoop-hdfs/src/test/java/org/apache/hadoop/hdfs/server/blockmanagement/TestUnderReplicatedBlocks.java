@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 public class TestUnderReplicatedBlocks extends TestCase {
   public void testSetrepIncWithUnderReplicatedBlocks() throws Exception {
@@ -44,17 +45,19 @@ public class TestUnderReplicatedBlocks extends TestCase {
       // remove one replica from the blocksMap so block becomes under-replicated
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
+      DBConnector.beginTransaction();
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = bm.getDatanodes((BlockInfo)b.getLocalBlock()).get(0);
+      DatanodeDescriptor dn = bm.getDatanodes(bm.getStoredBlock(b.getLocalBlock())).get(0);
       bm.addToInvalidates(b.getLocalBlock(), dn);
-      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
       bm.removeNode(b.getLocalBlock(), dn, false);
-      
+      DBConnector.commit();
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);
       assertEquals(0, shell.run(new String[]{
           "-setrep", "-w", Integer.toString(1+REPLICATION_FACTOR), FILE_NAME}));
-    } finally {
+    } catch(Exception e) {
+      e.printStackTrace();
+    }finally {
       cluster.shutdown();
     }
     

@@ -2,6 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
+import com.mysql.clusterj.Transaction;
+import com.mysql.clusterj.core.TransactionImpl;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
@@ -22,69 +24,72 @@ import se.sics.clusterj.TripletsTable;
 public class TransactionContext {
 
   private static Log logger = LogFactory.getLog(TransactionContext.class);
-  
   private boolean activeTxExpected = false;
   private boolean externallyMngedTx = true;
-  
   private Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
   private boolean allBlocksRead = false;
-  
   private Map<String, Replica> modifiedReplicas = new HashMap<String, Replica>();
   private Map<String, Replica> removedReplicas = new HashMap<String, Replica>();
   private Map<Long, List<Replica>> blockReplicas = new HashMap<Long, List<Replica>>();
 
   private void resetContext() {
+    activeTxExpected = false;
+    externallyMngedTx = true;
+    
     blocks.clear();
     modifiedBlocks.clear();
     removedBlocks.clear();
     inodeBlocks.clear();
     allBlocksRead = false;
-    activeTxExpected = false;
-    externallyMngedTx = true;
+    
+    modifiedReplicas.clear();
+    removedReplicas.clear();
+    blockReplicas.clear();
   }
 
   void begin() {
     activeTxExpected = true;
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Tx begin");
-    }
   }
 
   public void commit() throws TransactionContextException {
     if (!activeTxExpected) {
       throw new TransactionContextException("Active transaction is expected.");
     }
+    
+    StringBuilder builder = new StringBuilder();
+    
     Session session = DBConnector.obtainSession();
     for (BlockInfo block : removedBlocks.values()) {
       session.deletePersistent(BlockInfoTable.class, block.getBlockId());
+      builder.append("rm Block:").append(block.getBlockId()).append("\n");
     }
 
     for (BlockInfo block : modifiedBlocks.values()) {
       BlockInfoTable newInstance = session.newInstance(BlockInfoTable.class);
       BlockInfoFactory.createPersistable(block, newInstance);
       session.savePersistent(newInstance);
+      builder.append("w Block:").append(+ block.getBlockId()).append("\n");
     }
-    
+
     for (Replica replica : removedReplicas.values()) {
       Object[] pk = new Object[2];
       pk[0] = replica.getBlockId();
-      pk[1] = replica.getIndex();
+      pk[1] = replica.getStorageId();
       session.deletePersistent(TripletsTable.class, pk);
+      builder.append("rm Replica:").append(replica.cacheKey()).append("\n");
     }
 
     for (Replica replica : modifiedReplicas.values()) {
       TripletsTable newInstance = session.newInstance(TripletsTable.class);
       ReplicaFactory.createPersistable(replica, newInstance);
       session.savePersistent(newInstance);
+      builder.append("w Replica:").append(replica.cacheKey()).append("\n");
     }
-    
-    if (logger.isDebugEnabled()) {
-      logger.debug("`Tx commit");
-    }
+
+    logger.debug("Tx commit{ \n" + builder.toString() + "}");
 
     resetContext();
   }
@@ -92,9 +97,7 @@ public class TransactionContext {
   void rollback() {
     resetContext();
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("Tx rollback");
-    }
+    logger.debug("Tx rollback");
   }
 
   public void persist(Object obj) throws TransactionContextException {
@@ -125,12 +128,13 @@ public class TransactionContext {
 
     } else if (obj instanceof Replica) {
       Replica replica = (Replica) obj;
-      
-      if (removedReplicas.containsKey(replica.cacheKey()))
+
+      if (removedReplicas.containsKey(replica.cacheKey())) {
         throw new TransactionContextException("Removed replica passed to be persisted");
-      
+      }
+
       modifiedReplicas.put(replica.cacheKey(), replica);
-    }else {
+    } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
   }
@@ -159,10 +163,10 @@ public class TransactionContext {
 
       } else if (obj instanceof Replica) {
         Replica replica = (Replica) obj;
-        
+
         modifiedReplicas.remove(replica.cacheKey());
         removedReplicas.put(replica.cacheKey(), replica);
-      }else {
+      } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
       }
@@ -170,7 +174,7 @@ public class TransactionContext {
       afterTxCheck(done);
     }
   }
-  
+
   List<Replica> findReplicasByBlockId(long id) throws TransactionContextException {
     beforeTxCheck();
     try {
@@ -310,5 +314,4 @@ public class TransactionContext {
       }
     }
   }
-
 }

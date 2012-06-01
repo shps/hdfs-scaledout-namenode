@@ -2,11 +2,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.mysql.clusterj.ClusterJException;
-import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
-import com.mysql.clusterj.query.QueryBuilder;
-import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -175,29 +172,6 @@ public class DatanodeHelper {
   }
 
   /*
-   * Gets the datanode descriptor object via hostname
-   */
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  public static DatanodeDescriptor getDatanodeDescriptorByHostname(String hostname)
-  {
-    Session session = DBConnector.obtainSession();
-    DatanodeInfoTable dn = getDatanodeByParameter(session,new String [] { "hostname"}, new Object [] {hostname});
-    
-    return convertToHDFSDatanod(dn);
-  }
-
-  /*
-   * Gets the datanode descriptor object via name (i.e. hostname:port)
-   */
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  public static DatanodeDescriptor getDatanodeDescriptorByName(String name)
-  {
-    Session session = DBConnector.obtainSession();
-    DatanodeInfoTable dn = getDatanodeByParameter(session, new String [] {"hostname", "localPort"}, name.split(":"));
-    return convertToHDFSDatanod(dn);
-  }
-  
-  /*
    * Converts a DatanodeInfoTable object to HDFS DatanodeDescriptor object
    */
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -238,26 +212,4 @@ public class DatanodeHelper {
    session.deletePersistent(datanode);
  }
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- private static DatanodeInfoTable getDatanodeByParameter(Session session, String [] fields, Object [] values) 
-  {
-    assert fields.length == values.length;
-    
-    QueryBuilder qb = session.getQueryBuilder();
-    QueryDomainType<DatanodeInfoTable> dobj = qb.createQueryDefinition(DatanodeInfoTable.class);
-    
-    // Setting the fields
-    for(int i=0; i<fields.length; i++)
-    {
-      dobj.where(dobj.get(fields[i]).equal(dobj.param("param_"+i)));
-    }
-    
-    Query<DatanodeInfoTable> query = session.createQuery(dobj);
-    
-    // Setting the values
-    for(int i=0; i<values.length; i++)
-    {
-      query.setParameter("param_"+i, values[i]);
-    }
-    return query.getResultList().get(0);
-  }
 }

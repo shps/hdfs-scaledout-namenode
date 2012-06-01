@@ -60,7 +60,6 @@ public class TestMissingBlocksAlert extends TestCase {
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       DistributedFileSystem dfs = 
                             (DistributedFileSystem) cluster.getWritingFileSystem();
-
       // create a normal file
       DFSTestUtil.createFile(dfs, new Path("/testMissingBlocksAlert/file1"), 
                              fileLen, (short)3, 0);
@@ -82,7 +81,7 @@ public class TestMissingBlocksAlert extends TestCase {
       in.close();
 
       LOG.info("Waiting for missing blocks count to increase...");
-
+      
       while (dfs.getMissingBlocksCount() <= 0) {
         Thread.sleep(100);
       }

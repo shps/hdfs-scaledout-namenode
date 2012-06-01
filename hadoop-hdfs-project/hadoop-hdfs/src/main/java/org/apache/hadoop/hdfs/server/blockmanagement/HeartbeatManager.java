@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Daemon;
 
@@ -221,8 +222,9 @@ class HeartbeatManager implements DatanodeStatistics {
         }
         try {
           synchronized(this) {
-                  // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-            dm.removeDeadDatanode(dead, false);
+            DBConnector.beginTransaction();
+            dm.removeDeadDatanode(dead, true);
+            DBConnector.commit();
           }
         } catch (IOException e) {
           e.printStackTrace();

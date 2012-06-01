@@ -171,9 +171,6 @@ public class INodeHelper {
 			((INodeFile) (inode)).setHeader(inodetable.getHeader());
 
 			((INodeFile) (inode)).setID(inodetable.getId());
-      List<BlockInfo> blocks = EntityManager.getInstance().findBlocksByInodeId(inode.getID());
-      
-			((INodeFile) (inode)).setBlocks(blocks);
 		}
     
     if (inodetable.getSymlink() != null)

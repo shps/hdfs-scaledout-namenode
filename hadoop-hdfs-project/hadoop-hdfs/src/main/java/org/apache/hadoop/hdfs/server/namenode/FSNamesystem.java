@@ -3011,9 +3011,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
 
       if (deleteblock) {
-        pendingFile.removeLastBlock(ExtendedBlock.getLocalBlock(lastblock));
         blockManager.removeBlockFromMap(storedBlock, false);
-        em.remove(storedBlock);
       }
       else {
         // update last block
@@ -3768,17 +3766,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @throws IOException 
      */
     private synchronized void incrementSafeBlockCount(short replication) throws IOException {
-      /* 
-       * [JUDE] This is changed because in traditional HDFS, when the NN restarts, its blockMap is empty.
-       * 'blockMap' is filled each time the DN registers with the NN (via addStoredBlock method) and hence at once, on the first DN registration, this DN can report to the NN to have this block
-       * This would have minimum 1 replication. If 'safeReplication == 1' this check will pass and 'blockSafe' variable will increment to 1
-       * 
-       * In our case, the blockMap is not recreated if the NN restarts. When finding total replica for a block, we get this value from the 'triplets' table
-       * Hence, the condition 'replication == safeReplication' can never be exactly equal, since after restart, we can have many replica (depending on replication factor)
-       * This is just fetched from the db. But in the original HDFS, after restart of NN, the actual replicas are reported when all DNs have registered and reported their block info.
-       * So we need to modify the condition for 'replication >= safeReplication'
+      /*
+       * [JUDE] This is changed because in traditional HDFS, when the NN
+       * restarts, its blockMap is empty. 'blockMap' is filled each time the DN
+       * registers with the NN (via addStoredBlock method) and hence at once, on
+       * the first DN registration, this DN can report to the NN to have this
+       * block This would have minimum 1 replication. If 'safeReplication == 1'
+       * this check will pass and 'blockSafe' variable will increment to 1
+       *
+       * In our case, the blockMap is not recreated if the NN restarts. When
+       * finding total replica for a block, we get this value from the
+       * 'triplets' table Hence, the condition 'replication == safeReplication'
+       * can never be exactly equal, since after restart, we can have many
+       * replica (depending on replication factor) This is just fetched from the
+       * db. But in the original HDFS, after restart of NN, the actual replicas
+       * are reported when all DNs have registered and reported their block
+       * info. So we need to modify the condition for 'replication >=
+       * safeReplication'
        */
-      //if ((int)replication == safeReplication)
+      if ((int)replication >= safeReplication)
         this.blockSafe++;
       checkMode();
     }
@@ -4051,7 +4057,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getBlocksTotal() {
-    return isWritingNN() ? blockManager.getTotalBlocks() : -1;
+    return blockManager.getTotalBlocks();
   }
 
   /**
