@@ -2,10 +2,13 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 
 /**
  *
@@ -68,7 +71,7 @@ public class EntityManager {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
   }
-  
+
   public List<Replica> findReplicasByBlockId(long id) {
     try {
       return context().findReplicasByBlockId(id);
@@ -120,4 +123,23 @@ public class EntityManager {
     return null;
   }
 
+  public TreeSet<LeasePath> findLeasePathsByHolder(int holderId) {
+    try {
+      return context().findLeasePathsByHolderID(holderId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public LeasePath findLeasePathByPath(String path) {
+    try {
+      return context().findLeasePathByPath(path);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
 }

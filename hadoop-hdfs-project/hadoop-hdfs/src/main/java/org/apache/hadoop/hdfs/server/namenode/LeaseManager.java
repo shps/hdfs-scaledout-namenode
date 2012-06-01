@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -80,6 +81,7 @@ public class LeaseManager {
   // The map stores pathnames in lexicographical order.
   //
   private SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
+  private EntityManager em = EntityManager.getInstance();
 
   LeaseManager(FSNamesystem fsnamesystem) {
     this.fsnamesystem = fsnamesystem;
@@ -142,37 +144,27 @@ public class LeaseManager {
     Lease lease = getLease(holder);
     if (lease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
-      return LeaseHelper.addLease(holder, holderID, src, now(),
+      lease = LeaseHelper.addLease(holder, holderID, src, now(),
               isTransactional);
     } else {
-      return LeaseHelper.renewLeaseAndAddPath(holder,
+      lease = LeaseHelper.renewLease(holder,
               lease.getHolderID(), src, isTransactional);
     }
-  }
-
-  @Deprecated
-  synchronized Lease addLeaseOld(String holder, String src) {
-    Lease lease = getLease(holder);
-    if (lease == null) {
-      lease = new Lease(holder);
-      leases.put(holder, lease);
-      sortedLeases.add(lease);
-    } else {
-      renewLease(lease, false);
-    }
-    sortedLeasesByPath.put(src, lease);
-    lease.paths.add(src);
+    
+    LeasePath lPath = new LeasePath(src, lease.getHolderID());
+    lease.getPaths().add(lPath);
+    em.persist(em);
+    
     return lease;
   }
 
   /**
    * Remove the specified lease and src
    */
-  synchronized void removeLease(Lease lease, String src, boolean isTransactional) {
-    //sortedLeasesByPath.remove(src);
-    if (!lease.removePath(src, isTransactional)) {
+  synchronized void removeLease(Lease lease, LeasePath src, boolean isTransactional) {
+    if (lease.getPaths().remove(src))
       LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
-    }
+    em.remove(src);
 
     if (!lease.hasPath()) {
       LeaseHelper.deleteLease(lease.getHolder(), isTransactional);
@@ -182,10 +174,10 @@ public class LeaseManager {
 
   @Deprecated
   synchronized void removeLeaseOld(Lease lease, String src, boolean isTransactional) {
-    sortedLeasesByPath.remove(src);
-    if (!lease.removePath(src, isTransactional)) {
-      LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
-    }
+//    sortedLeasesByPath.remove(src);
+//    if (!lease.removePath(src, isTransactional)) {
+//      LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
+//    }
 
     if (!lease.hasPath()) {
       leases.remove(lease.holder);
@@ -201,7 +193,7 @@ public class LeaseManager {
   synchronized void removeLease(String holder, String src, boolean isTransactional) {
     Lease lease = getLease(holder);
     if (lease != null) {
-      removeLease(lease, src, isTransactional);
+      removeLease(lease, new LeasePath(src, lease.getHolderID()), isTransactional);
     }
   }
 
@@ -211,7 +203,7 @@ public class LeaseManager {
   synchronized Lease reassignLease(Lease lease, String src, String newHolder, boolean isTransactional) {
     assert newHolder != null : "new lease holder is null";
     if (lease != null) {
-      removeLease(lease, src, isTransactional);
+      removeLease(lease, new LeasePath(src, lease.getHolderID()), isTransactional);
     }
     return addLease(newHolder, src, isTransactional);
   }
@@ -260,15 +252,14 @@ public class LeaseManager {
    * checks in.  If the client dies and allows its lease to
    * expire, all the corresponding locks can be released.
    *************************************************************/
-  class Lease implements Comparable<Lease> {
+  public class Lease implements Comparable<Lease> {
 
     private final String holder;
     private long lastUpdate;
     //private final Collection<String> paths = new TreeSet<String>();
-    /** W: paths cannot be final because we set it from the LeaseHelper function*/
-    private Collection<String> paths = new TreeSet<String>();
-    //added for ThesisFS
-    private int holderID;
+    private Collection<LeasePath> paths = new TreeSet<LeasePath>();
+    private int holderID; // KTHFS
+    private EntityManager em = EntityManager.getInstance();
 
     /*Only LeaseManager object can create a lease */
     /**
@@ -293,7 +284,7 @@ public class LeaseManager {
       this.lastUpdate = lastUpd;
     }
 
-    public void setPaths(TreeSet<String> paths) {
+    public void setPaths(TreeSet<LeasePath> paths) {
       this.paths = paths;
     }
 
@@ -314,6 +305,11 @@ public class LeaseManager {
       this.lastUpdate = now(); //W: this might not be required because we always read lastUpdate from the DB
       LeaseHelper.renewLease(this.holder, isTransactional);
 
+    }
+    
+    public void removePath(LeasePath lPath)
+    {
+      getPaths().remove(lPath);
     }
 
     @Deprecated
@@ -336,24 +332,10 @@ public class LeaseManager {
      */
     private String findPath(INodeFileUnderConstruction pendingFile) {
       try {
-        for (String src : LeaseHelper.getPaths(this.holder)) {
-          if (fsnamesystem.dir.getFileINode(src).getFullPathName().equals(pendingFile.getFullPathName())) {
-            return src;
-          }
-        }
-      } catch (UnresolvedLinkException e) {
-        throw new AssertionError("Lease files should reside on this FS");
-      }
-      return null;
-    }
-
-    @SuppressWarnings("unused")
-    @Deprecated
-    private String findPathOld(INodeFileUnderConstruction pendingFile) {
-      try {
-        for (String src : paths) {
-          if (fsnamesystem.dir.getFileINode(src).getFullPathName().equals(pendingFile.getFullPathName())) {
-            return src;
+          
+        for (LeasePath lpath : this.getPaths()) {
+          if (fsnamesystem.dir.getFileINode(lpath.getPath()).getFullPathName().equals(pendingFile.getFullPathName())) {
+            return lpath.getPath();
           }
         }
       } catch (UnresolvedLinkException e) {
@@ -364,22 +346,7 @@ public class LeaseManager {
 
     /** Does this lease contain any path? */
     boolean hasPath() {
-      Lease lease = LeaseHelper.getLease(this.holder);
-      return (lease == null) ? false : !lease.getPathsLocal().isEmpty();
-    }
-
-    @Deprecated
-    boolean hasPathOld() {
-      return !paths.isEmpty();
-    }
-
-    boolean removePath(String src, boolean isTransactional) {
-      return LeaseHelper.removePath(this.holderID, src, isTransactional);
-    }
-
-    @Deprecated
-    boolean removePathOld(String src) {
-      return paths.remove(src);
+      return !this.getPaths().isEmpty();
     }
 
     /** {@inheritDoc} */
@@ -421,19 +388,10 @@ public class LeaseManager {
       return holder.hashCode();
     }
 
-    Collection<String> getPaths() {
-      return LeaseHelper.getPaths(this.holder);
-    }
-
-    /**
-     * This method should only be used immediately after a fully cooked lease object is fetched from database
-     * @return TreeSet<String>
-     */
-    Collection<String> getPathsLocal() {
-      return paths;
-    }
-
-    Collection<String> getPathsOld() {
+    Collection<LeasePath> getPaths() {
+      if (paths == null)
+        paths = em.findLeasePathsByHolder(holderID);
+      
       return paths;
     }
 
@@ -441,13 +399,9 @@ public class LeaseManager {
       return holder;
     }
 
-    void replacePath(String oldpath, String newpath, boolean isTransactional) {
-      LeaseHelper.replacePath(this.holderID, oldpath, newpath, isTransactional);
-    }
-
-    void replacePathOld(String oldpath, String newpath) {
-      paths.remove(oldpath);
-      paths.add(newpath);
+    void replacePath(LeasePath oldpath, LeasePath newpath) {
+      getPaths().remove(oldpath);
+      getPaths().add(newpath);
     }
 
     boolean doesExists() {
@@ -465,48 +419,23 @@ public class LeaseManager {
     }
 
     final int len = overwrite.length();
-    SortedMap<String, Lease> sortedLeasesByPathFromDB = LeaseHelper.getSortedLeasesByPath();
+    SortedMap<LeasePath, Lease> sortedLeasesByPathFromDB = LeaseHelper.getSortedLeasesByPath();
 
-    for (Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPathFromDB)) {
-      final String oldpath = entry.getKey();
+    for (Map.Entry<LeasePath, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPathFromDB)) {
+      final LeasePath oldpath = entry.getKey();
       final Lease lease = entry.getValue();
       //overwrite must be a prefix of oldpath
-      final String newpath = replaceBy + oldpath.substring(len);
+      final LeasePath newpath = new LeasePath(replaceBy + oldpath.getPath().substring(len), lease.getHolderID());
       if (LOG.isDebugEnabled()) {
         LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
       }
-      lease.replacePath(oldpath, newpath, isTransactional);
-    }
-  }
-
-  @Deprecated
-  synchronized void changeLeaseOld(String src, String dst,
-          String overwrite, String replaceBy, boolean isTransactional) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(getClass().getSimpleName() + ".changelease: "
-              + " src=" + src + ", dest=" + dst
-              + ", overwrite=" + overwrite
-              + ", replaceBy=" + replaceBy);
-    }
-
-    final int len = overwrite.length();
-    for (Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPath)) {
-      final String oldpath = entry.getKey();
-      final Lease lease = entry.getValue();
-      //overwrite must be a prefix of oldpath
-      final String newpath = replaceBy + oldpath.substring(len);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
-      }
-      lease.replacePath(oldpath, newpath, isTransactional);
-      sortedLeasesByPath.remove(oldpath);
-      sortedLeasesByPath.put(newpath, lease);
+      lease.replacePath(oldpath, newpath);
     }
   }
 
   synchronized void removeLeaseWithPrefixPath(String prefix, boolean isTransactional) {
-    SortedMap<String, Lease> sortedLeasesByPathFromDB = LeaseHelper.getSortedLeasesByPath();
-    for (Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPathFromDB)) {
+    SortedMap<LeasePath, Lease> sortedLeasesByPathFromDB = LeaseHelper.getSortedLeasesByPath();
+    for (Map.Entry<LeasePath, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPathFromDB)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
                 + ".removeLeaseWithPrefixPath: entry=" + entry);
@@ -515,32 +444,22 @@ public class LeaseManager {
     }
   }
 
-  @Deprecated
-  synchronized void removeLeaseWithPrefixPathOld(String prefix, boolean isTransactional) {
-    for (Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(LeaseManager.class.getSimpleName()
-                + ".removeLeaseWithPrefixPath: entry=" + entry);
-      }
-      removeLease(entry.getValue(), entry.getKey(), isTransactional);
-    }
-  }
-
-  static private List<Map.Entry<String, Lease>> findLeaseWithPrefixPath(
-          String prefix, SortedMap<String, Lease> path2lease) {
+  static private List<Map.Entry<LeasePath, Lease>> findLeaseWithPrefixPath(
+          String prefix, SortedMap<LeasePath, Lease> path2lease) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
 
-    List<Map.Entry<String, Lease>> entries = new ArrayList<Map.Entry<String, Lease>>();
+    List<Map.Entry<LeasePath, Lease>> entries = new ArrayList<Map.Entry<LeasePath, Lease>>();
     final int srclen = prefix.length();
 
-    for (Map.Entry<String, Lease> entry : path2lease.tailMap(prefix).entrySet()) {
-      final String p = entry.getKey();
-      if (!p.startsWith(prefix)) {
+    for (Map.Entry<LeasePath, Lease> entry : 
+            path2lease.tailMap(new LeasePath(prefix, Integer.MIN_VALUE)).entrySet()) {
+      final LeasePath p = entry.getKey();
+      if (!p.getPath().startsWith(prefix)) {
         return entries;
       }
-      if (p.length() == srclen || p.charAt(srclen) == Path.SEPARATOR_CHAR) {
+      if (p.getPath().length() == srclen || p.getPath().charAt(srclen) == Path.SEPARATOR_CHAR) {
         entries.add(entry);
       }
     }
@@ -596,36 +515,33 @@ public class LeaseManager {
 
       LOG.info("Lease " + oldest + " has expired hard limit");
 
-      final List<String> removing = new ArrayList<String>();
+      final List<LeasePath> removing = new ArrayList<LeasePath>();
       // need to create a copy of the oldest lease paths, becuase 
       // internalReleaseLease() removes paths corresponding to empty files,
       // i.e. it needs to modify the collection being iterated over
       // causing ConcurrentModificationException
-      Collection<String> paths = oldest.getPaths();
+      Collection<LeasePath> paths = oldest.getPaths();
       assert paths != null : "The lease " + oldest.toString() + " has no path.";
-      String[] leasePaths = new String[paths.size()];
+      LeasePath[] leasePaths = new LeasePath[paths.size()];
       paths.toArray(leasePaths);
-      for (String p : leasePaths) {
+      for (LeasePath lPath : leasePaths) {
         try {
-          // KTHFS: Check for atomicity if required, currently this function is running without atomicity (i.e. separate transactions)
-          if (fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, false)) //FIXME W (isTransactional should be true)
+          if (fsnamesystem.internalReleaseLease(oldest, lPath.getPath(), HdfsServerConstants.NAMENODE_LEASE_HOLDER, false))
           {
-            LOG.info("Lease recovery for file " + p
+            LOG.info("Lease recovery for file " + lPath
                     + " is complete. File closed.");
-            removing.add(p);
+            removing.add(lPath);
           } else {
-            LOG.info("Started block recovery for file " + p
+            LOG.info("Started block recovery for file " + lPath
                     + " lease " + oldest);
           }
         } catch (IOException e) {
-          LOG.error("Cannot release the path " + p + " in the lease " + oldest, e);
-          removing.add(p);
+          LOG.error("Cannot release the path " + lPath + " in the lease " + oldest, e);
+          removing.add(lPath);
         }
       }
 
-      for (String p : removing) {
-        // KTHFS: isTransactional = false since here we don't require atomicity in the transactions
-        // Single transaction
+      for (LeasePath lPath : removing) {
         boolean isDone = false;
         int tries = DBConnector.RETRY_COUNT;
 
@@ -633,14 +549,14 @@ public class LeaseManager {
           while (!isDone && tries > 0) {
             try {
               DBConnector.beginTransaction();
-              removeLease(oldest, p, true);
+              removeLease(oldest, lPath, true);
               DBConnector.commit();
               isDone = true;
             } catch (ClusterJException ex) {
               if (!isDone) {
                 DBConnector.safeRollback();
                 tries--;
-                FSNamesystem.LOG.error("removeLease() :: failed to remove lease from holder" + oldest.getHolder() + " on file " + p + ". Exception: " + ex.getMessage(), ex);
+                FSNamesystem.LOG.error("removeLease() :: failed to remove lease from holder" + oldest.getHolder() + " on file " + lPath + ". Exception: " + ex.getMessage(), ex);
               }
             }
           }

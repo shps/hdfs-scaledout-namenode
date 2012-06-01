@@ -2778,7 +2778,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return true  if file has been successfully finalized and closed or 
    *         false if block recovery has been initiated
    */
-  // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
   boolean internalReleaseLease(Lease lease, String src, 
       String recoveryLeaseHolder, boolean isTransactional) throws AlreadyBeingCreatedException, 
       IOException, UnresolvedLinkException, ImproperUsageException {
@@ -4065,10 +4064,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     readLock();
     try {
       for (Lease lease : leaseManager.getSortedLeases()) {
-        for (String path : lease.getPaths()) {
+        for (LeasePath lPath : lease.getPaths()) {
           INode node;
           try {
-            node = dir.getFileINode(path);
+            node = dir.getFileINode(lPath.getPath());
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
@@ -4086,11 +4085,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
       
-      return getBlocksTotal() - numUCBlocks;
-      // FIXME: We should remove all files 'under construction' on restart of NN
-      //                 As per HDFS semantics, the file is lost when it was opened and NN crashed/restarted
-      //return getBlocksTotal();
-      
+      return getBlocksTotal() - numUCBlocks;      
     } finally {
       readUnlock();
     }
@@ -4562,24 +4557,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       out.writeInt(leaseManager.countPath()); // write the size
 
       for (Lease lease : leaseManager.getSortedLeases()) {
-        for(String path : lease.getPaths()) {
+        for(LeasePath lPath : lease.getPaths()) {
           // verify that path exists in namespace
           INode node;
           try {
-            node = dir.getFileINode(path);
+            node = dir.getFileINode(lPath.getPath());
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
           if (node == null) {
-            throw new IOException("saveLeases found path " + path +
+            throw new IOException("saveLeases found path " + lPath.getPath() +
                                   " but no matching entry in namespace.");
           }
           if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
+            throw new IOException("saveLeases found path " + lPath.getPath() +
                                   " but is not under construction.");
           }
           INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImageSerialization.writeINodeUnderConstruction(out, cons, path);
+          FSImageSerialization.writeINodeUnderConstruction(out, cons, lPath.getPath());
         }
       }
     }

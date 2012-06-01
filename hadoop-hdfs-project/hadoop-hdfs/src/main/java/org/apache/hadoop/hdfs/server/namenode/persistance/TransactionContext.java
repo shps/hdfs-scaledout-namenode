@@ -12,8 +12,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.LeasePathsTable;
 import se.sics.clusterj.TripletsTable;
 
 /**
@@ -23,19 +24,20 @@ import se.sics.clusterj.TripletsTable;
 public class TransactionContext {
 
   private static Log logger = LogFactory.getLog(TransactionContext.class);
-  
   private boolean activeTxExpected = false;
   private boolean externallyMngedTx = true;
-  
   private Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
   private boolean allBlocksRead = false;
-  
   private Map<String, Replica> modifiedReplicas = new HashMap<String, Replica>();
   private Map<String, Replica> removedReplicas = new HashMap<String, Replica>();
   private Map<Long, List<Replica>> blockReplicas = new HashMap<Long, List<Replica>>();
+  private Map<Integer, TreeSet<LeasePath>> holderLeasePaths = new HashMap<Integer, TreeSet<LeasePath>>();
+  private Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
 
   private void resetContext() {
     blocks.clear();
@@ -45,6 +47,7 @@ public class TransactionContext {
     allBlocksRead = false;
     activeTxExpected = false;
     externallyMngedTx = true;
+
   }
 
   void begin() {
@@ -113,12 +116,21 @@ public class TransactionContext {
 
     } else if (obj instanceof Replica) {
       Replica replica = (Replica) obj;
-      
-      if (removedReplicas.containsKey(replica.cacheKey()))
+
+      if (removedReplicas.containsKey(replica.cacheKey())) {
         throw new TransactionContextException("Removed replica passed to be persisted");
-      
+      }
+
       modifiedReplicas.put(replica.cacheKey(), replica);
-    }else {
+    } else if (obj instanceof LeasePath) {
+      LeasePath lPath = (LeasePath) obj;
+
+      if (removedLPaths.containsKey(lPath)) {
+        throw new TransactionContextException("Removed lease-path passed to be persisted");
+      }
+
+      modifiedLPaths.put(lPath, lPath);
+    } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
   }
@@ -145,6 +157,13 @@ public class TransactionContext {
         modifiedBlocks.remove(block.getBlockId());
         removedBlocks.put(block.getBlockId(), attachedBlock);
 
+      }
+      if (obj instanceof LeasePath) {
+        LeasePath lPath = (LeasePath) obj;
+        leasePaths.remove(lPath);
+        modifiedLPaths.remove(lPath);
+        removedLPaths.put(lPath, lPath);
+
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
@@ -153,7 +172,7 @@ public class TransactionContext {
       afterTxCheck(done);
     }
   }
-  
+
   List<Replica> findReplicasByBlockId(long id) throws TransactionContextException {
     beforeTxCheck();
     try {
@@ -274,6 +293,21 @@ public class TransactionContext {
     return finalList;
   }
 
+  private TreeSet<LeasePath> syncLeasePathInstances(LeasePath[] lPaths) {
+    TreeSet<LeasePath> finalList = new TreeSet<LeasePath>();
+
+    for (LeasePath lPath : lPaths) {
+      if (this.leasePaths.containsKey(lPath)) {
+        finalList.add(this.leasePaths.get(lPath));
+      } else {
+        this.leasePaths.put(lPath, lPath);
+        finalList.add(lPath);
+      }
+    }
+
+    return finalList;
+  }
+
   private void beforeTxCheck() throws TransactionContextException {
     Session session = DBConnector.obtainSession();
     if (activeTxExpected && !session.currentTransaction().isActive()) {
@@ -294,4 +328,40 @@ public class TransactionContext {
     }
   }
 
+  public TreeSet<LeasePath> findLeasePathsByHolderID(int holderID) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (holderLeasePaths.containsKey(holderID)) {
+        return holderLeasePaths.get(holderID);
+      } else {
+        Session session = DBConnector.obtainSession();
+        QueryBuilder qb = session.getQueryBuilder();
+        QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
+        dobj.where(dobj.get("holderID").equal(dobj.param("param")));
+        Query<LeasePathsTable> query = session.createQuery(dobj);
+        query.setParameter("param", holderID);
+        List<LeasePathsTable> paths = query.getResultList();
+        LeasePath[] lPaths = LeasePathFactory.createLeasePaths(paths);
+        TreeSet<LeasePath> lpSet = syncLeasePathInstances(lPaths);
+        holderLeasePaths.put(holderID, lpSet);
+
+        return lpSet;
+      }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public LeasePath findLeasePathByPath(String path) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Session session = DBConnector.obtainSession();
+      LeasePathsTable lPTable = session.find(LeasePathsTable.class, path);
+      LeasePath lPath = LeasePathFactory.createLeasePath(lPTable);
+      leasePaths.put(lPath, lPath);
+      return lPath;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
 }
