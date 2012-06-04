@@ -99,7 +99,6 @@ public class BlockInfo extends Block {
   
   public void setINode(INodeFile inode) {
     this.inode = inode;
-    this.inodeId = inode.getID();
   }
 
   public List<Replica> getReplicas() {

@@ -132,7 +132,7 @@ public class INodeFile extends INode {
     blks.add(block);
   }
   
-  public void removeBlock(BlockInfo block, boolean isTransactional) throws Exception {
+  public void removeBlock(BlockInfo block) throws Exception {
     List<BlockInfo> blks = getBlocks();
     int index = block.getBlockIndex();
     

@@ -51,42 +51,60 @@ public class TransactionContext {
   private boolean allLeasePathsRead = false;
 
   private void resetContext() {
+    activeTxExpected = false;
+    externallyMngedTx = true;
+    
     blocks.clear();
     modifiedBlocks.clear();
     removedBlocks.clear();
     inodeBlocks.clear();
     allBlocksRead = false;
-    activeTxExpected = false;
-    externallyMngedTx = true;
-
+    
+    modifiedReplicas.clear();
+    removedReplicas.clear();
+    blockReplicas.clear();
   }
 
   void begin() {
     activeTxExpected = true;
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Tx begin");
-    }
   }
 
   public void commit() throws TransactionContextException {
     if (!activeTxExpected) {
       throw new TransactionContextException("Active transaction is expected.");
     }
+    
+    StringBuilder builder = new StringBuilder();
+    
     Session session = DBConnector.obtainSession();
     for (BlockInfo block : removedBlocks.values()) {
       session.deletePersistent(BlockInfoTable.class, block.getBlockId());
+      builder.append("rm Block:").append(block.getBlockId()).append("\n");
     }
 
     for (BlockInfo block : modifiedBlocks.values()) {
       BlockInfoTable newInstance = session.newInstance(BlockInfoTable.class);
       BlockInfoFactory.createPersistable(block, newInstance);
       session.savePersistent(newInstance);
+      builder.append("w Block:").append(+ block.getBlockId()).append("\n");
     }
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("`Tx commit");
+    for (Replica replica : removedReplicas.values()) {
+      Object[] pk = new Object[2];
+      pk[0] = replica.getBlockId();
+      pk[1] = replica.getStorageId();
+      session.deletePersistent(TripletsTable.class, pk);
+      builder.append("rm Replica:").append(replica.cacheKey()).append("\n");
     }
+
+    for (Replica replica : modifiedReplicas.values()) {
+      TripletsTable newInstance = session.newInstance(TripletsTable.class);
+      ReplicaFactory.createPersistable(replica, newInstance);
+      session.savePersistent(newInstance);
+      builder.append("w Replica:").append(replica.cacheKey()).append("\n");
+    }
+
+    logger.debug("Tx commit{ \n" + builder.toString() + "}");
 
     resetContext();
   }
@@ -94,9 +112,7 @@ public class TransactionContext {
   void rollback() {
     resetContext();
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("Tx rollback");
-    }
+    logger.debug("Tx rollback");
   }
 
   public void persist(Object obj) throws TransactionContextException {
@@ -199,6 +215,11 @@ public class TransactionContext {
         idToLease.remove(lease.getHolderID());
         modifiedLeases.remove(lease);
         removedLeases.put(lease, lease);
+      } else if (obj instanceof Replica) {
+        Replica replica = (Replica) obj;
+
+        modifiedReplicas.remove(replica.cacheKey());
+        removedReplicas.put(replica.cacheKey(), replica);
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");

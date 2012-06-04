@@ -19,11 +19,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import junit.framework.TestCase;
 
@@ -35,7 +32,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
@@ -189,8 +186,10 @@ public class TestNodeCount extends TestCase {
   NumberReplicas countNodes(Block block, FSNamesystem namesystem) {
     namesystem.readLock();
     try {
+      DBConnector.beginTransaction();
       lastBlock = block;
       lastNum = namesystem.getBlockManager().countNodes(block);
+      DBConnector.commit();
       return lastNum;
     }
     catch (IOException ex) {
