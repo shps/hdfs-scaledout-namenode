@@ -136,7 +136,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -163,7 +162,6 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
-import org.omg.CosNaming.IstringHelper;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -335,7 +333,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         this.registerMBean(); // register the MBean for the FSNamesystemState
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
         INodeHelper.initialize(blockManager.getDatanodeManager());
-        LeaseHelper.initialize(leaseManager);
     }
     }
     //TODO: truncate the DB tables when StartupOption.FORMAT
@@ -1481,7 +1478,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blk.setINode(cons);
         }
         dir.replaceNode(src, node, cons, isTransactional);
-        leaseManager.addLease(cons.getClientName(), src, isTransactional);
+        leaseManager.addLease(cons.getClientName(), src);
 
         // convert last block to under-construction
         return blockManager.convertLastBlockToUnderConstruction(cons, isTransactional);
@@ -1500,7 +1497,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throw new IOException("DIR* NameSystem.startFile: " +
                                 "Unable to add file to namespace.");
         }
-        leaseManager.addLease(newNode.getClientName(), src, isTransactional);
+        leaseManager.addLease(newNode.getClientName(), src);
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
                                      +"add "+src+" to namespace for "+holder);
@@ -1639,7 +1636,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // If the original holder has not renewed in the last SOFTLIMIT 
         // period, then start lease recovery.
         //
-        if (lease.expiredSoftLimit())
+        if (leaseManager.expiredSoftLimit(lease))
         {
           LOG.info("startFile: recover lease " + lease + ", src=" + src
               + " from client " + pendingFile.getClientName());
@@ -2892,7 +2889,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
       lastBlock.initializeBlockRecovery(blockRecoveryId, getBlockManager().getDatanodeManager(), isTransactional);
       em.persist(lastBlock);
-      leaseManager.renewLease(lease, isTransactional);
+      leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
       // if there are no valid replicas on data-nodes.
@@ -2922,7 +2919,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     //pendingFile.setClientName(newHolder); //FIXME
     INodeHelper.updateClientName(pendingFile.getID(), newHolder, isTransactional);
-    return leaseManager.reassignLease(lease, src, newHolder, isTransactional);
+    return leaseManager.reassignLease(lease, src, newHolder);
   }
 
   private void commitOrCompleteLastBlock(final INodeFileUnderConstruction fileINode,
@@ -2950,7 +2947,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     assert isWritingNN();
     assert hasWriteLock();
-    leaseManager.removeLease(pendingFile.getClientName(), src, isTransactional);
+    leaseManager.removeLease(pendingFile.getClientName(), src);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
@@ -3094,7 +3091,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (isInSafeMode()) {
             throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
           }
-          leaseManager.renewLease(holder, true);
+          leaseManager.renewLease(holder);
           DBConnector.commit();
           done = true;
         }
