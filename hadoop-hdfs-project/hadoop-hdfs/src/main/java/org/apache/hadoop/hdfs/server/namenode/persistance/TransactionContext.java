@@ -2,8 +2,6 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
-import com.mysql.clusterj.Transaction;
-import com.mysql.clusterj.core.TransactionImpl;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
@@ -12,9 +10,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import se.sics.clusterj.BlockInfoTable;
+import se.sics.clusterj.InvalidateBlocksTable;
 import se.sics.clusterj.TripletsTable;
 
 /**
@@ -34,20 +34,34 @@ public class TransactionContext {
   private Map<String, Replica> modifiedReplicas = new HashMap<String, Replica>();
   private Map<String, Replica> removedReplicas = new HashMap<String, Replica>();
   private Map<Long, List<Replica>> blockReplicas = new HashMap<Long, List<Replica>>();
+  private boolean allInvBlocksRead = false;
+  /**
+   * InvalidatedBlocks
+   */
+  private Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private Map<String, List<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, List<InvalidatedBlock>>();
+  private Map<InvalidatedBlock, InvalidatedBlock> modifiedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private long numInvBlocks = 0;
 
   private void resetContext() {
     activeTxExpected = false;
     externallyMngedTx = true;
-    
+
     blocks.clear();
     modifiedBlocks.clear();
     removedBlocks.clear();
     inodeBlocks.clear();
     allBlocksRead = false;
-    
+
     modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
+    
+    invBlocks.clear();
+    storageIdToInvBlocks.clear();
+    modifiedInvBlocks.clear();
+    removedInvBlocks.clear();
   }
 
   void begin() {
@@ -58,9 +72,9 @@ public class TransactionContext {
     if (!activeTxExpected) {
       throw new TransactionContextException("Active transaction is expected.");
     }
-    
+
     StringBuilder builder = new StringBuilder();
-    
+
     Session session = DBConnector.obtainSession();
     for (BlockInfo block : removedBlocks.values()) {
       session.deletePersistent(BlockInfoTable.class, block.getBlockId());
@@ -71,7 +85,7 @@ public class TransactionContext {
       BlockInfoTable newInstance = session.newInstance(BlockInfoTable.class);
       BlockInfoFactory.createPersistable(block, newInstance);
       session.savePersistent(newInstance);
-      builder.append("w Block:").append(+ block.getBlockId()).append("\n");
+      builder.append("w Block:").append(+block.getBlockId()).append("\n");
     }
 
     for (Replica replica : removedReplicas.values()) {
@@ -134,6 +148,17 @@ public class TransactionContext {
       }
 
       modifiedReplicas.put(replica.cacheKey(), replica);
+    } else if (obj instanceof InvalidatedBlock) {
+      InvalidatedBlock invBlock = (InvalidatedBlock) obj;
+
+      if (removedInvBlocks.containsKey(invBlock)) {
+        throw new TransactionContextException("Removed invalidated-block passed to be persisted");
+      }
+
+      invBlocks.put(invBlock, invBlock);
+      modifiedInvBlocks.put(invBlock, invBlock);
+      if (allBlocksRead)
+        numInvBlocks++;
     } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
@@ -166,6 +191,15 @@ public class TransactionContext {
 
         modifiedReplicas.remove(replica.cacheKey());
         removedReplicas.put(replica.cacheKey(), replica);
+      }
+      if (obj instanceof InvalidatedBlock) {
+        InvalidatedBlock invBlock = (InvalidatedBlock) obj;
+
+        invBlocks.remove(invBlock);
+        modifiedInvBlocks.remove(invBlock);
+        removedInvBlocks.put(invBlock, invBlock);
+        if (allBlocksRead)
+          numInvBlocks--;
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
@@ -289,6 +323,105 @@ public class TransactionContext {
       } else {
         blocks.put(blockInfo.getBlockId(), blockInfo);
         finalList.add(blockInfo);
+      }
+    }
+
+    return finalList;
+  }
+
+  public List<InvalidatedBlock> findInvalidatedBlocksByStorageId(String storageId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (storageIdToInvBlocks.containsKey(storageId)) {
+        return this.storageIdToInvBlocks.get(storageId);
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<InvalidateBlocksTable> qdt = qb.createQueryDefinition(InvalidateBlocksTable.class);
+      qdt.where(qdt.get("storageId").equal(qdt.param("param")));
+      Query<InvalidateBlocksTable> query = session.createQuery(qdt);
+      query.setParameter("param", storageId);
+      List<InvalidateBlocksTable> invBlockTables = query.getResultList();
+      List<InvalidatedBlock> invalidatedBlocks = syncInvalidatedBlockInstances(invBlockTables);
+      return invalidatedBlocks;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public InvalidatedBlock findInvalidatedBlockByPK(String storageId, long blockId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      InvalidatedBlock searchInstance = new InvalidatedBlock(storageId, blockId);
+      if (invBlocks.containsKey(searchInstance)) {
+        return invBlocks.get(searchInstance);
+      }
+
+      if (removedInvBlocks.containsKey(searchInstance)) {
+        return null;
+      }
+
+      Session session = DBConnector.obtainSession();
+      Object[] keys = new Object[2];
+      keys[0] = storageId;
+      keys[1] = blockId;
+      InvalidateBlocksTable invTable = session.find(InvalidateBlocksTable.class, keys);
+      InvalidatedBlock result = InvalidatedBlockFactory.createInvalidatedBlock(invTable);
+      this.invBlocks.put(result, result);
+      return result;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (allInvBlocksRead) {
+        return storageIdToInvBlocks;
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType qdt = qb.createQueryDefinition(InvalidateBlocksTable.class);
+      List<InvalidateBlocksTable> ibts = session.createQuery(qdt).getResultList();
+      numInvBlocks = 0;
+      syncInvalidatedBlockInstances(ibts);
+
+      allInvBlocksRead = true;
+
+      return storageIdToInvBlocks;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public long countAllInvalidatedBlocks() throws TransactionContextException {
+    findAllInvalidatedBlocks();
+    return numInvBlocks;
+  }
+
+  private List<InvalidatedBlock> syncInvalidatedBlockInstances(List<InvalidateBlocksTable> invBlockTables) {
+    List<InvalidatedBlock> finalList = new ArrayList<InvalidatedBlock>();
+
+    for (InvalidateBlocksTable bTable : invBlockTables) {
+      InvalidatedBlock invBlock = InvalidatedBlockFactory.createInvalidatedBlock(bTable);
+      if (!removedInvBlocks.containsKey(invBlock)) {
+        numInvBlocks++;
+        if (invBlocks.containsKey(invBlock)) {
+          finalList.add(invBlocks.get(invBlock));
+        } else {
+          invBlocks.put(invBlock, invBlock);
+          finalList.add(invBlock);
+        }
+        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+          storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
+        } else {
+          List<InvalidatedBlock> ibList = new ArrayList<InvalidatedBlock>();
+          ibList.add(invBlock);
+          storageIdToInvBlocks.put(invBlock.getStorageId(), ibList);
+        }
       }
     }
 
