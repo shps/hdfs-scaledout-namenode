@@ -117,7 +117,7 @@ public class TestDeadDatanode {
     }
 
     // Ensure blockReport from dead datanode is rejected with IOException
-    long[] blockReport = new long[] { 0L, 0L, 0L };
+    long[] blockReport = new long[] { 0L, 0L, -1L, -1L, -1L };
     try {
       dnp.blockReport(reg, poolId, blockReport);
       Assert.fail("Expected IOException is not thrown");

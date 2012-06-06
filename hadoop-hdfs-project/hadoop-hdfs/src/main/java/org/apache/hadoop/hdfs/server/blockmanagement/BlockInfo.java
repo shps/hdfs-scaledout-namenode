@@ -75,7 +75,7 @@ public class BlockInfo extends Block {
   private int blockIndex = -1; //added for KTHFS
   private long timestamp = 1;
   
-  protected long inodeId;
+  protected long inodeId = -1;
   
   public BlockInfo(Block blk) {
     super(blk);
@@ -193,8 +193,6 @@ public class BlockInfo extends Block {
   public BlockInfoUnderConstruction convertToBlockUnderConstruction(
           BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
     if (isComplete()) {
-      //return new BlockInfoUnderConstruction(
-      //		this, getINode().getReplication(), s, targets);
       BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this);
       bUc.setBlockUCState(s);
       bUc.setExpectedLocations(targets, isTransactional);

@@ -566,7 +566,30 @@ public class LeaseManager {
         fsnamesystem.writeLock();
         try {
           if (!fsnamesystem.isInSafeMode()) {
-            checkLeases();
+                    boolean isDone = false;
+        int tries = DBConnector.RETRY_COUNT;
+
+        try {
+          while (!isDone && tries > 0) {
+            try {
+              DBConnector.beginTransaction();
+              checkLeases(true);
+              DBConnector.commit();
+              isDone = true;
+            } catch (ClusterJException ex) {
+              if (!isDone) {
+                DBConnector.safeRollback();
+                tries--;
+                FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
+              }
+            }
+          }
+        } finally {
+          if (!isDone) {
+            DBConnector.safeRollback();
+          }
+        }
+
           }
         } finally {
           fsnamesystem.writeUnlock();
@@ -585,7 +608,7 @@ public class LeaseManager {
   }
 
   /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases() {
+  private synchronized void checkLeases(boolean isTransactional) {
     assert fsnamesystem.hasWriteLock();
     SortedSet<Lease> sortedLeasesFromDB = LeaseHelper.getSortedLeases();
     for (; sortedLeasesFromDB.size() > 0;) {
@@ -607,8 +630,9 @@ public class LeaseManager {
       paths.toArray(leasePaths);
       for (String p : leasePaths) {
         try {
-          // KTHFS: Check for atomicity if required, currently this function is running without atomicity (i.e. separate transactions)
-          if (fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, false)) //FIXME W (isTransactional should be true)
+          boolean leaseReleased = false;
+          leaseReleased = fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER, isTransactional);
+          if (leaseReleased)
           {
             LOG.info("Lease recovery for file " + p
                     + " is complete. File closed.");
@@ -617,6 +641,7 @@ public class LeaseManager {
             LOG.info("Started block recovery for file " + p
                     + " lease " + oldest);
           }
+          
         } catch (IOException e) {
           LOG.error("Cannot release the path " + p + " in the lease " + oldest, e);
           removing.add(p);
@@ -624,31 +649,7 @@ public class LeaseManager {
       }
 
       for (String p : removing) {
-        // KTHFS: isTransactional = false since here we don't require atomicity in the transactions
-        // Single transaction
-        boolean isDone = false;
-        int tries = DBConnector.RETRY_COUNT;
-
-        try {
-          while (!isDone && tries > 0) {
-            try {
-              DBConnector.beginTransaction();
-              removeLease(oldest, p, true);
-              DBConnector.commit();
-              isDone = true;
-            } catch (ClusterJException ex) {
-              if (!isDone) {
-                DBConnector.safeRollback();
-                tries--;
-                FSNamesystem.LOG.error("removeLease() :: failed to remove lease from holder" + oldest.getHolder() + " on file " + p + ". Exception: " + ex.getMessage(), ex);
-              }
-            }
-          }
-        } finally {
-          if (!isDone) {
-            DBConnector.safeRollback();
-          }
-        }
+              removeLease(oldest, p, isTransactional);
       }
       sortedLeasesFromDB = LeaseHelper.getSortedLeases();
     }

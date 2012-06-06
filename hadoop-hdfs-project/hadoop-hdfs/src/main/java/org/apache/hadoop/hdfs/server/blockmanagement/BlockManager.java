@@ -2712,7 +2712,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   public DatanodeDescriptor[] getNodes(BlockInfo block) {
     DatanodeDescriptor[] nodes =
             new DatanodeDescriptor[block.getReplicas().size()];
-    nodes = block.getReplicas().toArray(nodes);
+    nodes = getDatanodes(block).toArray(nodes);
     return nodes;
   }
 
