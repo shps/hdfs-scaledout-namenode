@@ -184,7 +184,7 @@ public class INodeFile extends INode {
     parent = null;
     List<BlockInfo> tempList = new ArrayList<BlockInfo>(getBlocks());
     for (BlockInfo blk : tempList) {
-      blocks.add(blk);
+      v.add(blk);
       blk.setINode(null);
       EntityManager.getInstance().remove(blk);
     }

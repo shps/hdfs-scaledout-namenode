@@ -1053,10 +1053,7 @@ public class FSDirectory implements Closeable {
       }
       srcInode.getBlocks().clear();
       trgParent.removeChild(srcInode, isTransactional);
-      em.remove(srcInode);
     }
-    
-    em.persist(trgParent);
     
     //TODO[Hooman]: The following changes can be optimized to be updated or flushed together.
     trgInode.setModificationTimeForce(timestamp);

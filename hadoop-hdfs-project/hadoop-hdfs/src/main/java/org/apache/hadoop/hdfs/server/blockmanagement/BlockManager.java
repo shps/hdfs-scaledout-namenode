@@ -909,7 +909,6 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) throws IOException {
     final Iterator<? extends Block> it = em.findBlocksByStorageId(node.getStorageID()).iterator();
     
-    //TODO: [thesis] this should just remove all the triplets and shrink the indexes
     while(it.hasNext()) {
       removeStoredBlock(it.next(), node, isTransactional);
     }
@@ -1363,6 +1362,15 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       final int numOfReplicas, final DatanodeDescriptor client,
       final HashMap<Node, Node> excludedNodes,
       final long blocksize) throws IOException {
+    //Kamal: this was added for the caught bug for removed nodes in NetworkTopology
+    if (excludedNodes != null) {
+      Iterator<Node> iterator = excludedNodes.values().iterator();
+      while (iterator.hasNext()) {
+        Node node = iterator.next();
+        if (datanodeManager.getDatanodeByName(node.getName()) == null)
+          excludedNodes.remove(node);
+      }
+    }
     // choose targets for the new block to be allocated.
     final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
         src, numOfReplicas, client, excludedNodes, blocksize);
@@ -1873,7 +1881,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     
     // just add it
     Replica replica = storedBlock.addReplica(node);
-    em.persist(replica);
+    if (replica != null)
+      em.persist(replica);
 
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
@@ -2857,9 +2866,11 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     try {
       corruptReplicas.removeFromCorruptReplicasMap(block);
       BlockInfo bi = getStoredBlock(block);
-      bi.getINode().removeBlock(bi);
-      bi.setINode(null);
-      em.remove(bi);
+      if (bi != null) {
+        bi.getINode().removeBlock(bi);
+        bi.setINode(null);
+        em.remove(bi);
+      }
     } catch (Exception ex) {
       Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
     }

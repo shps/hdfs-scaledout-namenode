@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Daemon;
 
@@ -80,8 +81,9 @@ public class BlockManagerTestUtil {
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
        getCorruptReplicas(blockManager).getNodes(b);
-    
-    for (DatanodeDescriptor cur : blockManager.getDatanodes((BlockInfo)b)) {
+    DBConnector.beginTransaction();
+    BlockInfo storedBlock = blockManager.getStoredBlock(b);
+    for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
         if ((corruptNodes == null ) || !corruptNodes.contains(cur)) {
           String rackName = cur.getNetworkLocation();
@@ -91,6 +93,7 @@ public class BlockManagerTestUtil {
         }
       }
     }
+    DBConnector.commit();
     return rackSet.size();
   }
 
