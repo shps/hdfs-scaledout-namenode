@@ -2963,108 +2963,125 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void commitBlockSynchronization(ExtendedBlock lastblock,
-      long newgenerationstamp, long newlength,
-      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
-                throws IOException, UnresolvedLinkException
-        {
-				 if (!isWritingNN())
-			        throw new ImproperUsageException();
+          long newgenerationstamp, long newlength,
+          boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
+          throws IOException, UnresolvedLinkException {
+    if (!isWritingNN()) {
+      throw new ImproperUsageException();
+    }
     String src = "";
     writeLock();
+
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-          "Cannot commitBlockSynchronization while in safe mode",
-          safeMode);
-      }
-      LOG.info("commitBlockSynchronization(lastblock=" + lastblock
-               + ", newgenerationstamp=" + newgenerationstamp
-               + ", newlength=" + newlength
-               + ", newtargets=" + Arrays.asList(newtargets)
-               + ", closeFile=" + closeFile
-               + ", deleteBlock=" + deleteblock
-               + ")");
-      final BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock
-        .getLocalBlock(lastblock));
-      if (storedBlock == null) {
-        throw new IOException("Block (=" + lastblock + ") not found");
-      }
-      INodeFile iFile = storedBlock.getINode();
-      if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
-        throw new IOException("Unexpected block (=" + lastblock
-                              + ") since the file (=" + iFile.getLocalName()
-                              + ") is not under construction");
-      }
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
 
-      long recoveryId =
-        ((BlockInfoUnderConstruction)storedBlock).getBlockRecoveryId();
-      if(recoveryId != newgenerationstamp) { //FIXME: [thesis] this exception fill be fixed once recoveryID is stored in DB
-        throw new IOException("The recovery id " + newgenerationstamp
-                              + " does not match current recovery id "
-                              + recoveryId + " for block " + lastblock); 
-      }
-
-      INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
-
-      if (deleteblock) {
-        blockManager.removeBlockFromMap(storedBlock, false);
-      }
-      else {
-        // update last block
-        storedBlock.setGenerationStamp(newgenerationstamp); 
-        storedBlock.setNumBytes(newlength); 
-        em.persist(storedBlock);
-
-        // find the DatanodeDescriptor objects
-        // There should be no locations in the blockManager till now because the
-        // file is underConstruction
-        DatanodeDescriptor[] descriptors = null;
-        if (newtargets.length > 0) {
-          descriptors = new DatanodeDescriptor[newtargets.length];
-          for(int i = 0; i < newtargets.length; i++) {
-            descriptors[i] = blockManager.getDatanodeManager().getDatanode(
-                newtargets[i]);
+          if (isInSafeMode()) {
+            throw new SafeModeException(
+                    "Cannot commitBlockSynchronization while in safe mode",
+                    safeMode);
           }
-        }
-        if (closeFile) {
-          // the file is getting closed. Insert block locations into blockManager.
-          // Otherwise fsck will report these blocks as MISSING, especially if the
-          // blocksReceived from Datanodes take a long time to arrive.
-          for (int i = 0; i < descriptors.length; i++) {
+          LOG.info("commitBlockSynchronization(lastblock=" + lastblock
+                  + ", newgenerationstamp=" + newgenerationstamp
+                  + ", newlength=" + newlength
+                  + ", newtargets=" + Arrays.asList(newtargets)
+                  + ", closeFile=" + closeFile
+                  + ", deleteBlock=" + deleteblock
+                  + ")");
+          final BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock.getLocalBlock(lastblock));
+          if (storedBlock == null) {
+            throw new IOException("Block (=" + lastblock + ") not found");
+          }
+          INodeFile iFile = storedBlock.getINode();
+          if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
+            throw new IOException("Unexpected block (=" + lastblock
+                    + ") since the file (=" + iFile.getLocalName()
+                    + ") is not under construction");
+          }
+
+          long recoveryId =
+                  ((BlockInfoUnderConstruction) storedBlock).getBlockRecoveryId();
+          if (recoveryId != newgenerationstamp) { //FIXME: [thesis] this exception fill be fixed once recoveryID is stored in DB
+            throw new IOException("The recovery id " + newgenerationstamp
+                    + " does not match current recovery id "
+                    + recoveryId + " for block " + lastblock);
+          }
+
+          INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
+
+          if (deleteblock) {
+            blockManager.removeBlockFromMap(storedBlock, true);
+          } else {
+            // update last block
+            storedBlock.setGenerationStamp(newgenerationstamp);
+            storedBlock.setNumBytes(newlength);
+            em.persist(storedBlock);
+
+            // find the DatanodeDescriptor objects
+            // There should be no locations in the blockManager till now because the
+            // file is underConstruction
+            DatanodeDescriptor[] descriptors = null;
+            if (newtargets.length > 0) {
+              descriptors = new DatanodeDescriptor[newtargets.length];
+              for (int i = 0; i < newtargets.length; i++) {
+                descriptors[i] = blockManager.getDatanodeManager().getDatanode(
+                        newtargets[i]);
+              }
+            }
+            if (closeFile) {
+              // the file is getting closed. Insert block locations into blockManager.
+              // Otherwise fsck will report these blocks as MISSING, especially if the
+              // blocksReceived from Datanodes take a long time to arrive.
+              for (int i = 0; i < descriptors.length; i++) {
+                //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+                Replica replica = storedBlock.addReplica(descriptors[i]);
+                if (replica != null)
+                  em.persist(replica);
+              }
+            }
+            // add pipeline locations into the INodeUnderConstruction
+            pendingFile.setLastBlock(storedBlock, descriptors, true);
+            em.persist(storedBlock);
+          }
+
+          src = leaseManager.findPath(pendingFile);
+          if (closeFile) {
+            // commit the last block and complete it if it has minimum replicas
             //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-            Replica replica = storedBlock.addReplica(descriptors[i]);
-            em.persist(replica);
+            commitOrCompleteLastBlock(pendingFile, storedBlock, true);
+
+            //remove lease, close file
+            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+            finalizeINodeFileUnderConstruction(src, pendingFile, true);
+          } else if (supportAppends) {
+            // If this commit does not want to close the file, persist
+            // blocks only if append is supported 
+            dir.persistBlocks(src, pendingFile);
           }
+
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
         }
-        // add pipeline locations into the INodeUnderConstruction
-        pendingFile.setLastBlock(storedBlock, descriptors, false);
-        em.persist(storedBlock);
-      }
-
-      src = leaseManager.findPath(pendingFile);
-      if (closeFile) {
-        // commit the last block and complete it if it has minimum replicas
-          //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-        commitOrCompleteLastBlock(pendingFile, storedBlock, false);
-
-        //remove lease, close file
-        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-        finalizeINodeFileUnderConstruction(src, pendingFile, false);
-      } else if (supportAppends) {
-        // If this commit does not want to close the file, persist
-        // blocks only if append is supported 
-        dir.persistBlocks(src, pendingFile);
       }
     } finally {
       writeUnlock();
+      DBConnector.safeRollback();
     }
+
     //getEditLog().logSync();
     if (closeFile) {
       LOG.info("commitBlockSynchronization(newblock=" + lastblock
-          + ", file=" + src
-          + ", newgenerationstamp=" + newgenerationstamp
-          + ", newlength=" + newlength
-          + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
+              + ", file=" + src
+              + ", newgenerationstamp=" + newgenerationstamp
+              + ", newlength=" + newlength
+              + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
     } else {
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
     }

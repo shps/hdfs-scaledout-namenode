@@ -25,7 +25,9 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
@@ -60,6 +62,8 @@ public class TestDatanodeDescriptor extends TestCase {
     
     DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
+    DBConnector.beginTransaction();
+    
     BlockInfo blk = new BlockInfo(new Block(1L));
     BlockInfo blk1 = new BlockInfo(new Block(2L));
     em.persist(blk);
@@ -71,32 +75,31 @@ public class TestDatanodeDescriptor extends TestCase {
     
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     Replica removeReplica = blk1.removeReplica(dd);
     assertNull(removeReplica);
     assertEquals(1, dd.numBlocks());
     // add an existent block
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     r1 = blk.addReplica(dd);
     assertNull(r1);
     assertEquals(1, dd.numBlocks());
     // add second block
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     r1 = blk1.addReplica(dd);
     assertNotNull(r1);
     em.persist(r1);
     assertEquals(2, dd.numBlocks());
     // remove first block
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     removeReplica = blk.removeReplica(dd);
     assertNotNull(removeReplica);
     em.remove(removeReplica);
     assertEquals(1, dd.numBlocks());
     // remove second block
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
     removeReplica = blk1.removeReplica(dd);
     assertNotNull(removeReplica);
     em.remove(removeReplica);
-    assertEquals(0, dd.numBlocks());    
+    assertEquals(0, dd.numBlocks()); 
+    //We rollbalck here because this generated data does not have the required 
+    //integrity to be persisted in database, for instance new block should be 
+    //blong to an inode.
+    DBConnector.safeRollback();
   }
 }

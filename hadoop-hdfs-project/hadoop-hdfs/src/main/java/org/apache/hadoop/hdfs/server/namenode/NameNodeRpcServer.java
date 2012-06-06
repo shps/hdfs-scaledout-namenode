@@ -326,8 +326,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     LocatedBlock locatedBlock = 
       namesystem.getAdditionalBlockWithTransaction(src, clientName, previous, excludedNodesSet);
-    if (locatedBlock != null)
+    if (locatedBlock != null) {
       metrics.incrAddBlockOps();
+      LOG.debug("addBlock after B:" + previous.getBlockId()  + " succeed.");
+    } else {
+      LOG.debug("addBlock after B:" + previous.getBlockId()  + " failed.");
+    }
     return locatedBlock;
   }
 
@@ -379,7 +383,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* NameNode.complete: "
           + src + " for " + clientName);
     }
-    return namesystem.completeFile(src, clientName, last);
+    boolean succeed = namesystem.completeFile(src, clientName, last);
+    
+    if (succeed)
+      LOG.debug("complete for " + src + " was succeed");
+    else
+      LOG.debug("complete for " + src + " was failed");
+    
+    return succeed;
   }
 
   /**
@@ -733,6 +744,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
+    
+    LOG.debug("blockReceivedAndDeleted DN:" + nodeReg.storageID + " B:" + receivedAndDeletedBlocks[0].getBlock().getBlockId());
     namesystem.getBlockManager().blockReceivedAndDeleted(
         nodeReg, poolId, receivedAndDeletedBlocks);
   }

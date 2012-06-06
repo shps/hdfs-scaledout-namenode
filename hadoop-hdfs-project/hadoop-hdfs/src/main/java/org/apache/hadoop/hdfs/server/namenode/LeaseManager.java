@@ -282,7 +282,30 @@ public class LeaseManager {
         fsnamesystem.writeLock();
         try {
           if (!fsnamesystem.isInSafeMode()) {
-            checkLeases();
+                    boolean isDone = false;
+        int tries = DBConnector.RETRY_COUNT;
+
+        try {
+          while (!isDone && tries > 0) {
+            try {
+              DBConnector.beginTransaction();
+              checkLeases(true);
+              DBConnector.commit();
+              isDone = true;
+            } catch (ClusterJException ex) {
+              if (!isDone) {
+                DBConnector.safeRollback();
+                tries--;
+                FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
+              }
+            }
+          }
+        } finally {
+          if (!isDone) {
+            DBConnector.safeRollback();
+          }
+        }
+
           }
         } finally {
           fsnamesystem.writeUnlock();
@@ -301,7 +324,7 @@ public class LeaseManager {
   }
 
   /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases() {
+  private synchronized void checkLeases(boolean isTransactional) {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
     SortedSet<Lease> sortedLeases = em.findAllExpiredLeases(expiredTime);
@@ -327,7 +350,9 @@ public class LeaseManager {
       paths.toArray(leasePaths);
       for (LeasePath lPath : leasePaths) {
         try {
-          if (fsnamesystem.internalReleaseLease(oldest, lPath.getPath(), HdfsServerConstants.NAMENODE_LEASE_HOLDER, false))
+          boolean leaseReleased = false;
+          leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(), HdfsServerConstants.NAMENODE_LEASE_HOLDER, isTransactional);
+          if (leaseReleased)
           {
             LOG.info("Lease recovery for file " + lPath
                     + " is complete. File closed.");
@@ -336,6 +361,7 @@ public class LeaseManager {
             LOG.info("Started block recovery for file " + lPath
                     + " lease " + oldest);
           }
+          
         } catch (IOException e) {
           LOG.error("Cannot release the path " + lPath + " in the lease " + oldest, e);
           removing.add(lPath);
@@ -343,29 +369,7 @@ public class LeaseManager {
       }
 
       for (LeasePath lPath : removing) {
-        boolean isDone = false;
-        int tries = DBConnector.RETRY_COUNT;
-
-        try {
-          while (!isDone && tries > 0) {
-            try {
-              DBConnector.beginTransaction();
               removeLease(oldest, lPath);
-              DBConnector.commit();
-              isDone = true;
-            } catch (ClusterJException ex) {
-              if (!isDone) {
-                DBConnector.safeRollback();
-                tries--;
-                FSNamesystem.LOG.error("removeLease() :: failed to remove lease from holder" + oldest.getHolder() + " on file " + lPath + ". Exception: " + ex.getMessage(), ex);
-              }
-            }
-          }
-        } finally {
-          if (!isDone) {
-            DBConnector.safeRollback();
-          }
-        }
       }
       
       if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed
