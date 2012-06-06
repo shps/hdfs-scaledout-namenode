@@ -103,6 +103,8 @@ public class TestDiskError {
         DFSTestUtil.waitReplication(fs, fileName, (short)2);
         fs.delete(fileName, true);
       }
+    }catch (Exception e) {
+        e.printStackTrace();
     } finally {
       // restore its old permission
       dir1.setWritable(true);

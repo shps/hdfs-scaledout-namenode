@@ -795,8 +795,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-	  
+	  DBConnector.beginTransaction();
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
+    DBConnector.commit();
 //    if (blocks != null) {
 //      blockManager.getDatanodeManager().sortLocatedBlocks(
 //          clientMachine, blocks.getLocatedBlocks());
@@ -1581,14 +1582,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return false;
   }
 
-  private void recoverLeaseInternal(INode fileInode, 
-      String src, String holder, String clientMachine, boolean force, boolean isTransactional)
-          throws IOException
-          {
+  private void recoverLeaseInternal(INode fileInode,
+          String src, String holder, String clientMachine, boolean force, boolean isTransactional)
+          throws IOException {
     assert isWritingNN();
     assert hasWriteLock();
-    if (fileInode != null && fileInode.isUnderConstruction())
-    {
+    if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) fileInode;
       //
       // If the file is under construction , then it must be in our
@@ -1599,82 +1598,69 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // We found the lease for this file. And surprisingly the original
       // holder is trying to recreate this file. This should never occur.
       //
-      if (!force && lease != null)
-      {
+      if (!force && lease != null) {
         Lease leaseFile = leaseManager.getLeaseByPath(src);
         if ((leaseFile != null && leaseFile.equals(lease))
-            || lease.getHolder().equals(holder))
-        {
+                || lease.getHolder().equals(holder)) {
           throw new AlreadyBeingCreatedException(
-              "failed to create file " + src + " for " + holder
-              + " on client " + clientMachine
-              + " because current leaseholder is trying to recreate file.");
+                  "failed to create file " + src + " for " + holder
+                  + " on client " + clientMachine
+                  + " because current leaseholder is trying to recreate file.");
         }
       }
       //
       // Find the original holder.
       //
       lease = leaseManager.getLease(pendingFile.getClientName());
-      if (lease == null)
-      {
+      if (lease == null) {
         throw new AlreadyBeingCreatedException(
-            "failed to create file " + src + " for " + holder
-            + " on client " + clientMachine
-            + " because pendingCreates is non-null but no leases found.");
+                "failed to create file " + src + " for " + holder
+                + " on client " + clientMachine
+                + " because pendingCreates is non-null but no leases found.");
       }
-      if (force)
-      {
+      if (force) {
         // close now: no need to wait for soft lease expiration and 
         // close only the file src
         LOG.info("recoverLease: recover lease " + lease + ", src=" + src
-            + " from client " + pendingFile.getClientName());
+                + " from client " + pendingFile.getClientName());
         internalReleaseLease(lease, src, holder, isTransactional);
-      }
-      else
-      {
+      } else {
         assert lease.getHolder().equals(pendingFile.getClientName()) :
-          "Current lease holder " + lease.getHolder()
-          + " does not match file creator " + pendingFile.getClientName();
+                "Current lease holder " + lease.getHolder()
+                + " does not match file creator " + pendingFile.getClientName();
         //
         // If the original holder has not renewed in the last SOFTLIMIT 
         // period, then start lease recovery.
         //
-        if (lease.expiredSoftLimit())
-        {
+        if (lease.expiredSoftLimit()) {
           LOG.info("startFile: recover lease " + lease + ", src=" + src
-              + " from client " + pendingFile.getClientName());
+                  + " from client " + pendingFile.getClientName());
           boolean isClosed = internalReleaseLease(lease, src, null, isTransactional);
-          if (!isClosed)
-          {
+          if (!isClosed) {
             throw new RecoveryInProgressException(
-                "Failed to close file " + src
-                + ". Lease recovery is in progress. Try again later.");
+                    "Failed to close file " + src
+                    + ". Lease recovery is in progress. Try again later.");
           }
-        }
-        else
-        {
+        } else {
           BlockInfo lastBlock = pendingFile.getLastBlock();
           if (lastBlock != null && lastBlock.getBlockUCState()
-              == BlockUCState.UNDER_RECOVERY)
-          {
+                  == BlockUCState.UNDER_RECOVERY) {
             throw new RecoveryInProgressException(
-                "Recovery in progress, file [" + src + "], "
+                    "Recovery in progress, file [" + src + "], "
                     + "lease owner [" + lease.getHolder() + "]");
-          }
-          else
-          {
+          } else {
             throw new AlreadyBeingCreatedException(
-                "Failed to create file [" + src + "] for [" + holder
-                + "] on client [" + clientMachine
-                + "], because this file is already being created by ["
-                + pendingFile.getClientName() + "] on ["
-                + pendingFile.getClientMachine() + "]");
+                    "Failed to create file [" + src + "] for [" + holder
+                    + "] on client [" + clientMachine
+                    + "], because this file is already being created by ["
+                    + pendingFile.getClientName() + "] on ["
+                    + pendingFile.getClientMachine() + "]");
           }
         }
       }
     }
 
-          }
+  }
 
   /**
    * Append to an existing file in the namespace.

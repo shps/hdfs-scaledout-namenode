@@ -219,20 +219,17 @@ public class DatanodeManager {
   }
 
   /** @return the datanode descriptor for the host. */
-  public DatanodeDescriptor getDatanodeByHost(final String host) { //TODO: KTHFS needs this!
+  public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
-    //return DatanodeHelper.getDatanodeDescriptorByHostname(host);
   }
   
-  public DatanodeDescriptor getDatanodeByName(final String hostName) { //TODO: KTHFS needs this!
-    //return DatanodeHelper.getDatanodeDescriptorByName(hostName);
+  public DatanodeDescriptor getDatanodeByName(final String hostName) {
 	return host2DatanodeMap.getDatanodeByName(hostName);
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
   public DatanodeDescriptor getDatanode(final String storageID) {
     return datanodeMap.get(storageID);
-    // return DatanodeHelper.getDatanodeDescriptorByStorageId(storageID);
   }
 
   /**
@@ -279,7 +276,7 @@ public class DatanodeManager {
     heartbeatManager.removeDatanode(nodeInfo);
     blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
     networktopology.remove(nodeInfo);
-
+    host2DatanodeMap.remove(nodeInfo);
     if (LOG.isDebugEnabled()) {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }

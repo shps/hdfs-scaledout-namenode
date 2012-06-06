@@ -328,9 +328,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
       namesystem.getAdditionalBlockWithTransaction(src, clientName, previous, excludedNodesSet);
     if (locatedBlock != null) {
       metrics.incrAddBlockOps();
-      LOG.debug("addBlock after B:" + previous.getBlockId()  + " succeed.");
+      LOG.debug("addBlock after B:" + previous  + " succeed,  " + locatedBlock.toString() + " Excludeds:" + excludedNodes);
     } else {
-      LOG.debug("addBlock after B:" + previous.getBlockId()  + " failed.");
+      LOG.debug("addBlock after B:" + previous  + " failed.");
     }
     return locatedBlock;
   }
