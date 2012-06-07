@@ -694,8 +694,22 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
-      refreshDatanodes();
+      int tries = DBConnector.RETRY_COUNT;
+      boolean done = false;
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          refreshDatanodes();
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          LOG.error(e.getMessage(), e);
+        }
+      }
     } finally {
+      DBConnector.safeRollback();
       namesystem.writeUnlock();
     }
   }

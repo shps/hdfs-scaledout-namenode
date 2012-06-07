@@ -3,12 +3,12 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
+import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 
 /**
  *
@@ -72,7 +72,7 @@ public class EntityManager {
     }
   }
 
-  public List<Replica> findReplicasByBlockId(long id) {
+  public List<IndexedReplica> findReplicasByBlockId(long id) {
     try {
       return context().findReplicasByBlockId(id);
     } catch (TransactionContextException ex) {
@@ -123,7 +123,7 @@ public class EntityManager {
     return null;
   }
 
-  public List<InvalidatedBlock> findInvalidatedBlocksByStorageId(String storageId) {
+  public List<Replica> findInvalidatedBlocksByStorageId(String storageId) {
     try {
       return context().findInvalidatedBlocksByStorageId(storageId);
     } catch (TransactionContextException ex) {
@@ -133,7 +133,7 @@ public class EntityManager {
     return null;
   }
 
-  public InvalidatedBlock findInvalidatedBlockByPK(String storageId, long blockId) {
+  public Replica findInvalidatedBlockByPK(String storageId, long blockId) {
     try {
       return context().findInvalidatedBlockByPK(storageId, blockId);
     } catch (TransactionContextException ex) {
@@ -143,7 +143,7 @@ public class EntityManager {
     return null;
   }
 
-  public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() {
+  public Map<String, List<Replica>> findAllInvalidatedBlocks() {
     try {
       return context().findAllInvalidatedBlocks();
     } catch (TransactionContextException ex) {
@@ -156,6 +156,31 @@ public class EntityManager {
   public long countAllInvalidatedBlocks() {
     try {
       return context().countAllInvalidatedBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return 0;
+  }
+
+  public TreeSet<Long> findExcessReplicaByStorageId(String storageId) {
+    try {
+      return context().findExcessReplicaByStorageId(storageId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  /**
+   * This method is only used for metrics.
+   * @return
+   * @throws TransactionContextException 
+   */
+  public long countAllExcessReplicas() {
+    try {
+      return context().countAllExcessReplicas();
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

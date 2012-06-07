@@ -69,13 +69,13 @@ public class TestDatanodeDescriptor extends TestCase {
     em.persist(blk);
     em.persist(blk1);
     // add first block
-    Replica r1 = blk.addReplica(dd);
+    IndexedReplica r1 = blk.addReplica(dd);
     assertNotNull(r1);
     em.persist(r1);
     
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
-    Replica removeReplica = blk1.removeReplica(dd);
+    IndexedReplica removeReplica = blk1.removeReplica(dd);
     assertNull(removeReplica);
     assertEquals(1, dd.numBlocks());
     // add an existent block

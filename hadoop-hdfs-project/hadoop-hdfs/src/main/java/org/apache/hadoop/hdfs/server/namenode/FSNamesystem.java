@@ -3027,7 +3027,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               // blocksReceived from Datanodes take a long time to arrive.
               for (int i = 0; i < descriptors.length; i++) {
                 //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-                Replica replica = storedBlock.addReplica(descriptors[i]);
+                IndexedReplica replica = storedBlock.addReplica(descriptors[i]);
                 if (replica != null)
                   em.persist(replica);
               }

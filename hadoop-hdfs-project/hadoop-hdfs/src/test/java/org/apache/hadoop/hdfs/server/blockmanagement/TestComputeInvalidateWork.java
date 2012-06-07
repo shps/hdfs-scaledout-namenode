@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
@@ -51,6 +52,7 @@ public class TestComputeInvalidateWork extends TestCase {
       
       namesystem.writeLock();
       try {
+        DBConnector.beginTransaction();
         for (int i=0; i<nodes.length; i++) {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
@@ -72,6 +74,7 @@ public class TestComputeInvalidateWork extends TestCase {
           assertEquals(workCount, blockInvalidateLimit);
           assertEquals(2, bm.computeInvalidateWork(2));
         }
+        DBConnector.commit();
       } finally {
         namesystem.writeUnlock();
       }
