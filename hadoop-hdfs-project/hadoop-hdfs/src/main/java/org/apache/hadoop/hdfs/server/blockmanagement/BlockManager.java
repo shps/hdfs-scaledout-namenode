@@ -1031,7 +1031,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       em.persist(replica);
 
     // Add this replica to corruptReplicas Map
-    corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
+    corruptReplicas.addToCorruptReplicasMap(storedBlock, node, isTransactional);
     if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(storedBlock, node, isTransactional);
@@ -2022,7 +2022,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     }
     // Remove the block from corruptReplicasMap
     if (!gotException)
-      corruptReplicas.removeFromCorruptReplicasMap(blk);
+      corruptReplicas.removeFromCorruptReplicasMap(blk, isTransactional);
   }
 
   /**
@@ -2297,7 +2297,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       }
 
       // Remove the replica from corruptReplicas
-      corruptReplicas.removeFromCorruptReplicasMap(block, node);
+      corruptReplicas.removeFromCorruptReplicasMap(block, node, isTransactional);
     }
   }
   
@@ -2855,7 +2855,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
   public void removeBlockFromMap(Block block, boolean isTransactional) throws IOException {
     try {
-      corruptReplicas.removeFromCorruptReplicasMap(block);
+      corruptReplicas.removeFromCorruptReplicasMap(block, isTransactional);
       BlockInfo bi = getStoredBlock(block);
       bi.getINode().removeBlock(bi);
       bi.setINode(null);

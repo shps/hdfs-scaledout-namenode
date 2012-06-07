@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.Server;
 
 import java.util.*;
+import org.apache.hadoop.hdfs.server.namenode.CorruptReplicasHelper;
 
 /**
  * Stores information about all corrupt blocks in the File System.
@@ -31,27 +32,42 @@ import java.util.*;
  * copies. These copies are removed once Block is found to have 
  * expected number of good replicas.
  * Mapping: Block -> TreeSet<DatanodeDescriptor> 
+ * 
+ * KTHFS [J]: This data structure is also persisted to NDB. But we also store in this data structure for read operations (i.e. this is essentially  a cache)
  */
 
 @InterfaceAudience.Private
 public class CorruptReplicasMap{
 
-  private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =
-    new TreeMap<Block, Collection<DatanodeDescriptor>>();
-  
+  //private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =  new TreeMap<Block, Collection<DatanodeDescriptor>>();
+
   /**
    * Mark the block belonging to datanode as corrupt.
    *
    * @param blk Block to be added to CorruptReplicasMap
    * @param dn DatanodeDescriptor which holds the corrupt replica
    */
-  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn) {
-    Collection<DatanodeDescriptor> nodes = getNodes(blk);
+  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn, boolean isTransactional) {
+    CorruptReplicasHelper.addToCorruptReplicas(blk, dn, isTransactional);
+    NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
+                                   blk.getBlockName() +
+                                   " added as corrupt on " + dn.getName() +
+                                   " by " + Server.getRemoteIp());
+  }
+  /*
+  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn, boolean isTransactional) {
+    Collection<DatanodeDescriptor> ` = getNodes(blk);
+    
+    // First time entry for this block
     if (nodes == null) {
       nodes = new TreeSet<DatanodeDescriptor>();
+      CorruptReplicasHelper.addToCorruptReplicas(blk, dn, isTransactional);
       corruptReplicasMap.put(blk, nodes);
     }
     if (!nodes.contains(dn)) {
+      
+      // New corrupt replica for this block (some corrupt replicas already exist)
+      CorruptReplicasHelper.addToCorruptReplicas(blk, dn, isTransactional);
       nodes.add(dn);
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    blk.getBlockName() +
@@ -65,18 +81,23 @@ public class CorruptReplicasMap{
                                    " by " + Server.getRemoteIp());
     }
   }
-
+*/
   /**
    * Remove Block from CorruptBlocksMap
    *
    * @param blk Block to be removed
    */
-  void removeFromCorruptReplicasMap(Block blk) {
+  void removeFromCorruptReplicasMap(Block blk, boolean isTransactional) {
+      CorruptReplicasHelper.removeFromCorruptReplicas(blk, isTransactional);
+  }
+  /*
+  void removeFromCorruptReplicasMap(Block blk, boolean isTransactional) {
     if (corruptReplicasMap != null) {
+      CorruptReplicasHelper.removeFromCorruptReplicas(blk, isTransactional);
       corruptReplicasMap.remove(blk);
     }
   }
-
+*/
   /**
    * Remove the block at the given datanode from CorruptBlockMap
    * @param blk block to be removed
@@ -84,20 +105,26 @@ public class CorruptReplicasMap{
    * @return true if the removal is successful; 
              false if the replica is not in the map
    */ 
-  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode, boolean isTransactional) {
+      return (CorruptReplicasHelper.removeFromCorruptReplicas(blk, datanode, isTransactional) > 0) ? true : false;
+  }
+  /*
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode, boolean isTransactional) {
     Collection<DatanodeDescriptor> datanodes = corruptReplicasMap.get(blk);
     if (datanodes==null)
       return false;
     if (datanodes.remove(datanode)) { // remove the replicas
+      CorruptReplicasHelper.removeFromCorruptReplicas(blk, datanode, isTransactional);
       if (datanodes.isEmpty()) {
         // remove the block if there is no more corrupted replicas
+        // KTHFS: No need to remove from table because rows would no longer exist for this block
         corruptReplicasMap.remove(blk);
       }
       return true;
     }
     return false;
   }
-    
+*/   
 
   /**
    * Get Nodes which have corrupt replicas of Block
@@ -106,7 +133,8 @@ public class CorruptReplicasMap{
    * @return collection of nodes. Null if does not exists
    */
   Collection<DatanodeDescriptor> getNodes(Block blk) {
-    return corruptReplicasMap.get(blk);
+    //return corruptReplicasMap.get(blk);
+    return CorruptReplicasHelper.getNodes(blk);
   }
 
   /**
@@ -117,8 +145,9 @@ public class CorruptReplicasMap{
    * @return true if replica is corrupt, false if does not exists in this map
    */
   boolean isReplicaCorrupt(Block blk, DatanodeDescriptor node) {
-    Collection<DatanodeDescriptor> nodes = getNodes(blk);
-    return ((nodes != null) && (nodes.contains(node)));
+    //Collection<DatanodeDescriptor> nodes = getNodes(blk);
+    //return ((nodes != null) && (nodes.contains(node)));
+    return CorruptReplicasHelper.isReplicaCorrupt(blk, node);
   }
 
   public int numCorruptReplicas(Block blk) {
@@ -127,7 +156,8 @@ public class CorruptReplicasMap{
   }
   
   public int size() {
-    return corruptReplicasMap.size();
+    //return corruptReplicasMap.size();
+    return CorruptReplicasHelper.getCorruptBlocks().size();
   }
 
   /**
@@ -144,6 +174,48 @@ public class CorruptReplicasMap{
    * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
    *
    */
+  long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
+                                   Long startingBlockId) {
+    if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
+      return null;
+    }
+    
+    //Iterator<Block> blockIt = corruptReplicasMap.keySet().iterator();
+    Iterator<Long> blockIt = CorruptReplicasHelper.getCorruptBlocks().iterator();
+    
+    // if the starting block id was specified, iterate over keys until
+    // we find the matching block. If we find a matching block, break
+    // to leave the iterator on the next block after the specified block. 
+    if (startingBlockId != null) {
+      boolean isBlockFound = false;
+      while (blockIt.hasNext()) {
+        long b = blockIt.next();
+        if (b == startingBlockId) {
+          isBlockFound = true;
+          break; 
+        }
+      }
+      
+      if (!isBlockFound) {
+        return null;
+      }
+    }
+
+    ArrayList<Long> corruptReplicaBlockIds = new ArrayList<Long>();
+
+    // append up to numExpectedBlocks blockIds to our list
+    for(int i=0; i<numExpectedBlocks && blockIt.hasNext(); i++) {
+      corruptReplicaBlockIds.add(blockIt.next());
+    }
+    
+    long[] ret = new long[corruptReplicaBlockIds.size()];
+    for(int i=0; i<ret.length; i++) {
+      ret[i] = corruptReplicaBlockIds.get(i);
+    }
+    
+    return ret;
+  }  
+  /*
   long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
                                    Long startingBlockId) {
     if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
@@ -184,4 +256,6 @@ public class CorruptReplicasMap{
     
     return ret;
   }  
+   * 
+   */
 }
