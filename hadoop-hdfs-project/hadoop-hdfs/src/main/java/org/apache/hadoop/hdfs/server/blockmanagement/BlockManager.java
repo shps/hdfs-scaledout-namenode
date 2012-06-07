@@ -2867,7 +2867,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       corruptReplicas.removeFromCorruptReplicasMap(block);
       BlockInfo bi = getStoredBlock(block);
       if (bi != null) {
-        bi.getINode().removeBlock(bi);
+        INodeFile iNode = bi.getINode();
+        if (iNode != null)
+          iNode.removeBlock(bi);
         bi.setINode(null);
         em.remove(bi);
       }
