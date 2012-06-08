@@ -12,18 +12,18 @@ import com.mysql.clusterj.annotation.PrimaryKey;
  *
  * @author Hooman <hooman@sics.se>
  */
-@PersistenceCapable(table = "InvalidateBlocks")
+@PersistenceCapable(table = "ExcessReplica")
 public interface ExcessReplicaTable {
-
-  @PrimaryKey
-  @Column(name = "storageId")
-  String getStorageId();
-
-  void setStorageId(String storageId);
 
   @PrimaryKey
   @Column(name = "blockId")
   long getBlockId();
 
   void setBlockId(long storageId);
+
+  @PrimaryKey
+  @Column(name = "storageId")
+  String getStorageId();
+
+  void setStorageId(String storageId);
 }

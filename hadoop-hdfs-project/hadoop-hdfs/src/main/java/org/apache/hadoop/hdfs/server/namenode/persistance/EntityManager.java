@@ -7,8 +7,10 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 
 /**
  *
@@ -123,7 +125,7 @@ public class EntityManager {
     return null;
   }
 
-  public List<Replica> findInvalidatedBlocksByStorageId(String storageId) {
+  public List<InvalidatedBlock> findInvalidatedBlocksByStorageId(String storageId) {
     try {
       return context().findInvalidatedBlocksByStorageId(storageId);
     } catch (TransactionContextException ex) {
@@ -143,7 +145,7 @@ public class EntityManager {
     return null;
   }
 
-  public Map<String, List<Replica>> findAllInvalidatedBlocks() {
+  public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() {
     try {
       return context().findAllInvalidatedBlocks();
     } catch (TransactionContextException ex) {
@@ -186,5 +188,15 @@ public class EntityManager {
     }
 
     return 0;
+  }
+
+  public ExcessReplica findExcessReplicaByPK(String storageId, long blockId) {
+    try {
+      return context().findExcessReplicaByPK(storageId, blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
   }
 }

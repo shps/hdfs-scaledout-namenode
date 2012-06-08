@@ -2184,7 +2184,10 @@ public class BlockManager {
       // We've removed a block from a node, so it's definitely no longer
       // in "excess" there.
       //
-      em.remove(new ExcessReplica(node.getStorageID(), block.getBlockId()));
+      ExcessReplica exReplica = em.findExcessReplicaByPK(node.getStorageID(), block.getBlockId());
+      if (exReplica != null)
+        em.remove(exReplica);
+      
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("BLOCK* removeStoredBlock: "
                 + block + " is removed from excessBlocks");
@@ -2799,6 +2802,7 @@ public class BlockManager {
           int tries = DBConnector.RETRY_COUNT;
           while (!done && tries > 0) {
             try {
+              DBConnector.beginTransaction();
               computeDatanodeWork();
               processPendingReplications();
               DBConnector.commit();

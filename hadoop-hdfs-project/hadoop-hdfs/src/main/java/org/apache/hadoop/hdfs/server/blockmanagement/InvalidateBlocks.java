@@ -73,9 +73,11 @@ class InvalidateBlocks {
   /** Remove a storage from the invalidatesSet */
   synchronized void remove(final String storageID) {
     //[H] ClusterJ limitation: no delete op using where clause
-    List<Replica> invBlocks = em.findInvalidatedBlocksByStorageId(storageID);
-    for (Replica invBlock : invBlocks) {
-      em.remove(invBlock);
+    List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageID);
+    if (invBlocks != null)
+      for (InvalidatedBlock invBlock : invBlocks) {
+        if (invBlock != null)
+          em.remove(invBlock);
     }
   }
 
@@ -86,7 +88,7 @@ class InvalidateBlocks {
 
   /** Print the contents to out. */
   synchronized void dump(final PrintWriter out) {
-    Map<String, List<Replica>> node2blocks = em.findAllInvalidatedBlocks();
+    Map<String, List<InvalidatedBlock>> node2blocks = em.findAllInvalidatedBlocks();
     final int size = node2blocks.values().size();
     out.println("Metasave: Blocks " + em.countAllInvalidatedBlocks()
             + " waiting deletion from " + size + " datanodes.");
@@ -94,8 +96,8 @@ class InvalidateBlocks {
       return;
     }
 
-    for (Map.Entry<String, List<Replica>> entry : node2blocks.entrySet()) {
-      final List<Replica> invBlocks = entry.getValue();
+    for (Map.Entry<String, List<InvalidatedBlock>> entry : node2blocks.entrySet()) {
+      final List<InvalidatedBlock> invBlocks = entry.getValue();
       if (invBlocks.size() > 0) {
         //FIXME [H]: To dump properly it needs to get the block using blockid.
         out.println(datanodeManager.getDatanode(entry.getKey()).getName() + invBlocks);
@@ -116,9 +118,10 @@ class InvalidateBlocks {
   int invalidateWork(final String storageId) {
     final DatanodeDescriptor dn = datanodeManager.getDatanode(storageId);
     if (dn == null) {
-      List<Replica> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
-      for (Replica ib : invBlocks) {
-        em.remove(ib);
+      List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
+      if (invBlocks != null)
+        for (InvalidatedBlock ib : invBlocks) {
+          em.remove(ib);
       }
 
       return 0;
@@ -137,7 +140,7 @@ class InvalidateBlocks {
 
   private synchronized List<Block> invalidateWork(
           final String storageId, final DatanodeDescriptor dn) {
-    final List<Replica> set = em.findInvalidatedBlocksByStorageId(storageId);
+    final List<InvalidatedBlock> set = em.findInvalidatedBlocksByStorageId(storageId);
     if (set == null) {
       return null;
     }
@@ -145,7 +148,7 @@ class InvalidateBlocks {
     // # blocks that can be sent in one message is limited
     final int limit = datanodeManager.blockInvalidateLimit;
     final List<Block> toInvalidate = new ArrayList<Block>(limit);
-    final Iterator<Replica> it = set.iterator();
+    final Iterator<InvalidatedBlock> it = set.iterator();
     for (int count = 0; count < limit && it.hasNext(); count++) {
       Replica invBlock = it.next();
       //[H] there is no need to generationstamp and timestamp in the datanode for invalidated blocks

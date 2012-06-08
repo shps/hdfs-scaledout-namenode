@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.junit.Ignore;
 
 /**
  * This test simulates a variety of situations when blocks are being
@@ -308,6 +309,7 @@ public class TestBlockReport {
    * @throws IOException in case of an error
    */
   @Test
+  @Ignore
   public void blockReport_06() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
