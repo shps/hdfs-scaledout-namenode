@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.UnderReplicaBlocksHelper;
  * Blocks have replication priority, with priority 0 indicating the highest
  * Blocks have only one replicas has the highest
  */
-class UnderReplicatedBlocks implements Iterable<Long> {
+class UnderReplicatedBlocks implements Iterable<Block> {
   static final int LEVEL = 5;
   static final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
   // private final List<NavigableSet<Block>> priorityQueues  = new ArrayList<NavigableSet<Block>>();
@@ -236,15 +236,15 @@ class UnderReplicatedBlocks implements Iterable<Long> {
   }
   
   //class BlockIterator implements Iterator<Block> {
-  class BlockIterator implements Iterator<Long> {
+  class BlockIterator implements Iterator<Block> {
     private int level;
     private boolean isIteratorForLevel = false;
     
     // KTHFS [J] Added here and removed from the outer class since we use the helper methods now to add / remove. We don't need a data structure
     // We only need the data structure (i.e. priorityQueues) for iterating (i.e. in this class)
-    private List<NavigableSet<Long>> priorityQueues  = null;;
+    private List<NavigableSet<Block>> priorityQueues  = null;;
     //private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
-    private List<Iterator<Long>> iterators = new ArrayList<Iterator<Long>>();
+    private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
 
     private BlockIterator() {
       // KTHFS [J] Get the latest under-replicated blocks from db
@@ -274,7 +274,7 @@ class UnderReplicatedBlocks implements Iterable<Long> {
     }
 
     @Override
-    public Long next() {
+    public Block next() {
       if (isIteratorForLevel)
         return iterators.get(0).next();
       update();

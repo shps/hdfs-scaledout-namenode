@@ -283,7 +283,7 @@ public class DatanodeManager {
     if (LOG.isDebugEnabled()) {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
-    namesystem.checkSafeMode();
+    namesystem.checkSafeMode(isTransactional);
     DatanodeHelper.removeDatanode(nodeInfo.getStorageID(), isTransactional);
   }
 
@@ -507,11 +507,11 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) 
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr, boolean isTransactional) 
     throws IOException {
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg, ipAddr)) {
-      startDecommission(nodeReg);
+      startDecommission(nodeReg, isTransactional);
     }
   }
 
@@ -520,11 +520,11 @@ public class DatanodeManager {
    * decommission completed. Return true if decommission is complete.
    * @throws IOException 
    */
-  boolean checkDecommissionState(DatanodeDescriptor node) throws IOException {
+  boolean checkDecommissionState(DatanodeDescriptor node, boolean isTransactional) throws IOException {
     // Check to see if all blocks in this decommissioned
     // node has reached their target replication factor.
     if (node.isDecommissionInProgress()) {
-      if (!blockManager.isReplicationInProgress(node)) {
+      if (!blockManager.isReplicationInProgress(node, isTransactional)) {
         node.setDecommissioned();
         LOG.info("Decommission complete for node " + node.getName());
       }
@@ -533,16 +533,16 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node) throws IOException {
+  private void startDecommission(DatanodeDescriptor node, boolean isTransactional) throws IOException {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName() + " with " + 
           node.numBlocks() +  " blocks.");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
-      DatanodeHelper.updateDatanodeInfo(node, false);
+      DatanodeHelper.updateDatanodeInfo(node, isTransactional);
       
       // all the blocks that reside on this node have to be replicated.
-      checkDecommissionState(node);
+      checkDecommissionState(node, isTransactional);
     }
   }
 
@@ -655,7 +655,7 @@ public class DatanodeManager {
         
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS, dnAddress);
+      checkDecommissioning(nodeS, dnAddress, transactional);
       
       DatanodeHelper.updateDatanodeInfo(nodeS, transactional);
       return;
@@ -677,7 +677,7 @@ public class DatanodeManager {
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr, dnAddress);
+    checkDecommissioning(nodeDescr, dnAddress, transactional);
     
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
@@ -697,8 +697,32 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
-      refreshDatanodes();
-    } finally {
+      boolean isDone = false;
+      int tries = DBConnector.RETRY_COUNT;
+      try {
+        while (!isDone && tries > 0) {
+          try {
+            DBConnector.beginTransaction();
+            refreshDatanodes(true);
+            DBConnector.commit();
+            isDone = true;
+          }
+          catch (ClusterJException ex) {
+            if (!isDone) {
+              DBConnector.safeRollback();
+              tries--;
+              LOG.error("refreshNodes() :: failed to refresh Nodes. Exception: " + ex.getMessage(), ex);
+            }
+          } // end catch
+        } // end while
+      } // end try-finally
+      finally {
+        if (!isDone) {
+          DBConnector.safeRollback();
+        }
+      }
+    }
+    finally {
       namesystem.writeUnlock();
     }
   }
@@ -721,14 +745,14 @@ public class DatanodeManager {
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  private void refreshDatanodes() throws IOException {
+  private void refreshDatanodes(boolean isTransactional) throws IOException {
     for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {
         node.setDisallowed(true); // case 2.
       } else {
         if (inExcludedHostsList(node, null)) {
-          startDecommission(node); // case 3.
+          startDecommission(node, isTransactional); // case 3.
         } else {
           stopDecommission(node); // case 4.
         }

@@ -131,6 +131,46 @@ public class BlocksHelper {
     }
     return null;
   }  
+  /** Return a Block object from an blockId 
+   * @param blockId
+   * @return
+   * @throws IOException 
+   */
+  public static Block getBlock(long blockId) {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    while (done == false && tries > 0) {
+      try {
+        BlockInfoTable ret = selectBlockInfo(session, blockId);
+        Block b = new Block(ret.getBlockId(), ret.getNumBytes(), ret.getGenerationStamp());
+        done = true;
+        return b;
+      }
+      catch (ClusterJException e) {
+        //System.err.println("getBlockInfo failed " + e.getMessage());
+        e.printStackTrace();
+        tries--;
+      }
+
+    }
+    return null;
+  }  
+
+  /** When called with single=false, will not retrieve the INodes for the Block */
+  private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
+    BlockInfoTable bit = selectBlockInfo(session, blockId);
+    return convert(bit);
+  }  
+ /** Primary key lookup in the BlockInfo table using block ID
+   * @param session
+   * @param blkid
+   * @return a row from the BlockInfo table
+   */
+  private static BlockInfoTable selectBlockInfo(Session session, long blkid) {
+    return session.find(BlockInfoTable.class, blkid);
+  }
   /** When called with single=false, will not retrieve the INodes for the Block */
   private static BlockInfo convert(BlockInfoTable bit) throws IOException {
     if (bit == null) {
@@ -167,20 +207,6 @@ public class BlocksHelper {
       return blockInfo;
     }
 
-  }
-
-  /** When called with single=false, will not retrieve the INodes for the Block */
-  private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
-    BlockInfoTable bit = selectBlockInfo(session, blockId);
-    return convert(bit);
-  }  
- /** Primary key lookup in the BlockInfo table using block ID
-   * @param session
-   * @param blkid
-   * @return a row from the BlockInfo table
-   */
-  private static BlockInfoTable selectBlockInfo(Session session, long blkid) {
-    return session.find(BlockInfoTable.class, blkid);
   }
 
 }

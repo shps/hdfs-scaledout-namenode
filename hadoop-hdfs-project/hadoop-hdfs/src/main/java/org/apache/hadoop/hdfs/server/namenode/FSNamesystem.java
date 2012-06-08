@@ -385,8 +385,57 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
 
+      if (isWritingNN()) {
+        boolean isDone = false;
+        int tries = DBConnector.RETRY_COUNT;
+        try {
+          while (!isDone && tries > 0) {
+            try {
+              DBConnector.beginTransaction();
+              setBlockTotal(true);
+              DBConnector.commit();
+              isDone = true;
+            }
+            catch (ClusterJException ex) {
+              if (!isDone) {
+                DBConnector.safeRollback();
+                tries--;
+                FSNamesystem.LOG.error("activate() :: failed to activate FSNamesystem. Exception: " + ex.getMessage(), ex);
+              }
+            }
+          }
+        }
+        finally {
+          if (!isDone) {
+            DBConnector.safeRollback();
+          }
+        }
+
+        if (isDone) {
+          blockManager.activate(conf);
+          this.lmthread = new Daemon(leaseManager.new Monitor());
+          lmthread.start();
+        }
+      }
+//      TODO:kamal, resouce monitor
+//      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+//      nnrmthread.start();
+    }
+    finally {
+      writeUnlock();
+    }
+
+    if (isWritingNN()) {
+      registerMXBean();
+    }
+    DefaultMetricsSystem.instance().register(this);
+  }
+  void activateOld(Configuration conf) throws IOException {
+    writeLock();
+    try {
+
       if(isWritingNN()) {
-      setBlockTotal();
+      setBlockTotal(false);
       blockManager.activate(conf);
       this.lmthread = new Daemon(leaseManager.new Monitor());
       lmthread.start();
@@ -1205,7 +1254,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               final List<BlockInfo> blocks = dir.setReplication(src, replication, oldReplication, true);
               isFile = blocks != null;
               if (isFile) {
-                blockManager.setReplication(oldReplication[0], replication, src, blocks);
+                blockManager.setReplication(oldReplication[0], replication, src, blocks, true);
               }
               DBConnector.commit();
               isDone = true;
@@ -1263,7 +1312,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final List<BlockInfo> blocks = dir.setReplication(src, replication, oldReplication, false);
       isFile = blocks != null;
       if (isFile) {
-        blockManager.setReplication(oldReplication[0], replication, src, blocks);
+        blockManager.setReplication(oldReplication[0], replication, src, blocks, false);
       }
     } finally {
       writeUnlock();
@@ -2158,12 +2207,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * replication factor, then insert them into neededReplication
    * @throws IOException 
    */
-  private void checkReplicationFactor(INodeFile file) throws IOException {
+  private void checkReplicationFactor(INodeFile file, boolean isTransactional) throws IOException {
 
     int numExpectedReplicas = file.getReplication();
     List<BlockInfo> pendingBlocks = file.getBlocks();
     for (BlockInfo blockInfo : pendingBlocks) {
-      blockManager.checkReplication(blockInfo, numExpectedReplicas);
+      blockManager.checkReplication(blockInfo, numExpectedReplicas, isTransactional);
     }
   }
     
@@ -2963,7 +3012,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile, isTransactional);
     
-    checkReplicationFactor(newFile);
+    checkReplicationFactor(newFile, isTransactional);
   }
 
   void commitBlockSynchronization(ExtendedBlock lastblock,
@@ -3195,7 +3244,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         try {
           DBConnector.beginTransaction();
           getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true);
-          checkSafeMode();
+          checkSafeMode(true);
           DBConnector.commit();
           done = true;
         } catch (ClusterJException e) {
@@ -3618,7 +3667,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Check for invalid, under- & over-replicated blocks in the end of startup.
      * @throws IOException 
      */
-    private synchronized void leave(boolean checkForUpgrades) throws IOException {
+    private synchronized void leave(boolean checkForUpgrades, boolean isTransactional) throws IOException {
       if(checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
         boolean needUpgrade = false;
@@ -3635,7 +3684,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // if not done yet, initialize replication queues
       if (!isPopulatingReplQueues()) {
-        initializeReplQueues();
+        initializeReplQueues(isTransactional);
       }
       long timeInSafemode = now() - systemStart;
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
@@ -3659,13 +3708,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Initialize replication queues.
      * @throws IOException 
      */
-    private synchronized void initializeReplQueues() throws IOException {
+    private synchronized void initializeReplQueues(boolean isTransactional) throws IOException {
       LOG.info("initializing replication queues");
       if (isPopulatingReplQueues()) {
         LOG.warn("Replication queues already initialized.");
       }
       long startTimeMisReplicatedScan = now();
-      blockManager.processMisReplicatedBlocks();
+      blockManager.processMisReplicatedBlocks(isTransactional);
       initializedReplQueues = true;
       NameNode.stateChangeLog.info("STATE* Replication Queue initialization "
           + "scan for invalid, over- and under-replicated blocks "
@@ -3713,12 +3762,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Check and trigger safe mode if needed. 
      * @throws IOException 
      */
-    private void checkMode() throws IOException {
+    private void checkMode(boolean isTransactional) throws IOException {
       if (needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
         if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
-          initializeReplQueues();
+          initializeReplQueues(isTransactional);
         }
         reportStatus("STATE* Safe mode ON.", false);
         return;
@@ -3728,7 +3777,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave(true); // leave safe mode
+        this.leave(true, isTransactional); // leave safe mode
         return;
       }
       if (reached > 0) {  // threshold has already been reached before
@@ -3743,7 +3792,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // check if we are ready to initialize replication queues
       if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
-        initializeReplQueues();
+        initializeReplQueues(isTransactional);
       }
     }
       
@@ -3751,12 +3800,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Set total number of blocks.
      * @throws IOException 
      */
-    private synchronized void setBlockTotal(int total) throws IOException {
+    private synchronized void setBlockTotal(int total, boolean isTransactional) throws IOException {
       this.blockTotal = total;
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
         (int) (((double) blockTotal) * replQueueThreshold);
-      checkMode();
+      checkMode(isTransactional);
     }
       
     /**
@@ -3765,7 +3814,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      * @throws IOException 
      */
-    private synchronized void incrementSafeBlockCount(short replication) throws IOException {
+    private synchronized void incrementSafeBlockCount(short replication, boolean isTransactional) throws IOException {
       /*
        * [JUDE] This is changed because in traditional HDFS, when the NN
        * restarts, its blockMap is empty. 'blockMap' is filled each time the DN
@@ -3786,7 +3835,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
        */
       if ((int)replication >= safeReplication)
         this.blockSafe++;
-      checkMode();
+      checkMode(isTransactional);
     }
       
     /**
@@ -3795,10 +3844,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      * @throws IOException 
      */
-    private synchronized void decrementSafeBlockCount(short replication) throws IOException {
+    private synchronized void decrementSafeBlockCount(short replication, boolean isTransactional) throws IOException {
       if (replication == safeReplication-1)
         this.blockSafe--;
-      checkMode();
+      checkMode(isTransactional);
     }
 
     /**
@@ -3949,6 +3998,61 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
         try {
           Thread.sleep(recheckInterval);
+        }
+        catch (InterruptedException ie) {
+        }
+      }
+      if (!fsRunning) {
+        LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread. ");
+      }
+      else {
+        // leave safe mode and stop the monitor
+        try {
+
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                leaveSafeMode(true, true);
+
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  LOG.error("SafeModeMonitor.run() caused error in trying to leave safe mode.  Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          }
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            } // end if
+          }// end finally
+
+        }
+        catch (SafeModeException es) { // should never happen
+          String msg = "SafeModeMonitor may not run during distributed upgrade.";
+          assert false : msg;
+          throw new RuntimeException(msg, es);
+        }
+        catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+      smmthread = null;
+    }
+    
+    @Deprecated
+    public void runOld() {
+      while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
+        try {
+          Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
         }
       }
@@ -3957,7 +4061,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } else {
         // leave safe mode and stop the monitor
         try {
-          leaveSafeMode(true);
+          leaveSafeMode(true, false);
         } catch(SafeModeException es) { // should never happen
           String msg = "SafeModeMonitor may not run during distributed upgrade.";
           assert false : msg;
@@ -3970,27 +4074,51 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
     
+  // @ClientProtocol
   boolean setSafeMode(SafeModeAction action) throws IOException {
     if (action != SafeModeAction.SAFEMODE_GET) {
       checkSuperuserPrivilege();
-      switch(action) {
-      case SAFEMODE_LEAVE: // leave safe mode
-        leaveSafeMode(false);
-        break;
-      case SAFEMODE_ENTER: // enter safe mode
-        enterSafeMode(false);
-        break;
+      switch (action) {
+        case SAFEMODE_LEAVE: // leave safe mode
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                leaveSafeMode(false, true);
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  FSNamesystem.LOG.error("setSafeMode() :: failed to set safe mode. Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          } // end try-finally
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            }
+          }
+          break;
+        case SAFEMODE_ENTER: // enter safe mode
+          enterSafeMode(false);
+          break;
       }
     }
     return isInSafeMode();
   }
 
   @Override
-  public void checkSafeMode() throws IOException {
+  public void checkSafeMode(boolean isTransactional) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode != null) {
-      safeMode.checkMode();
+      safeMode.checkMode(isTransactional);
     }
   }
 
@@ -4022,33 +4150,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   @Override
-  public void incrementSafeBlockCount(int replication) throws IOException {
+  public void incrementSafeBlockCount(int replication, boolean isTransactional) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return;
-    safeMode.incrementSafeBlockCount((short)replication);
+    safeMode.incrementSafeBlockCount((short)replication, isTransactional);
   }
 
   @Override
-  public void decrementSafeBlockCount(Block b) throws IOException {
+  public void decrementSafeBlockCount(Block b, boolean isTransactional) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null) // mostly true
       return;
-    safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas());
+    safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas(), isTransactional);
   }
 
   /**
    * Set the total number of blocks in the system. 
    * @throws IOException 
    */
-  private void setBlockTotal() throws IOException {
+  private void setBlockTotal(boolean isTransactional) throws IOException {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return;
-    safeMode.setBlockTotal((int)getCompleteBlocksTotal());
+    safeMode.setBlockTotal((int)getCompleteBlocksTotal(), isTransactional);
   }
 
   /**
@@ -4133,7 +4261,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Leave safe mode.
    * @throws IOException
    */
-  void leaveSafeMode(boolean checkForUpgrades) throws IOException {
+  void leaveSafeMode(boolean checkForUpgrades, boolean isTransactional) throws IOException {
     writeLock();
     try {
       if (!isInSafeMode()) {
@@ -4143,7 +4271,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(upgradeManager.getUpgradeState())
         throw new SafeModeException("Distributed upgrade is in progress",
                                     safeMode);
-      safeMode.leave(checkForUpgrades);
+      safeMode.leave(checkForUpgrades, isTransactional);
     } finally {
       writeUnlock();
     }
@@ -4177,7 +4305,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
-    return upgradeManager.processUpgradeCommand(comm);
+
+    UpgradeCommand result = null;
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try {
+      while (!isDone && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          result = upgradeManager.processUpgradeCommand(comm, true);
+          DBConnector.commit();
+          isDone = true;
+        }
+        catch (ClusterJException ex) {
+          if (!isDone) {
+            DBConnector.safeRollback();
+            tries--;
+            FSNamesystem.LOG.error("processDistributedUpgradeCommand() :: failed to process Distrubuted upgrade command. Exception: " + ex.getMessage(), ex);
+          }
+        } // end catch
+      } //end while
+    }//end try-finally
+    finally {
+      if (!isDone) {
+        DBConnector.safeRollback();
+      }
+    }
+    return result;
   }
 
   PermissionStatus createFsOwnerPermissions(FsPermission permission) {

@@ -13,6 +13,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.protocol.Block;
 import se.sics.clusterj.UnderReplicaBlocksTable;
 
 /**
@@ -161,11 +162,11 @@ public class UnderReplicaBlocksHelper {
   }
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  public static List<NavigableSet<Long>> getAllBlocks(int totalLevels) {
-    List<NavigableSet<Long>> priorityQueues = new ArrayList<NavigableSet<Long>>();
+  public static List<NavigableSet<Block>> getAllBlocks(int totalLevels) {
+    List<NavigableSet<Block>> priorityQueues = new ArrayList<NavigableSet<Block>>();
 
     for (int i = 0; i < totalLevels; i++) {
-      priorityQueues.add(new TreeSet<Long>());
+      priorityQueues.add(new TreeSet<Block>());
     }
 
     // Get all the under replicated blocks
@@ -174,7 +175,7 @@ public class UnderReplicaBlocksHelper {
     for (int i = 0; i < blocks.size(); i++) {
       int level = blocks.get(i).getLevel();
       long blockId = blocks.get(i).getBlockId();
-      priorityQueues.get(level).add(blockId);
+      priorityQueues.get(level).add(BlocksHelper.getBlock(blockId));
     }
     return priorityQueues;
   }

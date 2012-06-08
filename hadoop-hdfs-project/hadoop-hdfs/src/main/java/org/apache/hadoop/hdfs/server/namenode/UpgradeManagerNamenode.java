@@ -70,7 +70,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return true;
   }
 
-  synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command
+  synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command, boolean isTransactional
                                                     ) throws IOException {
     if(NameNode.LOG.isDebugEnabled()) {
       NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
@@ -100,7 +100,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     // proceede with the next one
     currentUpgrades.remove(curUO);
     if(currentUpgrades.isEmpty()) { // all upgrades are done
-      completeUpgrade();
+      completeUpgrade(isTransactional);
     } else {  // start next upgrade
       curUO = (UpgradeObjectNamenode)currentUpgrades.first();
       this.broadcastCommand = curUO.startUpgrade();
@@ -108,13 +108,14 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return reply;
   }
 
-  public synchronized void completeUpgrade() throws IOException {
+  @Override
+  public synchronized void completeUpgrade(boolean isTransactional) throws IOException {
     // set and write new upgrade state into disk
     setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);
     namesystem.getFSImage().getStorage().writeAll();
     currentUpgrades = null;
     broadcastCommand = null;
-    namesystem.leaveSafeMode(false);
+    namesystem.leaveSafeMode(false, isTransactional);
   }
 
   synchronized UpgradeStatusReport distributedUpgradeProgress

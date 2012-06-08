@@ -535,7 +535,7 @@ public class BlockManager {
 //    replaceBlock(ucBlock, oldBlock, isTransactional);
     em.persist(ucBlock);
     // Remove block from replication queue.
-    updateNeededReplications(oldBlock, 0, 0);
+    updateNeededReplications(oldBlock, 0, 0, isTransactional);
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeDescriptor dd : targets) {
@@ -1037,7 +1037,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       invalidateBlock(storedBlock, node, isTransactional);
     } else if (namesystem.isPopulatingReplQueues()) {
       // add the block to neededReplication
-      updateNeededReplications(storedBlock, -1, 0);
+      updateNeededReplications(storedBlock, -1, 0, isTransactional);
     }
   }
 
@@ -1108,7 +1108,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    *
    * @return number of blocks scheduled for replication during this iteration.
    */
-  private int computeReplicationWork(int blocksToProcess) throws IOException {
+  private int computeReplicationWork(int blocksToProcess, boolean isTransactional) throws IOException {
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate =
       chooseUnderReplicatedBlocks(blocksToProcess);
@@ -1116,7 +1116,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     int scheduledReplicationCount = 0;
     for (int i=0; i<blocksToReplicate.size(); i++) {
       for(Block block : blocksToReplicate.get(i)) {
-        if (computeReplicationWorkForBlock(block, i)) {
+        if (computeReplicationWorkForBlock(block, i, isTransactional)) {
           scheduledReplicationCount++;
         }
       }
@@ -1194,7 +1194,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * @throws IOException 
    */
   @VisibleForTesting
-  boolean computeReplicationWorkForBlock(Block block, int priority) throws IOException {
+  boolean computeReplicationWorkForBlock(Block block, int priority, boolean isTransactional) throws IOException {
     int requiredReplication, numEffectiveReplicas;
     List<DatanodeDescriptor> containingNodes, liveReplicaNodes;
     DatanodeDescriptor srcNode;
@@ -1209,7 +1209,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
         fileINode = (storedBlock != null) ? storedBlock.getINode() : null;
         // abandoned block or block reopened for append
         if(fileINode == null || fileINode.isUnderConstruction()) {
-          neededReplications.remove(block, priority); // remove from neededReplications
+          neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
           replIndex--;
           return false;
         }
@@ -1233,7 +1233,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
         if (numEffectiveReplicas >= requiredReplication) {
           if ( (pendingReplications.getNumReplicas(block) > 0) ||
                (blockHasEnoughRacks(block)) ) {
-            neededReplications.remove(block, priority); // remove from neededReplications
+            neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
             replIndex--;
             NameNode.stateChangeLog.info("BLOCK* "
                 + "Removing block " + block
@@ -1277,7 +1277,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
         fileINode = getINode(block);
         // abandoned block or block reopened for append
         if(fileINode == null || fileINode.isUnderConstruction()) {
-          neededReplications.remove(block, priority); // remove from neededReplications
+          neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
           replIndex--;
           return false;
         }
@@ -1291,7 +1291,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
         if (numEffectiveReplicas >= requiredReplication) {
           if ( (pendingReplications.getNumReplicas(block) > 0) ||
                (blockHasEnoughRacks(block)) ) {
-            neededReplications.remove(block, priority); // remove from neededReplications
+            neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
             replIndex--;
             NameNode.stateChangeLog.info("BLOCK* "
                 + "Removing block " + block
@@ -1327,7 +1327,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
         // remove from neededReplications
         if(numEffectiveReplicas + targets.length >= requiredReplication) {
-          neededReplications.remove(block, priority); // remove from neededReplications
+          neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
           replIndex--;
         }
         if (NameNode.stateChangeLog.isInfoEnabled()) {
@@ -1462,7 +1462,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * and put them back into the neededReplication queue
    * @throws IOException 
    */
-  private void processPendingReplications() throws IOException {
+  private void processPendingReplications(boolean isTransactional) throws IOException {
     Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
     if (timedOutItems != null) {
       namesystem.writeLock();
@@ -1474,7 +1474,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
             neededReplications.add(timedOutItems[i],
                                    num.liveReplicas(),
                                    num.decommissionedReplicas(),
-                                   getReplication(timedOutItems[i]));
+                                   getReplication(timedOutItems[i]), isTransactional);
           }
         }
       } finally {
@@ -1884,7 +1884,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that
     if(storedBlock.isComplete())
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      namesystem.incrementSafeBlockCount(numCurrentReplica, isTransactional);
   }
 
   /**
@@ -1952,7 +1952,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     // only complete blocks are counted towards that
     // Is no-op if not in safe mode.
     if(storedBlock.isComplete())
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      namesystem.incrementSafeBlockCount(numCurrentReplica, isTransactional);
 
     // if file is under construction, then done for now
     if (fileINode.isUnderConstruction()) {
@@ -1968,9 +1968,9 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     short fileReplication = fileINode.getReplication();
     if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
-          num.decommissionedReplicas(), fileReplication);
+          num.decommissionedReplicas(), fileReplication, isTransactional);
     } else {
-      updateNeededReplications(storedBlock, curReplicaDelta, 0);
+      updateNeededReplications(storedBlock, curReplicaDelta, 0, isTransactional);
     }
     if (numCurrentReplica > fileReplication) {
       processOverReplicatedBlock(storedBlock, fileReplication, node, delNodeHint);
@@ -2030,11 +2030,11 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * over or under replicated. Place it into the respective queue.
    * @throws IOException 
    */
-  public void processMisReplicatedBlocks() throws IOException {
+  public void processMisReplicatedBlocks(boolean isTransactional) throws IOException {
     assert namesystem.hasWriteLock();
 
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
-    neededReplications.clear();
+    neededReplications.clear(isTransactional);
     for (BlockInfo block : em.findAllBlocks()) {
       INodeFile fileINode = block.getINode();
       if (fileINode == null) {
@@ -2050,7 +2050,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       // add to under-replicated queue if need to be
       if (isNeededReplication(block, expectedReplication, numCurrentReplica)) {
         if (neededReplications.add(block, numCurrentReplica, num
-            .decommissionedReplicas(), expectedReplication)) {
+            .decommissionedReplicas(), expectedReplication, isTransactional)) {
           nrUnderReplicated++;
         }
       }
@@ -2070,14 +2070,14 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
 
   /** Set replication for the blocks. */
   public void setReplication(final short oldRepl, final short newRepl,
-      final String src, List<BlockInfo> blocks) throws IOException {
+      final String src, List<BlockInfo> blocks, boolean isTransactional) throws IOException {
     if (newRepl == oldRepl) {
       return;
     }
 
     // update needReplication priority queues
     for(Block b : blocks) {
-      updateNeededReplications(b, 0, newRepl-oldRepl);
+      updateNeededReplications(b, 0, newRepl-oldRepl, isTransactional);
     }
       
     if (oldRepl > newRepl) {
@@ -2272,8 +2272,8 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       //
       INode fileINode = getINode(block);
       if (fileINode != null) {
-        namesystem.decrementSafeBlockCount(block);
-        updateNeededReplications(block, -1, 0);
+        namesystem.decrementSafeBlockCount(block, isTransactional);
+        updateNeededReplications(block, -1, 0, isTransactional);
         
       }
 
@@ -2654,7 +2654,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * yet reached their replication factor. Otherwise returns false.
    * @throws IOException 
    */
-  boolean isReplicationInProgress(DatanodeDescriptor srcNode) throws IOException {
+  boolean isReplicationInProgress(DatanodeDescriptor srcNode, boolean isTransactional) throws IOException {
     boolean status = false;
     int underReplicatedBlocks = 0;
     int decommissionOnlyReplicas = 0;
@@ -2694,7 +2694,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
             neededReplications.add(block,
                                    curReplicas,
                                    num.decommissionedReplicas(),
-                                   curExpectedReplicas);
+                                   curExpectedReplicas, isTransactional);
           }
         }
       }
@@ -2738,7 +2738,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
   /** updates a block in under replication queue 
    * @throws IOException */
   private void updateNeededReplications(final Block block,
-      final int curReplicasDelta, int expectedReplicasDelta) throws IOException {
+      final int curReplicasDelta, int expectedReplicasDelta, boolean isTransactional) throws IOException {
     namesystem.writeLock();
     try {
       NumberReplicas repl = countNodes(block);
@@ -2746,26 +2746,26 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
       if (isNeededReplication(block, curExpectedReplicas, repl.liveReplicas())) {
         neededReplications.update(block, repl.liveReplicas(), repl
             .decommissionedReplicas(), curExpectedReplicas, curReplicasDelta,
-            expectedReplicasDelta);
+            expectedReplicasDelta, isTransactional);
       } else {
         int oldReplicas = repl.liveReplicas()-curReplicasDelta;
         int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
         neededReplications.remove(block, oldReplicas, repl.decommissionedReplicas(),
-                                  oldExpectedReplicas);
+                                  oldExpectedReplicas, isTransactional);
       }
     } finally {
       namesystem.writeUnlock();
     }
   }
 
-  public void checkReplication(Block block, int numExpectedReplicas) throws IOException {
+  public void checkReplication(Block block, int numExpectedReplicas, boolean isTransactional) throws IOException {
     // filter out containingNodes that are marked for decommission.
     NumberReplicas number = countNodes(block);
     if (isNeededReplication(block, numExpectedReplicas, number.liveReplicas())) { 
       neededReplications.add(block,
                              number.liveReplicas(),
                              number.decommissionedReplicas(),
-                             numExpectedReplicas);
+                             numExpectedReplicas, isTransactional);
     }
   }
 
@@ -2929,15 +2929,43 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     public void run() {
       while (namesystem.isRunning()) {
         try {
-          computeDatanodeWork();
-          processPendingReplications();
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                computeDatanodeWork(true);
+                processPendingReplications(true);
+
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          } // end try
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            }
+          }
           Thread.sleep(replicationRecheckInterval);
-        } catch (InterruptedException ie) {
+        }
+        catch (InterruptedException ie) {
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
           break;
-        } catch (IOException ie) {
-          LOG.warn("ReplicationMonitor thread received exception. " , ie);
-        } catch (Throwable t) {
+        }
+        catch (IOException ie) {
+          LOG.warn("ReplicationMonitor thread received exception. ", ie);
+        }
+        catch (Throwable t) {
           LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
           Runtime.getRuntime().exit(-1);
         }
@@ -2954,7 +2982,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
    * @return number of blocks scheduled for replication or removal.
    * @throws IOException
    */
-  int computeDatanodeWork() throws IOException {
+  int computeDatanodeWork(boolean isTransactional) throws IOException {
     int workFound = 0;
     // Blocks should not be replicated or removed if in safe mode.
     // It's OK to check safe mode here w/o holding lock, in the worst
@@ -2969,7 +2997,7 @@ private LocatedBlock createLocatedBlockOld(final BlockInfo blk, final long pos
     final int nodesToProcess = (int) Math.ceil(numlive
         * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100.0);
 
-    workFound = this.computeReplicationWork(blocksToProcess);
+    workFound = this.computeReplicationWork(blocksToProcess, isTransactional);
 
     // Update FSNamesystemMetrics counters
     namesystem.writeLock();

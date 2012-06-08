@@ -31,7 +31,7 @@ public interface SafeMode {
    * trigger the system to enter/leave safe mode.
    * @throws IOException 
    */
-  public void checkSafeMode() throws IOException;
+  public void checkSafeMode(boolean isTransactional) throws IOException;
 
   /** Is the system in safe mode? */
   public boolean isInSafeMode();
@@ -50,9 +50,9 @@ public interface SafeMode {
    * @param replication current replication 
    * @throws IOException 
    */
-  public void incrementSafeBlockCount(int replication) throws IOException;
+  public void incrementSafeBlockCount(int replication, boolean isTransactional) throws IOException;
 
   /** Decrement number of blocks that reached minimal replication. 
    * @throws IOException */
-  public void decrementSafeBlockCount(Block b) throws IOException;
+  public void decrementSafeBlockCount(Block b, boolean isTransactional) throws IOException;
 }
