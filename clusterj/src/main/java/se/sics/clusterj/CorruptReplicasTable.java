@@ -5,7 +5,6 @@
 package se.sics.clusterj;
 
 import com.mysql.clusterj.annotation.Column;
-import com.mysql.clusterj.annotation.Index;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 
@@ -21,7 +20,6 @@ public interface CorruptReplicasTable {
     void setBlockId(long bid);
 
     @PrimaryKey
-    @Index(name="idx_datanodeStorage")
     String getStorageId();
     void setStorageId(String id);
 }

@@ -31,6 +31,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import se.sics.clusterj.CorruptReplicasTable;
+import se.sics.clusterj.UnderReplicaBlocksTable;
 
 
 /* 
@@ -158,6 +160,8 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             BlocksHelper.resetTotalBlocks(true);
             session.deletePersistentAll(ReplicaUcTable.class);
             session.deletePersistentAll(DatanodeInfoTable.class);
+            session.deletePersistentAll(CorruptReplicasTable.class);
+            session.deletePersistentAll(UnderReplicaBlocksTable.class);
             tx.commit();
             session.flush();
             return true;

@@ -367,7 +367,7 @@ public class TestBlockManager {
     assertEquals("Block not initially pending replication",
         0, bm.pendingReplications.getNumReplicas(block));
     assertTrue("computeReplicationWork should indicate replication is needed",
-        bm.computeReplicationWorkForBlock(block, 1));
+        bm.computeReplicationWorkForBlock(block, 1, false));
     assertTrue("replication is pending after work is computed",
         bm.pendingReplications.getNumReplicas(block) > 0);
     

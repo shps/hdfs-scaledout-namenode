@@ -6,6 +6,11 @@ import se.sics.clusterj.*;
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.Transaction;
+import java.io.IOException;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
  * This class provides the CRUD methods for Blocks and Triplets It also provides
@@ -100,5 +105,82 @@ public class BlocksHelper {
         BlockTotalTable blkTable = session.find(BlockTotalTable.class, BLOCKTOTAL_ID);
         return blkTable.getTotal();
     }
+
+  /** Return a BlockInfo object from an blockId 
+   * @param blockId
+   * @return
+   * @throws IOException 
+   */
+  public static BlockInfo getBlockInfo(long blockId) throws IOException {
+    int tries = RETRY_COUNT;
+    boolean done = false;
+
+    Session session = DBConnector.obtainSession();
+    while (done == false && tries > 0) {
+      try {
+        BlockInfo ret = getBlockInfo(session, blockId, false);
+        done = true;
+        return ret;
+      }
+      catch (ClusterJException e) {
+        //System.err.println("getBlockInfo failed " + e.getMessage());
+        e.printStackTrace();
+        tries--;
+      }
+
+    }
+    return null;
+  }  
+  /** When called with single=false, will not retrieve the INodes for the Block */
+  private static BlockInfo convert(BlockInfoTable bit) throws IOException {
+    if (bit == null) {
+      return null;
+    }
+    else {
+      Block b = new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
+      BlockInfo blockInfo = new BlockInfo(b);
+
+      if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMMITTED.ordinal()) {
+        blockInfo = new BlockInfoUnderConstruction(b);
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.COMMITTED);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.COMPLETE.ordinal()) {
+        blockInfo = new BlockInfo(b);
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION.ordinal()) {
+        blockInfo = new BlockInfoUnderConstruction(b);
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+      else if (bit.getBlockUCState() == HdfsServerConstants.BlockUCState.UNDER_RECOVERY.ordinal()) {
+        blockInfo = new BlockInfoUnderConstruction(b);
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_RECOVERY);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(bit.getPrimaryNodeIndex());
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(bit.getBlockRecoveryId());
+      }
+
+      blockInfo.setBlockIndex(bit.getBlockIndex());
+      blockInfo.setTimestamp(bit.getTimestamp());
+      return blockInfo;
+    }
+
+  }
+
+  /** When called with single=false, will not retrieve the INodes for the Block */
+  private static BlockInfo getBlockInfo(Session session, long blockId, boolean single) throws IOException {
+    BlockInfoTable bit = selectBlockInfo(session, blockId);
+    return convert(bit);
+  }  
+ /** Primary key lookup in the BlockInfo table using block ID
+   * @param session
+   * @param blkid
+   * @return a row from the BlockInfo table
+   */
+  private static BlockInfoTable selectBlockInfo(Session session, long blkid) {
+    return session.find(BlockInfoTable.class, blkid);
+  }
 
 }

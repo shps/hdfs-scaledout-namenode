@@ -120,7 +120,7 @@ public class BlockManagerTestUtil {
    */
   public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException
   {
-    return blockManager.computeDatanodeWork();
+    return blockManager.computeDatanodeWork(false);
   }
   
 }
