@@ -528,7 +528,8 @@ public class BlockManager {
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeDescriptor dd : targets) {
       String datanodeId = dd.getStorageID();
-      invalidateBlocks.remove(datanodeId, oldBlock);
+      if (invalidateBlocks.contains(datanodeId, oldBlock))
+        invalidateBlocks.remove(datanodeId, oldBlock);
     }
 
     final long fileLength = fileINode.computeContentSummary().getLength();
@@ -1506,7 +1507,7 @@ public class BlockManager {
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC, isTransactional);
+    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
 
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
@@ -1580,8 +1581,7 @@ public class BlockManager {
       Collection<Block> toRemove,           // remove from DatanodeDescriptor
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockInfo> toCorrupt,      // add to corrupt replicas list
-      Collection<StatefulBlockInfo> toUC,
-      boolean isTransactional) throws IOException { // add to under-construction list
+      Collection<StatefulBlockInfo> toUC) throws IOException { // add to under-construction list
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     //BlockInfo delimiter = new BlockInfo(new Block(), 1);
@@ -1597,7 +1597,7 @@ public class BlockManager {
       Block iblk = itBR.next();
       ReplicaState iState = itBR.getCurrentReplicaState();
       BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
-                                  toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
+                                  toAdd, toInvalidate, toCorrupt, toUC);
       
       // move block to the head of the list
       if(storedBlock != null && storedBlock.hasReplicaIn(dn.getStorageID()))
@@ -1647,8 +1647,7 @@ public class BlockManager {
       final Collection<BlockInfo> toAdd, 
       final Collection<Block> toInvalidate, 
       final Collection<BlockInfo> toCorrupt,
-      final Collection<StatefulBlockInfo> toUC, 
-      boolean isTransactional) throws IOException {
+      final Collection<StatefulBlockInfo> toUC) throws IOException {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Reported block " + block
@@ -2274,7 +2273,7 @@ public class BlockManager {
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     processReportedBlock(node, block, ReplicaState.FINALIZED,
-                              toAdd, toInvalidate, toCorrupt, toUC, isTransactional);
+                              toAdd, toInvalidate, toCorrupt, toUC);
     // the block is only in one of the to-do lists
     // if it is in none then data-node already has it
     assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1

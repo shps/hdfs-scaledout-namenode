@@ -15,6 +15,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.velocity.runtime.directive.Stop;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.ExcessReplicaTable;
 import se.sics.clusterj.InvalidateBlocksTable;
@@ -53,7 +54,6 @@ public class TransactionContext {
   private Map<String, TreeSet<Long>> storageIdToExReplica = new HashMap<String, TreeSet<Long>>();
   private Map<ExcessReplica, ExcessReplica> modifiedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
   private Map<ExcessReplica, ExcessReplica> removedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
-  private long numExcessReplicas = 0; //Only used by metrics
 
   private void resetContext() {
     activeTxExpected = false;
@@ -201,6 +201,10 @@ public class TransactionContext {
         throw new TransactionContextException("Removed invalidated-block passed to be persisted");
       }
 
+      if (allInvBlocksRead) {
+        addStorageToInvalidatedBlock(invBlock);
+      }
+
       invBlocks.put(invBlock, invBlock);
       modifiedInvBlocks.put(invBlock, invBlock);
       if (allInvBlocksRead) {
@@ -217,6 +221,16 @@ public class TransactionContext {
       modifiedExReplica.put(exReplica, exReplica);
     } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
+    }
+  }
+
+  private void addStorageToInvalidatedBlock(InvalidatedBlock invBlock) {
+    if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+      storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
+    } else {
+      List<InvalidatedBlock> invBlockList = new ArrayList<InvalidatedBlock>();
+      invBlockList.add(invBlock);
+      storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
     }
   }
 
@@ -250,10 +264,20 @@ public class TransactionContext {
       } else if (obj instanceof InvalidatedBlock) {
         InvalidatedBlock invBlock = (InvalidatedBlock) obj;
 
+        if (!invBlocks.containsKey(invBlock)) {
+          throw new TransactionContextException("Unattached invalidated-block passed to be removed");
+        }
+
         invBlocks.remove(invBlock);
         modifiedInvBlocks.remove(invBlock);
         removedInvBlocks.put(invBlock, invBlock);
         if (allInvBlocksRead) {
+          if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+            List<InvalidatedBlock> ibs = storageIdToInvBlocks.get(invBlock.getStorageId());
+            ibs.remove(invBlock);
+            if (ibs.isEmpty())
+              storageIdToInvBlocks.remove(invBlock.getStorageId());
+          }
           numInvBlocks--;
         }
       } else if (obj instanceof ExcessReplica) {
@@ -398,7 +422,7 @@ public class TransactionContext {
     beforeTxCheck();
     try {
       if (storageIdToInvBlocks.containsKey(storageId)) {
-        return this.storageIdToInvBlocks.get(storageId);
+        return new ArrayList<InvalidatedBlock>(this.storageIdToInvBlocks.get(storageId)); //clone the list reference
       }
 
       Session session = DBConnector.obtainSession();
@@ -484,13 +508,7 @@ public class TransactionContext {
           invBlocks.put(invBlock, invBlock);
           finalList.add(invBlock);
         }
-        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
-          storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
-        } else {
-          List<InvalidatedBlock> ibList = new ArrayList<InvalidatedBlock>();
-          ibList.add(invBlock);
-          storageIdToInvBlocks.put(invBlock.getStorageId(), ibList);
-        }
+        addStorageToInvalidatedBlock(invBlock);
       }
     }
 

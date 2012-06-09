@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -140,19 +143,22 @@ class InvalidateBlocks {
 
   private synchronized List<Block> invalidateWork(
           final String storageId, final DatanodeDescriptor dn) {
-    final List<InvalidatedBlock> set = em.findInvalidatedBlocksByStorageId(storageId);
-    if (set == null) {
+    final List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
+    if (invBlocks == null || invBlocks.isEmpty()) {
       return null;
     }
 
     // # blocks that can be sent in one message is limited
     final int limit = datanodeManager.blockInvalidateLimit;
     final List<Block> toInvalidate = new ArrayList<Block>(limit);
-    final Iterator<InvalidatedBlock> it = set.iterator();
+    final Iterator<InvalidatedBlock> it = invBlocks.iterator();
     for (int count = 0; count < limit && it.hasNext(); count++) {
-      Replica invBlock = it.next();
-      //[H] there is no need to generationstamp and timestamp in the datanode for invalidated blocks
-      toInvalidate.add(new Block(invBlock.getBlockId())); 
+      InvalidatedBlock invBlock = it.next();
+      try {
+        toInvalidate.add(em.findBlockById(invBlock.getBlockId()));
+      } catch (IOException ex) {
+        Logger.getLogger(InvalidateBlocks.class.getName()).log(Level.SEVERE, null, ex);
+      }
       em.remove(invBlock);
     }
 
