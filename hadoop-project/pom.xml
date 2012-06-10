@@ -617,6 +617,15 @@
 
 <!--hold end-->
 
+<exclude>**/TestClientReportBadBlock.java</exclude>
+<exclude>**/TestDFSShell.java</exclude>
+<exclude>**/TestReadingWritingNN.java</exclude>
+<exclude>**/TestReplication.java</exclude>
+<exclude>**/TestGetBlockLocations.java</exclude>
+<exclude>**/TestHDFSFileContextMainOperations.java</exclude>
+<exclude>**/TestBlockReport.java</exclude>
+<exclude>**/TestFcHdfsSymlink.java</exclude>
+
 			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>

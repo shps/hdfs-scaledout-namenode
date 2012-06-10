@@ -133,7 +133,10 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             Session session = obtainSession();
             Transaction tx = session.currentTransaction();
             if (tx.isActive())
+            {
                 tx.rollback();
+            }
+            
             EntityManager.getInstance().rollback();
         }
         
