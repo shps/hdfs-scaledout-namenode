@@ -2413,17 +2413,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
               catch (ClusterJException e)
               {
-                  LOG.error(e.getMessage(), e);
                   tries--;
                   DBConnector.safeRollback();
+                  LOG.error(e.getMessage(), e);
                   status = false;
               }
           }
       }
       finally
       {
-          writeUnlock();
-          DBConnector.safeRollback();
+        DBConnector.safeRollback();
+        writeUnlock();
       }
       return status;
     }

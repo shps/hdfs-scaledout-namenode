@@ -12,7 +12,8 @@ import se.sics.clusterj.InvalidateBlocksTable;
 public class ReplicaFactory {
 
   public static InvalidatedBlock createReplica(InvalidateBlocksTable invBlockTable) {
-    return new InvalidatedBlock(invBlockTable.getStorageId(), invBlockTable.getBlockId());
+    return new InvalidatedBlock(invBlockTable.getStorageId(), invBlockTable.getBlockId(), 
+            invBlockTable.getGenerationStamp(), invBlockTable.getNumBytes());
   }
 
   public static ExcessReplica createReplica(ExcessReplicaTable exReplicaTable) {
@@ -22,6 +23,8 @@ public class ReplicaFactory {
   public static void createPersistable(InvalidatedBlock invBlock, InvalidateBlocksTable newInvTable) {
     newInvTable.setBlockId(invBlock.getBlockId());
     newInvTable.setStorageId(invBlock.getStorageId());
+    newInvTable.setGenerationStamp(invBlock.getGenerationStamp());
+    newInvTable.setNumBytes(invBlock.getNumBytes());
   }
 
   public static void createPersistable(ExcessReplica exReplica, ExcessReplicaTable exReplicaTable) {

@@ -22,4 +22,12 @@ public interface InvalidateBlocksTable {
   long getBlockId();
 
   void setBlockId(long storageId);
+  
+  @Column(name = "generationStamp")
+  long getGenerationStamp();
+  void setGenerationStamp(long generationStamp);
+  
+  @Column(name = "numBytes")
+  long getNumBytes();
+  void setNumBytes(long numBytes);
 }

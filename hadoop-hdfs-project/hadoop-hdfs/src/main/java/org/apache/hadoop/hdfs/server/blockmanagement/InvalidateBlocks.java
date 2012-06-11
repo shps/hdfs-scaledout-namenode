@@ -65,7 +65,8 @@ class InvalidateBlocks {
   synchronized void add(final Block block, final DatanodeInfo datanode,
           final boolean log) {
 
-    em.persist(new InvalidatedBlock(datanode.getStorageID(), block.getBlockId()));
+    em.persist(new InvalidatedBlock(datanode.getStorageID(), block.getBlockId(), 
+            block.getGenerationStamp(), block.getNumBytes()));
 
     if (log) {
       NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
@@ -86,7 +87,8 @@ class InvalidateBlocks {
 
   /** Remove the block from the specified storage. */
   synchronized void remove(final String storageID, final Block block) {
-    em.remove(new InvalidatedBlock(storageID, block.getBlockId()));
+    em.remove(new InvalidatedBlock(storageID, block.getBlockId(), 
+            block.getGenerationStamp(), block.getNumBytes()));
   }
 
   /** Print the contents to out. */
@@ -154,11 +156,8 @@ class InvalidateBlocks {
     final Iterator<InvalidatedBlock> it = invBlocks.iterator();
     for (int count = 0; count < limit && it.hasNext(); count++) {
       InvalidatedBlock invBlock = it.next();
-      try {
-        toInvalidate.add(em.findBlockById(invBlock.getBlockId()));
-      } catch (IOException ex) {
-        Logger.getLogger(InvalidateBlocks.class.getName()).log(Level.SEVERE, null, ex);
-      }
+        toInvalidate.add(new Block(invBlock.getBlockId(), 
+                invBlock.getNumBytes(), invBlock.getGenerationStamp()));
       em.remove(invBlock);
     }
 

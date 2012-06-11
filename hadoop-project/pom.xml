@@ -625,6 +625,7 @@
 <exclude>**/TestHDFSFileContextMainOperations.java</exclude>
 <exclude>**/TestBlockReport.java</exclude>
 <exclude>**/TestFcHdfsSymlink.java</exclude>
+<exlcude>**/TestFileCreationNamenodeRestart.java</exlcude>
 
 			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>

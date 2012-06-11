@@ -38,7 +38,6 @@ public class TransactionContext {
   private Map<String, IndexedReplica> modifiedReplicas = new HashMap<String, IndexedReplica>();
   private Map<String, IndexedReplica> removedReplicas = new HashMap<String, IndexedReplica>();
   private Map<Long, List<IndexedReplica>> blockReplicas = new HashMap<Long, List<IndexedReplica>>();
-  private boolean allInvBlocksRead = false;
   /**
    * InvalidatedBlocks
    */
@@ -47,6 +46,7 @@ public class TransactionContext {
   private Map<InvalidatedBlock, InvalidatedBlock> modifiedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private long numInvBlocks = 0;
+  private boolean allInvBlocksRead = false;
   /**
    * ExcessReplica
    */
@@ -73,6 +73,8 @@ public class TransactionContext {
     storageIdToInvBlocks.clear();
     modifiedInvBlocks.clear();
     removedInvBlocks.clear();
+    allInvBlocksRead = false;
+    numInvBlocks = 0;
 
     exReplicas.clear();
     storageIdToExReplica.clear();
@@ -126,7 +128,7 @@ public class TransactionContext {
       builder.append("w InvalidatedBlock:").append(invBlock.toString()).append("\n");
     }
 
-    for (Replica invBlock : removedInvBlocks.values()) {
+    for (InvalidatedBlock invBlock : removedInvBlocks.values()) {
       Object[] pk = new Object[2];
       pk[0] = invBlock.getBlockId();
       pk[1] = invBlock.getStorageId();
@@ -141,7 +143,7 @@ public class TransactionContext {
       builder.append("w ExcessReplica:").append(exReplica.toString()).append("\n");
     }
 
-    for (Replica exReplica : removedExReplica.values()) {
+    for (ExcessReplica exReplica : removedExReplica.values()) {
       Object[] pk = new Object[2];
       pk[0] = exReplica.getBlockId();
       pk[1] = exReplica.getStorageId();
