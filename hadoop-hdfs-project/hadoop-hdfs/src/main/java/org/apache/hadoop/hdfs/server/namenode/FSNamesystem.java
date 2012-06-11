@@ -790,19 +790,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Get block locations within the specified range.
+   *
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
-      long offset, long length) throws AccessControlException,
-      FileNotFoundException, UnresolvedLinkException, IOException {
-	  DBConnector.beginTransaction();
-    LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
-    DBConnector.commit();
-//    if (blocks != null) {
-//      blockManager.getDatanodeManager().sortLocatedBlocks(
-//          clientMachine, blocks.getLocatedBlocks());
-//    }
-    return blocks;
+          long offset, long length) throws AccessControlException,
+          FileNotFoundException, UnresolvedLinkException, IOException {
+    int tries = DBConnector.RETRY_COUNT;
+    boolean isDone = false;
+    try {
+      while (!isDone && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true, true);
+
+          DBConnector.commit();
+          isDone = true;
+          return blocks;
+        } catch (ClusterJException e) {
+          LOG.error(e.getMessage(), e);
+          DBConnector.safeRollback();
+          tries--;
+        }
+      }
+    } finally {
+      DBConnector.safeRollback();
+    }
+    return null;
   }
 
   /**
@@ -811,7 +825,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws FileNotFoundException, UnresolvedLinkException, IOException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
-      boolean doAccessTime, boolean needBlockToken) throws FileNotFoundException,
+      boolean doAccessTime, boolean needBlockToken, boolean isTransactional) throws FileNotFoundException,
       UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
@@ -826,7 +840,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           "Negative length is not supported. File: " + src);
     }
     final LocatedBlocks ret = getBlockLocationsUpdateTimes(src,
-        offset, length, doAccessTime, needBlockToken);
+        offset, length, doAccessTime, needBlockToken, isTransactional);
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -843,7 +857,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                                        long offset, 
                                                        long length,
                                                        boolean doAccessTime, 
-                                                       boolean needBlockToken)
+                                                       boolean needBlockToken, boolean isTransactional)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
 
     //for (int attempt = 0; attempt < 2; attempt++) {
@@ -872,7 +886,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             //  continue;
             //}
           }
-          dir.setTimes(src, inode, -1, now, false);
+          dir.setTimes(src, inode, -1, now, false, isTransactional);
         }
         return blockManager.createLocatedBlocks(inode.getBlocks(),
             inode.computeFileSize(false),
@@ -1065,31 +1079,45 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * The access time is precise upto an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
-  void setTimes(String src, long mtime, long atime) 
-    throws IOException, UnresolvedLinkException {
+  void setTimes(String src, long mtime, long atime)
+          throws IOException, UnresolvedLinkException {
     if (!isAccessTimeSupported() && atime != -1) {
-      throw new IOException("Access time for hdfs is not configured. " +
-                            " Please set dfs.support.accessTime configuration parameter.");
+      throw new IOException("Access time for hdfs is not configured. "
+              + " Please set dfs.support.accessTime configuration parameter.");
     }
     writeLock();
+    boolean done = false;
+    int tries = DBConnector.RETRY_COUNT;
     try {
-      // Write access is required to set access and modification times
-      if (isPermissionEnabled) {
-        checkPathAccess(src, FsAction.WRITE);
-      }
-      INodeFile inode = dir.getFileINode(src);
-      if (inode != null) {
-        dir.setTimes(src, inode, mtime, atime, true);
-        if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-          final HdfsFileStatus stat = dir.getFileInfo(src, false);
-          logAuditEvent(UserGroupInformation.getCurrentUser(),
-                        Server.getRemoteIp(),
-                        "setTimes", src, null, stat);
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          // Write access is required to set access and modification times
+          if (isPermissionEnabled) {
+            checkPathAccess(src, FsAction.WRITE);
+          }
+          INodeFile inode = dir.getFileINode(src);
+          if (inode != null) {
+            dir.setTimes(src, inode, mtime, atime, true, true);
+            if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+              final HdfsFileStatus stat = dir.getFileInfo(src, false);
+              logAuditEvent(UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setTimes", src, null, stat);
+            }
+          } else {
+            throw new FileNotFoundException("File " + src + " does not exist.");
+          }
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          FSNamesystem.LOG.error(e.getMessage(), e);
         }
-      } else {
-        throw new FileNotFoundException("File " + src + " does not exist.");
       }
     } finally {
+      DBConnector.safeRollback();
       writeUnlock();
     }
   }
@@ -1279,6 +1307,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return isFile;
   }
     
+  //TODO: kamal, tx
   long getPreferredBlockSize(String filename) 
       throws IOException, UnresolvedLinkException {
     readLock();
@@ -3128,35 +3157,46 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   
   DirectoryListing getListing(String src, byte[] startAfter,
-      boolean needLocation) 
-    throws AccessControlException, UnresolvedLinkException, IOException {
-    DirectoryListing dl;
+          boolean needLocation)
+          throws AccessControlException, UnresolvedLinkException, IOException {
+    DirectoryListing dl = null;
     readLock();
+
+    int tries = DBConnector.RETRY_COUNT;
+    boolean isDone = false;
     try {
-    	
-    	if (isPermissionEnabled) {
+      while (!isDone && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          if (isPermissionEnabled) {
             if (dir.isDir(src)) {
               checkPathAccess(src, FsAction.READ_EXECUTE);
             } else {
               checkTraverse(src);
             }
           }
-    	
-    	if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-    		logAuditEvent(UserGroupInformation.getCurrentUser(),
-    				Server.getRemoteIp(),
-    				"listStatus", src, null, null);
-    	}
-    	dl = dir.getListing(src, startAfter, needLocation); 
+
+          if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+            logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    Server.getRemoteIp(),
+                    "listStatus", src, null, null);
+          }
+          dl = dir.getListing(src, startAfter, needLocation);
+          DBConnector.commit();
+          isDone = true;
+          return dl;
+        } catch (ClusterJException e) {
+          LOG.error(e.getMessage(), e);
+          DBConnector.safeRollback();
+          tries--;
+        }
+      }
     } finally {
-    	readUnlock();
+      readUnlock();
+      DBConnector.safeRollback();
     }
-    /*
-    for (int i = 0; i < dl.getPartialListing().length; i++) {
-		HdfsFileStatus hfs = dl.getPartialListing()[i];
-	}
-    */
     return dl;
+
   }
   
 

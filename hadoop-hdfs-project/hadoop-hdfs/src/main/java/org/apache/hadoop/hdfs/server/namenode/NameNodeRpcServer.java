@@ -210,20 +210,22 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
   }
-
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     return namesystem.getDelegationToken(renewer);
   }
-
+  
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     return namesystem.renewDelegationToken(token);
   }
 
-  @Override // ClientProtocol
+    //TODO: kamal, tx
+@Override // ClientProtocol
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     namesystem.cancelDelegationToken(token);
@@ -335,6 +337,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return locatedBlock;
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
@@ -412,6 +415,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public LocatedBlock updateBlockForPipeline(ExtendedBlock block, String clientName)
       throws IOException {
@@ -419,6 +423,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
       ExtendedBlock newBlock, DatanodeID[] newNodes)
@@ -435,6 +440,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
         newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
   }
   
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public long getPreferredBlockSize(String filename) 
       throws IOException {
@@ -540,23 +546,27 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return files;
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src)  throws IOException {
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true);
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException { 
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, false);
   }
   
+  //TODO: kamal, tx
   @Override
   public long[] getStats() {
     return namesystem.getStats();
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
@@ -602,11 +612,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return namesystem.distributedUpgradeProgress(action);
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public void metaSave(String filename) throws IOException {
     namesystem.metaSave(filename);
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException {
@@ -634,6 +646,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
   
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     return namesystem.getContentSummary(path);
@@ -645,6 +658,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.setQuota(path, namespaceQuota, diskspaceQuota);
   }
   
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public void fsync(String src, String clientName) throws IOException {
     namesystem.fsync(src, clientName);
@@ -676,6 +690,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       new PermissionStatus(ugi.getShortUserName(), null, dirPerms), createParent);
   }
 
+  //TODO: kamal, tx
   @Override // ClientProtocol
   public String getLinkTarget(String path) throws IOException {
     metrics.incrGetLinkTargetOps();

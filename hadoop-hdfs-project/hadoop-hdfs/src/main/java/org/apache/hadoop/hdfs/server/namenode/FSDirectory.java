@@ -2050,9 +2050,9 @@ public class FSDirectory implements Closeable {
   /**
    * Sets the access time on the file. Logs it in the transaction log.
    */
-  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) {
+  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force, boolean isTransactional) {
     
-    unprotectedSetTimes(src, inode, mtime, atime, force);
+    unprotectedSetTimes(src, inode, mtime, atime, force, isTransactional);
     //boolean status = false;
     //writeLock();
     //try {
@@ -2066,19 +2066,19 @@ public class FSDirectory implements Closeable {
   }
 
   //unused
-  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
+  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force, boolean isTransactional) 
       throws UnresolvedLinkException {
     //assert hasWriteLock();
     INodeFile inode = getFileINode(src);
-    return unprotectedSetTimes(src, inode, mtime, atime, force);
+    return unprotectedSetTimes(src, inode, mtime, atime, force, isTransactional);
   }
 
   private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
-                                      long atime, boolean force) {
+                                      long atime, boolean force, boolean isTransactional) {
     //assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
-      inode.setModificationTimeForceDB(mtime);
+      inode.setModificationTimeForceDB(mtime, isTransactional);
       status = true;
     }
     if (atime != -1) {
@@ -2089,7 +2089,7 @@ public class FSDirectory implements Closeable {
       if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
         status =  false;
       } else {
-        inode.setAccessTimeDB(atime);
+        inode.setAccessTimeDB(atime, isTransactional);
         status = true;
       }
     } 

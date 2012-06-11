@@ -52,6 +52,7 @@ public class TransactionContext {
 
   void begin() {
     activeTxExpected = true;
+    logger.debug("\nTX begin{" );
   }
 
   public void commit() throws TransactionContextException {
@@ -89,7 +90,7 @@ public class TransactionContext {
       builder.append("w Replica:").append(replica.cacheKey()).append("\n");
     }
 
-    logger.debug("Tx commit{ \n" + builder.toString() + "}");
+    logger.debug("\nTx commit[" + builder.toString() + "]");
 
     resetContext();
   }
@@ -97,7 +98,7 @@ public class TransactionContext {
   void rollback() {
     resetContext();
 
-    logger.debug("Tx rollback");
+    logger.debug("\n}Tx rollback");
   }
 
   public void persist(Object obj) throws TransactionContextException {
