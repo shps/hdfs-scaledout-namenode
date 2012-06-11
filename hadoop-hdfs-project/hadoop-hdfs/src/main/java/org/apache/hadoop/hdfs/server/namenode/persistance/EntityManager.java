@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -145,7 +146,7 @@ public class EntityManager {
     return null;
   }
 
-  public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() {
+  public Map<String, HashSet<InvalidatedBlock>> findAllInvalidatedBlocks() {
     try {
       return context().findAllInvalidatedBlocks();
     } catch (TransactionContextException ex) {
