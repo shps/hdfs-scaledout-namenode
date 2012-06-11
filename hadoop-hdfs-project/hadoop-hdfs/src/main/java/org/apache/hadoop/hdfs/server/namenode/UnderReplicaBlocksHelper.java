@@ -75,8 +75,8 @@ public class UnderReplicaBlocksHelper {
     }
     return false;
   }
+  
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
   public static boolean remove(int level, long blockId, boolean isTransactional) {
     Session session = DBConnector.obtainSession();
     DBConnector.checkTransactionState(isTransactional);
@@ -95,8 +95,8 @@ public class UnderReplicaBlocksHelper {
       return removeBlockWithTransaction(session, ur);
     }
   }
+  
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
   private static boolean removeBlockWithTransaction(Session session, UnderReplicaBlocksTable ur) {
     Transaction tx = session.currentTransaction();
 
@@ -119,8 +119,8 @@ public class UnderReplicaBlocksHelper {
     }
     return false;
   }
+  
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
   public static void removeAll(boolean isTransactional) {
     Session session = DBConnector.obtainSession();
     DBConnector.checkTransactionState(isTransactional);
@@ -133,7 +133,6 @@ public class UnderReplicaBlocksHelper {
     }
   }
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
   private static void removeAllWithTransaction(Session session) {
     Transaction tx = session.currentTransaction();
 
@@ -154,14 +153,14 @@ public class UnderReplicaBlocksHelper {
       }
     }
   }
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public static void update(int oldLevel, int newLevel, long blockId, boolean isTransactional) {
     remove(oldLevel, blockId, isTransactional);
     add(newLevel, blockId, isTransactional);
   }
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public static List<NavigableSet<Block>> getAllBlocks(int totalLevels) {
     List<NavigableSet<Block>> priorityQueues = new ArrayList<NavigableSet<Block>>();
 
