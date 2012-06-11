@@ -613,7 +613,19 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/Test*$*.java</exclude>
+<!--hold start-->
 
+<!--hold end-->
+
+<exclude>**/TestClientReportBadBlock.java</exclude>
+<exclude>**/TestDFSShell.java</exclude>
+<exclude>**/TestReadingWritingNN.java</exclude>
+<exclude>**/TestReplication.java</exclude>
+<exclude>**/TestGetBlockLocations.java</exclude>
+<exclude>**/TestHDFSFileContextMainOperations.java</exclude>
+<exclude>**/TestBlockReport.java</exclude>
+<exclude>**/TestFcHdfsSymlink.java</exclude>
+<exlcude>**/TestFileCreationNamenodeRestart.java</exlcude>
 
 			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>

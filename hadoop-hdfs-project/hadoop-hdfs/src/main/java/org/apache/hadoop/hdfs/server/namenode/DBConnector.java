@@ -33,6 +33,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import se.sics.clusterj.CorruptReplicasTable;
 import se.sics.clusterj.UnderReplicaBlocksTable;
+import se.sics.clusterj.ExcessReplicaTable;
+import se.sics.clusterj.InvalidateBlocksTable;
 
 
 /* 
@@ -135,7 +137,10 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             Session session = obtainSession();
             Transaction tx = session.currentTransaction();
             if (tx.isActive())
+            {
                 tx.rollback();
+            }
+            
             EntityManager.getInstance().rollback();
         }
         
@@ -162,6 +167,8 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             session.deletePersistentAll(DatanodeInfoTable.class);
             session.deletePersistentAll(CorruptReplicasTable.class);
             session.deletePersistentAll(UnderReplicaBlocksTable.class);
+            session.deletePersistentAll(InvalidateBlocksTable.class);
+            session.deletePersistentAll(ExcessReplicaTable.class);
             tx.commit();
             session.flush();
             return true;

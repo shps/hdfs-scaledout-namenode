@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 public class TestDFSRemove extends junit.framework.TestCase {
@@ -45,7 +46,9 @@ public class TestDFSRemove extends junit.framework.TestCase {
   static long getTotalDfsUsed(MiniDFSCluster cluster) throws IOException {
     long total = 0;
     for(DataNode node : cluster.getDataNodes()) {
-      total += node.getFSDataset().getDfsUsed();
+      DatanodeDescriptor datanode = cluster.getNamesystem().getBlockManager().getDatanodeManager().getDatanode(node.getDatanodeId());
+      total += datanode.getDfsUsed();
+//      total += datanode.getFSDataset().getDfsUsed();
     }
     return total;
   }

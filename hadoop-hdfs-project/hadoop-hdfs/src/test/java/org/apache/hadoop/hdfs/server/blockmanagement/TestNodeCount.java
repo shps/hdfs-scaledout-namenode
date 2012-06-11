@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * Test if live nodes count per node is correct 
@@ -107,9 +108,10 @@ public class TestNodeCount extends TestCase {
       // find out a non-excess node
       List<DatanodeDescriptor> dataNodes = bm.getDatanodes(bm.getStoredBlock(block));
       DatanodeDescriptor nonExcessDN = null;
+      EntityManager em = EntityManager.getInstance();
       for (DatanodeDescriptor dn : dataNodes) {
-        Collection<Block> blocks = bm.excessReplicateMap.get(dn.getStorageID());
-        if (blocks == null || !blocks.contains(block)) {
+        Collection<Long> excessReplicas = em.findExcessReplicaByStorageId(dn.getStorageID());
+        if (excessReplicas == null || !excessReplicas.contains(block.getBlockId())) {
           nonExcessDN = dn;
           break;
         }

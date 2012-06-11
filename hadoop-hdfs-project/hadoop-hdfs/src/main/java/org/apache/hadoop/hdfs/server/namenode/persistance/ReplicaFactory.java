@@ -1,28 +1,34 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
-import se.sics.clusterj.TripletsTable;
+import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import se.sics.clusterj.ExcessReplicaTable;
+import se.sics.clusterj.InvalidateBlocksTable;
 
 /**
  *
- * @author kamal hakimzadeh <kamal@sics.se>
+ * @author Hooman <hooman@sics.se>
  */
 public class ReplicaFactory {
 
-  public static List<Replica> createReplicaList(List<TripletsTable> triplets) {
-    List<Replica> replicas = new ArrayList<Replica>(triplets.size());
-    for (TripletsTable t : triplets) {
-      replicas.add(new Replica(t.getBlockId(), t.getStorageId(), t.getIndex()));
-    }
-    return replicas;
+  public static InvalidatedBlock createReplica(InvalidateBlocksTable invBlockTable) {
+    return new InvalidatedBlock(invBlockTable.getStorageId(), invBlockTable.getBlockId(), 
+            invBlockTable.getGenerationStamp(), invBlockTable.getNumBytes());
   }
 
-  public static void createPersistable(Replica replica, TripletsTable newInstance) {
-    newInstance.setBlockId(replica.getBlockId());
-    newInstance.setIndex(replica.getIndex());
-    newInstance.setStorageId(replica.getStorageId());
+  public static ExcessReplica createReplica(ExcessReplicaTable exReplicaTable) {
+    return new ExcessReplica(exReplicaTable.getStorageId(), exReplicaTable.getBlockId());
   }
-  
+
+  public static void createPersistable(InvalidatedBlock invBlock, InvalidateBlocksTable newInvTable) {
+    newInvTable.setBlockId(invBlock.getBlockId());
+    newInvTable.setStorageId(invBlock.getStorageId());
+    newInvTable.setGenerationStamp(invBlock.getGenerationStamp());
+    newInvTable.setNumBytes(invBlock.getNumBytes());
+  }
+
+  public static void createPersistable(ExcessReplica exReplica, ExcessReplicaTable exReplicaTable) {
+    exReplicaTable.setBlockId(exReplica.getBlockId());
+    exReplicaTable.setStorageId(exReplica.getStorageId());
+  }
 }

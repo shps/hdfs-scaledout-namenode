@@ -218,7 +218,6 @@ public class TestHDFSConcat {
    * Test that the concat operation is properly persisted in the
    * edit log, and properly replayed on restart.
    */
-  @Test
   public void testConcatInEditLog() throws Exception {
     final Path TEST_DIR = new Path("/testConcatInEditLog");
     final long FILE_LEN = blockSize;

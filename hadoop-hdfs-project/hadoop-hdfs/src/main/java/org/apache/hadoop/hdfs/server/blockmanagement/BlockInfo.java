@@ -68,14 +68,14 @@ public class BlockInfo extends Block {
     }
   }
   private INodeFile inode;
-  private List<Replica> replicas;
+  private List<IndexedReplica> replicas;
   /**
    * For implementing {@link LightWeightGSet.LinkedElement} interface
    */
   private int blockIndex = -1; //added for KTHFS
   private long timestamp = 1;
   
-  protected long inodeId;
+  protected long inodeId = -1;
   
   public BlockInfo(Block blk) {
     super(blk);
@@ -101,7 +101,7 @@ public class BlockInfo extends Block {
     this.inode = inode;
   }
 
-  public List<Replica> getReplicas() {
+  public List<IndexedReplica> getReplicas() {
     if (replicas == null) {
       replicas = EntityManager.getInstance().findReplicasByBlockId(getBlockId());
     }
@@ -112,12 +112,12 @@ public class BlockInfo extends Block {
   /**
    * Adds new replica for this block.
    */
-  public Replica addReplica(DatanodeDescriptor dn) {
+  public IndexedReplica addReplica(DatanodeDescriptor dn) {
     if (hasReplicaIn(dn.getStorageID())) {
       return null;
     }
 
-    Replica replica = new Replica(getBlockId(), dn.getStorageID(), getReplicas().size());
+    IndexedReplica replica = new IndexedReplica(getBlockId(), dn.getStorageID(), getReplicas().size());
     replicas.add(replica);
     dn.increamentBlocks();
     return replica;
@@ -129,8 +129,8 @@ public class BlockInfo extends Block {
    * @param storageId
    * @return
    */
-  public Replica removeReplica(DatanodeDescriptor dn) {
-    Replica replica = null;
+  public IndexedReplica removeReplica(DatanodeDescriptor dn) {
+    IndexedReplica replica = null;
     int index = -1;
     
     for (int i = 0; i < getReplicas().size(); i++) {
@@ -145,7 +145,7 @@ public class BlockInfo extends Block {
       dn.decrementBlocks();
       
       for (int i = index; i < replicas.size(); i++) {
-        Replica r1 = replicas.get(i);
+        IndexedReplica r1 = replicas.get(i);
         r1.setIndex(i);
         EntityManager.getInstance().persist(r1);
       }
@@ -156,7 +156,7 @@ public class BlockInfo extends Block {
   }
 
   boolean hasReplicaIn(String storageId) {
-    for (Replica replica : getReplicas()) {
+    for (IndexedReplica replica : getReplicas()) {
       if (replica.getStorageId().equals(storageId)) {
         return true;
       }
@@ -193,8 +193,6 @@ public class BlockInfo extends Block {
   public BlockInfoUnderConstruction convertToBlockUnderConstruction(
           BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
     if (isComplete()) {
-      //return new BlockInfoUnderConstruction(
-      //		this, getINode().getReplication(), s, targets);
       BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this);
       bUc.setBlockUCState(s);
       bUc.setExpectedLocations(targets, isTransactional);

@@ -305,18 +305,6 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     ReplicaHelper.add(this.getBlockId(), dn, rState, isTransactional);
   }
 
-  @Override // BlockInfo
-  // BlockInfoUnderConstruction participates in maps the same way as BlockInfo
-  public int hashCode() {
-    return super.hashCode();
-  }
-
-  @Override // BlockInfo
-  public boolean equals(Object obj) {
-    // Sufficient to rely on super's implementation
-    return (this == obj) || super.equals(obj) || (this.getBlockId() == ((BlockInfoUnderConstruction)obj).getBlockId()); //FIXME: W
-  }
-
   /** {@inheritDoc} */
   @Override
   public String toString() {
