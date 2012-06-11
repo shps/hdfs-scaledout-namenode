@@ -24,6 +24,7 @@ import org.apache.hadoop.ipc.Server;
 
 import java.util.*;
 import org.apache.hadoop.hdfs.server.namenode.CorruptReplicasHelper;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * Stores information about all corrupt blocks in the File System.
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.CorruptReplicasHelper;
 @InterfaceAudience.Private
 public class CorruptReplicasMap{
 
+  private EntityManager em = EntityManager.getInstance();
   //private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =  new TreeMap<Block, Collection<DatanodeDescriptor>>();
 
   /**

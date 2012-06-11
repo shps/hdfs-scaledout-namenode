@@ -751,7 +751,7 @@ public class DatanodeManager {
         if (inExcludedHostsList(node, null)) {
           startDecommission(node, isTransactional); // case 3.
         } else {
-          stopDecommission(node, transactional); // case 4.
+          stopDecommission(node, isTransactional); // case 4.
         }
       }
     }
