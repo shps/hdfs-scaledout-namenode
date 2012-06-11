@@ -424,7 +424,12 @@ public class TransactionContext {
       query.setParameter("param", storageId);
       List<InvalidateBlocksTable> invBlockTables = query.getResultList();
       syncInvalidatedBlockInstances(invBlockTables);
-      return new ArrayList(storageIdToInvBlocks.get(storageId));
+      HashSet<InvalidatedBlock> ibSet = storageIdToInvBlocks.get(storageId);
+      if (ibSet != null) {
+        return new ArrayList(ibSet);
+      } else {
+        return new ArrayList<InvalidatedBlock>();
+      }
     } finally {
       afterTxCheck(true);
     }
