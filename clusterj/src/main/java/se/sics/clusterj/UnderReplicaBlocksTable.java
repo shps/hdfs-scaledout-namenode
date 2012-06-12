@@ -12,12 +12,11 @@ import com.mysql.clusterj.annotation.PrimaryKey;
 public interface UnderReplicaBlocksTable 
 {
     @PrimaryKey
-    @Column(name = "level")
-    int getLevel();
-    void setLevel(int level);
-
-    @PrimaryKey
     @Column(name = "blockId")
     long getBlockId();
     void setBlockId(long bid);
+
+    @Column(name = "level")
+    int getLevel();
+    void setLevel(int level);
 }

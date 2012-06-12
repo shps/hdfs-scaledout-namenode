@@ -1,16 +1,20 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 
 /**
  *
@@ -69,6 +73,22 @@ public class EntityManager {
   public void remove(Object obj) {
     try {
       context().remove(obj);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
+  public void removeAll(Class type) {
+    try {
+      context().removeAll(type);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
+  public void update(Object oldValue, Object newValue) {
+    try {
+      context().update(oldValue, newValue);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -144,7 +164,6 @@ public class EntityManager {
 
     return null;
   }
-
   public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() {
     try {
       return context().findAllInvalidatedBlocks();
@@ -199,4 +218,74 @@ public class EntityManager {
 
     return null;
   }
+  
+  public Collection<DatanodeDescriptor> findCorruptReplica(long blockId) {
+    try {
+      return context().findCorruptReplica(blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+  public DatanodeDescriptor findCorruptReplica(long blockId, String storageId) {
+    try {
+      return context().findCorruptReplica(blockId, storageId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public Collection<CorruptReplica> findAllCorruptBlocks() {
+    try {
+      return context().findAllCorruptBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+  
+  public boolean containsUnderReplicatedBlock(long blockId) {
+    try {
+      return context().containsUnderReplicatedBlock(blockId);
+    }
+    catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return false;
+  }
+
+  public List<UnderReplicatedBlock> findAllUnderReplicatedBlocks() {
+    try {
+      return context().findAllUnderReplicatedBlocks();
+    }
+    catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return null;
+  }
+
+  public int countNonCorruptedUnderReplicatedBlocks(int level) {
+    try {
+      return context().countNonCorruptedUnderReplicatedBlocks(level);
+    }
+    catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return 0;
+  }
+
+  public int countCorruptedUnderReplicatedBlocks(int level) {
+    try {
+      return context().countCorruptedUnderReplicatedBlocks(level);
+    }
+    catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return 0;
+  }
+        
 }
