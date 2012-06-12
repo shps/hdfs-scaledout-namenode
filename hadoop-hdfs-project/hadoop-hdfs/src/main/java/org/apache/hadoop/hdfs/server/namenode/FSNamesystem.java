@@ -2290,9 +2290,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /** @deprecated See {@link #renameTo(String, String)} */
   @Deprecated
   private boolean renameToInternal(String src, String dst)
-                throws IOException, UnresolvedLinkException
-        {
-			    assert isWritingNN();
+          throws IOException, UnresolvedLinkException {
+    assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -2303,57 +2302,45 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isPermissionEnabled) {
       //We should not be doing this.  This is move() not renameTo().
       //but for now,
-      String actualdst = dir.isDir(dst)?
-          dst + Path.SEPARATOR + new Path(src).getName(): dst;
+      String actualdst = dir.isDir(dst)
+              ? dst + Path.SEPARATOR + new Path(src).getName() : dst;
       checkParentAccess(src, FsAction.WRITE);
       checkAncestorAccess(actualdst, FsAction.WRITE);
     }
 
     HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
-                
-                // Starting the DB transaction
-                boolean isDone = false;
-                boolean isRenameDone = false;
-                int tries = DBConnector.RETRY_COUNT;
-                try
-                {
-                        while (!isDone && tries > 0)
-                        {
-                                try
-                                {
-                                        DBConnector.beginTransaction();
-                                        if (dir.renameTo(src, dst, true))
-                                        {
-                                                unprotectedChangeLease(src, dst, dinfo, true);     // update lease with new filename
-                                                DBConnector.commit();
-                                                isDone = true;
-                                                isRenameDone = true;
-    }
-                                        else
-                                        {
-                                                isRenameDone = false;
-  }
-                                }
-                                catch(ClusterJException ex)
-                                {
-                                        if(!isDone)
-                                        {
-                                                DBConnector.safeRollback();
-                                                tries--;
-                                                FSNamesystem.LOG.error("renameToInternal() :: failed to rename "+src+" to "+dst+". Exception: "+ex.getMessage(), ex);
-                                        }
-                                }
-                        }
-                }
-                finally
-                {
-                        if(!isDone)
-                        {
-                                DBConnector.safeRollback();
-                        }
-                }
-                return isRenameDone;
+
+    // Starting the DB transaction
+    boolean isDone = false;
+    boolean isRenameDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try {
+      while (!isDone && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          if (dir.renameTo(src, dst, true)) {
+            unprotectedChangeLease(src, dst, dinfo, true);     // update lease with new filename
+            DBConnector.commit();
+            isDone = true;
+            isRenameDone = true;
+          } else {
+            isRenameDone = false;
+          }
+        } catch (ClusterJException ex) {
+          if (!isDone) {
+            DBConnector.safeRollback();
+            tries--;
+            FSNamesystem.LOG.error("renameToInternal() :: failed to rename " + src + " to " + dst + ". Exception: " + ex.getMessage(), ex);
+          }
         }
+      }
+    } finally {
+      if (!isDone) {
+        DBConnector.safeRollback();
+      }
+    }
+    return isRenameDone;
+  }
   
 
   /** Rename src to dst */
@@ -2450,17 +2437,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
               catch (ClusterJException e)
               {
-                  LOG.error(e.getMessage(), e);
                   tries--;
                   DBConnector.safeRollback();
+                  LOG.error(e.getMessage(), e);
                   status = false;
               }
           }
       }
       finally
       {
-          writeUnlock();
-          DBConnector.safeRollback();
+        DBConnector.safeRollback();
+        writeUnlock();
       }
       return status;
     }
@@ -3056,7 +3043,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               // blocksReceived from Datanodes take a long time to arrive.
               for (int i = 0; i < descriptors.length; i++) {
                 //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-                Replica replica = storedBlock.addReplica(descriptors[i]);
+                IndexedReplica replica = storedBlock.addReplica(descriptors[i]);
                 if (replica != null)
                   em.persist(replica);
               }

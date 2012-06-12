@@ -26,7 +26,11 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -51,6 +55,8 @@ public class TestComputeInvalidateWork extends TestCase {
       
       namesystem.writeLock();
       try {
+        DBConnector.beginTransaction();
+        EntityManager em = EntityManager.getInstance();
         for (int i=0; i<nodes.length; i++) {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
@@ -72,7 +78,10 @@ public class TestComputeInvalidateWork extends TestCase {
           assertEquals(workCount, blockInvalidateLimit);
           assertEquals(2, bm.computeInvalidateWork(2));
         }
+        
+//        DBConnector.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
       } finally {
+        DBConnector.safeRollback();
         namesystem.writeUnlock();
       }
     } finally {

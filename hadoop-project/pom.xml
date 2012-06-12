@@ -640,7 +640,7 @@
 			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
 			<exclude>**/TestRefreshUserMappings.java</exclude>
 			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeBlockScanner</exclude>
+			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
 			<!-- TODO--><exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
 			<!-- TODO--><exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
 			<!-- TODO--><exclude>**/TestNameNodeMetrics.java</exclude>
