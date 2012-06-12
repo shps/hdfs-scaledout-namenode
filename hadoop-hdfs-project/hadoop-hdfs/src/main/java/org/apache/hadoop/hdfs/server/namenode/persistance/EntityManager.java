@@ -12,6 +12,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 
 /**
  *
@@ -194,6 +195,36 @@ public class EntityManager {
   public ExcessReplica findExcessReplicaByPK(String storageId, long blockId) {
     try {
       return context().findExcessReplicaByPK(storageId, blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public PendingBlockInfo findPendingBlockByPK(long blockId) {
+    try {
+      return context().findPendingBlockByPK(blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<PendingBlockInfo> findAllPendingBlocks() {
+    try {
+      return context().findAllPendingBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<PendingBlockInfo> findTimedoutPendingBlocks(long timelimit) {
+    try {
+      return context().findTimedoutPendingBlocks(timelimit);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

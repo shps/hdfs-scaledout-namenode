@@ -32,6 +32,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import se.sics.clusterj.ExcessReplicaTable;
 import se.sics.clusterj.InvalidateBlocksTable;
+import se.sics.clusterj.PendingReplicationBlockTable;
 
 
 /*
@@ -155,6 +156,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             session.deletePersistentAll(DatanodeInfoTable.class);
             session.deletePersistentAll(InvalidateBlocksTable.class);
             session.deletePersistentAll(ExcessReplicaTable.class);
+            session.deletePersistentAll(PendingReplicationBlockTable.class);
             tx.commit();
             session.flush();
             return true;

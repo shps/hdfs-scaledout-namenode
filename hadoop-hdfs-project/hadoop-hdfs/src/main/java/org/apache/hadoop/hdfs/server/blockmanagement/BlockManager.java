@@ -275,7 +275,6 @@ public class BlockManager {
 
   public void activate(Configuration conf) {
     if (namesystem.isWritingNN()) {
-        pendingReplications.start();
         datanodeManager.activate(conf);
         replicationThread.start();
     }
@@ -286,7 +285,6 @@ public class BlockManager {
         replicationThread.interrupt();
         
     }
-    if (pendingReplications != null) pendingReplications.stop();
     if(datanodeManager != null) datanodeManager.close();
   }
 
@@ -1373,18 +1371,32 @@ public class BlockManager {
    * @throws IOException 
    */
   private void processPendingReplications() throws IOException {
-    Block[] timedOutItems = pendingReplications.getTimedOutBlocks();
+    Block[] timedOutItems = null;
+    List<PendingBlockInfo> timedoutPendings = pendingReplications.getTimedOutBlocks();
+    if (timedoutPendings != null) {
+      timedOutItems = new Block[timedoutPendings.size()];
+
+      for (int i = 0; i < timedoutPendings.size(); i++) {
+        PendingBlockInfo p = timedoutPendings.get(i);
+        try {
+          timedOutItems[i] = em.findBlockById(p.getBlockId());
+        } catch (IOException ex) {
+          LOG.error(ex.getMessage(), ex);
+        }
+      }
+    }
+
     if (timedOutItems != null) {
       namesystem.writeLock();
       try {
         for (int i = 0; i < timedOutItems.length; i++) {
           NumberReplicas num = countNodes(timedOutItems[i]);
           if (isNeededReplication(timedOutItems[i], getReplication(timedOutItems[i]),
-                                 num.liveReplicas())) {
+                  num.liveReplicas())) {
             neededReplications.add(timedOutItems[i],
-                                   num.liveReplicas(),
-                                   num.decommissionedReplicas(),
-                                   getReplication(timedOutItems[i]));
+                    num.liveReplicas(),
+                    num.decommissionedReplicas(),
+                    getReplication(timedOutItems[i]));
           }
         }
       } finally {
@@ -1395,7 +1407,7 @@ public class BlockManager {
        */
     }
   }
-  
+
   /**
    * StatefulBlockInfo is used to build the "toUC" list, which is a list of
    * updates to the information about under-construction blocks.

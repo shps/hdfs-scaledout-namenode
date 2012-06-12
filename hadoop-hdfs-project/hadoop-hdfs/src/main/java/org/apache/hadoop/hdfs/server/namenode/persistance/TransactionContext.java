@@ -2,6 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
+import com.mysql.clusterj.query.Predicate;
+import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
@@ -13,10 +15,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.ExcessReplicaTable;
 import se.sics.clusterj.InvalidateBlocksTable;
+import se.sics.clusterj.PendingReplicationBlockTable;
 import se.sics.clusterj.TripletsTable;
 
 /**
@@ -51,6 +55,13 @@ public class TransactionContext {
   private Map<String, TreeSet<Long>> storageIdToExReplica = new HashMap<String, TreeSet<Long>>();
   private Map<ExcessReplica, ExcessReplica> modifiedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
   private Map<ExcessReplica, ExcessReplica> removedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
+  /**
+   * PendingBlocks
+   */
+  private Map<Long, PendingBlockInfo> pendings = new HashMap<Long, PendingBlockInfo>();
+  private Map<Long, PendingBlockInfo> modifiedPendings = new HashMap<Long, PendingBlockInfo>();
+  private Map<Long, PendingBlockInfo> removedPendings = new HashMap<Long, PendingBlockInfo>();
+  private boolean allPendingRead = false;
 
   private void resetContext() {
     activeTxExpected = false;
@@ -76,11 +87,16 @@ public class TransactionContext {
     storageIdToExReplica.clear();
     modifiedExReplica.clear();
     removedExReplica.clear();
+    
+    pendings.clear();
+    modifiedPendings.clear();
+    removedPendings.clear();
+    allPendingRead = false;
   }
 
   void begin() {
     activeTxExpected = true;
-    logger.debug("\nTX begin{" );
+    logger.debug("\nTX begin{");
   }
 
   public void commit() throws TransactionContextException {
@@ -147,8 +163,23 @@ public class TransactionContext {
       session.deletePersistent(ExcessReplicaTable.class, pk);
       builder.append("rm ExcessReplica:").append(exReplica.toString()).append("\n");
     }
+    
+    for (PendingBlockInfo p : modifiedPendings.values())
+    {
+      PendingReplicationBlockTable pTable = session.newInstance(PendingReplicationBlockTable.class);
+      PendingBlockInfoFactory.createPersistablePendingBlockInfo(p, pTable);
+      session.savePersistent(pTable);
+      builder.append("w PendingBlockInfo:").append(p.toString()).append("\n");
+    }
+    
+    for (PendingBlockInfo p : removedPendings.values())
+    {
+      PendingReplicationBlockTable pTable = session.newInstance(PendingReplicationBlockTable.class, p.getBlockId());
+      session.deletePersistent(pTable);
+      builder.append("rm PendingBlockInfo:").append(p.toString()).append("\n");
+    }
 
-    logger.debug("\nTx commit[" + builder.toString() + "]");
+//    logger.debug("\nTx commit[" + builder.toString() + "]");
 
     resetContext();
   }
@@ -213,6 +244,15 @@ public class TransactionContext {
 
       exReplicas.put(exReplica, exReplica);
       modifiedExReplica.put(exReplica, exReplica);
+    } else if (obj instanceof PendingBlockInfo) {
+      PendingBlockInfo pendingBlock = (PendingBlockInfo) obj;
+
+      if (removedPendings.containsKey(pendingBlock.getBlockId())) {
+        throw new TransactionContextException("Removed pending-block passed to be persisted");
+      }
+
+      pendings.put(pendingBlock.getBlockId(), pendingBlock);
+      modifiedPendings.put(pendingBlock.getBlockId(), pendingBlock);
     } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
@@ -281,6 +321,13 @@ public class TransactionContext {
 
         modifiedExReplica.remove(exReplica);
         removedExReplica.put(exReplica, exReplica);
+      } else if (obj instanceof PendingBlockInfo) {
+        PendingBlockInfo pendingBlock = (PendingBlockInfo) obj;
+        if (pendings.remove(pendingBlock.getBlockId()) == null) {
+          throw new TransactionContextException("Unattached pending-block passed to be removed");
+        }
+        modifiedPendings.remove(pendingBlock.getBlockId());
+        removedPendings.put(pendingBlock.getBlockId(), pendingBlock);
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
@@ -618,6 +665,94 @@ public class TransactionContext {
       ExcessReplica result = ReplicaFactory.createReplica(invTable);
       this.exReplicas.put(result, result);
       return result;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public PendingBlockInfo findPendingBlockByPK(long blockId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (this.pendings.containsKey(blockId)) {
+        return this.pendings.get(blockId);
+      }
+
+      if (this.removedPendings.containsKey(blockId)) {
+        return null;
+      }
+
+      Session session = DBConnector.obtainSession();
+      PendingReplicationBlockTable pendingTable = session.find(PendingReplicationBlockTable.class, blockId);
+      PendingBlockInfo pendingBlock = null;
+      if (pendingTable != null) {
+        pendingBlock = PendingBlockInfoFactory.createPendingBlockInfo(pendingTable);
+        this.pendings.put(blockId, pendingBlock);
+      }
+
+      return pendingBlock;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public List<PendingBlockInfo> findAllPendingBlocks() throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (allPendingRead) {
+        return new ArrayList(pendings.values());
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      Query<PendingReplicationBlockTable> query =
+              session.createQuery(qb.createQueryDefinition(PendingReplicationBlockTable.class));
+      List<PendingReplicationBlockTable> result = query.getResultList();
+      syncPendingBlockInstances(result);
+      return new ArrayList(pendings.values());
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  /**
+   * 
+   * @param pendingTables
+   * @return newly found pending blocks
+   */
+  private List<PendingBlockInfo> syncPendingBlockInstances(List<PendingReplicationBlockTable> pendingTables) {
+    List<PendingBlockInfo> newPBlocks = new ArrayList<PendingBlockInfo>();
+    for (PendingReplicationBlockTable pTable : pendingTables) {
+      PendingBlockInfo p = PendingBlockInfoFactory.createPendingBlockInfo(pTable);
+      if (pendings.containsKey(p.getBlockId())) {
+        newPBlocks.add(pendings.get(p.getBlockId()));
+      } else if (!removedPendings.containsKey(p.getBlockId())) {
+        pendings.put(p.getBlockId(), p);
+        newPBlocks.add(p);
+      }
+    }
+
+    return newPBlocks;
+  }
+
+  public List<PendingBlockInfo> findTimedoutPendingBlocks(long timelimit) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<PendingReplicationBlockTable> qdt = qb.createQueryDefinition(PendingReplicationBlockTable.class);
+      PredicateOperand predicateOp = qdt.get("timestamp");
+      String paramName = "timelimit";
+      PredicateOperand param = qdt.param(paramName);
+      Predicate lessThan = predicateOp.lessThan(param);
+      qdt.where(lessThan);
+      Query query = session.createQuery(qdt);
+      query.setParameter(paramName, timelimit);
+      List<PendingReplicationBlockTable> result = query.getResultList();
+      if (result != null) {
+        return syncPendingBlockInstances(result);
+      }
+      
+      return null;
     } finally {
       afterTxCheck(true);
     }
