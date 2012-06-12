@@ -61,7 +61,6 @@ public class TestComputeInvalidateWork extends TestCase {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
                 GenerationStamp.FIRST_VALID_STAMP);
-            em.persist(new BlockInfo(block));
             bm.addToInvalidates(block, nodes[i]);
           }
         }

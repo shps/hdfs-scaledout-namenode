@@ -47,10 +47,9 @@ public class TransactionContext {
    * InvalidatedBlocks
    */
   private Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
-  private Map<String, List<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, List<InvalidatedBlock>>();
+  private Map<String, HashSet<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, HashSet<InvalidatedBlock>>();
   private Map<InvalidatedBlock, InvalidatedBlock> modifiedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
-  private long numInvBlocks = 0;
   private boolean allInvBlocksRead = false;
   /**
    * ExcessReplica
@@ -101,7 +100,6 @@ public class TransactionContext {
     modifiedInvBlocks.clear();
     removedInvBlocks.clear();
     allInvBlocksRead = false;
-    numInvBlocks = 0;
 
     exReplicas.clear();
     storageIdToExReplica.clear();
@@ -272,17 +270,11 @@ public class TransactionContext {
         throw new TransactionContextException("Removed invalidated-block passed to be persisted");
       }
 
-      if (allInvBlocksRead) {
-        addStorageToInvalidatedBlock(invBlock);
-      }
+      addStorageToInvalidatedBlock(invBlock);
 
       invBlocks.put(invBlock, invBlock);
       modifiedInvBlocks.put(invBlock, invBlock);
-      if (allInvBlocksRead) {
-        numInvBlocks++;
-      }
-    }
-    else if (obj instanceof ExcessReplica) {
+    } else if (obj instanceof ExcessReplica) {
       ExcessReplica exReplica = (ExcessReplica) obj;
 
       if (removedExReplica.containsKey(exReplica)) {
@@ -319,7 +311,7 @@ public class TransactionContext {
     if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
       storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
     } else {
-      List<InvalidatedBlock> invBlockList = new ArrayList<InvalidatedBlock>();
+      HashSet<InvalidatedBlock> invBlockList = new HashSet<InvalidatedBlock>();
       invBlockList.add(invBlock);
       storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
     }
@@ -362,14 +354,12 @@ public class TransactionContext {
         invBlocks.remove(invBlock);
         modifiedInvBlocks.remove(invBlock);
         removedInvBlocks.put(invBlock, invBlock);
-        if (allInvBlocksRead) {
-          if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
-            List<InvalidatedBlock> ibs = storageIdToInvBlocks.get(invBlock.getStorageId());
-            ibs.remove(invBlock);
-            if (ibs.isEmpty())
-              storageIdToInvBlocks.remove(invBlock.getStorageId());
+        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+          HashSet<InvalidatedBlock> ibs = storageIdToInvBlocks.get(invBlock.getStorageId());
+          ibs.remove(invBlock);
+          if (ibs.isEmpty()) {
+            storageIdToInvBlocks.remove(invBlock.getStorageId());
           }
-          numInvBlocks--;
         }
       } else if (obj instanceof ExcessReplica) {
         ExcessReplica exReplica = (ExcessReplica) obj;
@@ -598,8 +588,13 @@ public class TransactionContext {
       Query<InvalidateBlocksTable> query = session.createQuery(qdt);
       query.setParameter("param", storageId);
       List<InvalidateBlocksTable> invBlockTables = query.getResultList();
-      List<InvalidatedBlock> invalidatedBlocks = syncInvalidatedBlockInstances(invBlockTables);
-      return invalidatedBlocks;
+      syncInvalidatedBlockInstances(invBlockTables);
+      HashSet<InvalidatedBlock> ibSet = storageIdToInvBlocks.get(storageId);
+      if (ibSet != null) {
+        return new ArrayList(ibSet);
+      } else {
+        return new ArrayList<InvalidatedBlock>();
+      }
     } finally {
       afterTxCheck(true);
     }
@@ -634,7 +629,7 @@ public class TransactionContext {
     }
   }
 
-  public Map<String, List<InvalidatedBlock>> findAllInvalidatedBlocks() throws TransactionContextException {
+  public Map<String, HashSet<InvalidatedBlock>> findAllInvalidatedBlocks() throws TransactionContextException {
     beforeTxCheck();
     try {
       if (allInvBlocksRead) {
@@ -645,7 +640,6 @@ public class TransactionContext {
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType qdt = qb.createQueryDefinition(InvalidateBlocksTable.class);
       List<InvalidateBlocksTable> ibts = session.createQuery(qdt).getResultList();
-      numInvBlocks = 0;
       syncInvalidatedBlockInstances(ibts);
 
       allInvBlocksRead = true;
@@ -658,27 +652,24 @@ public class TransactionContext {
 
   public long countAllInvalidatedBlocks() throws TransactionContextException {
     findAllInvalidatedBlocks();
-    return numInvBlocks;
+    long count = 0;
+    for (HashSet ibset : storageIdToInvBlocks.values()) {
+      count += ibset.size();
+    }
+    return count;
   }
 
-  private List<InvalidatedBlock> syncInvalidatedBlockInstances(List<InvalidateBlocksTable> invBlockTables) {
-    List<InvalidatedBlock> finalList = new ArrayList<InvalidatedBlock>();
-
+  private void syncInvalidatedBlockInstances(List<InvalidateBlocksTable> invBlockTables) {
     for (InvalidateBlocksTable bTable : invBlockTables) {
       InvalidatedBlock invBlock = ReplicaFactory.createReplica(bTable);
       if (!removedInvBlocks.containsKey(invBlock)) {
-        numInvBlocks++;
         if (invBlocks.containsKey(invBlock)) {
-          finalList.add(invBlocks.get(invBlock));
         } else {
           invBlocks.put(invBlock, invBlock);
-          finalList.add(invBlock);
         }
         addStorageToInvalidatedBlock(invBlock);
       }
     }
-
-    return finalList;
   }
 
   public TreeSet<Long> findExcessReplicaByStorageId(String storageId) throws TransactionContextException {

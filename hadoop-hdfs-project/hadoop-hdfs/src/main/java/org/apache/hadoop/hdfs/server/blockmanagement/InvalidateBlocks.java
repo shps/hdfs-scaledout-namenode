@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,7 @@ class InvalidateBlocks {
 
   /** Print the contents to out. */
   synchronized void dump(final PrintWriter out) {
-    Map<String, List<InvalidatedBlock>> node2blocks = em.findAllInvalidatedBlocks();
+    Map<String, HashSet<InvalidatedBlock>> node2blocks = em.findAllInvalidatedBlocks();
     final int size = node2blocks.values().size();
     out.println("Metasave: Blocks " + em.countAllInvalidatedBlocks()
             + " waiting deletion from " + size + " datanodes.");
@@ -101,8 +102,8 @@ class InvalidateBlocks {
       return;
     }
 
-    for (Map.Entry<String, List<InvalidatedBlock>> entry : node2blocks.entrySet()) {
-      final List<InvalidatedBlock> invBlocks = entry.getValue();
+    for (Map.Entry<String, HashSet<InvalidatedBlock>> entry : node2blocks.entrySet()) {
+      final HashSet<InvalidatedBlock> invBlocks = entry.getValue();
       if (invBlocks.size() > 0) {
         //FIXME [H]: To dump properly it needs to get the block using blockid.
         out.println(datanodeManager.getDatanode(entry.getKey()).getName() + invBlocks);
