@@ -87,9 +87,9 @@ public class EntityManager {
     }
   }
 
-  public void update(Object oldValue, Object newValue) {
+  public void update(Object newValue) {
     try {
-      context().update(oldValue, newValue);
+      context().update(newValue);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

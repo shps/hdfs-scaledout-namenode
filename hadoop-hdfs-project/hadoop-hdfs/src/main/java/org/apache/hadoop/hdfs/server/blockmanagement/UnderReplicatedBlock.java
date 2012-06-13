@@ -32,9 +32,6 @@ public class UnderReplicatedBlock {
       return false;
     }
     final UnderReplicatedBlock other = (UnderReplicatedBlock) obj;
-    if (this.level != other.level) {
-      return false;
-    }
     if (this.blockId != other.blockId) {
       return false;
     }
@@ -44,8 +41,8 @@ public class UnderReplicatedBlock {
   @Override
   public int hashCode() {
     int hash = 7;
-    hash = 97 * hash + this.level;
-    hash = 97 * hash + (int) (this.blockId ^ (this.blockId >>> 32));
+    hash = 37 * hash + (int) (this.blockId ^ (this.blockId >>> 32));
     return hash;
   }
+
 }

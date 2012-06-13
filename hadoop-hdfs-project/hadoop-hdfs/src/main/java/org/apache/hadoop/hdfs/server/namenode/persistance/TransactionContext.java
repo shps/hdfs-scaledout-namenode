@@ -203,10 +203,8 @@ public class TransactionContext {
     }
     
     for (UnderReplicatedBlock urBlock : removedurBlocks.values()) {
-      Object[] pk = new Object[1];
-      pk[0] = urBlock.getBlockId();
-      session.deletePersistent(UnderReplicaBlocksTable.class, pk);
-      builder.append("rm UnderReplicated block:").append("[blk-").append(pk[0]).append("][level-").append(urBlock.getLevel()).append("]").append("\n");
+      session.deletePersistent(UnderReplicaBlocksTable.class, urBlock.getBlockId());
+      builder.append("rm UnderReplicated block:").append("[blk-").append(urBlock.getBlockId()).append("][level-").append(urBlock.getLevel()).append("]").append("\n");
     }
     for (UnderReplicatedBlock urBlock : modifiedurBlocks.values()) {
         UnderReplicaBlocksTable newInstance = session.newInstance(UnderReplicaBlocksTable.class);
@@ -373,9 +371,9 @@ public class TransactionContext {
       } else if(obj instanceof CorruptReplica) {
         CorruptReplica corruptReplica = (CorruptReplica) obj;
         
-        if(corruptReplicas.get(corruptReplica) == null) {
-          throw new TransactionContextException("Unattached corrupt replica passed to be removed");
-        }
+        //if(corruptReplicas.get(corruptReplica) == null) {
+        //  throw new TransactionContextException("Unattached corrupt replica passed to be removed");
+       // }
         corruptReplicas.remove(corruptReplica);
         modifiedCorruptReplicas.remove(corruptReplica);
         removedCorruptReplicas.put(corruptReplica, corruptReplica);
@@ -384,8 +382,8 @@ public class TransactionContext {
       else if(obj instanceof UnderReplicatedBlock) {
         UnderReplicatedBlock urBlock = (UnderReplicatedBlock) obj;
         
-        if(urBlocks.get(urBlock) == null) {
-          throw new TransactionContextException("Unattached under replica passed to be removed");
+        if(!urBlocks.containsKey(urBlock)) {
+          throw new TransactionContextException("Unattached under replica [blk:"+urBlock.getBlockId()+", level: "+urBlock.getLevel()+" ] passed to be removed");
         }
         urBlocks.remove(urBlock);
         modifiedurBlocks.remove(urBlock);
@@ -411,7 +409,7 @@ public class TransactionContext {
           modifiedurBlocks.clear();
           
           // Delete from Db
-          DBConnector.obtainSession().deletePersistentAll(type);
+          DBConnector.obtainSession().deletePersistentAll(UnderReplicaBlocksTable.class);
           done = true;
       }else {
         done = false;
@@ -422,26 +420,27 @@ public class TransactionContext {
     }
   }
 
-  public void update(Object oldValue, Object newValue) throws TransactionContextException {
+  public void update(Object newValue) throws TransactionContextException {
     beforeTxCheck();
     boolean done = false;
     try {
-      if (oldValue instanceof UnderReplicatedBlock) {
-        UnderReplicatedBlock urBlockOld = (UnderReplicatedBlock) oldValue;
+      if (newValue instanceof UnderReplicatedBlock) {
         UnderReplicatedBlock urBlockNew = (UnderReplicatedBlock) newValue;
 
         // Update the maps i.e. put old value into removed and put new values into the maps
-        if(urBlocks.containsKey(urBlockOld)) {
-          urBlocks.remove(urBlockOld);
+        if(urBlocks.containsKey(urBlockNew)) {
+          urBlocks.put(urBlockNew, urBlockNew);
         }
-        urBlocks.put(urBlockNew, urBlockNew);
-        
-        if(modifiedurBlocks.containsKey(urBlockOld)) {
-          modifiedurBlocks.remove(urBlockOld);
+        else {
+          throw new TransactionContextException("Unattached under replica to be updated");
         }
-        modifiedurBlocks.put(urBlockNew, urBlockNew);
         
-        removedurBlocks.put(urBlockOld, urBlockOld);
+        if(modifiedurBlocks.containsKey(urBlockNew)) {
+          modifiedurBlocks.put(urBlockNew, urBlockNew);
+        }
+        else {
+          throw new TransactionContextException("Unattached under replica to be updated");
+        }
         done = true;
       }
       else {
@@ -888,9 +887,7 @@ public class TransactionContext {
 
       // Not found in memory, search in database
       Session session = DBConnector.obtainSession();
-      Object[] keys = new Object[1];
-      keys[0] = blockId;
-      UnderReplicaBlocksTable urBlockTable = session.find(UnderReplicaBlocksTable.class, keys);
+      UnderReplicaBlocksTable urBlockTable = session.find(UnderReplicaBlocksTable.class, blockId);
       if (urBlockTable != null) {
         UnderReplicatedBlock urBlock = ReplicaFactory.createReplica(urBlockTable);
         urBlocks.put(urBlock, urBlock);

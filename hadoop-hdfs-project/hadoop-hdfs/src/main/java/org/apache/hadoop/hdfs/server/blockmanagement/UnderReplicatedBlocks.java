@@ -167,7 +167,12 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     int priLevel = getPriority(block, oldReplicas, 
                                decommissionedReplicas,
                                oldExpectedReplicas);
-    return remove(block, priLevel, isTransactional);
+    if(em.containsUnderReplicatedBlock(block.getBlockId())) {
+      return remove(block, priLevel, isTransactional);
+    }
+    else {
+      return false;
+    }
   }
       
   /** remove a block from a under replication queue given a priority*/
@@ -226,7 +231,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     
     // Update the priority levels
     if ((oldPri != LEVEL && oldPri != curPri) && (curPri != LEVEL)) {
-      em.update(new UnderReplicatedBlock(oldPri, block.getBlockId()), new UnderReplicatedBlock(curPri, block.getBlockId()));
+      em.update(new UnderReplicatedBlock(curPri, block.getBlockId()));
     }
     
     if (NameNode.stateChangeLog.isDebugEnabled()) {

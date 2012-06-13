@@ -20,6 +20,7 @@ public interface CorruptReplicasTable {
     void setBlockId(long bid);
 
     @PrimaryKey
+    @Column(name = "storageId")
     String getStorageId();
     void setStorageId(String id);
 }
