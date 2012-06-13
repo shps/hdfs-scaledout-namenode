@@ -1,51 +1,63 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 /**
- * This class holds the information of one replica of a block in one datanode.
- * 
- * @author kamal hakimzadeh<kamal@sics.se>
+ *
+ * @author Hooman <hooman@sics.se>
  */
-public class Replica {
-  long blockId;
-  String storageId;
-  int index;
+public abstract class Replica {
 
-  public Replica(long blockId, String storageId, int index) {
-    this.blockId = blockId;
+  protected String storageId;
+  protected long blockId;
+
+  public Replica(String storageId, long blockId) {
     this.storageId = storageId;
-    this.index = index;
+    this.blockId = blockId;
   }
-  
-  public long getBlockId() {
-    return blockId;
-  }
-  
+
+  /**
+   * @return the storageId
+   */
   public String getStorageId() {
     return storageId;
   }
 
-  public int getIndex() {
-    return index;
+  /**
+   * @param storageId the storageId to set
+   */
+  public void setStorageId(String storageId) {
+    this.storageId = storageId;
   }
 
-  public void setIndex(int index) {
-    this.index = index;
+  /**
+   * @return the blockId
+   */
+  public long getBlockId() {
+    return blockId;
   }
-  
+
+  /**
+   * @param blockId the blockId to set
+   */
+  public void setBlockId(long blockId) {
+    this.blockId = blockId;
+  }
+
   @Override
   public boolean equals(Object obj) {
-    Replica that = (Replica) obj;
-    
-    if (this == that)
-      return true;
-    else if (this.blockId == that.getBlockId() && this.getStorageId().equals(that.getStorageId()))
-      return true;
-    
-    return false;
+    if (obj == null || !(obj instanceof Replica)) {
+      return false;
+    }
+
+    Replica other = (Replica) obj;
+    return this.blockId == other.getBlockId()
+            && this.storageId.equals(other.getStorageId());
   }
-  
-  public String cacheKey() {
-    StringBuilder builder = new StringBuilder(blockId + storageId);
-    return builder.toString();
+
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 23 * hash + (this.storageId != null ? this.storageId.hashCode() : 0);
+    hash = 23 * hash + (int) (this.blockId ^ (this.blockId >>> 32));
+    return hash;
   }
 }

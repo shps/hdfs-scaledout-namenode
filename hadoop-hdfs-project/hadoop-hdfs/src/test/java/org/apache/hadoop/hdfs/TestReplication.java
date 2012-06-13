@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Random;
@@ -42,9 +39,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.namenode.DBAdmin;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * This class tests the replication of a DFS file.

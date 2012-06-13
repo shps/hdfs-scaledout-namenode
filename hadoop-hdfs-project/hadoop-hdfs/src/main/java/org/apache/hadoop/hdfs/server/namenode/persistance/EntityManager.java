@@ -1,15 +1,21 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
+import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 
 /**
  *
@@ -73,7 +79,7 @@ public class EntityManager {
     }
   }
 
-  public List<Replica> findReplicasByBlockId(long id) {
+  public List<IndexedReplica> findReplicasByBlockId(long id) {
     try {
       return context().findReplicasByBlockId(id);
     } catch (TransactionContextException ex) {
@@ -134,9 +140,29 @@ public class EntityManager {
     return null;
   }
 
+  public List<InvalidatedBlock> findInvalidatedBlocksByStorageId(String storageId) {
+    try {
+      return context().findInvalidatedBlocksByStorageId(storageId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
   public LeasePath findLeasePathByPath(String path) {
     try {
       return context().findLeasePathByPath(path);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public Replica findInvalidatedBlockByPK(String storageId, long blockId) {
+    try {
+      return context().findInvalidatedBlockByPK(storageId, blockId);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -154,6 +180,16 @@ public class EntityManager {
     return null;
   }
 
+  public Map<String, HashSet<InvalidatedBlock>> findAllInvalidatedBlocks() {
+    try {
+      return context().findAllInvalidatedBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
   public Lease findLeaseByHolderId(int holderId) {
     try {
       return context().findLeaseByHolderId(holderId);
@@ -164,9 +200,29 @@ public class EntityManager {
     return null;
   }
 
+  public long countAllInvalidatedBlocks() {
+    try {
+      return context().countAllInvalidatedBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return 0;
+  }
+
   public Lease findLeaseByHolder(String holder) {
     try {
       return context().findLeaseByHolder(holder);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public TreeSet<Long> findExcessReplicaByStorageId(String storageId) {
+    try {
+      return context().findExcessReplicaByStorageId(storageId);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -189,9 +245,64 @@ public class EntityManager {
     return null;
   }
 
+  /*
+   * This method is only used for metrics.
+   * @return
+   * @throws TransactionContextException 
+   */
+  public long countAllExcessReplicas() {
+    try {
+      return context().countAllExcessReplicas();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return 0;
+  }
+
+  public ExcessReplica findExcessReplicaByPK(String storageId, long blockId) {
+    try {
+      return context().findExcessReplicaByPK(storageId, blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public PendingBlockInfo findPendingBlockByPK(long blockId) {
+    try {
+      return context().findPendingBlockByPK(blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<PendingBlockInfo> findAllPendingBlocks() {
+    try {
+      return context().findAllPendingBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
   public SortedSet<Lease> findAllLeases() {
     try {
       return context().findAllLeases();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<PendingBlockInfo> findTimedoutPendingBlocks(long timelimit) {
+    try {
+      return context().findTimedoutPendingBlocks(timelimit);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

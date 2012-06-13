@@ -331,7 +331,7 @@ public class TestBlockManager {
 
     for (DatanodeDescriptor dn : nodes) {
       // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      Replica replica = blockInfo.addReplica(dn);
+      IndexedReplica replica = blockInfo.addReplica(dn);
       EntityManager.getInstance().persist(replica);
     }
     return blockInfo;

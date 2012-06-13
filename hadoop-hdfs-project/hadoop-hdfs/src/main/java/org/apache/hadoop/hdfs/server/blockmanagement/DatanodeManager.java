@@ -219,20 +219,17 @@ public class DatanodeManager {
   }
 
   /** @return the datanode descriptor for the host. */
-  public DatanodeDescriptor getDatanodeByHost(final String host) { //TODO: KTHFS needs this!
+  public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
-    //return DatanodeHelper.getDatanodeDescriptorByHostname(host);
   }
   
-  public DatanodeDescriptor getDatanodeByName(final String hostName) { //TODO: KTHFS needs this!
-    //return DatanodeHelper.getDatanodeDescriptorByName(hostName);
+  public DatanodeDescriptor getDatanodeByName(final String hostName) {
 	return host2DatanodeMap.getDatanodeByName(hostName);
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
   public DatanodeDescriptor getDatanode(final String storageID) {
     return datanodeMap.get(storageID);
-    // return DatanodeHelper.getDatanodeDescriptorByStorageId(storageID);
   }
 
   /**
@@ -279,7 +276,7 @@ public class DatanodeManager {
     heartbeatManager.removeDatanode(nodeInfo);
     blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
     networktopology.remove(nodeInfo);
-
+    host2DatanodeMap.remove(nodeInfo);
     if (LOG.isDebugEnabled()) {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
@@ -507,11 +504,11 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) 
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr, boolean transactional) 
     throws IOException {
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg, ipAddr)) {
-      startDecommission(nodeReg);
+      startDecommission(nodeReg, transactional);
     }
   }
 
@@ -533,13 +530,13 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node) throws IOException {
+  private void startDecommission(DatanodeDescriptor node, boolean transactional) throws IOException {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName() + " with " + 
           node.numBlocks() +  " blocks.");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
-      DatanodeHelper.updateDatanodeInfo(node, false);
+      DatanodeHelper.updateDatanodeInfo(node, transactional);
       
       // all the blocks that reside on this node have to be replicated.
       checkDecommissionState(node);
@@ -547,13 +544,13 @@ public class DatanodeManager {
   }
 
   /** Stop decommissioning the specified datanodes. */
-  void stopDecommission(DatanodeDescriptor node) throws IOException {
+  void stopDecommission(DatanodeDescriptor node, boolean transactional) throws IOException {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
       blockManager.processOverReplicatedBlocksOnReCommission(node);
       
-      DatanodeHelper.updateDatanodeInfo(node, false);
+      DatanodeHelper.updateDatanodeInfo(node, transactional);
     }
   }
 
@@ -655,7 +652,7 @@ public class DatanodeManager {
         
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS, dnAddress);
+      checkDecommissioning(nodeS, dnAddress, transactional);
       
       DatanodeHelper.updateDatanodeInfo(nodeS, transactional);
       return;
@@ -677,7 +674,7 @@ public class DatanodeManager {
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr, dnAddress);
+    checkDecommissioning(nodeDescr, dnAddress, transactional);
     
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
@@ -697,8 +694,22 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
-      refreshDatanodes();
+      int tries = DBConnector.RETRY_COUNT;
+      boolean done = false;
+      while (!done && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          refreshDatanodes(true);
+          DBConnector.commit();
+          done = true;
+        } catch (ClusterJException e) {
+          tries--;
+          DBConnector.safeRollback();
+          LOG.error(e.getMessage(), e);
+        }
+      }
     } finally {
+      DBConnector.safeRollback();
       namesystem.writeUnlock();
     }
   }
@@ -721,16 +732,16 @@ public class DatanodeManager {
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  private void refreshDatanodes() throws IOException {
+  private void refreshDatanodes(boolean transactional) throws IOException {
     for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {
         node.setDisallowed(true); // case 2.
       } else {
         if (inExcludedHostsList(node, null)) {
-          startDecommission(node); // case 3.
+          startDecommission(node, transactional); // case 3.
         } else {
-          stopDecommission(node); // case 4.
+          stopDecommission(node, transactional); // case 4.
         }
       }
     }

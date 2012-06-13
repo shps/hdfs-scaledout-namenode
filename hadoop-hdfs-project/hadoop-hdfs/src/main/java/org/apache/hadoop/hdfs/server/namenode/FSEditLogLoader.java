@@ -306,7 +306,7 @@ public class FSEditLogLoader {
 
             fsDir.unprotectedSetTimes(timesOp.path,
                                       timesOp.mtime,
-                                      timesOp.atime, true);
+                                      timesOp.atime, true, false);
             break;
           }
           case OP_SYMLINK: {

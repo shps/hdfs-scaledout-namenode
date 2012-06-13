@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.List;
 import junit.framework.TestCase;
-import java.lang.System;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * This class tests the internals of PendingReplicationBlocks.java
@@ -34,8 +37,11 @@ public class TestPendingReplication extends TestCase {
   public void testPendingReplication() {
     PendingReplicationBlocks pendingReplications;
     pendingReplications = new PendingReplicationBlocks(TIMEOUT * 1000);
-    pendingReplications.start();
-
+    
+    DBConnector.setConfiguration(new HdfsConfiguration());
+    DBConnector.formatDB();
+    DBConnector.beginTransaction();
+    EntityManager em = EntityManager.getInstance();
     //
     // Add 10 blocks to pendingReplications.
     //
@@ -43,10 +49,12 @@ public class TestPendingReplication extends TestCase {
       Block block = new Block(i, i, 0);
       pendingReplications.add(block, i);
     }
+    
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
-
-
+    
+    DBConnector.commit(); //FIXME[H]: An improved transaction context is required to handle add and remove in the same transactions.
+    DBConnector.beginTransaction();
     //
     // remove one item and reinsert it
     //
@@ -58,7 +66,12 @@ public class TestPendingReplication extends TestCase {
     for (int i = 0; i < 7; i++) {
       pendingReplications.remove(blk);           // removes all replicas
     }
+    
     assertTrue(pendingReplications.size() == 9);
+    
+    DBConnector.commit(); 
+    
+    DBConnector.beginTransaction(); //again wants to add the totally removed block
     pendingReplications.add(blk, 8);
     assertTrue(pendingReplications.size() == 10);
 
@@ -105,16 +118,20 @@ public class TestPendingReplication extends TestCase {
     LOG.info("Had to wait for " + loop +
                        " seconds for the lot to timeout");
 
+    DBConnector.commit();
+    
+    DBConnector.beginTransaction();
     //
     // Verify that everything has timed out.
     //
     assertEquals("Size of pendingReplications ",
                  0, pendingReplications.size());
-    Block[] timedOut = pendingReplications.getTimedOutBlocks();
-    assertTrue(timedOut != null && timedOut.length == 15);
-    for (int i = 0; i < timedOut.length; i++) {
-      assertTrue(timedOut[i].getBlockId() < 15);
+    List<PendingBlockInfo> timedOut = pendingReplications.getTimedOutBlocks();
+    assertTrue(timedOut != null && timedOut.size() == 15);
+    for (int i = 0; i < timedOut.size(); i++) {
+      assertTrue(timedOut.get(i).getBlockId() < 15);
     }
-    pendingReplications.stop();
+    
+    DBConnector.commit();
   }
 }
