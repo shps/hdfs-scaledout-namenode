@@ -2194,7 +2194,9 @@ public class BlockManager {
 
 
       // Remove the replica from corruptReplicas
-      corruptReplicas.removeFromCorruptReplicasMap(block, node, isTransactional);
+      if(em.findCorruptReplica(block.getBlockId(), node.getStorageID()) != null) {
+        corruptReplicas.removeFromCorruptReplicasMap(block, node, isTransactional);
+      }
     }
   }
   
