@@ -313,7 +313,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       for (int i = 0; i < urBlocks.size(); i++) {
         int l = urBlocks.get(i).getLevel();
         long blockId = urBlocks.get(i).getBlockId();
-        priorityQueues.get(l).add(BlocksHelper.getBlock(blockId));
+        //priorityQueues.get(l).add(BlocksHelper.getBlock(blockId));
+        priorityQueues.get(l).add(em.findSimpleBlockById(blockId));
       }
 
       //priorityQueues = UnderReplicaBlocksHelper.getAllBlocks(LEVEL);
@@ -326,7 +327,16 @@ class UnderReplicatedBlocks implements Iterable<Block> {
 
     private BlockIterator(int l) {
       // KTHFS [J] Get the latest under-replicated blocks from db
-      priorityQueues = UnderReplicaBlocksHelper.getAllBlocks(LEVEL);
+      for (int i = 0; i < LEVEL; i++) {
+        priorityQueues.add(new TreeSet<Block>());
+      }
+
+      //priorityQueues = UnderReplicaBlocksHelper.getAllBlocks(l);
+      List<UnderReplicatedBlock> urBlocks = em.findAllCorruptedUnderReplicatedBlocks(l);
+      for (int i = 0; i < urBlocks.size(); i++) {
+        //priorityQueues.get(urBlocks.get(i).getLevel()).add(BlocksHelper.getBlock(urBlocks.get(i).getBlockId()));
+        priorityQueues.get(urBlocks.get(i).getLevel()).add(em.findSimpleBlockById(urBlocks.get(i).getBlockId()));
+      }
 
       level = l;
       isIteratorForLevel = true;

@@ -2710,7 +2710,16 @@ public class BlockManager {
   }
 
   public INodeFile getINode(Block b) throws IOException {
-    return (b instanceof BlockInfo) ? ((BlockInfo) b).getINode() : null;
+    if(b instanceof BlockInfo) {
+      return ((BlockInfo)b).getINode();
+    }
+    else {
+      b = em.findBlockById(b.getBlockId());
+      if(b == null) {
+        return null;
+      }
+      return ((BlockInfo) b).getINode();
+    }
   }
 
   public int numCorruptReplicas(Block block) {

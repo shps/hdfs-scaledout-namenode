@@ -169,7 +169,16 @@ public class CorruptReplicasMap{
   
   public int size() {
     Collection<CorruptReplica> datanodes = em.findAllCorruptBlocks();
-    return (datanodes == null) ? 0 : datanodes.size();
+    if(datanodes == null) {
+      return 0;
+    }
+    else {
+      Set<Long> corruptBlocks = new HashSet<Long>();
+      for(CorruptReplica c : datanodes) {
+        corruptBlocks.add(c.getBlockId());
+      }
+      return corruptBlocks.size();
+    }
     //return corruptReplicasMap.size();
     //return CorruptReplicasHelper.getCorruptBlocks().size();
   }

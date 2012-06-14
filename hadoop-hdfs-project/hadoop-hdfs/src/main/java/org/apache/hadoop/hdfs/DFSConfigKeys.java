@@ -33,7 +33,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_INODE_CACHE_ENABLED = System.getenv("KTHFS_INODE_CACHE") == null ? false : System.getenv("KTHFS_INODE_CACHE").equals("false") ? false : true;
   
   public static final String DFS_DB_CONNECTOR_STRING_KEY = "dfs.dbconnector.string";
-  public static final String DFS_DB_CONNECTOR_STRING_DEFAULT = "cloud3.sics.se";//System.getenv("KTHFS_CONN_STR");
+  public static final String DFS_DB_CONNECTOR_STRING_DEFAULT = System.getenv("KTHFS_CONN_STR");
   public static final String DFS_DB_DATABASE_KEY = "dfs.dbconnector.database";
   public static final String DFS_DB_DATABASE_DEFAULT = System.getenv("KTHFS_DATABASE");
   public static final String DFS_DB_NUM_SESSION_FACTORIES = "dfs.dbconnector.num-session-factories";

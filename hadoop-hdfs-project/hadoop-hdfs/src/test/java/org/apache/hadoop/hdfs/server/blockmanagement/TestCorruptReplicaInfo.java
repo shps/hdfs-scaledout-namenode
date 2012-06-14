@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.mysql.clusterj.ClusterJUserException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,8 +29,12 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
  * This test makes sure that 
@@ -38,32 +43,37 @@ import org.apache.hadoop.hdfs.protocol.Block;
  *   return the correct values
  */
 public class TestCorruptReplicaInfo extends TestCase {
-  
-  private static final Log LOG = 
+
+  private static final Log LOG =
                            LogFactory.getLog(TestCorruptReplicaInfo.class);
-  
   private Map<Long, Block> block_map =
-    new HashMap<Long, Block>();  
-    
+                           new HashMap<Long, Block>();
+
   // Allow easy block creation by block id
   // Return existing block if one with same block id already exists
   private Block getBlock(Long block_id) {
     if (!block_map.containsKey(block_id)) {
-      block_map.put(block_id, new Block(block_id,0,0));
+      block_map.put(block_id, new Block(block_id, 0, 0));
     }
-    
+
     return block_map.get(block_id);
   }
-  
+
   private Block getBlock(int block_id) {
-    return getBlock((long)block_id);
+    return getBlock((long) block_id);
   }
-  
-  public void testCorruptReplicaInfo() throws IOException, 
-                                       InterruptedException {
-    
+
+  public void testCorruptReplicaInfo() throws IOException,
+                                              InterruptedException {
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    try {
+
+      DBConnector.beginTransaction();
+      // Since we are persisting CorruptReplicasMap, we need to add begin and end transaction clause
       CorruptReplicasMap crm = new CorruptReplicasMap();
-      
+
       // Make sure initial values are returned correctly
       assertEquals("Number of corrupt blocks must initially be 0", 0, crm.size());
       assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIds(-1, null));
@@ -76,49 +86,67 @@ public class TestCorruptReplicaInfo extends TestCase {
       // output of getCorruptReplicaBlockIds
       int NUM_BLOCK_IDS = 140;
       List<Long> block_ids = new LinkedList<Long>();
-      for (int i=0;i<NUM_BLOCK_IDS;i++) {
-        block_ids.add((long)i);
+      for (int i = 0; i < NUM_BLOCK_IDS; i++) {
+        block_ids.add((long) i);
       }
-      
-      DatanodeDescriptor dn1 = new DatanodeDescriptor();
-      DatanodeDescriptor dn2 = new DatanodeDescriptor();
-      
+
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DatanodeDescriptor dn1 = new DatanodeDescriptor(datanodes.get(0).getDatanodeId());
+      DatanodeDescriptor dn2 = new DatanodeDescriptor(datanodes.get(1).getDatanodeId());
+
       crm.addToCorruptReplicasMap(getBlock(0), dn1, false);
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   1, crm.size());
+      assertEquals("Number of corrupt blocks not returning correctly", 1, crm.size());
       crm.addToCorruptReplicasMap(getBlock(1), dn1, false);
       assertEquals("Number of corrupt blocks not returning correctly",
                    2, crm.size());
-      
+
       crm.addToCorruptReplicasMap(getBlock(1), dn2, false);
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   2, crm.size());
+      assertEquals("Number of corrupt blocks not returning correctly", 2, crm.size());
+
+      DBConnector.commit();
+      DBConnector.beginTransaction();
       
       crm.removeFromCorruptReplicasMap(getBlock(1), false);
       assertEquals("Number of corrupt blocks not returning correctly",
                    1, crm.size());
-      
+
       crm.removeFromCorruptReplicasMap(getBlock(0), false);
       assertEquals("Number of corrupt blocks not returning correctly",
                    0, crm.size());
+
+      DBConnector.commit();
+      DBConnector.beginTransaction();
+
       
-      for (Long block_id: block_ids) {
+      for (Long block_id : block_ids) {
         crm.addToCorruptReplicasMap(getBlock(block_id), dn1, false);
       }
-            
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   NUM_BLOCK_IDS, crm.size());
-      
+
+      assertEquals("Number of corrupt blocks not returning correctly", NUM_BLOCK_IDS, crm.size());
+      DBConnector.commit();
+      DBConnector.beginTransaction();
+
       assertTrue("First five block ids not returned correctly ",
-                Arrays.equals(new long[]{0,1,2,3,4},
-                              crm.getCorruptReplicaBlockIds(5, null)));
-                              
+                 Arrays.equals(new long[]{0, 1, 2, 3, 4},
+                               crm.getCorruptReplicaBlockIds(5, null)));
+
       LOG.info(crm.getCorruptReplicaBlockIds(10, 7L));
       LOG.info(block_ids.subList(7, 18));
 
       assertTrue("10 blocks after 7 not returned correctly ",
-                Arrays.equals(new long[]{8,9,10,11,12,13,14,15,16,17},
-                              crm.getCorruptReplicaBlockIds(10, 7L)));
-      
+                 Arrays.equals(new long[]{8, 9, 10, 11, 12, 13, 14, 15, 16, 17},
+                               crm.getCorruptReplicaBlockIds(10, 7L)));
+
+      DBConnector.commit();
+    } // end try
+    catch (ClusterJUserException ex) {
+      assertFalse("Exception in database operations. Exception: " + ex.getMessage(), true);
+      DBConnector.safeRollback();
+    }
+    finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

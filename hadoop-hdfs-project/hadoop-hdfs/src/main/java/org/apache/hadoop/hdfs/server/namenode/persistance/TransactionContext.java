@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
@@ -427,20 +428,18 @@ public class TransactionContext {
       if (newValue instanceof UnderReplicatedBlock) {
         UnderReplicatedBlock urBlockNew = (UnderReplicatedBlock) newValue;
 
-        // Update the maps i.e. put old value into removed and put new values into the maps
-        if(urBlocks.containsKey(urBlockNew)) {
-          urBlocks.put(urBlockNew, urBlockNew);
-        }
-        else {
-          throw new TransactionContextException("Unattached under replica to be updated");
-        }
-        
-        if(modifiedurBlocks.containsKey(urBlockNew)) {
-          modifiedurBlocks.put(urBlockNew, urBlockNew);
-        }
-        else {
-          throw new TransactionContextException("Unattached under replica to be updated");
-        }
+        /*
+         * Called from 
+         * NameNodeRpcServer.reportBadBlocks(..)
+         *        BlockManager.findAndMarkBlockAsCorrupt
+         *                  BlockManager.markBlockAsCorrupt
+         *                            BlockManager.updateNeededReplications       ===> When the block is detected corrupt by the client, the NN will mark the block as corrupt
+         *                                                                                                                                                 After marking it as corrupt, it checks if there is enough replications for this block. 
+         *                                                                                                                                                If the number of live replica is less than the the minimum replication required, it will save it as an under-replicated block with some prioroity level
+         */
+        // Update the maps and replaces the old value (if present) with the new value into the map
+        urBlocks.put(urBlockNew, urBlockNew);
+        modifiedurBlocks.put(urBlockNew, urBlockNew);
         done = true;
       }
       else {
@@ -492,6 +491,29 @@ public class TransactionContext {
         inodeBlocks.put(id, syncedList);
         return syncedList;
       }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public Block findSimpleBlockById(long blockId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Block block = blocks.get(blockId);
+      if (block == null) {
+        Session session = DBConnector.obtainSession();
+        BlockInfoTable bit = session.find(BlockInfoTable.class, blockId);
+        if (bit == null) {
+          return null;
+        }
+        block = BlockInfoFactory.createSimpleBlock(bit);
+        
+        // [J] Cannot do this as i need just "Block" type. 
+        // Creating "BlockInfo" type would need to throw an IOException, but i cannot let the caller of this function to throw an IOException
+        // Caller is: BlockManager.getCorruptReplicaBlockIterator(); where it implements a Iterator interface and should have a method Iterate() that cannot have a "throws IOException" in its definition
+        //blocks.put(blockId, block);
+      }
+      return block;
     } finally {
       afterTxCheck(true);
     }
@@ -820,15 +842,19 @@ public class TransactionContext {
       Query<CorruptReplicasTable> query = session.createQuery(dobj);
       query.setParameter("blockId", blockId);
       
-      List<CorruptReplicasTable> creplicas = query.getResultList();
       Collection<DatanodeDescriptor> datanodes = new TreeSet<DatanodeDescriptor>();
+      List<CorruptReplicasTable> creplicas = query.getResultList();
+      if(creplicas.size() > 0) {
+        syncCorruptReplicaInstances(creplicas);
+      }
       
-      for (CorruptReplicasTable c : creplicas) {
+      // After sync, all values in memory and database are combined
+      for (CorruptReplica c : corruptReplicas.values()) {
         // Fill the dnd data
         datanodes.add(DatanodeHelper.getDatanodeDescriptorByStorageId(c.getStorageId()));
         
       }
-      syncCorruptReplicaInstances(creplicas);
+      
       return datanodes;
       
     } finally {
@@ -918,6 +944,34 @@ public class TransactionContext {
       allCorruptBlocksRead = true;
 
       return new ArrayList(urBlocks.values());
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+  public List<UnderReplicatedBlock> findAllCorruptedUnderReplicatedBlocks(int corruptLevel) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Session session = DBConnector.obtainSession();
+      
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
+      Predicate pred = dobj.get("level").equal(dobj.param("level"));
+      dobj.where(pred);
+      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
+      query.setParameter("level", corruptLevel);
+      
+      List<UnderReplicaBlocksTable> urCorruptedBlocks = query.getResultList();
+      syncUnderReplicatedBlockInstances(urCorruptedBlocks);
+      
+      // After sync, only get the corrupt replica blocks with level 'corruptLevel'
+      List<UnderReplicatedBlock> finalUrCorruptedBlocks = new ArrayList<UnderReplicatedBlock>();
+      for(UnderReplicatedBlock urb : urBlocks.values()) {
+        if(urb.getLevel() == corruptLevel) {
+          finalUrCorruptedBlocks.add(urb);
+        }
+      }
+      return finalUrCorruptedBlocks;
+      
     } finally {
       afterTxCheck(true);
     }

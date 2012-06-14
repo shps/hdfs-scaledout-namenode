@@ -51,6 +51,10 @@ public class BlockInfoFactory {
     return blockInfo;
   }
 
+  public static Block createSimpleBlock(BlockInfoTable bit) {
+    return new Block(bit.getBlockId(), bit.getNumBytes(), bit.getGenerationStamp());
+  }
+
   public static List<BlockInfo> createBlockInfoList(List<BlockInfoTable> bitList) throws IOException {
     List<BlockInfo> blocks = new ArrayList<BlockInfo>();
     for (BlockInfoTable bit : bitList) {
