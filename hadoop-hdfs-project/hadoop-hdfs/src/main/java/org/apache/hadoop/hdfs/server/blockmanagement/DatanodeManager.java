@@ -25,7 +25,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -47,12 +46,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.DatanodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -199,19 +196,6 @@ public class DatanodeManager {
     return heartbeatManager;
   }
 
-  /** Sort the located blocks by the distance to the target host. */
-  public void sortLocatedBlocks(final String targethost,
-      final List<LocatedBlock> locatedblocks) {
-    //sort the blocks
-    final DatanodeDescriptor client = getDatanodeByHost(targethost);
-    for (LocatedBlock b : locatedblocks) {
-      networktopology.pseudoSortByDistance(client, b.getLocations());
-      
-      // Move decommissioned datanodes to the bottom
-      Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
-    }    
-  }
-
   CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
       final String firstkey) {
     return new CyclicIteration<String, DatanodeDescriptor>(
@@ -228,7 +212,7 @@ public class DatanodeManager {
   }  
 
   /** Get a datanode descriptor given corresponding storageID */
-  public DatanodeDescriptor getDatanode(final String storageID) {
+  public DatanodeDescriptor getDatanodeByStorageId(final String storageID) {
     return datanodeMap.get(storageID);
   }
 
@@ -241,7 +225,7 @@ public class DatanodeManager {
    */
   public DatanodeDescriptor getDatanode(DatanodeID nodeID
       ) throws UnregisteredNodeException {
-    final DatanodeDescriptor node = getDatanode(nodeID.getStorageID());
+    final DatanodeDescriptor node = getDatanodeByStorageId(nodeID.getStorageID());
     if (node == null) 
       return null;
     if (!node.getName().equals(nodeID.getName())) {
@@ -281,7 +265,6 @@ public class DatanodeManager {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
     namesystem.checkSafeMode();
-    DatanodeHelper.removeDatanode(nodeInfo.getStorageID(), isTransactional);
   }
 
   /**
@@ -536,7 +519,6 @@ public class DatanodeManager {
           node.numBlocks() +  " blocks.");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
-      DatanodeHelper.updateDatanodeInfo(node, transactional);
       
       // all the blocks that reside on this node have to be replicated.
       checkDecommissionState(node);
@@ -549,8 +531,6 @@ public class DatanodeManager {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
       blockManager.processOverReplicatedBlocksOnReCommission(node);
-      
-      DatanodeHelper.updateDatanodeInfo(node, transactional);
     }
   }
 
@@ -602,7 +582,7 @@ public class DatanodeManager {
         + " storage " + nodeReg.getStorageID());
 
     DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
-    DatanodeDescriptor nodeN = getDatanodeByHost(nodeReg.getName());
+    DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByHost(nodeReg.getName());
       
     if (nodeN != null && nodeN != nodeS) {
       NameNode.LOG.info("BLOCK* NameSystem.registerDatanode: "
@@ -654,7 +634,6 @@ public class DatanodeManager {
       heartbeatManager.register(nodeS);
       checkDecommissioning(nodeS, dnAddress, transactional);
       
-      DatanodeHelper.updateDatanodeInfo(nodeS, transactional);
       return;
     } 
 
@@ -679,9 +658,7 @@ public class DatanodeManager {
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
     // because its is done when the descriptor is created
-    heartbeatManager.addDatanode(nodeDescr);
-    
-    DatanodeHelper.registerDatanode(nodeDescr, transactional);
+    heartbeatManager.addDatanode(nodeDescr);    
   }
 
   /**
@@ -932,7 +909,7 @@ public class DatanodeManager {
               blocks.length);
           for (BlockInfoUnderConstruction b : blocks) {
             brCommand.add(new RecoveringBlock(
-                new ExtendedBlock(blockPoolId, b), b.getExpectedLocations(), b
+                new ExtendedBlock(blockPoolId, b), blockManager.getExpectedDatanodes(b), b
                     .getBlockRecoveryId()));
           }
           return new DatanodeCommand[] { brCommand };

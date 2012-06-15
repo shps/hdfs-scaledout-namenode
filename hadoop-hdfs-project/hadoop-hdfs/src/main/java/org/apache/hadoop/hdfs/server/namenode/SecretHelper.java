@@ -13,11 +13,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 import se.sics.clusterj.DelegationKeyTable;
-import se.sics.clusterj.INodeTableSimple;
 
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
@@ -359,16 +357,6 @@ public class SecretHelper {
 		session.savePersistent(dkt); //using save to imitate the functionality of Map.put()
 	}
 	
-	/** Updates an already existing row in DelegationKey table
-	 * @param session
-	 * @param dkt
-	 */
-	private static void update(Session session, DelegationKeyTable dkt){
-    HelperMetrics.secretMetrics.incrUpdate();
-    
-		session.updatePersistent(dkt);
-	}
-	
 	/** Delete a key from the DelegationKey table
 	 * @param session
 	 * @param keyId
@@ -379,13 +367,4 @@ public class SecretHelper {
 		session.deletePersistent(DelegationKeyTable.class, keyId);
 	}
 	
-	/** Delete all rows from the DelegationKey table
-	 * @param session
-	 */
-	private static void deleteAll(Session session){
-    HelperMetrics.secretMetrics.incrDelete();
-    
-		session.deletePersistentAll(DelegationKeyTable.class);
-	}
-
 }

@@ -39,7 +39,7 @@ public class BlockManagerTestUtil {
       final String storageID) {
     ns.readLock();
     try {
-      return ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
+      return ns.getBlockManager().getDatanodeManager().getDatanodeByStorageId(storageID);
     } finally {
       ns.readUnlock();
     }

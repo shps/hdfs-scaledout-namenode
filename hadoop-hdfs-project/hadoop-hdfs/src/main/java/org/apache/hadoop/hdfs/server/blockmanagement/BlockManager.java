@@ -49,14 +49,12 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.namenode.ReplicaHelper;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -71,6 +69,7 @@ import com.mysql.clusterj.ClusterJException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
@@ -394,13 +393,13 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   private boolean commitBlock(final BlockInfoUnderConstruction block,
-      final Block commitBlock, boolean isTransactional) throws IOException {
+      final Block commitBlock) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
       return false;
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
-    block.commitBlock(commitBlock, isTransactional);
+    block.commitBlock(commitBlock.getNumBytes(), commitBlock.getGenerationStamp());
     em.persist(block);
     return true;
   }
@@ -430,7 +429,7 @@ public class BlockManager {
     }
 
     NumberReplicas blockStatus = countNodes(lastBlock);
-    final boolean b = commitBlock((BlockInfoUnderConstruction) lastBlock, commitBlock, isTransactional);
+    final boolean b = commitBlock((BlockInfoUnderConstruction) lastBlock, commitBlock);
 
     if (blockStatus.liveReplicas() >= minReplication) {
       completeBlock(fileINode, lastBlock, isTransactional);
@@ -462,9 +461,13 @@ public class BlockManager {
     fileINode.setBlock(blkIndex, completeBlock, isTransactional);
     completeBlock.setINode(fileINode);
     em.persist(completeBlock);
-    // replace block in the blocksMap
-    //W: do ReplicaHelper.delete(ucBlock, isTransactional)
-    ReplicaHelper.delete(ucBlock.getBlockId(), isTransactional);
+    
+    for (ReplicaUnderConstruction rep : ucBlock.getExpectedReplicas()) {
+      em.remove(rep);
+    }
+    
+    ucBlock.getExpectedReplicas().clear();
+    
     return completeBlock;    
   }
   
@@ -509,25 +512,27 @@ public class BlockManager {
       return null;
     LOG.debug("oldBlock=" + oldBlock);
     LOG.debug("getStoredBlock(oldBlock)=" + getStoredBlock(oldBlock));
-    /*assert oldBlock == getStoredBlock(oldBlock) :
-      "last block of the file is not in blocksMap";*/
     assert oldBlock.equals(getStoredBlock(oldBlock)) :
         "last block of the file is not in blocksMap";
 
-    DatanodeDescriptor[] targets = getNodes(oldBlock);
+    BlockInfoUnderConstruction ucBlock = fileINode.setLastBlock(oldBlock);
+    
+    for (IndexedReplica replica : oldBlock.getReplicas()) {
+      ReplicaUnderConstruction addedReplica = ucBlock.addExpectedReplica(replica.getStorageId(), HdfsServerConstants.ReplicaState.RBW);
+      
+      if (addedReplica != null)
+        em.persist(addedReplica);
+    }
 
-    BlockInfoUnderConstruction ucBlock =
-      fileINode.setLastBlock(oldBlock, targets, isTransactional);
-//    replaceBlock(ucBlock, oldBlock, isTransactional);
+
     em.persist(ucBlock);
     // Remove block from replication queue.
     updateNeededReplications(oldBlock, 0, 0);
 
     // remove this block from the list of pending blocks to be deleted. 
-    for (DatanodeDescriptor dd : targets) {
-      String datanodeId = dd.getStorageID();
-      if (invalidateBlocks.contains(datanodeId, oldBlock))
-        invalidateBlocks.remove(datanodeId, oldBlock);
+    for (IndexedReplica replica: oldBlock.getReplicas()) {
+      if (invalidateBlocks.contains(replica.getStorageId(), oldBlock))
+        invalidateBlocks.remove(replica.getStorageId(), oldBlock);
     }
 
     final long fileLength = fileINode.computeContentSummary().getLength();
@@ -603,9 +608,8 @@ public class BlockManager {
                 + ", blk=" + blk);
       }
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction) blk;
-      final DatanodeDescriptor[] locations = uc.getExpectedLocations();
       final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-      return new LocatedBlock(eb, locations, pos, false);
+      return new LocatedBlock(eb, getExpectedDatanodes(uc), pos, false);
     }
 
     NumberReplicas replicas = countNodes(blk);
@@ -1576,8 +1580,10 @@ public class BlockManager {
       
       // If block is under construction, add this replica to its list
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-        ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
-            node, iblk, reportedState, false);
+        ReplicaUnderConstruction expReplica = 
+                ((BlockInfoUnderConstruction)storedBlock).addExpectedReplica(node.getStorageID(), reportedState);
+        if (expReplica != null)
+          em.persist(expReplica);
         //and fall through to next clause
       }      
       //add replica if appropriate
@@ -1763,7 +1769,9 @@ public class BlockManager {
       ReplicaState reportedState,
       boolean isTransactional) 
   throws IOException {
-    block.addReplicaIfNotPresent(node, block, reportedState, isTransactional);
+    ReplicaUnderConstruction expReplica = block.addExpectedReplica(node.getStorageID(), reportedState);
+    if (expReplica != null)
+      em.persist(expReplica);
     if (reportedState == ReplicaState.FINALIZED && !block.hasReplicaIn(node.getStorageID())) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
@@ -2267,7 +2275,7 @@ public class BlockManager {
     // get the deletion hint node
     DatanodeDescriptor delHintNode = null;
     if (delHint != null && delHint.length() != 0) {
-      delHintNode = datanodeManager.getDatanode(delHint);
+      delHintNode = datanodeManager.getDatanodeByStorageId(delHint);
       if (delHintNode == null) {
         NameNode.stateChangeLog.warn("BLOCK* blockReceived: " + block
             + " is expected to be removed from an unrecorded node " + delHint);
@@ -2582,14 +2590,12 @@ public class BlockManager {
   }
 
   public int getActiveBlockCount() {
-    return BlocksHelper.getTotalBlocks() - (int) invalidateBlocks.numBlocks();
-  }
-
-  public DatanodeDescriptor[] getNodes(BlockInfo block) {
-    DatanodeDescriptor[] nodes =
-            new DatanodeDescriptor[block.getReplicas().size()];
-    nodes = getDatanodes(block).toArray(nodes);
-    return nodes;
+    try {
+      return em.countAllBlocks() - (int) invalidateBlocks.numBlocks();
+    } catch (IOException ex) {
+      Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return -1;
   }
 
   public int getTotalBlocks() {
@@ -2791,12 +2797,29 @@ public class BlockManager {
     List<DatanodeDescriptor> dscs = new ArrayList<DatanodeDescriptor>();
     
     for (IndexedReplica replica : block.getReplicas()) {
-      dscs.add(datanodeManager.getDatanode(replica.getStorageId()));
+      DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(replica.getStorageId());
+      if(dn != null)
+          dscs.add(dn);
     }
     
     return dscs;
   }
 
+  public DatanodeDescriptor[] getExpectedDatanodes(BlockInfoUnderConstruction block) {
+    List<DatanodeDescriptor> list = new ArrayList<DatanodeDescriptor>();
+    
+    for (ReplicaUnderConstruction uc : block.getExpectedReplicas() ) {
+      DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(uc.getStorageId());
+      if(dn != null)
+          list.add(dn);
+    }
+    
+    DatanodeDescriptor[] array = new DatanodeDescriptor[list.size()];
+    
+    array = list.toArray(array);
+    
+    return array;
+  }
 
   /**
    * Periodically calls computeReplicationWork().

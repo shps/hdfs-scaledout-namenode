@@ -16,12 +16,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import se.sics.clusterj.BlockInfoTable;
-import se.sics.clusterj.ExcessReplicaTable;
-import se.sics.clusterj.InvalidateBlocksTable;
-import se.sics.clusterj.PendingReplicationBlockTable;
-import se.sics.clusterj.TripletsTable;
+import se.sics.clusterj.*;
 
 /**
  *
@@ -32,11 +29,23 @@ public class TransactionContext {
   private static Log logger = LogFactory.getLog(TransactionContext.class);
   private boolean activeTxExpected = false;
   private boolean externallyMngedTx = true;
+  /**
+   * BlockInfo
+   */
   private Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
   private boolean allBlocksRead = false;
+  /**
+   * ReplicaUnderConstruction
+   */
+  private Map<String, ReplicaUnderConstruction> modifiedReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
+  private Map<String, ReplicaUnderConstruction> removedReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
+  private Map<Long, List<ReplicaUnderConstruction>> blockReplicasUc = new HashMap<Long, List<ReplicaUnderConstruction>>();
+  /**
+   * Replica
+   */
   private Map<String, IndexedReplica> modifiedReplicas = new HashMap<String, IndexedReplica>();
   private Map<String, IndexedReplica> removedReplicas = new HashMap<String, IndexedReplica>();
   private Map<Long, List<IndexedReplica>> blockReplicas = new HashMap<Long, List<IndexedReplica>>();
@@ -73,6 +82,10 @@ public class TransactionContext {
     inodeBlocks.clear();
     allBlocksRead = false;
 
+    modifiedReplicasUc.clear();
+    removedReplicasUc.clear();
+    blockReplicasUc.clear();
+    
     modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
@@ -87,7 +100,7 @@ public class TransactionContext {
     storageIdToExReplica.clear();
     modifiedExReplica.clear();
     removedExReplica.clear();
-    
+
     pendings.clear();
     modifiedPendings.clear();
     removedPendings.clear();
@@ -117,6 +130,21 @@ public class TransactionContext {
       BlockInfoFactory.createPersistable(block, newInstance);
       session.savePersistent(newInstance);
       builder.append("w Block:").append(+block.getBlockId()).append("\n");
+    }
+
+    for (ReplicaUnderConstruction replica : removedReplicasUc.values()) {
+      Object[] pk = new Object[2];
+      pk[0] = replica.getBlockId();
+      pk[1] = replica.getStorageId();
+      session.deletePersistent(ReplicaUcTable.class, pk);
+      builder.append("rm ReplicaUc:").append(replica.cacheKey()).append("\n");
+    }
+
+    for (ReplicaUnderConstruction replica : modifiedReplicasUc.values()) {
+      ReplicaUcTable newInstance = session.newInstance(ReplicaUcTable.class);
+      ReplicaUcFactory.createPersistable(replica, newInstance);
+      session.savePersistent(newInstance);
+      builder.append("w ReplicaUc:").append(replica.cacheKey()).append("\n");
     }
 
     for (IndexedReplica replica : removedReplicas.values()) {
@@ -163,23 +191,21 @@ public class TransactionContext {
       session.deletePersistent(ExcessReplicaTable.class, pk);
       builder.append("rm ExcessReplica:").append(exReplica.toString()).append("\n");
     }
-    
-    for (PendingBlockInfo p : modifiedPendings.values())
-    {
+
+    for (PendingBlockInfo p : modifiedPendings.values()) {
       PendingReplicationBlockTable pTable = session.newInstance(PendingReplicationBlockTable.class);
       PendingBlockInfoFactory.createPersistablePendingBlockInfo(p, pTable);
       session.savePersistent(pTable);
       builder.append("w PendingBlockInfo:").append(p.toString()).append("\n");
     }
-    
-    for (PendingBlockInfo p : removedPendings.values())
-    {
+
+    for (PendingBlockInfo p : removedPendings.values()) {
       PendingReplicationBlockTable pTable = session.newInstance(PendingReplicationBlockTable.class, p.getBlockId());
       session.deletePersistent(pTable);
       builder.append("rm PendingBlockInfo:").append(p.toString()).append("\n");
     }
 
-//    logger.debug("\nTx commit[" + builder.toString() + "]");
+    logger.debug("\nTx commit[" + builder.toString() + "]");
 
     resetContext();
   }
@@ -216,6 +242,14 @@ public class TransactionContext {
       blocks.put(block.getBlockId(), block);
       modifiedBlocks.put(block.getBlockId(), block);
 
+    } else if (obj instanceof ReplicaUnderConstruction) {
+      ReplicaUnderConstruction replica = (ReplicaUnderConstruction) obj;
+
+      if (removedReplicasUc.containsKey(replica.cacheKey())) {
+        throw new TransactionContextException("Removed  under constructionreplica passed to be persisted");
+      }
+
+      modifiedReplicasUc.put(replica.cacheKey(), replica);
     } else if (obj instanceof IndexedReplica) {
       IndexedReplica replica = (IndexedReplica) obj;
 
@@ -290,6 +324,11 @@ public class TransactionContext {
         modifiedBlocks.remove(block.getBlockId());
         removedBlocks.put(block.getBlockId(), attachedBlock);
 
+      } else if (obj instanceof ReplicaUnderConstruction) {
+        ReplicaUnderConstruction replica = (ReplicaUnderConstruction) obj;
+
+        modifiedReplicasUc.remove(replica.cacheKey());
+        removedReplicasUc.put(replica.cacheKey(), replica);
       } else if (obj instanceof IndexedReplica) {
         IndexedReplica replica = (IndexedReplica) obj;
 
@@ -337,7 +376,7 @@ public class TransactionContext {
     }
   }
 
-  List<IndexedReplica> findReplicasByBlockId(long id) throws TransactionContextException {
+  public List<IndexedReplica> findReplicasByBlockId(long id) throws TransactionContextException {
     beforeTxCheck();
     try {
       if (blockReplicas.containsKey(id)) {
@@ -420,6 +459,11 @@ public class TransactionContext {
     }
   }
 
+  public int countAllBlocks() throws TransactionContextException, IOException {
+    findAllBlocks();
+    return blocks.size();
+  }
+  
   public List<BlockInfo> findBlocksByStorageId(String name) throws IOException, TransactionContextException {
     beforeTxCheck();
     try {
@@ -620,8 +664,9 @@ public class TransactionContext {
 
   /**
    * This method is only used for metrics.
+   *
    * @return
-   * @throws TransactionContextException 
+   * @throws TransactionContextException
    */
   public long countAllExcessReplicas() throws TransactionContextException {
     beforeTxCheck();
@@ -715,7 +760,7 @@ public class TransactionContext {
   }
 
   /**
-   * 
+   *
    * @param pendingTables
    * @return newly found pending blocks
    */
@@ -751,10 +796,33 @@ public class TransactionContext {
       if (result != null) {
         return syncPendingBlockInstances(result);
       }
-      
+
       return null;
     } finally {
       afterTxCheck(true);
     }
   }
+
+  public List<ReplicaUnderConstruction> findReplicasUCByBlockId(long id) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (blockReplicasUc.containsKey(id)) {
+        return blockReplicasUc.get(id);
+      } else {
+        Session session = DBConnector.obtainSession();
+        QueryBuilder qb = session.getQueryBuilder();
+        QueryDomainType<ReplicaUcTable> dobj = qb.createQueryDefinition(ReplicaUcTable.class);
+        dobj.where(dobj.get("blockId").equal(dobj.param("param")));
+        Query<ReplicaUcTable> query = session.createQuery(dobj);
+        query.setParameter("param", id);
+        List<ReplicaUcTable> storedReplicas = query.getResultList();
+        List<ReplicaUnderConstruction> replicas = ReplicaUcFactory.createReplicaList(storedReplicas);
+        blockReplicasUc.put(id, replicas);
+        return replicas;
+      }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
 }

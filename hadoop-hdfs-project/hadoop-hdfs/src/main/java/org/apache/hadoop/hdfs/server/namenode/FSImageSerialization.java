@@ -97,8 +97,7 @@ public class FSImageSerialization {
     // last block is UNDER_CONSTRUCTION
     if(numBlocks > 0) {
       blk.readFields(in);
-      blocks[i] = new BlockInfoUnderConstruction(
-        blk, BlockUCState.UNDER_CONSTRUCTION, null);
+      blocks[i] = new BlockInfoUnderConstruction(blk);
     }
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);

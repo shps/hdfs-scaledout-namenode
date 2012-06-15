@@ -38,6 +38,7 @@ public class BlockInfo extends Block {
 
     ByBlockIndex() {
 
+      @Override
       public int compare(BlockInfo o1, BlockInfo o2) {
         if (o1.getBlockIndex() < o2.getBlockIndex()) {
           return -1;
@@ -48,6 +49,7 @@ public class BlockInfo extends Block {
     },
     ByGenerationStamp() {
 
+      @Override
       public int compare(BlockInfo o1, BlockInfo o2) {
         if (o1.getGenerationStamp() < o2.getGenerationStamp()) {
           return -1;
@@ -57,6 +59,7 @@ public class BlockInfo extends Block {
       }
     };
 
+    @Override
     public abstract int compare(BlockInfo o1, BlockInfo o2);
 
     public Comparator acsending() {
@@ -182,27 +185,6 @@ public class BlockInfo extends Block {
    */
   public boolean isComplete() {
     return getBlockUCState().equals(BlockUCState.COMPLETE);
-  }
-
-  /**
-   * Convert a complete block to an under construction block.
-   *
-   * @return BlockInfoUnderConstruction - an under construction block.
-   * @throws IOException
-   */
-  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
-          BlockUCState s, DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
-    if (isComplete()) {
-      BlockInfoUnderConstruction bUc = new BlockInfoUnderConstruction(this);
-      bUc.setBlockUCState(s);
-      bUc.setExpectedLocations(targets, isTransactional);
-      return bUc;
-    }
-    // the block is already under construction
-    BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) this;
-    ucBlock.setBlockUCState(s);
-    ucBlock.setExpectedLocations(targets, isTransactional);
-    return ucBlock;
   }
 
   @Override

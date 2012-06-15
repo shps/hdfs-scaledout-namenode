@@ -37,7 +37,6 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.avro.reflect.Nullable;
-import org.apache.hadoop.hdfs.server.namenode.DatanodeHelper;
 
 /** 
  * DatanodeInfo represents the status of a DataNode.

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,8 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -106,7 +103,7 @@ class InvalidateBlocks {
       final HashSet<InvalidatedBlock> invBlocks = entry.getValue();
       if (invBlocks.size() > 0) {
         //FIXME [H]: To dump properly it needs to get the block using blockid.
-        out.println(datanodeManager.getDatanode(entry.getKey()).getName() + invBlocks);
+        out.println(datanodeManager.getDatanodeByStorageId(entry.getKey()).getName() + invBlocks);
       }
     }
   }
@@ -122,7 +119,7 @@ class InvalidateBlocks {
 
   /** Invalidate work for the storage. */
   int invalidateWork(final String storageId) {
-    final DatanodeDescriptor dn = datanodeManager.getDatanode(storageId);
+    final DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(storageId);
     if (dn == null) {
       List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
       if (invBlocks != null)

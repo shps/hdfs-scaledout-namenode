@@ -151,7 +151,6 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             session.deletePersistentAll(BlockTotalTable.class);
             session.deletePersistentAll(DelegationKeyTable.class);
-            BlocksHelper.resetTotalBlocks(true);
             session.deletePersistentAll(ReplicaUcTable.class);
             session.deletePersistentAll(DatanodeInfoTable.class);
             session.deletePersistentAll(InvalidateBlocksTable.class);

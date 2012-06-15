@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
@@ -52,10 +53,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.*;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -245,7 +244,7 @@ public class FSDirectory implements Closeable {
                 long preferredBlockSize,
                 String clientName,
                 String clientMachine,
-                DatanodeDescriptor clientNode,
+                DatanodeID clientNode,
                 long generationStamp, boolean isTransactional) 
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException {
@@ -377,7 +376,11 @@ public class FSDirectory implements Closeable {
           new BlockInfoUnderConstruction(
               block);
       blockInfo.setBlockUCState(BlockUCState.UNDER_CONSTRUCTION);
-      blockInfo.setExpectedLocations(targets, isTransactional);
+      for (DatanodeDescriptor dn : targets) {
+        ReplicaUnderConstruction expReplica = blockInfo.addExpectedReplica(dn.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
+        if (expReplica != null)
+          em.persist(expReplica);
+      }
       blockInfo.setINode(fileINode);
       fileINode.addBlock(blockInfo);
       em.persist(blockInfo);

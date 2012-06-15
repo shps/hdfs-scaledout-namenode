@@ -1,9 +1,10 @@
 /**
- * 
+ *
  */
 package se.sics.clusterj;
 
 import com.mysql.clusterj.annotation.Column;
+import com.mysql.clusterj.annotation.Index;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 
@@ -11,29 +12,29 @@ import com.mysql.clusterj.annotation.PrimaryKey;
  * @author wmalik
  *
  */
-@PersistenceCapable(table="ReplicaUc")
+@PersistenceCapable(table = "ReplicaUc")
 public interface ReplicaUcTable {
 
   @PrimaryKey
-  @Column(name = "id")
-  int getId();     
-  void setId(int id);
-
   @Column(name = "blockId")
-  long getBlockId();     
+  long getBlockId();
+
   void setBlockId(long blkid);
 
-  @Column(name = "expLocation")
-  byte[] getExpectedLocation();  
-  void setExpectedLocation(byte[] expiryDate);
+  @PrimaryKey
+  @Column(name = "storageId")
+  @Index(name = "idx_datanodeStorage")
+  String getStorageId();
+
+  void setStorageId(String id);
+
+  @Column(name = "indx")
+  int getIndex();
+
+  void setIndex(int index);
 
   @Column(name = "state")
-  byte[] getState(); 
-  void setState(byte[] state);
+  int getState();
 
-  @Column(name = "timestamp")
-  long getTimestamp();     
-  void setTimestamp(long ts);
-
+  void setState(int state);
 }
-

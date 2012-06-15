@@ -131,6 +131,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -1486,7 +1487,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-
+      
       if (append && myFile != null) {
         //
         // Replace current node with a INodeUnderConstruction.
@@ -1875,7 +1876,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
-      clientNode = pendingFile.getClientNode();
+      clientNode = blockManager.getDatanodeManager().getDatanode(pendingFile.getClientNode());
       replication = (int)pendingFile.getReplication();
     /*} finally {
       writeUnlock();
@@ -1941,7 +1942,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       //check lease
       final INodeFileUnderConstruction file = checkLease(src, clientName);
-      clientnode = file.getClientNode();
+      clientnode = blockManager.getDatanodeManager().getDatanode(file.getClientNode());
       preferredblocksize = file.getPreferredBlockSize();
 
       //find datanode descriptors
@@ -2887,9 +2888,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new AlreadyBeingCreatedException(message);
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
-      // setup the last block locations from the blockManager if not known
-      if(lastBlock.getNumExpectedLocations() == 0)
-        lastBlock.setExpectedLocations(blockManager.getNodes(lastBlock), isTransactional);
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp();
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
@@ -3041,15 +3039,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               // the file is getting closed. Insert block locations into blockManager.
               // Otherwise fsck will report these blocks as MISSING, especially if the
               // blocksReceived from Datanodes take a long time to arrive.
-              for (int i = 0; i < descriptors.length; i++) {
-                //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-                IndexedReplica replica = storedBlock.addReplica(descriptors[i]);
+              for(DatanodeID id : newtargets) {
+                IndexedReplica replica = storedBlock.addReplica(blockManager.getDatanodeManager().getDatanodeByStorageId(id.getStorageID()));
                 if (replica != null)
                   em.persist(replica);
               }
             }
             // add pipeline locations into the INodeUnderConstruction
-            pendingFile.setLastBlock(storedBlock, descriptors, true);
+            BlockInfoUnderConstruction bUc = pendingFile.setLastBlock(storedBlock);
+            for (DatanodeID id : newtargets) {
+              ReplicaUnderConstruction addedReplica = bUc.addExpectedReplica(id.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
+
+              if (addedReplica != null) {
+                em.persist(addedReplica);
+              }
+            }
+
             em.persist(storedBlock);
           }
 
@@ -4537,17 +4542,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     blockinfo.setGenerationStamp(newBlock.getGenerationStamp());
     blockinfo.setNumBytes(newBlock.getNumBytes());
 
-    // find the DatanodeDescriptor objects
-    final DatanodeManager dm = getBlockManager().getDatanodeManager();
-    DatanodeDescriptor[] descriptors = null;
     if (newNodes.length > 0) {
-      descriptors = new DatanodeDescriptor[newNodes.length];
       for(int i = 0; i < newNodes.length; i++) {
-        descriptors[i] = dm.getDatanode(newNodes[i]);
+        ReplicaUnderConstruction replica = blockinfo.addExpectedReplica(newNodes[i].getStorageID(), HdfsServerConstants.ReplicaState.RBW);
+        em.persist(replica);
       }
     }
-    blockinfo.setExpectedLocations(descriptors, false);
 
+    em.persist(blockinfo);
+    
     // persist blocks only if append is supported
     String src = leaseManager.findPath(pendingFile);
     if (supportAppends) {

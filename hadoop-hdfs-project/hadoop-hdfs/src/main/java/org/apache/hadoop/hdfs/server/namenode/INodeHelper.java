@@ -154,7 +154,7 @@ public class INodeHelper {
 					ps,
 					inodetable.getClientName(),
 					inodetable.getClientMachine(),
-					dnm.getDatanodeByHost(inodetable.getClientNode()));
+					dnm.getDatanodeByName(inodetable.getClientNode()));
 
 			((INodeFile) (inode)).setID(inodetable.getId());
 

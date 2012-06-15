@@ -1,228 +1,144 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.namenode.BlocksHelper;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.ReplicaHelper;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
- * Represents a block that is currently being constructed.<br>
- * This is usually the last block of a file opened for write or append.
+ * Represents a block that is currently being constructed.<br> This is usually
+ * the last block of a file opened for write or append.
  */
 public class BlockInfoUnderConstruction extends BlockInfo {
-  /** Block state. See {@link BlockUCState} */
-  private BlockUCState blockUCState;
 
   /**
-   * Block replicas as assigned when the block was allocated.
-   * This defines the pipeline order.
+   * Block state. See {@link BlockUCState}
    */
-  private List<ReplicaUnderConstruction> replicas;
-
-  /** A data-node responsible for block recovery. */
-  private int primaryNodeIndex = -1;
-
+  private BlockUCState blockUCState;
   /**
-   * The new generation stamp, which this block will have
-   * after the recovery succeeds. Also used as a recovery id to identify
-   * the right recovery if any of the abandoned recoveries re-appear.
+   * Block replicas as assigned when the block was allocated. This defines the
+   * pipeline order.
+   */
+  private List<ReplicaUnderConstruction> expectedReplicas;
+  /**
+   * A data-node responsible for block recovery.
+   */
+  private int primaryNodeIndex = -1;
+  /**
+   * The new generation stamp, which this block will have after the recovery
+   * succeeds. Also used as a recovery id to identify the right recovery if any
+   * of the abandoned recoveries re-appear.
    */
   private long blockRecoveryId = 0;
-  
-  /** Should only be called by BlocksHelper
+
+  /**
+   * Should only be called by BlocksHelper
+   *
    * @param recoveryId
    */
   public void setBlockRecoveryId(long recoveryId) {
     this.blockRecoveryId = recoveryId;
   }
-  
-  /** Should only be called by BlocksHelper
+
+  /**
+   * Should only be called by BlocksHelper
+   *
    * @param nodeIndex
    */
   public void setPrimaryNodeIndex(int nodeIndex) {
     this.primaryNodeIndex = nodeIndex;
   }
-  
+
   public int getPrimaryNodeIndex() {
     return this.primaryNodeIndex;
-  }
-  
-  /**
-   * ReplicaUnderConstruction contains information about replicas while
-   * they are under construction.
-   * The GS, the length and the state of the replica is as reported by 
-   * the data-node.
-   * It is not guaranteed, but expected, that data-nodes actually have
-   * corresponding replicas.
-   */
-  public static class ReplicaUnderConstruction extends Block {
-    private DatanodeDescriptor expectedLocation;
-    private ReplicaState state;
-
-    public ReplicaUnderConstruction(Block block,
-                             DatanodeDescriptor target,
-                             ReplicaState state) {
-      super(block);
-      this.expectedLocation = target;
-      this.state = state;
-    }
-
-    /**
-     * Expected block replica location as assigned when the block was allocated.
-     * This defines the pipeline order.
-     * It is not guaranteed, but expected, that the data-node actually has
-     * the replica.
-     */
-    DatanodeDescriptor getExpectedLocation() {
-      return expectedLocation;
-    }
-
-    /**
-     * Get replica state as reported by the data-node.
-     */
-    ReplicaState getState() {
-      return state;
-    }
-
-    /**
-     * Set replica state.
-     */
-    void setState(ReplicaState s) {
-      state = s;
-    }
-
-    /**
-     * Is data-node the replica belongs to alive.
-     */
-    boolean isAlive() {
-      return expectedLocation.isAlive;
-    }
-
-    @Override // Block
-    public int hashCode() {
-      return super.hashCode();
-    }
-
-    @Override // Block
-    public boolean equals(Object obj) {
-      // Sufficient to rely on super's implementation
-      return (this == obj) || super.equals(obj);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public String toString() {
-      final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-      b.append("[")
-       .append(expectedLocation)
-       .append("|")
-       .append(state)
-       .append("]");
-      return b.toString();
-    }
   }
 
   /**
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
-   * @throws IOException 
+   *
+   * @throws IOException
    */
-  public BlockInfoUnderConstruction(Block blk) throws IOException {
-    this(blk, BlockUCState.UNDER_CONSTRUCTION, null);
-  }
-
-  /**
-   * Create a block that is currently being constructed.
-   * @throws IOException 
-   */
-  public BlockInfoUnderConstruction(Block blk,
-                             BlockUCState state,
-                             DatanodeDescriptor[] targets) throws IOException {
+  public BlockInfoUnderConstruction(Block blk) {
     super(blk);
-    assert getBlockUCState() != BlockUCState.COMPLETE :
-      "BlockInfoUnderConstruction cannot be in COMPLETE state";
-    this.blockUCState = state;
-    setExpectedLocations(targets, false);
+    this.blockUCState = BlockUCState.UNDER_CONSTRUCTION;
   }
 
   /**
    * Convert an under construction block to a complete block.
-   * 
+   *
    * @return BlockInfo - a complete block.
-   * @throws IOException if the state of the block 
-   * (the generation stamp and the length) has not been committed by 
-   * the client or it does not have at least a minimal number of replicas 
-   * reported from data-nodes. 
+   * @throws IOException if the state of the block (the generation stamp and the
+   * length) has not been committed by the client or it does not have at least a
+   * minimal number of replicas reported from data-nodes.
    */
   BlockInfo convertToCompleteBlock() throws IOException {
     assert getBlockUCState() != BlockUCState.COMPLETE :
-      "Trying to convert a COMPLETE block";
-    if(getBlockUCState() != BlockUCState.COMMITTED)
+            "Trying to convert a COMPLETE block";
+    if (getBlockUCState() != BlockUCState.COMMITTED) {
       throw new IOException(
-          "Cannot complete block: block has not been COMMITTED by the client");
+              "Cannot complete block: block has not been COMMITTED by the client");
+    }
     return new BlockInfo(this);
   }
 
-  /** Set expected locations 
-   * @throws IOException */
-  public void setExpectedLocations(DatanodeDescriptor[] targets, boolean isTransactional) throws IOException {
-    int numLocations = targets == null ? 0 : targets.length;
-    //this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
-    for(int i = 0; i < numLocations; i++) {
-      //replicas.add(
-      //  new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
-      ReplicaHelper.add(this.getBlockId(), targets[i], ReplicaState.RBW, isTransactional);
-    }
-  }
-
   /**
-   * Create array of expected replica locations
-   * (as has been assigned by chooseTargets()).
-   * @throws IOException 
+   * Create array of expected replica locations (as has been assigned by
+   * chooseTargets()).
+   *
+   * @throws IOException
    */
-  public DatanodeDescriptor[] getExpectedLocations() throws IOException {
-    List<ReplicaUnderConstruction> replicasList = ReplicaHelper.getReplicas(this.getBlockId(), false);
-    int numLocations = replicasList == null ? 0 : replicasList.size();
-    DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocations];
-    for(int i = 0; i < numLocations; i++)
-      locations[i] = replicasList.get(i).getExpectedLocation();
-    return locations;
-    
-    
+  public List<ReplicaUnderConstruction> getExpectedReplicas() {
+    if (expectedReplicas == null) {
+      expectedReplicas = EntityManager.getInstance().findReplicaUCByBlockId(getBlockId());
+    }
+    Collections.sort(expectedReplicas, ReplicaUnderConstruction.Order.ByIndex);
+    return expectedReplicas;
   }
 
-  /** Get the number of expected locations */
-  public int getNumExpectedLocations() {
-    //return replicas == null ? 0 : replicas.size();
-    return ReplicaHelper.size(this.getBlockId(), false);
+  public ReplicaUnderConstruction addExpectedReplica(String storageId, ReplicaState rState) {
+    if (hasExpectedReplicaIn(storageId))
+      return null;
+    
+    ReplicaUnderConstruction replica = new ReplicaUnderConstruction(rState, storageId, getBlockId(), getExpectedReplicas().size());
+    getExpectedReplicas().add(replica);
+    return replica;
+  }
+
+  private boolean hasExpectedReplicaIn(String storageId) {
+    for (IndexedReplica replica : getReplicas()) {
+      if (replica.getStorageId().equals(storageId)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
    * Return the state of the block under construction.
+   *
    * @see BlockUCState
    */
   @Override // BlockInfo
@@ -234,85 +150,65 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     blockUCState = s;
   }
 
-  /** Get block recovery ID */
+  /**
+   * Get block recovery ID
+   */
   public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
   /**
-   * Commit block's length and generation stamp as reported by the client.
-   * Set block state to {@link BlockUCState#COMMITTED}.
-   * @param block - contains client reported block length and generation 
-   * @throws IOException if block ids are inconsistent.
+   * Commit block's length and generation stamp as reported by the client. Set
+   * block state to {@link BlockUCState#COMMITTED}.
    */
-  void commitBlock(Block block, boolean isTransactional) throws IOException {
-    if(getBlockId() != block.getBlockId())
-      throw new IOException("Trying to commit inconsistent block: id = "
-          + block.getBlockId() + ", expected id = " + getBlockId());
+  public void commitBlock(long reportedNumBytes, long reportedGenStamp) {
     blockUCState = BlockUCState.COMMITTED;
-    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    setNumBytes(reportedNumBytes);
+    setGenerationStamp(reportedGenStamp);
   }
-  
 
   /**
-   * Initialize lease recovery for this block.
-   * Find the first alive data-node starting from the previous primary and
-   * make it primary.
-   * @throws IOException 
+   * Initialize lease recovery for this block. Find the first alive data-node
+   * starting from the previous primary and make it primary.
+   *
+   * @throws IOException
    */
   public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr, boolean isTransactional) throws IOException {
 
-    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), isTransactional);
-    
-    setBlockUCState(BlockUCState.UNDER_RECOVERY); 
-    
+    setBlockUCState(BlockUCState.UNDER_RECOVERY);
+
     blockRecoveryId = recoveryId; //FIXME: this should be either persisted to database / or stored globally
-    
-    if (replicasFromDB.isEmpty()) {
+
+    if (getExpectedReplicas().isEmpty()) {
       NameNode.stateChangeLog.warn("BLOCK*"
-        + " INodeFileUnderConstruction.initLeaseRecovery:"
-        + " No blocks found, lease removed.");
+              + " INodeFileUnderConstruction.initLeaseRecovery:"
+              + " No blocks found, lease removed.");
     }
 
     int previous = primaryNodeIndex; //FIXME: this should be either persisted to database / or stored globally
-    
-    for(int i = 1; i <= replicasFromDB.size(); i++) {
-      int j = (previous + i)%replicasFromDB.size();
-      ReplicaUnderConstruction replica = replicasFromDB.get(j);
-      DatanodeDescriptor datanodeFromDB = replica.getExpectedLocation();
-      DatanodeDescriptor datanode = datanodeMgr.getDatanode(datanodeFromDB.getStorageID());
+
+    for (int i = 1; i <= getExpectedReplicas().size(); i++) {
+      int j = (previous + i) % getExpectedReplicas().size();
+      ReplicaUnderConstruction replica = getExpectedReplicas().get(j);
+      DatanodeDescriptor datanode = datanodeMgr.getDatanodeByStorageId(replica.getStorageId());
       if (datanode.isAlive) { //FIXME
         primaryNodeIndex = j;
-        
+
         datanode.addBlockToBeRecovered(this);
         NameNode.stateChangeLog.info("BLOCK* " + this
-          + " recovery started, primary=" + datanode);
+                + " recovery started, primary=" + datanode);
         return;
       }
     }
-    
-    
-  }
-  
-  void addReplicaIfNotPresent(DatanodeDescriptor dn,
-      Block block,
-      ReplicaState rState, boolean isTransactional) throws IOException {
-    
-    List<ReplicaUnderConstruction> replicasFromDB = ReplicaHelper.getReplicas(this.getBlockId(), false);
-    for(ReplicaUnderConstruction r : replicasFromDB)
-      if(r.getExpectedLocation().getName().equals(dn.getName()))
-        return;
-    ReplicaHelper.add(this.getBlockId(), dn, rState, isTransactional);
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(super.toString());
-    b.append("{blockUCState=").append(blockUCState)
-     .append(", primaryNodeIndex=").append(primaryNodeIndex)
-     .append(", replicas=").append(replicas)
-     .append("}");
+    b.append("{blockUCState=").append(blockUCState).append(", primaryNodeIndex=").append(primaryNodeIndex).append(", replicas=").append(getExpectedReplicas().toArray()).append("}");
     return b.toString();
   }
 }

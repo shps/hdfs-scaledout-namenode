@@ -13,22 +13,24 @@ import com.mysql.clusterj.annotation.Index;
  *
  * @author wmalik
  */
-@PersistenceCapable(table="triplets")
+@PersistenceCapable(table = "triplets")
 public interface TripletsTable {
 
-    @PrimaryKey
-    @Column(name = "blockId")
-    long getBlockId();
-    void setBlockId(long bid);
+  @PrimaryKey
+  @Column(name = "blockId")
+  long getBlockId();
 
-    @Column(name = "index")
-    int getIndex();
-    void setIndex(int index);
+  void setBlockId(long bid);
 
+  @PrimaryKey
+  @Column(name = "storageId")
+  @Index(name = "idx_datanodeStorage")
+  String getStorageId();
 
-    @PrimaryKey
-    @Column(name = "storageId")
-    @Index(name="idx_datanodeStorage")
-    String getStorageId();
-    void setStorageId(String id);
+  void setStorageId(String id);
+
+  @Column(name = "index")
+  int getIndex();
+  
+  void setIndex(int index);
 }

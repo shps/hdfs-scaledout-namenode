@@ -13,6 +13,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.Replica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.*;
 
 /**
  *
@@ -76,15 +77,6 @@ public class EntityManager {
     }
   }
 
-  public List<IndexedReplica> findReplicasByBlockId(long id) {
-    try {
-      return context().findReplicasByBlockId(id);
-    } catch (TransactionContextException ex) {
-      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    return null;
-  }
-
   public List<BlockInfo> findBlocksByInodeId(long id) {
     try {
       try {
@@ -114,6 +106,35 @@ public class EntityManager {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
 
+    return null;
+  }
+
+  public int countAllBlocks() throws IOException {
+    try {
+      return context().countAllBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return -1;
+  }
+
+   public List<ReplicaUnderConstruction> findReplicaUCByBlockId(long blockId) {
+    try {
+      return context().findReplicasUCByBlockId(blockId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<IndexedReplica> findReplicasByBlockId(long id) {
+    try {
+      return context().findReplicasByBlockId(id);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
     return null;
   }
 
