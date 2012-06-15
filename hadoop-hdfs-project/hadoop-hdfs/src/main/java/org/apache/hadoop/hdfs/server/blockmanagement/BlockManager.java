@@ -2738,6 +2738,13 @@ public class BlockManager {
           iNode.removeBlock(bi);
         bi.setINode(null);
         em.remove(bi);
+        
+        // Remove all the replicas for this block
+        List<IndexedReplica> replicas = em.findReplicasByBlockId(block.getBlockId());
+        for(IndexedReplica r : replicas) {
+          em.remove(r);
+        }
+        
       }
     } catch (Exception ex) {
       Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
