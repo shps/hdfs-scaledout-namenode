@@ -41,17 +41,6 @@ public class TransactionContext {
   private Map<Long, BlockInfo> removedBlocks = new HashMap<Long, BlockInfo>();
   private Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
   private boolean allBlocksRead = false;
-  private Map<Integer, TreeSet<LeasePath>> holderLeasePaths = new HashMap<Integer, TreeSet<LeasePath>>();
-  private Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
-  private Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
-  private Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
-  private Map<String, LeasePath> pathToLeasePath = new HashMap<String, LeasePath>();
-  private Map<String, Lease> leases = new HashMap<String, Lease>();
-  private Map<Integer, Lease> idToLease = new HashMap<Integer, Lease>();
-  private Map<Lease, Lease> modifiedLeases = new HashMap<Lease, Lease>();
-  private Map<Lease, Lease> removedLeases = new HashMap<Lease, Lease>();
-  private boolean allLeasesRead = false;
-  private boolean allLeasePathsRead = false;
   private Map<String, IndexedReplica> modifiedReplicas = new HashMap<String, IndexedReplica>();
   private Map<String, IndexedReplica> removedReplicas = new HashMap<String, IndexedReplica>();
   private Map<Long, List<IndexedReplica>> blockReplicas = new HashMap<Long, List<IndexedReplica>>();
@@ -77,6 +66,23 @@ public class TransactionContext {
   private Map<Long, PendingBlockInfo> modifiedPendings = new HashMap<Long, PendingBlockInfo>();
   private Map<Long, PendingBlockInfo> removedPendings = new HashMap<Long, PendingBlockInfo>();
   private boolean allPendingRead = false;
+  /**
+   * LeasePath
+   */
+  private Map<Integer, TreeSet<LeasePath>> holderLeasePaths = new HashMap<Integer, TreeSet<LeasePath>>();
+  private Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<String, LeasePath> pathToLeasePath = new HashMap<String, LeasePath>();
+  private boolean allLeasePathsRead = false;
+  /**
+   * Lease
+   */
+  private Map<String, Lease> leases = new HashMap<String, Lease>();
+  private Map<Integer, Lease> idToLease = new HashMap<Integer, Lease>();
+  private Map<Lease, Lease> modifiedLeases = new HashMap<Lease, Lease>();
+  private Map<Lease, Lease> removedLeases = new HashMap<Lease, Lease>();
+  private boolean allLeasesRead = false;
 
   private void resetContext() {
     activeTxExpected = false;
@@ -107,6 +113,19 @@ public class TransactionContext {
     modifiedPendings.clear();
     removedPendings.clear();
     allPendingRead = false;
+
+    holderLeasePaths.clear();
+    leasePaths.clear();
+    modifiedLPaths.clear();
+    removedLPaths.clear();
+    pathToLeasePath.clear();
+    allLeasePathsRead = false;
+
+    idToLease.clear();
+    modifiedLeases.clear();
+    removedLeases.clear();
+    leases.clear();
+    allLeasesRead = false;
   }
 
   void begin() {
@@ -192,6 +211,33 @@ public class TransactionContext {
       builder.append("rm PendingBlockInfo:").append(p.toString()).append("\n");
     }
 
+    for (LeasePath lp : modifiedLPaths.values()) {
+      LeasePathsTable lTable = session.newInstance(LeasePathsTable.class);
+      LeasePathFactory.createPersistableLeasePathInstance(lp, lTable);
+      session.savePersistent(lTable);
+      builder.append("w LeasePath:").append(lp.toString()).append("\n");
+    }
+
+    for (LeasePath lp : removedLPaths.values()) {
+      LeasePathsTable lTable = session.newInstance(LeasePathsTable.class, lp.getPath());
+      session.deletePersistent(lTable);
+      builder.append("rm LeasePath:").append(lp.toString()).append("\n");
+    }
+
+    for (Lease l : modifiedLeases.values()) {
+      LeaseTable lTable = session.newInstance(LeaseTable.class);
+      LeaseFactory.createPersistableLeaseInstance(l, lTable);
+      session.savePersistent(lTable);
+      builder.append("w Lease:").append(l.toString()).append("\n");
+    }
+
+    for (Lease l : removedLeases.values()) {
+      LeaseTable lTable = session.newInstance(LeaseTable.class, l.getHolder());
+      session.deletePersistent(lTable);
+      builder.append("rm Lease:").append(l.toString()).append("\n");
+    }
+
+
 //    logger.debug("\nTx commit[" + builder.toString() + "]");
 
     resetContext();
@@ -247,6 +293,15 @@ public class TransactionContext {
       modifiedLPaths.put(lPath, lPath);
       leasePaths.put(lPath, lPath);
       pathToLeasePath.put(lPath.getPath(), lPath);
+      if (allLeasePathsRead) {
+        if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+          holderLeasePaths.get(lPath.getHolderId()).add(lPath);
+        } else {
+          TreeSet<LeasePath> lSet = new TreeSet<LeasePath>();
+          lSet.add(lPath);
+          holderLeasePaths.put(lPath.getHolderId(), lSet);
+        }
+      }
     } else if (obj instanceof Lease) {
       Lease lease = (Lease) obj;
 
@@ -322,26 +377,6 @@ public class TransactionContext {
         blocks.remove(block.getBlockId());
         modifiedBlocks.remove(block.getBlockId());
         removedBlocks.put(block.getBlockId(), attachedBlock);
-
-      }
-      if (obj instanceof LeasePath) {
-        LeasePath lPath = (LeasePath) obj;
-        leasePaths.remove(lPath);
-        pathToLeasePath.remove(lPath.getPath());
-        modifiedLPaths.remove(lPath);
-        removedLPaths.put(lPath, lPath);
-
-      } else if (obj instanceof Lease) {
-        Lease lease = (Lease) obj;
-
-        if (!leases.containsKey(lease.getHolder())) {
-          throw new TransactionContextException("Unattached lease passed to be removed");
-        }
-
-        leases.remove(lease.getHolder());
-        idToLease.remove(lease.getHolderID());
-        modifiedLeases.remove(lease);
-        removedLeases.put(lease, lease);
       } else if (obj instanceof IndexedReplica) {
         IndexedReplica replica = (IndexedReplica) obj;
 
@@ -380,6 +415,32 @@ public class TransactionContext {
         }
         modifiedPendings.remove(pendingBlock.getBlockId());
         removedPendings.put(pendingBlock.getBlockId(), pendingBlock);
+      } else if (obj instanceof LeasePath) {
+        LeasePath lPath = (LeasePath) obj;
+        if (leasePaths.remove(lPath) == null) {
+          throw new TransactionContextException("Unattached lease-path passed to be removed");
+        }
+
+        pathToLeasePath.remove(lPath.getPath());
+        modifiedLPaths.remove(lPath);
+        if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+          Set<LeasePath> lSet = holderLeasePaths.get(lPath.getHolderId());
+          lSet.remove(lPath);
+          if (lSet.isEmpty()) {
+            holderLeasePaths.remove(lPath.getHolderId());
+          }
+        }
+        removedLPaths.put(lPath, lPath);
+
+      } else if (obj instanceof Lease) {
+        Lease lease = (Lease) obj;
+
+        if (leases.remove(lease.getHolder()) == null) {
+          throw new TransactionContextException("Unattached lease passed to be removed");
+        }
+        idToLease.remove(lease.getHolderID());
+        modifiedLeases.remove(lease);
+        removedLeases.put(lease, lease);
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
@@ -509,23 +570,6 @@ public class TransactionContext {
     return finalList;
   }
 
-  private TreeSet<LeasePath> syncLeasePathInstances(List<LeasePathsTable> lpTables) {
-    TreeSet<LeasePath> finalList = new TreeSet<LeasePath>();
-
-    for (LeasePathsTable lpt : lpTables) {
-      LeasePath lPath = LeasePathFactory.createLeasePath(lpt);
-      if (this.leasePaths.containsKey(lPath)) {
-        finalList.add(this.leasePaths.get(lPath));
-      } else {
-        this.leasePaths.put(lPath, lPath);
-        this.pathToLeasePath.put(lpt.getPath(), lPath);
-        finalList.add(lPath);
-      }
-    }
-
-    return finalList;
-  }
-
   public List<InvalidatedBlock> findInvalidatedBlocksByStorageId(String storageId) throws TransactionContextException {
     beforeTxCheck();
     try {
@@ -647,92 +691,6 @@ public class TransactionContext {
     }
   }
 
-  private void beforeTxCheck() throws TransactionContextException {
-    Session session = DBConnector.obtainSession();
-    if (activeTxExpected && !session.currentTransaction().isActive()) {
-      throw new TransactionContextException("Active transaction is expected.");
-    } else if (!activeTxExpected) {
-      DBConnector.beginTransaction();
-      externallyMngedTx = false;
-    }
-  }
-
-  private void afterTxCheck(boolean done) {
-    if (!externallyMngedTx) {
-      if (done) {
-        DBConnector.commit();
-      } else {
-        DBConnector.safeRollback();
-      }
-    }
-  }
-
-  public TreeSet<LeasePath> findLeasePathsByHolderID(int holderID) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (holderLeasePaths.containsKey(holderID)) {
-        return holderLeasePaths.get(holderID);
-      } else {
-        Session session = DBConnector.obtainSession();
-        QueryBuilder qb = session.getQueryBuilder();
-        QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
-        dobj.where(dobj.get("holderID").equal(dobj.param("param")));
-        Query<LeasePathsTable> query = session.createQuery(dobj);
-        query.setParameter("param", holderID);
-        List<LeasePathsTable> paths = query.getResultList();
-        TreeSet<LeasePath> lpSet = syncLeasePathInstances(paths);
-        holderLeasePaths.put(holderID, lpSet);
-
-        return lpSet;
-      }
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public LeasePath findLeasePathByPath(String path) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (pathToLeasePath.containsKey(path)) {
-        return pathToLeasePath.get(path);
-      }
-
-      Session session = DBConnector.obtainSession();
-      LeasePathsTable lPTable = session.find(LeasePathsTable.class, path);
-      LeasePath lPath = LeasePathFactory.createLeasePath(lPTable);
-      leasePaths.put(lPath, lPath);
-      pathToLeasePath.put(lPath.getPath(), lPath);
-
-      return lPath;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public TreeSet<LeasePath> findLeasePathsByPrefix(String prefix) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType dobj = qb.createQueryDefinition(LeasePathsTable.class);
-      PredicateOperand propertyPredicate = dobj.get("path");
-      String param = "prefix";
-      PredicateOperand propertyLimit = dobj.get(param);
-      Predicate like = propertyPredicate.like(propertyLimit);
-      dobj.where(like);
-      Query query = session.createQuery(dobj);
-      query.setParameter(param, prefix + "%");
-      List<LeasePathsTable> resultset = query.getResultList();
-      if (resultset != null) {
-        return syncLeasePathInstances(resultset);
-      }
-
-      return null;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
   private TreeSet<Long> syncExcessReplicaInstances(List<ExcessReplicaTable> exReplicaTables) {
     TreeSet<Long> replicaSet = new TreeSet<Long>();
 
@@ -777,27 +735,6 @@ public class TransactionContext {
     }
   }
 
-  public TreeSet<LeasePath> findAllLeasePaths() throws TransactionContextException {
-    beforeTxCheck();
-
-    try {
-      if (allLeasePathsRead) {
-        return new TreeSet<LeasePath>(leasePaths.values());
-      }
-
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType dobj = qb.createQueryDefinition(LeasePathsTable.class);
-      Query query = session.createQuery(dobj);
-      List<LeasePathsTable> resultset = query.getResultList();
-      TreeSet<LeasePath> lPathSet = syncLeasePathInstances(resultset);
-      allLeasePathsRead = true;
-      return lPathSet;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
   public ExcessReplica findExcessReplicaByPK(String storageId, long blockId) throws TransactionContextException {
     beforeTxCheck();
     try {
@@ -827,37 +764,23 @@ public class TransactionContext {
     }
   }
 
-  public Lease findLeaseByHolderId(int holderId) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (idToLease.containsKey(holderId)) {
-        return idToLease.get(holderId);
-      }
+  private void beforeTxCheck() throws TransactionContextException {
+    Session session = DBConnector.obtainSession();
+    if (activeTxExpected && !session.currentTransaction().isActive()) {
+      throw new TransactionContextException("Active transaction is expected.");
+    } else if (!activeTxExpected) {
+      DBConnector.beginTransaction();
+      externallyMngedTx = false;
+    }
+  }
 
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
-
-      dobj.where(dobj.get("holderID").equal(dobj.param("param")));
-
-      Query<LeaseTable> query = session.createQuery(dobj);
-      query.setParameter("param", holderId); //the WHERE clause of SQL
-      List<LeaseTable> leaseTables = query.getResultList();
-
-      if (leaseTables.size() > 1) {
-        logger.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
-        return null;
-      } else if (leaseTables.size() == 1) {
-        Lease lease = LeaseFactory.createLease(leaseTables.get(0));
-        leases.put(lease.getHolder(), lease);
-        idToLease.put(lease.getHolderID(), lease);
-        return lease;
+  private void afterTxCheck(boolean done) {
+    if (!externallyMngedTx) {
+      if (done) {
+        DBConnector.commit();
       } else {
-        logger.info("No rows found for holderID:" + holderId + " in Lease table");
-        return null;
+        DBConnector.safeRollback();
       }
-    } finally {
-      afterTxCheck(true);
     }
   }
 
@@ -925,69 +848,6 @@ public class TransactionContext {
     }
   }
 
-  /**
-   * Finds the hard-limit expired leases. i.e. All leases older than the given time limit.
-   * @param timeLimit
-   * @return 
-   */
-  public SortedSet<Lease> findAllExpiredLeases(long timeLimit) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType dobj = qb.createQueryDefinition(Lease.class);
-      PredicateOperand propertyPredicate = dobj.get("lastUpdate");
-      String param = "timelimit";
-      PredicateOperand propertyLimit = dobj.get(param);
-      Predicate lessThan = propertyPredicate.lessThan(propertyLimit);
-      dobj.where(lessThan);
-      Query query = session.createQuery(dobj);
-      query.setParameter(param, new Long(timeLimit));
-      List<LeaseTable> resultset = query.getResultList();
-      return syncLeaseInstances(resultset);
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public SortedSet<Lease> findAllLeases() throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (allLeasesRead) {
-        return new TreeSet<Lease>(this.leases.values());
-      }
-
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
-      Query<LeaseTable> query = session.createQuery(dobj);
-      List<LeaseTable> resultList = query.getResultList();
-      SortedSet<Lease> leaseSet = syncLeaseInstances(resultList);
-      allLeasesRead = true;
-      return leaseSet;
-    } finally {
-      afterTxCheck(true);
-    }
-
-
-  }
-
-  private SortedSet<Lease> syncLeaseInstances(List<LeaseTable> lTables) {
-    SortedSet<Lease> lSet = new TreeSet<Lease>();
-    if (lTables != null) {
-      for (LeaseTable lt : lTables) {
-        Lease lease = LeaseFactory.createLease(lt);
-        if (leases.containsKey(lease.getHolder()) && !removedLeases.containsKey(lease)) {
-          lSet.add(leases.get(lease.getHolder()));
-        } else {
-          lSet.add(lease);
-        }
-      }
-    }
-
-    return lSet;
-  }
-
   /*
    * 
    * @param pendingTables
@@ -1030,5 +890,223 @@ public class TransactionContext {
     } finally {
       afterTxCheck(true);
     }
+  }
+
+  public TreeSet<LeasePath> findLeasePathsByHolderID(int holderID) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (holderLeasePaths.containsKey(holderID)) {
+        return holderLeasePaths.get(holderID);
+      } else {
+        Session session = DBConnector.obtainSession();
+        QueryBuilder qb = session.getQueryBuilder();
+        QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
+        dobj.where(dobj.get("holderID").equal(dobj.param("param")));
+        Query<LeasePathsTable> query = session.createQuery(dobj);
+        query.setParameter("param", holderID);
+        List<LeasePathsTable> paths = query.getResultList();
+        TreeSet<LeasePath> lpSet = syncLeasePathInstances(paths, false);
+        holderLeasePaths.put(holderID, lpSet);
+
+        return lpSet;
+      }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  private TreeSet<LeasePath> syncLeasePathInstances(List<LeasePathsTable> lpTables, boolean allRead) {
+    TreeSet<LeasePath> finalList = new TreeSet<LeasePath>();
+
+    for (LeasePathsTable lpt : lpTables) {
+      LeasePath lPath = LeasePathFactory.createLeasePath(lpt);
+      if (!removedLPaths.containsKey(lPath)) {
+        if (this.leasePaths.containsKey(lPath)) {
+          lPath = this.leasePaths.get(lPath);
+        } else {
+          this.leasePaths.put(lPath, lPath);
+          this.pathToLeasePath.put(lpt.getPath(), lPath);
+        }
+        finalList.add(lPath);
+        if (allRead) {
+          if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+            holderLeasePaths.get(lPath.getHolderId()).add(lPath);
+          } else {
+            TreeSet<LeasePath> lSet = new TreeSet<LeasePath>();
+            lSet.add(lPath);
+            holderLeasePaths.put(lPath.getHolderId(), lSet);
+          }
+        }
+      }
+    }
+
+    return finalList;
+  }
+
+  public LeasePath findLeasePathByPath(String path) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (pathToLeasePath.containsKey(path)) {
+        return pathToLeasePath.get(path);
+      }
+
+      Session session = DBConnector.obtainSession();
+      LeasePathsTable lPTable = session.find(LeasePathsTable.class, path);
+      LeasePath lPath = null;
+      if (lPTable != null) {
+        lPath = LeasePathFactory.createLeasePath(lPTable);
+        leasePaths.put(lPath, lPath);
+        pathToLeasePath.put(lPath.getPath(), lPath);
+      }
+      return lPath;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public TreeSet<LeasePath> findLeasePathsByPrefix(String prefix) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType dobj = qb.createQueryDefinition(LeasePathsTable.class);
+      PredicateOperand propertyPredicate = dobj.get("path");
+      String param = "prefix";
+      PredicateOperand propertyLimit = dobj.param(param);
+      Predicate like = propertyPredicate.like(propertyLimit);
+      dobj.where(like);
+      Query query = session.createQuery(dobj);
+      query.setParameter(param, prefix + "%");
+      List<LeasePathsTable> resultset = query.getResultList();
+      if (resultset != null) {
+        return syncLeasePathInstances(resultset, false);
+      }
+
+      return null;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public TreeSet<LeasePath> findAllLeasePaths() throws TransactionContextException {
+    beforeTxCheck();
+
+    try {
+      if (allLeasePathsRead) {
+        return new TreeSet<LeasePath>(leasePaths.values());
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType dobj = qb.createQueryDefinition(LeasePathsTable.class);
+      Query query = session.createQuery(dobj);
+      List<LeasePathsTable> resultset = query.getResultList();
+      TreeSet<LeasePath> lPathSet = syncLeasePathInstances(resultset, true);
+      allLeasePathsRead = true;
+      return lPathSet;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public Lease findLeaseByHolderId(int holderId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (idToLease.containsKey(holderId)) {
+        return idToLease.get(holderId);
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
+
+      dobj.where(dobj.get("holderID").equal(dobj.param("param")));
+
+      Query<LeaseTable> query = session.createQuery(dobj);
+      query.setParameter("param", holderId); //the WHERE clause of SQL
+      List<LeaseTable> leaseTables = query.getResultList();
+
+      if (leaseTables.size() > 1) {
+        logger.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
+        return null;
+      } else if (leaseTables.size() == 1) {
+        Lease lease = LeaseFactory.createLease(leaseTables.get(0));
+        leases.put(lease.getHolder(), lease);
+        idToLease.put(lease.getHolderID(), lease);
+        return lease;
+      } else {
+        logger.info("No rows found for holderID:" + holderId + " in Lease table");
+        return null;
+      }
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  /**
+   * Finds the hard-limit expired leases. i.e. All leases older than the given time limit.
+   * @param timeLimit
+   * @return 
+   */
+  public SortedSet<Lease> findAllExpiredLeases(long timeLimit) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType dobj = qb.createQueryDefinition(LeaseTable.class);
+      PredicateOperand propertyPredicate = dobj.get("lastUpdate");
+      String param = "timelimit";
+      PredicateOperand propertyLimit = dobj.param(param);
+      Predicate lessThan = propertyPredicate.lessThan(propertyLimit);
+      dobj.where(lessThan);
+      Query query = session.createQuery(dobj);
+      query.setParameter(param, new Long(timeLimit));
+      List<LeaseTable> resultset = query.getResultList();
+      return syncLeaseInstances(resultset);
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public SortedSet<Lease> findAllLeases() throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (allLeasesRead) {
+        return new TreeSet<Lease>(this.leases.values());
+      }
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
+      Query<LeaseTable> query = session.createQuery(dobj);
+      List<LeaseTable> resultList = query.getResultList();
+      SortedSet<Lease> leaseSet = syncLeaseInstances(resultList);
+      allLeasesRead = true;
+      return leaseSet;
+    } finally {
+      afterTxCheck(true);
+    }
+
+
+  }
+
+  private SortedSet<Lease> syncLeaseInstances(List<LeaseTable> lTables) {
+    SortedSet<Lease> lSet = new TreeSet<Lease>();
+    if (lTables != null) {
+      for (LeaseTable lt : lTables) {
+        Lease lease = LeaseFactory.createLease(lt);
+        if (!removedLeases.containsKey(lease)) {
+          if (leases.containsKey(lease.getHolder())) {
+            lSet.add(leases.get(lease.getHolder()));
+          } else {
+            lSet.add(lease);
+            leases.put(lease.getHolder(), lease);
+            idToLease.put(lease.getHolderID(), lease);
+          }
+        }
+      }
+    }
+
+    return lSet;
   }
 }

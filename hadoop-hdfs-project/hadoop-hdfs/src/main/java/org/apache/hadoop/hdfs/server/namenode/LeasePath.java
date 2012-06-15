@@ -56,8 +56,7 @@ public class LeasePath implements Comparable<LeasePath> {
   @Override
   public int hashCode() {
     int hash = 7;
-    hash = 83 * hash + this.holderId;
-    hash = 83 * hash + (this.path != null ? this.path.hashCode() : 0);
+    hash = 37 * hash + (this.path != null ? this.path.hashCode() : 0);
     return hash;
   }
 

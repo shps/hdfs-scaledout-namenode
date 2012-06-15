@@ -2160,9 +2160,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     finalizeINodeFileUnderConstruction(src, pendingFile, isTransactional);
 
-    //[Hooman] moved this log to the caller method completeFile
-//    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
-//                                  + " is closed by " + holder);
     return true;
   }
 

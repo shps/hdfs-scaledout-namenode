@@ -25,7 +25,6 @@ public class Lease implements Comparable<Lease> {
     this.lastUpdate = lastUpd;
   }
 
-  /** W: Added for ThesisFS */
   public void setLastUpdate(long lastUpd) {
     this.lastUpdate = lastUpd;
   }
@@ -103,7 +102,7 @@ public class Lease implements Comparable<Lease> {
   }
 
   public Collection<LeasePath> getPaths() {
-    if (paths == null) {
+    if (paths.isEmpty()) {
       paths = em.findLeasePathsByHolder(holderID);
     }
 

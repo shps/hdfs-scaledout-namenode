@@ -23,12 +23,11 @@ public class LeasePathFactory {
   }
 
   public static LeasePath createLeasePath(LeasePathsTable leasePathTable) {
-    LeasePath lPath = null;
+    return new LeasePath(leasePathTable.getPath(), leasePathTable.getHolderID());
+  }
 
-    if (leasePathTable != null) {
-      lPath = new LeasePath(leasePathTable.getPath(), leasePathTable.getHolderID());
-    }
-
-    return lPath;
+  public static void createPersistableLeasePathInstance(LeasePath lp, LeasePathsTable lTable) {
+    lTable.setHolderID(lp.getHolderId());
+    lTable.setPath(lp.getPath());
   }
 }

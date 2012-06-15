@@ -68,7 +68,6 @@ public class LeaseManager {
   private final FSNamesystem fsnamesystem;
   private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
   private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
-
   private EntityManager em = EntityManager.getInstance();
 
   LeaseManager(FSNamesystem fsnamesystem) {
@@ -119,11 +118,11 @@ public class LeaseManager {
     } else {
       renewLease(lease);
     }
-    
+
     LeasePath lPath = new LeasePath(src, lease.getHolderID());
     lease.addPath(lPath);
-    em.persist(em);
-    
+    em.persist(lPath);
+
     return lease;
   }
 
@@ -132,9 +131,10 @@ public class LeaseManager {
    */
   synchronized void removeLease(Lease lease, LeasePath src) {
     if (lease.removePath(src)) {
+      em.remove(src);
+    } else {
       LOG.error(src + " not found in lease.paths (=" + lease.getPaths() + ")");
     }
-    em.remove(src);
 
     if (!lease.hasPath()) {
       em.remove(lease);
@@ -158,7 +158,15 @@ public class LeaseManager {
   synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
     assert newHolder != null : "new lease holder is null";
     if (lease != null) {
-      removeLease(lease, new LeasePath(src, lease.getHolderID()));
+      // Removing lease-path souldn't be persisted in entity-manager since we want to add it to another lease.
+      if (!lease.removePath(new LeasePath(src, lease.getHolderID()))) {
+        LOG.error(src + " not found in lease.paths (=" + lease.getPaths() + ")");
+      }
+
+      if (!lease.hasPath()) {
+        em.remove(lease);
+
+      }
     }
     return addLease(newHolder, src);
   }
@@ -250,8 +258,8 @@ public class LeaseManager {
 
     for (LeasePath lPath : leasePathSet) {
       if (!lPath.getPath().startsWith(prefix)) {
-        LOG.warn("LeasePath fetched by prefix does not start with the prefix: \n" +
-                "LeasePath: " + lPath + "\t Prefix: " + prefix);
+        LOG.warn("LeasePath fetched by prefix does not start with the prefix: \n"
+                + "LeasePath: " + lPath + "\t Prefix: " + prefix);
         return entries;
       }
       if (lPath.getPath().length() == srclen || lPath.getPath().charAt(srclen) == Path.SEPARATOR_CHAR) {
@@ -282,29 +290,29 @@ public class LeaseManager {
         fsnamesystem.writeLock();
         try {
           if (!fsnamesystem.isInSafeMode()) {
-                    boolean isDone = false;
-        int tries = DBConnector.RETRY_COUNT;
+            boolean isDone = false;
+            int tries = DBConnector.RETRY_COUNT;
 
-        try {
-          while (!isDone && tries > 0) {
             try {
-              DBConnector.beginTransaction();
-              checkLeases(true);
-              DBConnector.commit();
-              isDone = true;
-            } catch (ClusterJException ex) {
+              while (!isDone && tries > 0) {
+                try {
+                  DBConnector.beginTransaction();
+                  checkLeases(true);
+                  DBConnector.commit();
+                  isDone = true;
+                } catch (ClusterJException ex) {
+                  if (!isDone) {
+                    DBConnector.safeRollback();
+                    tries--;
+                    FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
+                  }
+                }
+              }
+            } finally {
               if (!isDone) {
                 DBConnector.safeRollback();
-                tries--;
-                FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
               }
             }
-          }
-        } finally {
-          if (!isDone) {
-            DBConnector.safeRollback();
-          }
-        }
 
           }
         } finally {
@@ -328,9 +336,10 @@ public class LeaseManager {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
     SortedSet<Lease> sortedLeases = em.findAllExpiredLeases(expiredTime);
-    if (sortedLeases == null)
+    if (sortedLeases == null) {
       return;
-    
+    }
+
     for (; sortedLeases.size() > 0;) {
       final Lease oldest = sortedLeases.first();
       if (!expiredHardLimit(oldest)) {
@@ -351,9 +360,9 @@ public class LeaseManager {
       for (LeasePath lPath : leasePaths) {
         try {
           boolean leaseReleased = false;
-          leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(), HdfsServerConstants.NAMENODE_LEASE_HOLDER, isTransactional);
-          if (leaseReleased)
-          {
+          leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(),
+                  HdfsServerConstants.NAMENODE_LEASE_HOLDER, isTransactional);
+          if (leaseReleased) {
             LOG.info("Lease recovery for file " + lPath
                     + " is complete. File closed.");
             removing.add(lPath);
@@ -361,7 +370,7 @@ public class LeaseManager {
             LOG.info("Started block recovery for file " + lPath
                     + " lease " + oldest);
           }
-          
+
         } catch (IOException e) {
           LOG.error("Cannot release the path " + lPath + " in the lease " + oldest, e);
           removing.add(lPath);
@@ -369,21 +378,21 @@ public class LeaseManager {
       }
 
       for (LeasePath lPath : removing) {
-              removeLease(oldest, lPath);
+        removeLease(oldest, lPath);
       }
-      
+
       if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed
+      {
         sortedLeases.remove(oldest);
+      }
     }
   }
 
-  private boolean expiredHardLimit(Lease lease)
-  {
+  private boolean expiredHardLimit(Lease lease) {
     return now() - lease.getLastUpdated() > hardLimit;
   }
-  
-  public boolean expiredSoftLimit(Lease lease)
-  {
+
+  public boolean expiredSoftLimit(Lease lease) {
     return now() - lease.getLastUpdated() > softLimit;
   }
 }
