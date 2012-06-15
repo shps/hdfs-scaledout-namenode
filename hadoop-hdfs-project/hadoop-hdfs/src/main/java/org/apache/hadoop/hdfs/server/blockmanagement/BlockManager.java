@@ -2832,7 +2832,7 @@ public class BlockManager {
                 if (!isDone) {
                   DBConnector.safeRollback();
                   tries--;
-                  LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
+                  LOG.error("ReplicationMonitor.run() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
                 } // end if
               } // end catch
             } // end while

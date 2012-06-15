@@ -177,6 +177,9 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       
   /** remove a block from a under replication queue given a priority*/
   boolean remove(Block block, int priLevel, boolean isTransactional) {
+     if(!em.containsUnderReplicatedBlock(block.getBlockId())) {
+       return false;
+     }
     if(priLevel >= 0 && priLevel < LEVEL) {
       em.remove(new UnderReplicatedBlock(priLevel, block.getBlockId()));
     //if(priLevel >= 0 && priLevel < LEVEL  && priorityQueues.get(priLevel).remove(block)) {
