@@ -20,13 +20,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
-import se.sics.clusterj.BlockInfoTable;
-import se.sics.clusterj.LeasePathsTable;
-import se.sics.clusterj.LeaseTable;
-import se.sics.clusterj.ExcessReplicaTable;
-import se.sics.clusterj.InvalidateBlocksTable;
-import se.sics.clusterj.PendingReplicationBlockTable;
-import se.sics.clusterj.TripletsTable;
+import se.sics.clusterj.*;
 
 /**
  *
