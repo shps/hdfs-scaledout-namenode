@@ -137,7 +137,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -164,7 +163,6 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
-import org.omg.CosNaming.IstringHelper;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -336,7 +334,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         this.registerMBean(); // register the MBean for the FSNamesystemState
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
         INodeHelper.initialize(blockManager.getDatanodeManager());
-        LeaseHelper.initialize(leaseManager);
     }
     }
     //TODO: truncate the DB tables when StartupOption.FORMAT
@@ -1512,7 +1509,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blk.setINode(cons);
         }
         dir.replaceNode(src, node, cons, isTransactional);
-        leaseManager.addLease(cons.getClientName(), src, isTransactional);
+        leaseManager.addLease(cons.getClientName(), src);
 
         // convert last block to under-construction
         return blockManager.convertLastBlockToUnderConstruction(cons, isTransactional);
@@ -1531,7 +1528,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throw new IOException("DIR* NameSystem.startFile: " +
                                 "Unable to add file to namespace.");
         }
-        leaseManager.addLease(newNode.getClientName(), src, isTransactional);
+        leaseManager.addLease(newNode.getClientName(), src);
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
                                      +"add "+src+" to namespace for "+holder);
@@ -1662,7 +1659,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // If the original holder has not renewed in the last SOFTLIMIT 
         // period, then start lease recovery.
         //
-        if (lease.expiredSoftLimit()) {
+        if (leaseManager.expiredSoftLimit(lease))
+        {
           LOG.info("startFile: recover lease " + lease + ", src=" + src
                   + " from client " + pendingFile.getClientName());
           boolean isClosed = internalReleaseLease(lease, src, null, isTransactional);
@@ -2163,9 +2161,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     finalizeINodeFileUnderConstruction(src, pendingFile, isTransactional);
 
-    //[Hooman] moved this log to the caller method completeFile
-//    NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
-//                                  + " is closed by " + holder);
     return true;
   }
 
@@ -2781,7 +2776,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return true  if file has been successfully finalized and closed or 
    *         false if block recovery has been initiated
    */
-  // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
   boolean internalReleaseLease(Lease lease, String src, 
       String recoveryLeaseHolder, boolean isTransactional) throws AlreadyBeingCreatedException, 
       IOException, UnresolvedLinkException, ImproperUsageException {
@@ -2893,7 +2887,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
       lastBlock.initializeBlockRecovery(blockRecoveryId, getBlockManager().getDatanodeManager(), isTransactional);
       em.persist(lastBlock);
-      leaseManager.renewLease(lease, isTransactional);
+      leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
       // if there are no valid replicas on data-nodes.
@@ -2923,7 +2917,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     //pendingFile.setClientName(newHolder); //FIXME
     INodeHelper.updateClientName(pendingFile.getID(), newHolder, isTransactional);
-    return leaseManager.reassignLease(lease, src, newHolder, isTransactional);
+    return leaseManager.reassignLease(lease, src, newHolder);
   }
 
   private void commitOrCompleteLastBlock(final INodeFileUnderConstruction fileINode,
@@ -2951,7 +2945,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     assert isWritingNN();
     assert hasWriteLock();
-    leaseManager.removeLease(pendingFile.getClientName(), src, isTransactional);
+    leaseManager.removeLease(pendingFile.getClientName(), src);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
@@ -3117,7 +3111,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (isInSafeMode()) {
             throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
           }
-          leaseManager.renewLease(holder, true);
+          leaseManager.renewLease(holder);
           DBConnector.commit();
           done = true;
         }
@@ -4106,10 +4100,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     readLock();
     try {
       for (Lease lease : leaseManager.getSortedLeases()) {
-        for (String path : lease.getPaths()) {
+        for (LeasePath lPath : lease.getPaths()) {
           INode node;
           try {
-            node = dir.getFileINode(path);
+            node = dir.getFileINode(lPath.getPath());
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
@@ -4127,11 +4121,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
       
-      return getBlocksTotal() - numUCBlocks;
-      // FIXME: We should remove all files 'under construction' on restart of NN
-      //                 As per HDFS semantics, the file is lost when it was opened and NN crashed/restarted
-      //return getBlocksTotal();
-      
+      return getBlocksTotal() - numUCBlocks;      
     } finally {
       readUnlock();
     }
@@ -4601,24 +4591,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       out.writeInt(leaseManager.countPath()); // write the size
 
       for (Lease lease : leaseManager.getSortedLeases()) {
-        for(String path : lease.getPaths()) {
+        for(LeasePath lPath : lease.getPaths()) {
           // verify that path exists in namespace
           INode node;
           try {
-            node = dir.getFileINode(path);
+            node = dir.getFileINode(lPath.getPath());
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
           if (node == null) {
-            throw new IOException("saveLeases found path " + path +
+            throw new IOException("saveLeases found path " + lPath.getPath() +
                                   " but no matching entry in namespace.");
           }
           if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
+            throw new IOException("saveLeases found path " + lPath.getPath() +
                                   " but is not under construction.");
           }
           INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImageSerialization.writeINodeUnderConstruction(out, cons, path);
+          FSImageSerialization.writeINodeUnderConstruction(out, cons, lPath.getPath());
         }
       }
     }

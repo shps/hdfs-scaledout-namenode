@@ -1,6 +1,5 @@
 package se.sics.clusterj;
 
-import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.*;
 
 
@@ -20,8 +19,8 @@ public interface LeaseTable {
 	
 	
 	@Column(name = "lastUpdate")
-	long getLastUpdated();
-	void setLastUpdated(long last_upd);
+	long getLastUpdate();
+	void setLastUpdate(long last_upd);
 	
 	
 	@Column(name = "holderID")

@@ -15,7 +15,7 @@ public interface LeasePathsTable {
 	int getHolderID();
 	void setHolderID(int holder_id);
 	
-	
+	@PrimaryKey
 	@Column(name = "path")
 	String getPath();
 	void setPath(String path);
