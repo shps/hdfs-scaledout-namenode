@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

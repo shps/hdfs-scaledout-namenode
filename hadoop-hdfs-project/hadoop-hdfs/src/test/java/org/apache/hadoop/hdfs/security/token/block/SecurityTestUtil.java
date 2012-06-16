@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.security.token.Token;
 
 /** Utilities for security tests */
@@ -33,13 +31,13 @@ public class SecurityTestUtil {
    */
   public static boolean isBlockTokenExpired(Token<BlockTokenIdentifier> token)
       throws IOException {
-    return BlockTokenSecretManagerNN.isTokenExpired(token);
+    return BlockTokenSecretManager.isTokenExpired(token);
   }
 
   /**
    * set access token lifetime.
    */
-  public static void setBlockTokenLifetime(BlockTokenSecretManagerNN handler,
+  public static void setBlockTokenLifetime(BlockTokenSecretManager handler,
       long tokenLifetime) {
     handler.setTokenLifetime(tokenLifetime);
   }

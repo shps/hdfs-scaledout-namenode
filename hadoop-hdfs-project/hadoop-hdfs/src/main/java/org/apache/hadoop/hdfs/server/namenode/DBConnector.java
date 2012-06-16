@@ -1,7 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
-import se.sics.clusterj.DatanodeInfoTable;
-import se.sics.clusterj.BlockTotalTable;
 import com.mysql.clusterj.ClusterJException;
 import se.sics.clusterj.BlockInfoTable;
 import se.sics.clusterj.INodeTableSimple;
@@ -23,7 +21,6 @@ import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
-import se.sics.clusterj.DelegationKeyTable;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
@@ -148,7 +145,6 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
             session.deletePersistentAll(LeaseTable.class);
             session.deletePersistentAll(LeasePathsTable.class);
             session.deletePersistentAll(TripletsTable.class);
-            session.deletePersistentAll(DelegationKeyTable.class);
             session.deletePersistentAll(ReplicaUcTable.class);
             session.deletePersistentAll(InvalidateBlocksTable.class);
             session.deletePersistentAll(ExcessReplicaTable.class);

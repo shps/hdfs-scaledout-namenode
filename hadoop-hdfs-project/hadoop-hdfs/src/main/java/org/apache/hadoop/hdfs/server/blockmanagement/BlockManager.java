@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -89,7 +88,7 @@ public class BlockManager {
 
   private DatanodeManager datanodeManager = null;
   private HeartbeatManager heartbeatManager = null;
-  private BlockTokenSecretManagerNN blockTokenSecretManager;
+  private final BlockTokenSecretManager blockTokenSecretManager;
 
   private volatile long pendingReplicationBlocksCount = 0L;
   private volatile long corruptReplicaBlocksCount = 0L;
@@ -181,8 +180,8 @@ public class BlockManager {
         replicationThread = new Daemon(new ReplicationMonitor());
     }
     
-    blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
-
+//    blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
+    blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
     this.maxCorruptFilesReturned = conf.getInt(
       DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
@@ -227,8 +226,7 @@ public class BlockManager {
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
   }
 
-  private static BlockTokenSecretManagerNN createBlockTokenSecretManager(
-      FSNamesystem fsns,
+  private static BlockTokenSecretManager createBlockTokenSecretManager(
       final Configuration conf) throws IOException {
     final boolean isEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
@@ -249,16 +247,12 @@ public class BlockManager {
         + "=" + updateMin + " min(s), "
         + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY
         + "=" + lifetimeMin + " min(s)");
-    if(fsns.isWritingNN())
-        return new BlockTokenSecretManagerNN(true,
+    return new BlockTokenSecretManager(true,
         updateMin*60*1000L, lifetimeMin*60*1000L);
-    else
-    	return new BlockTokenSecretManagerNN(false, 
-    	updateMin*60*1000L, lifetimeMin*60*1000L);
   }
-
-  /** get the BlockTokenSecretManager */
-  BlockTokenSecretManagerNN getBlockTokenSecretManager() {
+  
+   /** get the BlockTokenSecretManager */
+  BlockTokenSecretManager getBlockTokenSecretManager() {
     return blockTokenSecretManager;
   }
 
