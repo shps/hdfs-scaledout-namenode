@@ -162,8 +162,8 @@ public class LeaseManager {
       if (!lease.removePath(new LeasePath(src, lease.getHolderID()))) {
         LOG.error(src + " not found in lease.paths (=" + lease.getPaths() + ")");
       }
-
-      if (!lease.hasPath()) {
+      
+      if (!lease.hasPath() && !lease.getHolder().equals(newHolder)) {
         em.remove(lease);
 
       }
