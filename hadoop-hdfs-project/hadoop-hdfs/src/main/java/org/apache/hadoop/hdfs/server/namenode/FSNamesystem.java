@@ -1876,7 +1876,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
-      clientNode = blockManager.getDatanodeManager().getDatanode(pendingFile.getClientNode());
+      clientNode = blockManager.getDatanodeManager().getDatanodeByName(pendingFile.getClientName());
       replication = (int)pendingFile.getReplication();
     /*} finally {
       writeUnlock();

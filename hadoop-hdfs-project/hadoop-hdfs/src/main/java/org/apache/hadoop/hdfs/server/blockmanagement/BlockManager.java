@@ -432,7 +432,7 @@ public class BlockManager {
     final boolean b = commitBlock((BlockInfoUnderConstruction) lastBlock, commitBlock);
 
     if (blockStatus.liveReplicas() >= minReplication) {
-      completeBlock(fileINode, lastBlock, isTransactional);
+      completeBlock(fileINode, lastBlock);
     }
     return b;
   }
@@ -445,7 +445,7 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   private BlockInfo completeBlock(final INodeFile fileINode,
-      final int blkIndex, boolean isTransactional) throws IOException {
+      final int blkIndex) throws IOException {
                 
     if(blkIndex < 0)
       return null;
@@ -458,7 +458,7 @@ public class BlockManager {
           "block does not satisfy minimal replication requirement.");
     BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
     // replace penultimate block in file
-    fileINode.setBlock(blkIndex, completeBlock, isTransactional);
+    fileINode.setBlock(blkIndex, completeBlock);
     completeBlock.setINode(fileINode);
     em.persist(completeBlock);
     
@@ -472,7 +472,7 @@ public class BlockManager {
   }
   
   private BlockInfo completeBlock(final INodeFile fileINode,
-          final BlockInfo block, boolean isTransactional) throws IOException {
+          final BlockInfo block) throws IOException {
 
     List<BlockInfo> fileBlocks = fileINode.getBlocks();
     for (int idx = 0; idx < fileBlocks.size(); idx++) {
@@ -481,11 +481,11 @@ public class BlockManager {
         if (countNodes(fileBlocks.get(idx)).liveReplicas() >= minReplication) {
           // try to complete this block first
           LOG.warn("Block  [" + fileBlocks.get(idx).getBlockId() + "] was not completed. Status [" + fileBlocks.get(idx).getBlockUCState().name() + "]. Trying to complete block... ");
-          completeBlock(fileINode, idx, isTransactional);
+          completeBlock(fileINode, idx);
         }
       }
       if (fileBlocks.get(idx).getBlockId() == block.getBlockId()) {
-        return completeBlock(fileINode, idx, isTransactional);
+        return completeBlock(fileINode, idx);
       }
     }
     return block;
@@ -599,7 +599,9 @@ public class BlockManager {
     return lb;
   }
 
-  /** @return a LocatedBlock for the given block */
+  /**
+   * @return a LocatedBlock for the given block
+   */
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos) throws IOException {
     if (blk instanceof BlockInfoUnderConstruction) {
       if (blk.isComplete()) {
@@ -611,49 +613,32 @@ public class BlockManager {
       final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
       return new LocatedBlock(eb, getExpectedDatanodes(uc), pos, false);
     }
-
-    NumberReplicas replicas = countNodes(blk);
-    
-    final int numCorruptNodes = replicas.corruptReplicas();
-    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);       
+    // get block locations
+    final int numCorruptNodes = countNodes(blk).corruptReplicas();
+    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
-               + blk + " blockMap has " + numCorruptNodes
-               + " but corrupt replicas map has " + numCorruptReplicas);
+              + blk + " blockMap has " + numCorruptNodes
+              + " but corrupt replicas map has " + numCorruptReplicas);
     }
+
     final int numNodes = getStoredBlock(blk).getReplicas().size();
-    // [thesis] We don't need to check for replicas because countNodes() given us all this information
-    // Check for corrupt replicas                                                                                                                   
-    // Filter datanodes from corrupt replicas
-    final boolean isCorrupt = numNodes == numCorruptNodes;
+    final boolean isCorrupt = numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes : numNodes - numCorruptNodes;
-    
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
     if (numMachines > 0) {
-      if (!namesystem.isWritingNN()) {
-        List<DatanodeDescriptor> datanodes = getDatanodes(blk);
-        int w = 0;
-        for (DatanodeDescriptor dn : datanodes) {
-          String ipPort = dn.getHostName();
-          machines[w++] = new DatanodeDescriptor(
-                  new DatanodeID(ipPort, "DUMMY-STORAGE-ID", -1, Integer.parseInt(ipPort.substring(ipPort.indexOf(":") + 1))),
-                  "",
-                  ipPort);
-          
-        }
-      } else {
+      int j = 0;
+      List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(blk));
 
-        int j = 0;
-        List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(blk));
-
-        for (DatanodeDescriptor d : dataNodes) {
+      for (DatanodeDescriptor d : dataNodes) {
+        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
+        if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
           machines[j++] = d;
         }
       }
     }
     final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-    //return new LocatedBlock(eb, machines, pos, isCorrupt);
-    return new LocatedBlock(eb, machines, pos, false);
+    return new LocatedBlock(eb, machines, pos, isCorrupt);
   }
 
   /** Create a LocatedBlocks. */
@@ -1807,7 +1792,7 @@ public class BlockManager {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication)
-      storedBlock = completeBlock(storedBlock.getINode(), storedBlock, isTransactional);
+      storedBlock = completeBlock(storedBlock.getINode(), storedBlock);
 
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that
@@ -1874,7 +1859,7 @@ public class BlockManager {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication)
-      storedBlock = completeBlock(fileINode, storedBlock, isTransactional);
+      storedBlock = completeBlock(fileINode, storedBlock);
 
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that
@@ -2744,6 +2729,14 @@ public class BlockManager {
         if (iNode != null)
           iNode.removeBlock(bi);
         bi.setINode(null);
+        for (IndexedReplica replica: bi.getReplicas()) {
+          em.remove(replica);
+        }
+        
+        if (bi instanceof BlockInfoUnderConstruction) {
+          for (ReplicaUnderConstruction ruc : ((BlockInfoUnderConstruction)bi).getExpectedReplicas())
+            em.remove(ruc);
+        }
         em.remove(bi);
       }
     } catch (Exception ex) {

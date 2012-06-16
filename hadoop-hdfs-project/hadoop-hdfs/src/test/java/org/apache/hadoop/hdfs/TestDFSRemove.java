@@ -76,7 +76,7 @@ public class TestDFSRemove extends junit.framework.TestCase {
           assertTrue(fs.delete(a, false));
         }
         // wait 3 heartbeat intervals, so that all blocks are deleted.
-        Thread.sleep(3 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);
+        Thread.sleep(5 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);
         // all blocks should be gone now.
         long dfsUsedFinal = getTotalDfsUsed(cluster);
         assertEquals("All blocks should be gone. start=" + dfsUsedStart

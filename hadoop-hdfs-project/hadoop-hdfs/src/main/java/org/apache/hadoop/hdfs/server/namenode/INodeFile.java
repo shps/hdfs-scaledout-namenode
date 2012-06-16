@@ -132,12 +132,9 @@ public class INodeFile extends INode {
     blks.add(block);
   }
   
-  public void removeBlock(BlockInfo block) throws Exception {
+  public void removeBlock(BlockInfo block) {
     List<BlockInfo> blks = getBlocks();
     int index = block.getBlockIndex();
-    
-    if (blks.get(index) != block)
-      throw new Exception("BlockIndex mismatch");
     
     blks.remove(block);
     
@@ -148,7 +145,7 @@ public class INodeFile extends INode {
       }
   }
   
-  public void setBlock(int index, BlockInfo block, boolean isTransactional) {
+  public void setBlock(int index, BlockInfo block) {
     List<BlockInfo> blks = getBlocks();
     
     block.setBlockIndex(index);

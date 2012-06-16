@@ -127,7 +127,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   private boolean hasExpectedReplicaIn(String storageId) {
-    for (IndexedReplica replica : getReplicas()) {
+    for (IndexedReplica replica : getExpectedReplicas()) {
       if (replica.getStorageId().equals(storageId)) {
         return true;
       }
