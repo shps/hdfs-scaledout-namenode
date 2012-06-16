@@ -626,6 +626,7 @@
       <exclude>**/TestHDFSFileContextMainOperations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
       <exclude>**/TestBlockReport.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
 
+	  <exclude>**/TestSecretHelper.java</exclude><!-- kamal: secret manager rolled back to its original impl, we must include this if we would decide to switch into new implementation--> 
 			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
 			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
