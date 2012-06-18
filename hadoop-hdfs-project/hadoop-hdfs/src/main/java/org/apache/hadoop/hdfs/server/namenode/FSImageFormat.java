@@ -428,8 +428,7 @@ class FSImageFormat {
         INodeFile oldnode = (INodeFile) old;
         //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
         fsDir.replaceNode(path, oldnode, cons, false);
-        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-        namesystem.leaseManager.addLease(cons.getClientName(), path, false); 
+        namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }
 

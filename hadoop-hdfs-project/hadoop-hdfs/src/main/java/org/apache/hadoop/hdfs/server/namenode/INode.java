@@ -331,9 +331,9 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 		this.modificationTime = modtime;
 	}
 	
-	void setModificationTimeForceDB(long modtime) {
+	void setModificationTimeForceDB(long modtime, boolean isTransactional) {
           assert !isDirectory();
-          INodeHelper.updateModificationTime(this.id, modtime, false);
+          INodeHelper.updateModificationTime(this.id, modtime, isTransactional);
           this.modificationTime = modtime;
 	}
 
@@ -356,8 +356,8 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 	/**
 	 * Set last access time of inode in database.
 	 */
-	void setAccessTimeDB(long atime) {
-	  INodeHelper.updateAccessTime(this.id, atime, false);
+	void setAccessTimeDB(long atime, boolean isTransactional) {
+	  INodeHelper.updateAccessTime(this.id, atime, isTransactional);
 	  accessTime = atime;
 	}
 
