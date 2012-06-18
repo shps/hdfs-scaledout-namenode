@@ -2814,13 +2814,15 @@ public class BlockManager {
     @Override
     public void run() {
       while (namesystem.isRunning()) {
+        boolean isDone = false;
         try {
-          boolean isDone = false;
+          
           int tries = DBConnector.RETRY_COUNT;
 
           try {
             while (!isDone && tries > 0) {
               try {
+                isDone = false;
                 DBConnector.beginTransaction();
                 computeDatanodeWork(true);
                 processPendingReplications(true);
@@ -2855,7 +2857,10 @@ public class BlockManager {
           LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
           Runtime.getRuntime().exit(-1);
         } finally {
-          DBConnector.safeRollback();
+          if(!isDone) {
+            
+            DBConnector.safeRollback();
+          }
         }
       }
     }

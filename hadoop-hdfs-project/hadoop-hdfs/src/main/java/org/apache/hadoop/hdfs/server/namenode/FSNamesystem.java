@@ -3249,7 +3249,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      if(!done) {
+        DBConnector.safeRollback();
+      }
       writeUnlock();
     }
     

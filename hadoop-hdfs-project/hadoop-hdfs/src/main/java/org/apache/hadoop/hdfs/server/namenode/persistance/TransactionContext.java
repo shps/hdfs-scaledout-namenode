@@ -220,7 +220,6 @@ public class TransactionContext {
 
   void rollback() {
     resetContext();
-
     logger.debug("Tx rollback");
   }
 

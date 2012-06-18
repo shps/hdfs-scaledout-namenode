@@ -109,7 +109,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
         public static void beginTransaction()
         {
             Session session = obtainSession();
-//            session.setLockMode(LockMode.SHARED);
+//            session.setLockMode(LockMode.SHARED); // Default is READ_COMMITTED
             session.currentTransaction().begin();
             EntityManager.getInstance().begin();
         }
