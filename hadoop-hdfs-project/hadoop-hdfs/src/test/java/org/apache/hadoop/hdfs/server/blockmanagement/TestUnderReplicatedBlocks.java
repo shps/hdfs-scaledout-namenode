@@ -50,15 +50,17 @@ public class TestUnderReplicatedBlocks extends TestCase {
       DatanodeDescriptor dn = bm.getDatanodes(bm.getStoredBlock(b.getLocalBlock())).get(0);
       bm.addToInvalidates(b.getLocalBlock(), dn);
       bm.removeNode(b.getLocalBlock(), dn, false);
-      DBConnector.commit();
+      DBConnector.commit(); 
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);
       int result = shell.run(new String[]{
           "-setrep", "-w", Integer.toString(1+REPLICATION_FACTOR), FILE_NAME});
       assertEquals(0, result);
+      System.out.println("Replication work done");
     } catch(Exception e) {
       e.printStackTrace();
     }finally {
+      System.out.println("Shutting down cluster");
       cluster.shutdown();
     }
     

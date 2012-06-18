@@ -1187,6 +1187,7 @@ public class BlockManager {
         NumberReplicas numReplicas = countNodes(block);
         numEffectiveReplicas = numReplicas.liveReplicas() +
         pendingReplications.getNumReplicas(block);
+        System.out.println("computeReplicationWorkForBlock():: numEffectiveReplicas: "+numEffectiveReplicas+", target.length: "+targets.length+ ", requiredReplication: "+requiredReplication);
 
         if (numEffectiveReplicas >= requiredReplication) {
           if ( (pendingReplications.getNumReplicas(block) > 0) ||
@@ -1212,6 +1213,7 @@ public class BlockManager {
         srcNode.addBlockToBeReplicated(block, targets);
 
         for (DatanodeDescriptor dn : targets) {
+          System.out.println("computeReplicationWorkForBlock():: dn-target: "+dn.getName());
           dn.incBlocksScheduled();
         }
 
@@ -1226,7 +1228,9 @@ public class BlockManager {
         }
 
         // remove from neededReplications
+        // -------------------------------------------------------------------------
         if(numEffectiveReplicas + targets.length >= requiredReplication) {
+          System.out.println("computeReplicationWorkForBlock():: removing block["+block.getBlockId()+"] from neededReplications");
           neededReplications.remove(block, priority, isTransactional); // remove from neededReplications
           replIndex--;
         }
@@ -2331,6 +2335,7 @@ public class BlockManager {
                                 deleted++;
                             } else {
                                 // KTHFS:  adds block from triplets table
+                              System.out.println("computeReplicationWorkForBlock():: BlockReceived from dn: "+node.getName()+", block: "+receivedAndDeletedBlocks[i].getBlock().getBlockId());
                                 addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
                                         receivedAndDeletedBlocks[i].getDelHints(), true);
                                 received++;
