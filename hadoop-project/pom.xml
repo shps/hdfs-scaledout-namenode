@@ -690,7 +690,7 @@
 
 			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
                         <exclude>**/TestFsLimits.java</exclude>
-                        <exclude>**/TestDiskError.java</exclude> <!--[J] Takes a long time to complete! Will need to fix later
+                        <exclude>**/TestDiskError.java</exclude> <!--[J] Takes a long time to complete! Will need to fix later -->
 
           </excludes>
         </configuration>
