@@ -233,7 +233,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     }
     
     // Update the priority levels
-    if ((oldPri != LEVEL && oldPri != curPri) && (curPri != LEVEL)) {
+    if ((oldPri != LEVEL && curPri != LEVEL)) {
+      NameNode.stateChangeLog.debug("Updating replication for block "+block.getBlockId()+" by "+expectedReplicasDelta);
       em.update(new UnderReplicatedBlock(curPri, block.getBlockId()));
     }
     
