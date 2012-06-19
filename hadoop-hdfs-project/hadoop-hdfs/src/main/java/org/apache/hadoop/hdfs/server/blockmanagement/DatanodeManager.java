@@ -953,7 +953,6 @@ public class DatanodeManager {
         List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
               maxTransfers);
         if (pendingList != null) {
-          System.out.println("computeReplicationWorkForBlock():: DatanodeHeartbeat for dn-"+nodeinfo.getName()+", pending replication block [block: "+pendingList.get(0).block.getBlockId() +"]: "+pendingList.get(0).targets[0].getName()+" and "+pendingList.get(0).targets[1].getName());
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
               pendingList));
         }
