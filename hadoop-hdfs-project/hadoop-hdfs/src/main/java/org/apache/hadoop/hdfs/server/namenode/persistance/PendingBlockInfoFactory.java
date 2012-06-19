@@ -1,7 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
-import se.sics.clusterj.PendingReplicationBlockTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.PendingReplicationBlockTable;
 
 /**
  *

@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
@@ -115,7 +116,7 @@ public class INodeFile extends INode {
    */
   public List<BlockInfo> getBlocks() {
     if (blocks == null) {
-      blocks = EntityManager.getInstance().findBlocksByInodeId(id);
+      blocks = (List<BlockInfo>) EntityManager.getInstance().findList(BlockInfoFinder.ByInodeId, id);
     }
     
     Collections.sort(blocks, BlockInfo.Order.ByBlockIndex);
@@ -141,7 +142,7 @@ public class INodeFile extends INode {
     if (index != blks.size())
       for (int i = index; i < blocks.size(); i++) {
         blocks.get(i).setBlockIndex(i);
-        EntityManager.getInstance().persist(blocks.get(i));
+        EntityManager.getInstance().update(blocks.get(i));
       }
   }
   
@@ -154,7 +155,7 @@ public class INodeFile extends INode {
     if (index < blks.size() - 1) {
       for (int i = index + 1; i < blks.size(); i++) {
         blks.get(i).setBlockIndex(i);
-        EntityManager.getInstance().persist(blks.get(i));
+        EntityManager.getInstance().update(blks.get(i));
       }
     }
       

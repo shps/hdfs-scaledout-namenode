@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -27,7 +26,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import se.sics.clusterj.BlockInfoTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoTable;
 
 /**
  * Internal class for block metadata.
@@ -106,7 +106,7 @@ public class BlockInfo extends Block {
 
   public List<IndexedReplica> getReplicas() {
     if (replicas == null) {
-      replicas = EntityManager.getInstance().findReplicasByBlockId(getBlockId());
+      replicas = (List<IndexedReplica>) EntityManager.getInstance().findList(IndexedReplicaFinder.ByBlockId, getBlockId());
     }
 
     return replicas;
@@ -150,7 +150,7 @@ public class BlockInfo extends Block {
       for (int i = index; i < replicas.size(); i++) {
         IndexedReplica r1 = replicas.get(i);
         r1.setIndex(i);
-        EntityManager.getInstance().persist(r1);
+        EntityManager.getInstance().update(r1);
       }
     }
     

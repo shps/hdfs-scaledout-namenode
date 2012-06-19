@@ -1,7 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import org.apache.hadoop.hdfs.server.namenode.Lease;
-import se.sics.clusterj.LeaseTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeaseTable;
 
 /**
  *

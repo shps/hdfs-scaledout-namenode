@@ -2,8 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
-import se.sics.clusterj.ExcessReplicaTable;
-import se.sics.clusterj.InvalidateBlocksTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ExcessReplicaTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InvalidateBlocksTable;
 
 /**
  *

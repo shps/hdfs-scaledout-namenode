@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import se.sics.clusterj.ReplicaUcTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ReplicaUcTable;
 
 /**
  *

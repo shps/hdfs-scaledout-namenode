@@ -4,7 +4,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  *
  * @author Hooman <hooman@sics.se>
  */
-public abstract class Replica {
+public abstract class Replica implements Comparable<Replica> {
 
   protected String storageId;
   protected long blockId;
@@ -59,5 +59,26 @@ public abstract class Replica {
     hash = 23 * hash + (this.storageId != null ? this.storageId.hashCode() : 0);
     hash = 23 * hash + (int) (this.blockId ^ (this.blockId >>> 32));
     return hash;
+  }
+
+  @Override
+  public int compareTo(Replica t) {
+    if (this.equals(t)) {
+      return 0;
+    }
+    
+    if (t == null)
+      return 1;
+    
+    int sIdResult = this.getStorageId().compareTo(t.getStorageId());
+    if (sIdResult != 0) {
+      return sIdResult;
+    }
+
+    if (this.getBlockId() > t.getBlockId()) {
+      return 1;
+    } else {
+      return -1;
+    }
   }
 }

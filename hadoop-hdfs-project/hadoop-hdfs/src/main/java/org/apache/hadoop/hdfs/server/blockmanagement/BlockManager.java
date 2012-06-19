@@ -70,7 +70,9 @@ import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -119,7 +121,7 @@ public class BlockManager {
   }
   /** Used by metrics */
   public long getExcessBlocksCount() {
-    return em.countAllExcessReplicas();
+    return em.countAll(ExcessReplica.class);
   }
 
   /**replicationRecheckInterval is how often namenode checks for new replication work*/
@@ -394,7 +396,7 @@ public class BlockManager {
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
     block.commitBlock(commitBlock.getNumBytes(), commitBlock.getGenerationStamp());
-    em.persist(block);
+    em.update(block);
     return true;
   }
 
@@ -454,7 +456,7 @@ public class BlockManager {
     // replace penultimate block in file
     fileINode.setBlock(blkIndex, completeBlock);
     completeBlock.setINode(fileINode);
-    em.persist(completeBlock);
+    em.update(completeBlock);
     
     for (ReplicaUnderConstruction rep : ucBlock.getExpectedReplicas()) {
       em.remove(rep);
@@ -515,11 +517,9 @@ public class BlockManager {
       ReplicaUnderConstruction addedReplica = ucBlock.addExpectedReplica(replica.getStorageId(), HdfsServerConstants.ReplicaState.RBW);
       
       if (addedReplica != null)
-        em.persist(addedReplica);
+        em.add(addedReplica);
     }
-
-
-    em.persist(ucBlock);
+    
     // Remove block from replication queue.
     updateNeededReplications(oldBlock, 0, 0);
 
@@ -758,7 +758,7 @@ public class BlockManager {
     if(numBlocks == 0) {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
-    Iterator<BlockInfo> iter = em.findBlocksByStorageId(node.getStorageID()).iterator();
+    Iterator<BlockInfo> iter = em.findList(BlockInfoFinder.ByStorageId, node.getStorageID()).iterator();
     int startBlock = DFSUtil.getRandom().nextInt(numBlocks); // starting from a random block
     // skip blocks
     for(int i=0; i<startBlock; i++) {
@@ -773,7 +773,7 @@ public class BlockManager {
       totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
-      iter = em.findBlocksByStorageId(node.getStorageID()).iterator();
+      iter = em.findList(BlockInfoFinder.ByStorageId, node.getStorageID()).iterator();
       for(int i=0; i<startBlock&&totalSize<size; i++) {
         curBlock = iter.next();
         if(!curBlock.isComplete())  continue;
@@ -789,7 +789,8 @@ public class BlockManager {
   /** Remove the blocks associated to the given datanode. 
    * @throws IOException */
   void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) throws IOException {
-    final Iterator<? extends Block> it = em.findBlocksByStorageId(node.getStorageID()).iterator();
+    final Iterator<? extends Block> it = 
+            em.findList(BlockInfoFinder.ByStorageId, node.getStorageID()).iterator();
     
     while(it.hasNext()) {
       removeStoredBlock(it.next(), node, isTransactional);
@@ -909,7 +910,7 @@ public class BlockManager {
     // Add replica to the data-node if it is not already there
     IndexedReplica replica = storedBlock.addReplica(node);
     if (replica != null)
-      em.persist(replica);
+      em.add(replica);
 
     // Add this replica to corruptReplicas Map
     corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
@@ -1299,13 +1300,14 @@ public class BlockManager {
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(block);
     
     for (DatanodeDescriptor node : dataNodes) {
-      Collection<Long> excessBlocks =
-              em.findExcessReplicaByStorageId(node.getStorageID());
+      Collection<ExcessReplica> excessBlocks =
+              em.findList(ExcessReplicaFinder.ByStorageId, node.getStorageID());
       if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         decommissioned++;
-      } else if (excessBlocks != null && excessBlocks.contains(block.getBlockId())) {
+      } else if (excessBlocks != null&& 
+              excessBlocks.contains(new ExcessReplica(node.getStorageID(), block.getBlockId()))) {
         excess++;
       } else {
         nodesContainingLiveReplicas.add(node);
@@ -1361,11 +1363,7 @@ public class BlockManager {
 
       for (int i = 0; i < timedoutPendings.size(); i++) {
         PendingBlockInfo p = timedoutPendings.get(i);
-        try {
-          timedOutItems[i] = em.findBlockById(p.getBlockId());
-        } catch (IOException ex) {
-          LOG.error(ex.getMessage(), ex);
-        }
+        timedOutItems[i] = em.find(BlockInfoFinder.ById, p.getBlockId());
       }
     }
 
@@ -1562,7 +1560,7 @@ public class BlockManager {
         ReplicaUnderConstruction expReplica = 
                 ((BlockInfoUnderConstruction)storedBlock).addExpectedReplica(node.getStorageID(), reportedState);
         if (expReplica != null)
-          em.persist(expReplica);
+          em.add(expReplica);
         //and fall through to next clause
       }      
       //add replica if appropriate
@@ -1588,7 +1586,7 @@ public class BlockManager {
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
-    List<BlockInfo> existingBlocks = em.findBlocksByStorageId(dn.getStorageID());
+    List<BlockInfo> existingBlocks = (List<BlockInfo>) em.findList(BlockInfoFinder.ByStorageId, dn.getStorageID());
 
     while(itBR.hasNext()) {
       Block iblk = itBR.next();
@@ -1750,7 +1748,7 @@ public class BlockManager {
   throws IOException {
     ReplicaUnderConstruction expReplica = block.addExpectedReplica(node.getStorageID(), reportedState);
     if (expReplica != null)
-      em.persist(expReplica);
+      em.add(expReplica);
     if (reportedState == ReplicaState.FINALIZED && !block.hasReplicaIn(node.getStorageID())) {
       addStoredBlock(block, node, null, true, isTransactional);
     }
@@ -1780,7 +1778,8 @@ public class BlockManager {
     
     // just add it
     IndexedReplica replica = storedBlock.addReplica(node);
-    em.persist(replica);
+    if (replica != null)
+      em.add(replica);
 
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
@@ -1830,7 +1829,7 @@ public class BlockManager {
 
     int curReplicaDelta;
     if (replica != null) {
-      em.persist(replica);
+      em.add(replica);
       curReplicaDelta = 1;
       if (logEveryBlock) {
         NameNode.stateChangeLog.info("BLOCK* addStoredBlock: "
@@ -1942,7 +1941,7 @@ public class BlockManager {
 
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     neededReplications.clear();
-    for (BlockInfo block : em.findAllBlocks()) {
+    for (BlockInfo block : em.findList(BlockInfoFinder.All)) {
       INodeFile fileINode = block.getINode();
       if (fileINode == null) {
         // block does not belong to any file
@@ -2018,8 +2017,10 @@ public class BlockManager {
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
 
     for (DatanodeDescriptor cur : dataNodes) {
-      Collection<Long> excessBlocks = em.findExcessReplicaByStorageId(cur.getStorageID());
-      if (excessBlocks == null || !excessBlocks.contains(block.getBlockId())) {
+      Collection<ExcessReplica> excessBlocks = 
+              em.findList(ExcessReplicaFinder.ByStorageId, cur.getStorageID());
+      ExcessReplica searchkey = new ExcessReplica(cur.getStorageID(), block.getBlockId());
+      if (excessBlocks == null || !excessBlocks.contains(searchkey)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
           if (corruptNodes == null || !corruptNodes.contains(cur)) {
@@ -2137,7 +2138,7 @@ public class BlockManager {
   private void addToExcessReplicate(DatanodeInfo dn, Block block) {
     assert namesystem.hasWriteLock();
 
-    em.persist(new ExcessReplica(dn.getStorageID(), block.getBlockId()));
+    em.add(new ExcessReplica(dn.getStorageID(), block.getBlockId()));
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* addToExcessReplicate:"
               + " (" + dn.getName() + ", " + block
@@ -2182,7 +2183,8 @@ public class BlockManager {
       // We've removed a block from a node, so it's definitely no longer
       // in "excess" there.
       //
-      ExcessReplica exReplica = em.findExcessReplicaByPK(node.getStorageID(), block.getBlockId());
+      ExcessReplica exReplica = 
+              em.find(ExcessReplicaFinder.ByPKey, block.getBlockId(), node.getStorageID());
       if (exReplica != null)
         em.remove(exReplica);
       
@@ -2386,9 +2388,10 @@ public class BlockManager {
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       } else {
-        Collection<Long> blocksExcess =
-          em.findExcessReplicaByStorageId(node.getStorageID());
-        if (blocksExcess != null && blocksExcess.contains(b.getBlockId())) {
+        Collection<ExcessReplica> blocksExcess =
+          em.findList(ExcessReplicaFinder.ByStorageId, node.getStorageID());
+        ExcessReplica searchKey = new ExcessReplica(node.getStorageID(), b.getBlockId());
+        if (blocksExcess != null && blocksExcess.contains(searchKey)) {
           excess++;
         } else {
           live++;
@@ -2417,9 +2420,10 @@ public class BlockManager {
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       } else {
-        Collection<Long> blocksExcess =
-          em.findExcessReplicaByStorageId(node.getStorageID());
-        if (blocksExcess != null && blocksExcess.contains(b.getBlockId())) {
+        Collection<ExcessReplica> blocksExcess =
+          em.findList(ExcessReplicaFinder.ByStorageId, node.getStorageID());
+        ExcessReplica searchKey = new ExcessReplica(node.getStorageID(), b.getBlockId());
+        if (blocksExcess != null && blocksExcess.contains(searchKey)) {
           excess++;
         } else {
           live++;
@@ -2498,7 +2502,8 @@ public class BlockManager {
    */
   void processOverReplicatedBlocksOnReCommission(
       final DatanodeDescriptor srcNode) throws IOException {
-    final Iterator<? extends Block> it = em.findBlocksByStorageId(srcNode.getStorageID()).iterator();
+    final Iterator<? extends Block> it = 
+            em.findList(BlockInfoFinder.ByStorageId, srcNode.getStorageID()).iterator();
     while(it.hasNext()) {
       final Block block = it.next();
       INodeFile fileINode = getINode(block);
@@ -2522,7 +2527,8 @@ public class BlockManager {
     int underReplicatedBlocks = 0;
     int decommissionOnlyReplicas = 0;
     int underReplicatedInOpenFiles = 0;
-    final Iterator<? extends Block> it = em.findBlocksByStorageId(srcNode.getStorageID()).iterator();
+    final Iterator<? extends Block> it = 
+            em.findList(BlockInfoFinder.ByStorageId, srcNode.getStorageID()).iterator();
     while(it.hasNext()) {
       final Block block = it.next();
       INode fileINode = getINode(block);
@@ -2569,21 +2575,13 @@ public class BlockManager {
   }
 
   public int getActiveBlockCount() {
-    try {
-      return em.countAllBlocks() - (int) invalidateBlocks.numBlocks();
-    } catch (IOException ex) {
-      Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    return -1;
+
+    return em.countAll(BlockInfo.class) - (int) invalidateBlocks.numBlocks();
+
   }
 
   public int getTotalBlocks() {
-    try {
-      return em.findAllBlocks().size();
-    } catch (IOException ex) {
-      Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    return -1;
+    return em.countAll(BlockInfo.class);
   }
 
   public void removeBlock(Block block, boolean isTransactional) throws IOException {
@@ -2593,7 +2591,7 @@ public class BlockManager {
   }
 
   public BlockInfo getStoredBlock(Block block) throws IOException {
-    return em.findBlockById(block.getBlockId());
+    return em.find(BlockInfoFinder.ById, block.getBlockId());
   }
 
   /** updates a block in under replication queue 

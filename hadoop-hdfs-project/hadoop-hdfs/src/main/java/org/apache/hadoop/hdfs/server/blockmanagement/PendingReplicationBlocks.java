@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.PrintWriter;
@@ -28,7 +25,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockFinder;
 
 /***************************************************
  * PendingReplicationBlocks does the bookkeeping of all
@@ -61,15 +60,15 @@ class PendingReplicationBlocks {
    * Add a block to the list of pending Replications
    */
   void add(Block block, int numReplicas) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = em.find(PendingBlockFinder.ByPKey, block.getBlockId());
     if (found == null) {
       found = new PendingBlockInfo(block.getBlockId(), now(), numReplicas);
+      em.add(found);
     } else {
       found.incrementReplicas(numReplicas);
       found.setTimeStamp(now());
+      em.update(found);
     }
-
-    em.persist(found);
   }
 
   /**
@@ -78,7 +77,7 @@ class PendingReplicationBlocks {
    * for this block.
    */
   void remove(Block block) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = em.find(PendingBlockFinder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Removing pending replication for " + block);
@@ -87,7 +86,7 @@ class PendingReplicationBlocks {
       if (found.getNumReplicas() <= 0) {
         em.remove(found);
       } else {
-        em.persist(found);
+        em.update(found);
       }
     }
   }
@@ -96,7 +95,7 @@ class PendingReplicationBlocks {
    * The total number of blocks that are undergoing replication
    */
   int size() {
-    List<PendingBlockInfo> pendingBlocks = em.findAllPendingBlocks(); //TODO[H]: This can be improved.
+    List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) em.findList(PendingBlockFinder.All); //TODO[H]: This can be improved.
     if (pendingBlocks != null) {
       int count = 0;
       for (PendingBlockInfo p : pendingBlocks) {
@@ -121,7 +120,7 @@ class PendingReplicationBlocks {
    * How many copies of this block is pending replication?
    */
   int getNumReplicas(Block block) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = em.find(PendingBlockFinder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       return found.getNumReplicas();
     }
@@ -135,7 +134,7 @@ class PendingReplicationBlocks {
    */
   List<PendingBlockInfo> getTimedOutBlocks() {
     long timeLimit = now() - timeout;
-    List<PendingBlockInfo> timedoutPendings = em.findTimedoutPendingBlocks(timeLimit);
+    List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) em.findList(PendingBlockFinder.ByTimeLimit, timeLimit);
     if (timedoutPendings == null || timedoutPendings.size() <= 0) {
       return null;
     }    
@@ -147,21 +146,17 @@ class PendingReplicationBlocks {
    * Iterate through all items and print them.
    */
   void metaSave(PrintWriter out) {
-    List<PendingBlockInfo> pendingBlocks = em.findAllPendingBlocks();
+    List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) em.findList(PendingBlockFinder.All);
     if (pendingBlocks != null) {
       out.println("Metasave: Blocks being replicated: "
               + pendingBlocks.size());
       for (PendingBlockInfo pendingBlock : pendingBlocks) {
-        try {
-          if (!isTimedout(pendingBlock)) {
-            BlockInfo bInfo = em.findBlockById(pendingBlock.getBlockId());
-            out.println(bInfo
-                    + " StartTime: " + new Time(pendingBlock.getTimeStamp())
-                    + " NumReplicaInProgress: "
-                    + pendingBlock.getNumReplicas());
-          }
-        } catch (IOException ex) {
-          Logger.getLogger(PendingReplicationBlocks.class.getName()).log(Level.SEVERE, null, ex);
+        if (!isTimedout(pendingBlock)) {
+          BlockInfo bInfo = em.find(BlockInfoFinder.ById, pendingBlock.getBlockId());
+          out.println(bInfo
+                  + " StartTime: " + new Time(pendingBlock.getTimeStamp())
+                  + " NumReplicaInProgress: "
+                  + pendingBlock.getNumReplicas());
         }
       }
     }

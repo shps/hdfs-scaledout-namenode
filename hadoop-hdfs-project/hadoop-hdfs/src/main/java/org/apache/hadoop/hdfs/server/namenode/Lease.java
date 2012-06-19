@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathFinder;
 
 /************************************************************
  * A Lease governs all the locks held by a single client.
@@ -103,7 +104,7 @@ public class Lease implements Comparable<Lease> {
 
   public Collection<LeasePath> getPaths() {
     if (paths.isEmpty()) {
-      paths = em.findLeasePathsByHolder(holderID);
+      paths = em.findList(LeasePathFinder.ByHolderId, holderID);
     }
 
     return paths;

@@ -25,9 +25,7 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
@@ -66,12 +64,12 @@ public class TestDatanodeDescriptor extends TestCase {
     
     BlockInfo blk = new BlockInfo(new Block(1L));
     BlockInfo blk1 = new BlockInfo(new Block(2L));
-    em.persist(blk);
-    em.persist(blk1);
+    em.add(blk);
+    em.add(blk1);
     // add first block
     IndexedReplica r1 = blk.addReplica(dd);
     assertNotNull(r1);
-    em.persist(r1);
+    em.add(r1);
     
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
@@ -85,7 +83,7 @@ public class TestDatanodeDescriptor extends TestCase {
     // add second block
     r1 = blk1.addReplica(dd);
     assertNotNull(r1);
-    em.persist(r1);
+    em.add(r1);
     assertEquals(2, dd.numBlocks());
     // remove first block
     removeReplica = blk.removeReplica(dd);

@@ -15,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.io.DataOutputBuffer;
 
-import se.sics.clusterj.DelegationKeyTable;
 
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
@@ -26,6 +25,7 @@ import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.DelegationKeyTable;
 
 /**
  * @author wmalik

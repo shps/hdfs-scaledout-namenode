@@ -2886,7 +2886,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long blockRecoveryId = nextGenerationStamp();
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile, isTransactional);
       lastBlock.initializeBlockRecovery(blockRecoveryId, getBlockManager().getDatanodeManager(), isTransactional);
-      em.persist(lastBlock);
+      em.update(lastBlock);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -3016,7 +3016,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             // update last block
             storedBlock.setGenerationStamp(newgenerationstamp);
             storedBlock.setNumBytes(newlength);
-            em.persist(storedBlock);
+            em.update(storedBlock);
 
             // find the DatanodeDescriptor objects
             // There should be no locations in the blockManager till now because the
@@ -3036,7 +3036,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               for(DatanodeID id : newtargets) {
                 IndexedReplica replica = storedBlock.addReplica(blockManager.getDatanodeManager().getDatanodeByStorageId(id.getStorageID()));
                 if (replica != null)
-                  em.persist(replica);
+                  em.add(replica);
               }
             }
             // add pipeline locations into the INodeUnderConstruction
@@ -3045,11 +3045,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               ReplicaUnderConstruction addedReplica = bUc.addExpectedReplica(id.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
 
               if (addedReplica != null) {
-                em.persist(addedReplica);
+                em.add(addedReplica);
               }
             }
 
-            em.persist(storedBlock);
+            em.update(storedBlock);
           }
 
           src = leaseManager.findPath(pendingFile);
@@ -4535,11 +4535,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (newNodes.length > 0) {
       for(int i = 0; i < newNodes.length; i++) {
         ReplicaUnderConstruction replica = blockinfo.addExpectedReplica(newNodes[i].getStorageID(), HdfsServerConstants.ReplicaState.RBW);
-        em.persist(replica);
+        if (replica != null)
+          em.add(replica);
       }
     }
 
-    em.persist(blockinfo);
+    em.update(blockinfo);
     
     // persist blocks only if append is supported
     String src = leaseManager.findPath(pendingFile);

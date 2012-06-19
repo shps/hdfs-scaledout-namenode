@@ -40,15 +40,6 @@
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
-
-<!--
-<repository>
-            <id>sics-release</id>
-            <name>SICS Release Repository</name>
-            <url>http://kompics.sics.se/maven/repository</url>
-        </repository>
-
--->
   </repositories>
 
   <licenses>
@@ -120,11 +111,6 @@
         <artifactId>hadoop-auth</artifactId>
         <version>${project.version}</version>
       </dependency>
-<!--<dependency>
-<groupId>se.sics.dight</groupId>
-    <artifactId>clusterj</artifactId>
-    <version>1.0-SNAPSHOT</version>
-      </dependency>-->
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
@@ -616,80 +602,101 @@
 <!--hold start-->
 <!--hold end-->
 
-      <exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestDatanodeBlockScanner.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestClientReportBadBlock.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestDFSShell.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestReadingWritingNN.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestReplication.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestGetBlockLocations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestHDFSFileContextMainOperations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-      <exclude>**/TestBlockReport.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestDatanodeBlockScanner.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestClientReportBadBlock.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestDFSShell.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestReadingWritingNN.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestReplication.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestGetBlockLocations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestHDFSFileContextMainOperations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestBlockReport.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
 
-	  <exclude>**/TestSecretHelper.java</exclude><!-- kamal: secret manager rolled back to its original impl, we must include this if we would decide to switch into new implementation--> 
-			<!-- Sometimes passes and sometimes fails --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
-			<!-- TODO--><exclude>**/TestStreamFile.java</exclude>
-			<!-- TODO --><exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
+            <exclude>**/TestSecretHelper.java</exclude><!-- kamal: secret manager rolled back to its original impl, we must include this if we would decide to switch into new implementation--> 
+			<!-- Sometimes passes and sometimes fails -->
+            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestStreamFile.java</exclude>
+			<!-- TODO -->
+            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
 
-			<!-- TODO--><exclude>**/TestFsck.java</exclude>
-			<!-- TODO--> <exclude>**/TestFsLimits.java</exclude>
-			<!-- TODO--><exclude>**/TestBlockManager.java</exclude>
-			<!-- TODO--><exclude>**/TestListFilesInFileContext.java</exclude>
-			<!-- TODO--><exclude>**/TestDataTransferProtocol.java</exclude>
-			<exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
-			<exclude>**/TestRefreshUserMappings.java</exclude>
-			<exclude>**/TestViewFsFileStatusHdfs.java</exclude>
-			<!-- TODO--><exclude>**/TestDatanodeBlockScanner.java</exclude>
-			<!-- TODO--><exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
-			<!-- TODO--><exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
-			<!-- TODO--><exclude>**/TestNameNodeMetrics.java</exclude>
-			<!-- TODO--><exclude>**/TestDfsOverAvroRpc.java</exclude>
-			<!-- TODO--><exclude>**/TestJMXGet.java</exclude>
-			<!-- TODO--><exclude>**/TestDeleteBlockPool.java</exclude>
-			<!-- TODO--><exclude>**/TestViewFsHdfs.java</exclude> <!-- 39/40 test-cases are passing, it's worth to fix -->
-			<!-- TODO--><exclude>**/TestFileCorruption.java</exclude>
-			<!-- TODO--><exclude>**/TestModTime.java</exclude>
-			<!-- TODO--><exclude>**/TestDataNodeVolumeFailureToleration.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
-			<!-- TODO--><exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
-			<!-- TODO--><exclude>**/TestFileLimit.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestFsck.java</exclude>
+			<!-- TODO--> 
+            <exclude>**/TestFsLimits.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestBlockManager.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestListFilesInFileContext.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDataTransferProtocol.java</exclude>
+            <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff-->
+            <exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff-->
+            <exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff-->
+            <exclude>**/TestRefreshUserMappings.java</exclude>
+            <exclude>**/TestViewFsFileStatusHdfs.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDatanodeBlockScanner.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDFSStorageStateRecovery.java</exclude> <!-- infinite loop for MiniCluster to come up -->
+			<!-- TODO-->
+            <exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
+			<!-- TODO-->
+            <exclude>**/TestNameNodeMetrics.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDfsOverAvroRpc.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestJMXGet.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDeleteBlockPool.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestViewFsHdfs.java</exclude> <!-- 39/40 test-cases are passing, it's worth to fix -->
+			<!-- TODO-->
+            <exclude>**/TestFileCorruption.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestModTime.java</exclude>
+			<!-- TODO-->
+            <exclude>**/TestDataNodeVolumeFailureToleration.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
+			<!-- TODO-->
+            <exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
+			<!-- TODO-->
+            <exclude>**/TestFileLimit.java</exclude>
 
-                        <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
-			<exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
-			<exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
+            <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
+            <exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
+            <exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
 
-			<exclude>**/TestBalancer.java</exclude>
-			<exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
-			<exclude>**/TestDecommissioningStatus.java</exclude>
-			<exclude>**/TestInjectionForSimulatedStorage.java</exclude>
-			<exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
-			<exclude>**/TestDistributedUpgrade.java</exclude>
-			<exclude>**/TestDecommission.java</exclude>
+            <exclude>**/TestBalancer.java</exclude>
+            <exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
+            <exclude>**/TestDecommissioningStatus.java</exclude>
+            <exclude>**/TestInjectionForSimulatedStorage.java</exclude>
+            <exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
+            <exclude>**/TestDistributedUpgrade.java</exclude>
+            <exclude>**/TestDecommission.java</exclude>
 
-			<exclude>**/TestCrcCorruption.java</exclude>
-			<exclude>**/TestSafeMode.java</exclude>
-			<exclude>**/TestJMXGet.java</exclude>
-			<exclude>**/TestDeleteBlockPool.java</exclude>
-			<exclude>**/TestOverReplicatedBlocks.java</exclude>
-			<exclude>**/TestViewFsHdfs.java</exclude>
-			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
-			<exclude>**/TestQuota.java</exclude>
+            <exclude>**/TestCrcCorruption.java</exclude>
+            <exclude>**/TestSafeMode.java</exclude>
+            <exclude>**/TestJMXGet.java</exclude>
+            <exclude>**/TestDeleteBlockPool.java</exclude>
+            <exclude>**/TestOverReplicatedBlocks.java</exclude>
+            <exclude>**/TestViewFsHdfs.java</exclude>
+            <exclude>**/TestNNMetricFilesInGetListingOps.java</exclude>
+            <exclude>**/TestQuota.java</exclude>
 
-			<exclude>**/TestCrcCorruption.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
-			<exclude>**/TestRestartDFS.java</exclude>
-			<exclude>**/TestNNMetricFilesInGetListingOps.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
+            <exclude>**/TestCrcCorruption.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
+            <exclude>**/TestRestartDFS.java</exclude>
+            <exclude>**/TestNNMetricFilesInGetListingOps.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
 
-			<exclude>**/TestMetaSave.java</exclude>
-			<exclude>**/TestWriteConfigurationToDFS.java</exclude>
-			<exclude>**/TestNNThroughputBenchmark.java</exclude> <!-- seems very time consuming-->
-			<exclude>**/TestDFSUpgradeFromImage.java</exclude>
-			<exclude>**/TestHDFSCLI.java</exclude>
-			<exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
-			<exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
+            <exclude>**/TestMetaSave.java</exclude>
+            <exclude>**/TestWriteConfigurationToDFS.java</exclude>
+            <exclude>**/TestNNThroughputBenchmark.java</exclude> <!-- seems very time consuming-->
+            <exclude>**/TestDFSUpgradeFromImage.java</exclude>
+            <exclude>**/TestHDFSCLI.java</exclude>
+            <exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
+            <exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
 
-			<exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
-                        <exclude>**/TestFsLimits.java</exclude>
+            <exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
+            <exclude>**/TestFsLimits.java</exclude>
 
           </excludes>
         </configuration>
@@ -714,7 +721,7 @@
           <artifactId>jdk.tools</artifactId>
           <version>1.6</version>
           <scope>system</scope>
-      <systemPath>${env.JAVA_HOME}/lib/tools.jar</systemPath> 
+          <systemPath>${env.JAVA_HOME}/lib/tools.jar</systemPath> 
         </dependency>
       </dependencies>
     </profile>

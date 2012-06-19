@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +35,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathFinder;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -75,19 +76,19 @@ public class LeaseManager {
   }
 
   Lease getLease(String holder) {
-    return em.findLeaseByHolder(holder);
+    return em.find(LeaseFinder.ByPKey, holder);
   }
 
-  SortedSet<Lease> getSortedLeases() {
-    return em.findAllLeases();
+  Collection<Lease> getSortedLeases() {
+    return em.findList(LeaseFinder.All);
   }
 
   /** @return the lease containing src */
   public Lease getLeaseByPath(String src) {
-    LeasePath leasePath = em.findLeasePathByPath(src);
+    LeasePath leasePath = em.find(LeasePathFinder.ByPKey, src);
     if (leasePath != null) {
       int holderID = leasePath.getHolderId();
-      Lease lease = em.findLeaseByHolderId(holderID);
+      Lease lease = em.find(LeaseFinder.ByHolderId, holderID);
       return lease;
     } else {
       return null;
@@ -96,14 +97,14 @@ public class LeaseManager {
 
   /** @return the number of leases currently in the system */
   public synchronized int countLease() {
-    return em.findAllLeases().size();
+    return em.findList(LeaseFinder.All).size();
   }
 
   /** This method is never called in the stateless implementation 
    * @return the number of paths contained in all leases 
    * */
   synchronized int countPath() {
-    return em.findAllLeases().size();
+    return em.countAll(Lease.class);
   }
 
   /**
@@ -114,14 +115,14 @@ public class LeaseManager {
     if (lease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
       lease = new Lease(holder, holderID, now());
-      em.persist(lease);
+      em.add(lease);
     } else {
       renewLease(lease);
     }
 
     LeasePath lPath = new LeasePath(src, lease.getHolderID());
     lease.addPath(lPath);
-    em.persist(lPath);
+    em.add(lPath);
 
     return lease;
   }
@@ -207,7 +208,7 @@ public class LeaseManager {
   synchronized void renewLease(Lease lease) {
     if (lease != null) {
       lease.setLastUpdate(now());
-      em.persist(lease);
+      em.update(lease);
     }
   }
 
@@ -232,7 +233,7 @@ public class LeaseManager {
       }
       lease.replacePath(oldPath, newPath);
       em.remove(oldPath);
-      em.persist(newPath);
+      em.add(newPath);
     }
   }
 
@@ -252,7 +253,7 @@ public class LeaseManager {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
 
-    TreeSet<LeasePath> leasePathSet = em.findLeasePathsByPrefix(prefix);
+    Collection<LeasePath> leasePathSet = em.findList(LeasePathFinder.ByPrefix, prefix);
     List<Map.Entry<LeasePath, Lease>> entries = new ArrayList<Map.Entry<LeasePath, Lease>>();
     final int srclen = prefix.length();
 
@@ -263,7 +264,7 @@ public class LeaseManager {
         return entries;
       }
       if (lPath.getPath().length() == srclen || lPath.getPath().charAt(srclen) == Path.SEPARATOR_CHAR) {
-        Lease lease = em.findLeaseByHolderId(lPath.getHolderId());
+        Lease lease = em.find(LeaseFinder.ByHolderId, lPath.getHolderId());
         entries.add(new SimpleEntry<LeasePath, Lease>(lPath, lease));
       }
     }
@@ -335,7 +336,7 @@ public class LeaseManager {
   private synchronized void checkLeases(boolean isTransactional) {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
-    SortedSet<Lease> sortedLeases = em.findAllExpiredLeases(expiredTime);
+    SortedSet<Lease> sortedLeases = (SortedSet<Lease>) em.findList(LeaseFinder.ByTimeLimit, expiredTime);
     if (sortedLeases == null) {
       return;
     }

@@ -15,7 +15,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
-import se.sics.clusterj.INodeTableSimple;
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
@@ -29,6 +28,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INodeTableSimple;
 
 /**
  * This class provides the CRUD operations for inodes stored in database. 
@@ -158,7 +159,8 @@ public class INodeHelper {
 
 			((INodeFile) (inode)).setID(inodetable.getId());
 
-      List<BlockInfo> blocks = EntityManager.getInstance().findBlocksByInodeId(inode.getID());
+      List<BlockInfo> blocks = 
+              (List<BlockInfo>) EntityManager.getInstance().findList(BlockInfoFinder.ByInodeId, inode.getID());
 			((INodeFile) (inode)).setBlocks(blocks);
 		}
 		if (inodetable.getIsClosedFile()) {

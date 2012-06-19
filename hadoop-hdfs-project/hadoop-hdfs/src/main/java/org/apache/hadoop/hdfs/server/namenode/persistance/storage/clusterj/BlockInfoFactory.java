@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance;
+package org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -7,7 +7,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import se.sics.clusterj.BlockInfoTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoTable;
 
 /**
  *

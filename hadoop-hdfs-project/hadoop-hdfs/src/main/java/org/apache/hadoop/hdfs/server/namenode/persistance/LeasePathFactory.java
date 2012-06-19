@@ -2,7 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.util.List;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
-import se.sics.clusterj.LeasePathsTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeasePathsTable;
 
 /**
  *

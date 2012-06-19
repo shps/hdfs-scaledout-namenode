@@ -32,27 +32,26 @@
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>sics-release</id>
+      <name>SICS Release Repository</name>
+      <url>http://kompics.sics.se/maven/repository</url>
+    </repository>
+  </repositories>
+
   <dependencies>
 
-<dependency>
-	<groupId>mysql</groupId>
-	<artifactId>mysql-connector-java</artifactId>
-	<version>5.1.18</version>
-        <scope>provided</scope>
-</dependency> 
-<!--<dependency>
-<groupId>se.sics.dight</groupId>
-    <artifactId>clusterj</artifactId>
-</dependency> -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>5.1.18</version>
+      <scope>provided</scope>
+    </dependency> 
     <dependency>
       <groupId>org.aspectj</groupId>
       <artifactId>aspectjtools</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>se.sics.dight</groupId>
-      <artifactId>clusterj</artifactId>
-      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.aspectj</groupId>
@@ -123,6 +122,29 @@
     <dependency>
       <groupId>org.apache.ant</groupId>
       <artifactId>ant</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.ndb</groupId>
+      <artifactId>clusterj-linux32</artifactId>
+      <version>7.1.15a</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>jsr250-api</artifactId>
+      <version>1.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.persistence</groupId>
+      <artifactId>persistence-api</artifactId>
+      <version>1.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.transaction</groupId>
+      <artifactId>jta</artifactId>
+      <version>1.1</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -329,20 +351,20 @@
             <configuration>
               <target>
                 <condition property="commons.daemon.os.name" value="darwin">
-                    <os name="Mac OS X"/>
+                  <os name="Mac OS X"/>
                 </condition>
                 <condition property="commons.daemon.os.arch" value="universal">
-                    <os name="Mac OS X"/>
+                  <os name="Mac OS X"/>
                 </condition>
                 <condition property="commons.daemon.os.name" value="linux">
-                    <os name="Linux" />
+                  <os name="Linux" />
                 </condition>
                 <!-- Set commons.daemon.os.arch to either i686 or x86_64 for GNU/Linux -->
                 <condition property="commons.daemon.os.arch" value="x86_64">
-                    <os name="Linux" arch="amd64"/>
+                  <os name="Linux" arch="amd64"/>
                 </condition>
                 <condition property="commons.daemon.os.arch" value="i686">
-                    <os name="Linux" /> <!-- This is a guess -->
+                  <os name="Linux" /> <!-- This is a guess -->
                 </condition>
                 <property name="commons.daemon.tar.name"
                           value="commons-daemon-${commons-daemon.version}-bin-${commons.daemon.os.name}-${commons.daemon.os.arch}.tar.gz"/>
@@ -366,7 +388,40 @@
           </execution>
         </executions>
       </plugin>
-  </plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>se.sics.ndb</groupId>
+                  <artifactId>clusterj-linux32</artifactId>
+                  <version>7.1.15a</version>
+                  <classifier>${build.type}</classifier>
+                  <type>jar</type>
+                  <overWrite>false</overWrite>
+                  <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 
   <profiles>

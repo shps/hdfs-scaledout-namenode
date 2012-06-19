@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionFinder;
 
 /**
  * Represents a block that is currently being constructed.<br> This is usually
@@ -111,7 +112,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    */
   public List<ReplicaUnderConstruction> getExpectedReplicas() {
     if (expectedReplicas == null) {
-      expectedReplicas = EntityManager.getInstance().findReplicaUCByBlockId(getBlockId());
+      expectedReplicas = 
+              (List<ReplicaUnderConstruction>) EntityManager.getInstance().findList(ReplicaUnderConstructionFinder.ByBlockId, getBlockId());
     }
     Collections.sort(expectedReplicas, ReplicaUnderConstruction.Order.ByIndex);
     return expectedReplicas;

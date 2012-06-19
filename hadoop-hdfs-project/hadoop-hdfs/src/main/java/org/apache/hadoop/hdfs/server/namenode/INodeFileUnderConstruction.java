@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * I-node for file being written.
@@ -117,8 +118,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     }
     
     BlockInfoUnderConstruction bUc;
-    if (getBlocks().contains(lastBlock));
-      removeBlock(lastBlock);
+      
     if (lastBlock.isComplete()) {
       bUc = new BlockInfoUnderConstruction(lastBlock);
     } else {
@@ -128,6 +128,14 @@ public class INodeFileUnderConstruction extends INodeFile {
     
     bUc.setINode(this);
     addBlock(bUc);
+    
+    if (getBlocks().contains(lastBlock)) {
+      removeBlock(lastBlock);
+      EntityManager.getInstance().update(bUc);
+    } else {
+      EntityManager.getInstance().add(bUc);
+    }
+    
     return bUc;
   }
 }

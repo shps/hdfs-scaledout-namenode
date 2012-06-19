@@ -29,9 +29,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -332,7 +329,7 @@ public class TestBlockManager {
     for (DatanodeDescriptor dn : nodes) {
       // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
       IndexedReplica replica = blockInfo.addReplica(dn);
-      EntityManager.getInstance().persist(replica);
+      EntityManager.getInstance().add(replica);
     }
     return blockInfo;
   }
@@ -357,9 +354,6 @@ public class TestBlockManager {
     INodeFile iNode = Mockito.mock(INodeFile.class);
     Mockito.doReturn((short)3).when(iNode).getReplication();
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
-
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-//    bm.addINode(blockInfo, iNode, false);
     return blockInfo;
   }
   

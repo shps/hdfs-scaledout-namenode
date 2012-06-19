@@ -22,14 +22,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockFinder;
 
 /** 
  * Keeps a Collection for every named machine containing blocks
@@ -48,12 +47,12 @@ class InvalidateBlocks {
 
   /** @return the number of blocks to be invalidated . */
   synchronized long numBlocks() {
-    return em.countAllInvalidatedBlocks();
+    return em.countAll(InvalidatedBlock.class);
   }
 
   /** Does this contain the block which is associated with the storage? */
   synchronized boolean contains(final String storageID, final Block block) {
-    return em.findInvalidatedBlockByPK(storageID, block.getBlockId()) != null;
+    return em.find(InvalidatedBlockFinder.ByPrimaryKey, block.getBlockId(), storageID) != null;
   }
 
   /**
@@ -63,7 +62,7 @@ class InvalidateBlocks {
   synchronized void add(final Block block, final DatanodeInfo datanode,
           final boolean log) {
 
-    em.persist(new InvalidatedBlock(datanode.getStorageID(), block.getBlockId(), 
+    em.add(new InvalidatedBlock(datanode.getStorageID(), block.getBlockId(), 
             block.getGenerationStamp(), block.getNumBytes()));
 
     if (log) {
@@ -75,7 +74,7 @@ class InvalidateBlocks {
   /** Remove a storage from the invalidatesSet */
   synchronized void remove(final String storageID) {
     //[H] ClusterJ limitation: no delete op using where clause
-    List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageID);
+    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) em.findList(InvalidatedBlockFinder.ByStorageId, storageID);
     if (invBlocks != null)
       for (InvalidatedBlock invBlock : invBlocks) {
         if (invBlock != null)
@@ -91,26 +90,39 @@ class InvalidateBlocks {
 
   /** Print the contents to out. */
   synchronized void dump(final PrintWriter out) {
-    Map<String, HashSet<InvalidatedBlock>> node2blocks = em.findAllInvalidatedBlocks();
-    final int size = node2blocks.values().size();
-    out.println("Metasave: Blocks " + em.countAllInvalidatedBlocks()
+    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) em.findList(InvalidatedBlockFinder.All);
+    HashSet<String> storageIds = new HashSet<String>();
+    for (InvalidatedBlock ib : invBlocks)
+      storageIds.add(ib.getStorageId());
+    
+    final int size = storageIds.size();
+    out.println("Metasave: Blocks " + invBlocks.size()
             + " waiting deletion from " + size + " datanodes.");
     if (size == 0) {
       return;
     }
 
-    for (Map.Entry<String, HashSet<InvalidatedBlock>> entry : node2blocks.entrySet()) {
-      final HashSet<InvalidatedBlock> invBlocks = entry.getValue();
+    //FIXME [H]: To dump properly it needs to get the block using blockid. Indeed, this is inefficient.
+    for (String sId : storageIds) {
+      HashSet<InvalidatedBlock> invSet = new HashSet<InvalidatedBlock>();
+      for (InvalidatedBlock ib : invBlocks)
+      {
+        if (ib.getStorageId().equals(sId))
+          invSet.add(ib);
+      }
       if (invBlocks.size() > 0) {
-        //FIXME [H]: To dump properly it needs to get the block using blockid.
-        out.println(datanodeManager.getDatanodeByStorageId(entry.getKey()).getName() + invBlocks);
+        out.println(datanodeManager.getDatanodeByStorageId(sId).getName() + invBlocks);
       }
     }
   }
 
   /** @return a list of the storage IDs. */
   synchronized List<String> getStorageIDs() {
-    Set<String> storageIds = em.findAllInvalidatedBlocks().keySet();
+    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) em.findList(InvalidatedBlockFinder.All);
+    HashSet<String> storageIds = new HashSet<String>();
+    for (InvalidatedBlock ib : invBlocks)
+      storageIds.add(ib.getStorageId());
+    
     if (storageIds != null)
       return new ArrayList<String>(storageIds);
     
@@ -121,7 +133,7 @@ class InvalidateBlocks {
   int invalidateWork(final String storageId) {
     final DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(storageId);
     if (dn == null) {
-      List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
+      List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) em.findList(InvalidatedBlockFinder.ByStorageId, storageId);
       if (invBlocks != null)
         for (InvalidatedBlock ib : invBlocks) {
           em.remove(ib);
@@ -143,7 +155,7 @@ class InvalidateBlocks {
 
   private synchronized List<Block> invalidateWork(
           final String storageId, final DatanodeDescriptor dn) {
-    final List<InvalidatedBlock> invBlocks = em.findInvalidatedBlocksByStorageId(storageId);
+    final List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) em.findList(InvalidatedBlockFinder.ByStorageId, storageId);
     if (invBlocks == null || invBlocks.isEmpty()) {
       return null;
     }

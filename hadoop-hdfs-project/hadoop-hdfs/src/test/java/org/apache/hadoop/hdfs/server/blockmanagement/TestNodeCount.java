@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
 
 /**
  * Test if live nodes count per node is correct 
@@ -110,8 +111,10 @@ public class TestNodeCount extends TestCase {
       DatanodeDescriptor nonExcessDN = null;
       EntityManager em = EntityManager.getInstance();
       for (DatanodeDescriptor dn : dataNodes) {
-        Collection<Long> excessReplicas = em.findExcessReplicaByStorageId(dn.getStorageID());
-        if (excessReplicas == null || !excessReplicas.contains(block.getBlockId())) {
+        Collection<ExcessReplica> excessReplicas = 
+                em.findList(ExcessReplicaFinder.ByStorageId, dn.getStorageID());
+        ExcessReplica searchKey = new ExcessReplica(dn.getStorageID(), block.getBlockId());
+        if (excessReplicas == null || !excessReplicas.contains(searchKey)) {
           nonExcessDN = dn;
           break;
         }

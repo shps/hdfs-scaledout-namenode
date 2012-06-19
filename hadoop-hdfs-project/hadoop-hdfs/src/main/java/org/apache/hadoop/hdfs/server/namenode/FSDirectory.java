@@ -314,7 +314,7 @@ public class FSDirectory implements Closeable {
           for (int i = 0; i < nrBlocks; i++) {
             blocks[i].setINode(newF);
             blks.add(blocks[i]);
-            em.persist(blocks[i]);
+            em.add(blocks[i]);
           }
           newF.setBlocks(blks);
           
@@ -379,11 +379,11 @@ public class FSDirectory implements Closeable {
       for (DatanodeDescriptor dn : targets) {
         ReplicaUnderConstruction expReplica = blockInfo.addExpectedReplica(dn.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
         if (expReplica != null)
-          em.persist(expReplica);
+          em.add(expReplica);
       }
       blockInfo.setINode(fileINode);
       fileINode.addBlock(blockInfo);
-      em.persist(blockInfo);
+      em.add(blockInfo);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
             + path + " with " + block
@@ -1052,7 +1052,7 @@ public class FSDirectory implements Closeable {
       for (BlockInfo block : srcInode.getBlocks()) {
         trgInode.addBlock(block);
         block.setINode(trgInode);
-        em.persist(block);
+        em.update(block);
       }
       srcInode.getBlocks().clear();
       trgParent.removeChild(srcInode, isTransactional);
