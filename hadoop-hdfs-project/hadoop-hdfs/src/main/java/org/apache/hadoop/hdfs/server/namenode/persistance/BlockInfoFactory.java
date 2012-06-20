@@ -19,7 +19,7 @@ public class BlockInfoFactory {
     persistable.setBlockId(block.getBlockId());
     persistable.setNumBytes(block.getNumBytes());
     persistable.setGenerationStamp(block.getGenerationStamp());
-    persistable.setINodeID(block.getINode().getID());
+    persistable.setINodeID(block.getINode().getId());
     persistable.setTimestamp(block.getTimestamp());
     persistable.setBlockIndex(block.getBlockIndex());
     persistable.setBlockUCState(block.getBlockUCState().ordinal());

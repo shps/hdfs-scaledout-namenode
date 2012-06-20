@@ -80,7 +80,7 @@ public class FSImageSerialization {
   // Helper function that reads in an INodeUnderConstruction
   // from the input stream
   //
-  static INodeFileUnderConstruction readINodeUnderConstruction(
+  static INodeFile readINodeUnderConstruction(
                             DataInputStream in) throws IOException {
     byte[] name = readBytes(in);
     short blockReplication = in.readShort();
@@ -111,7 +111,7 @@ public class FSImageSerialization {
       locations[i].readFields(in);
     }
 
-    INodeFileUnderConstruction ifuc = new INodeFileUnderConstruction(name, 
+    INodeFile ifuc = new INodeFile(true, name, 
                                           blockReplication, 
                                           modificationTime,
                                           preferredBlockSize,
@@ -133,9 +133,10 @@ public class FSImageSerialization {
   // into the input stream
   //
   static void writeINodeUnderConstruction(DataOutputStream out,
-                                           INodeFileUnderConstruction cons,
+                                           INodeFile cons,
                                            String path) 
                                            throws IOException {
+    assert cons.isUnderConstruction();
     writeString(path, out);
     out.writeShort(cons.getReplication());
     out.writeLong(cons.getModificationTime());
@@ -157,7 +158,7 @@ public class FSImageSerialization {
    */
   static void saveINode2Image(INode node,
                               DataOutputStream out) throws IOException {
-    byte[] name = node.getLocalNameBytes();
+    byte[] name = node.getNameBytes();
     out.writeShort(name.length);
     out.write(name);
     FsPermission filePerm = TL_DATA.get().FILE_PERM;

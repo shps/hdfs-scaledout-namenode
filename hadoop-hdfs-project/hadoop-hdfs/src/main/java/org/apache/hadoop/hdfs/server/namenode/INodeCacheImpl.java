@@ -3,14 +3,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /** This class manages the local cache of INodes
  * @author wmalik
@@ -29,7 +27,7 @@ public class INodeCacheImpl implements INodeCache {
 			LOG.debug("inodes.length == 0 || inodes == null || inodes[0] == null");
 			return;
 		}
-		if (!inodes[0].getLocalName().equals("")) {
+		if (!inodes[0].getName().equals("")) {
 			LOG.debug("!inodes[0].getLocalName().equals(\"\")");
 			return;
 		}
@@ -38,8 +36,8 @@ public class INodeCacheImpl implements INodeCache {
 		for (int i = 1; i < inodes.length; i++) {
 			if (inodes[i] == null)
 				break;
-			INodeEntry entry = new INodeEntry(inodes[i].getID(),
-					inodes[i].getLocalNameBytes(), inodes[i].isDirectory());
+			INodeEntry entry = new INodeEntry(inodes[i].getId(),
+					inodes[i].getNameBytes(), inodes[i].isDirectory());
 			parentEntry.addChild(entry);
 			parentEntry = parentEntry.getChildINode(entry.name);
 		}
@@ -47,16 +45,16 @@ public class INodeCacheImpl implements INodeCache {
 	}
 
 	
-	private boolean verify(INode[] entries, byte[][] components) {
+	private boolean verify(List<INode> entries, byte[][] components) {
 		
-		if(entries.length != components.length
+		if(entries.size() != components.length
 				|| components.length == 0
-				|| entries.length == 0)
+        || entries.size() == 0)
 			return false;
 
-		for (int i = 0; i < entries.length; i++) {
+		for (int i = 0; i < entries.size(); i++) {
 			String component = DFSUtil.bytes2String(components[i]);
-			String inodeName = DFSUtil.bytes2String(entries[i].name);
+			String inodeName = DFSUtil.bytes2String(entries.get(i).name);
 			if(!component.equals(inodeName))
 				return false;
 		}
@@ -100,12 +98,14 @@ public class INodeCacheImpl implements INodeCache {
 		INodeEntry[] entries = get(path);
 
 		if(entries != null) {
-			INode[] inodes = INodeHelper.getINodes(entries); //one shot lookup
-			if(inodes == null)
-				return null;
-			if(verify(inodes, INodeDirectory.getPathComponents(path))) {
+      List<Long> ids = toIds(entries);
+      List<INode> inodes = EntityManager.getInstance().findInodesByIds(ids);
+      if (inodes.size() < ids.size()) //means the cache is old, so invalidate
+        return null;
+      List<INode> sortedList = sortINodesByPath(inodes);
+			if(verify(sortedList, INodeDirectory.getPathComponents(path))) {
 				LOG.debug("Cache Hit"); //TODO: Increment the cache miss metric here
-				return inodes[inodes.length-1];
+				return sortedList.get(inodes.size()-1);
 			}
 			else { //cache invalidated
 				//TODO
@@ -169,8 +169,8 @@ public class INodeCacheImpl implements INodeCache {
 	@Override
 	public void putRoot(INodeDirectory root) {
 		if (rootEntry == null)
-			rootEntry = new INodeEntry(root.getID(), DFSUtil.string2Bytes(root
-					.getLocalName()), true);
+			rootEntry = new INodeEntry(root.getId(), DFSUtil.string2Bytes(root
+					.getName()), true);
 	}
 
 	@Override
@@ -209,5 +209,56 @@ public class INodeCacheImpl implements INodeCache {
 		rootEntry = null; 
 		singletonCache = null;
 	}
+
+  private List<Long> toIds(INodeEntry[] entries) {
+    List<Long> ids = new ArrayList<Long>();
+    for (INodeEntry iNodeEntry : entries) {
+      ids.add(iNodeEntry.id);
+    }
+    return ids;
+  }
+
+  	/** Chain the inodes together according to the directory hierarchy
+	 *  This is required because the ClusterJ "in" clause doesn't guarantee the order
+	 *  
+	 * @param inodeList a list of inodets which need to be sorted
+	 * @return
+	 */
+	private List<INode> sortINodesByPath(List<INode> inodeList) {
+
+		if (inodeList == null) {
+			return null;
+		}
+		if (inodeList.size() == 1) {
+			return inodeList;
+		}
+
+		//converting list to a map so that we can get an inode in O(1) during chaining
+		Map<Long, INode> inodesMap = new HashMap<Long, INode>(); //<pid, inodetable>
+		for (INode inode : inodeList) {
+			inodesMap.put(inode.getParentId(), inode);
+		}
+
+		List<INode> sortedList =
+				new ArrayList<INode>(inodeList.size());
+		int count = 0;
+		INode root = inodesMap.get(-1L); //use a constant here
+		sortedList.add(root);
+		Long next_parent_id = root.getId();
+
+		//lets chain the inodes together
+		while (count < inodeList.size() - 1) {
+			INode inode = inodesMap.get(next_parent_id);
+			if (inode == null) //if the chain is broken, return null and invalidate the cache
+			{
+				return null;
+			}
+			sortedList.add(inode);
+			next_parent_id = inode.getId();
+			count++;
+		}
+		return sortedList;
+	}
+        
 
 }

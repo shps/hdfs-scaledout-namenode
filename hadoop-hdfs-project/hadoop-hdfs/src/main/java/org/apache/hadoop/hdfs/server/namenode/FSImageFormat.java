@@ -265,7 +265,7 @@ class FSImageFormat {
 
        // add to parent
        // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false, false);       
+       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false);       
      }
      return numChildren;
    }
@@ -299,9 +299,8 @@ class FSImageFormat {
       }
 
       // add new inode
-      // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
       parentINode = fsDir.addToParent(pathComponents[pathComponents.length-1], 
-          parentINode, newNode, false, false);
+          parentINode, newNode, false);
     }
   }
 
@@ -413,22 +412,22 @@ class FSImageFormat {
       LOG.info("Number of files under construction = " + size);
 
       for (int i = 0; i < size; i++) {
-        INodeFileUnderConstruction cons =
-          FSImageSerialization.readINodeUnderConstruction(in);
-
-        // verify that file exists in namespace
-        String path = cons.getLocalName();
-        INode old = fsDir.getFileINode(path);
-        if (old == null) {
-          throw new IOException("Found lease for non-existent file " + path);
-        }
-        if (old.isDirectory()) {
-          throw new IOException("Found lease for directory " + path);
-        }
-        INodeFile oldnode = (INodeFile) old;
-        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-        fsDir.replaceNode(path, oldnode, cons, false);
-        namesystem.leaseManager.addLease(cons.getClientName(), path); 
+//        INodeFileUnderConstruction cons =
+//          FSImageSerialization.readINodeUnderConstruction(in);
+//
+//        // verify that file exists in namespace
+//        String path = cons.getName();
+//        INode old = fsDir.getFileINode(path);
+//        if (old == null) {
+//          throw new IOException("Found lease for non-existent file " + path);
+//        }
+//        if (old.isDirectory()) {
+//          throw new IOException("Found lease for directory " + path);
+//        }
+//        INodeFile oldnode = (INodeFile) old;
+//        //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
+//        fsDir.replaceNode(path, oldnode, cons);
+//        namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }
 
@@ -594,7 +593,7 @@ class FSImageFormat {
     private static void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      List<INode> children = current.getChildrenRaw();
+      List<INode> children = current.getChildren();
       if (children == null || children.isEmpty())
         return;
       // print prefix (parent directory name)
@@ -614,7 +613,7 @@ class FSImageFormat {
       for(INode child : children) {
         if(!child.isDirectory())
           continue;
-        currentDirName.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
+        currentDirName.put(PATH_SEPARATOR).put(child.getNameBytes());
         saveImage(currentDirName, (INodeDirectory)child, out);
         currentDirName.position(prefixLen);
       }

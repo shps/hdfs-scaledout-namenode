@@ -223,7 +223,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           synchronized(this) {
             DBConnector.beginTransaction();
-            dm.removeDeadDatanode(dead, true);
+            dm.removeDeadDatanode(dead);
             DBConnector.commit();
           }
         } catch (IOException e) {

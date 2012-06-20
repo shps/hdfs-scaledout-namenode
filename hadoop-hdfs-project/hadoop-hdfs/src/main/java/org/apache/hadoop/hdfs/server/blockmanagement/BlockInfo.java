@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -25,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import se.sics.clusterj.BlockInfoTable;
 
@@ -90,7 +88,7 @@ public class BlockInfo extends Block {
 
   public INodeFile getINode() {
     if (inode == null) {
-      inode = (INodeFile) INodeHelper.getINode(inodeId);
+      inode = (INodeFile) EntityManager.getInstance().findInodeById(inodeId);
     }
 
     return inode;

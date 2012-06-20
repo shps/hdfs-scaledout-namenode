@@ -100,7 +100,7 @@ public class TestBlockManager {
     NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
     cluster.remove(deadNode);
     // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    bm.removeBlocksAssociatedTo(deadNode, false);
+    bm.removeBlocksAssociatedTo(deadNode);
   }
 
 
@@ -321,7 +321,7 @@ public class TestBlockManager {
       DatanodeDescriptor[] pipeline) throws IOException {
     for (int i = 1; i < pipeline.length; i++) {
             // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      bm.addBlock(pipeline[i], blockInfo, null, false);
+      bm.addBlock(pipeline[i], blockInfo, null);
     }
   }
 

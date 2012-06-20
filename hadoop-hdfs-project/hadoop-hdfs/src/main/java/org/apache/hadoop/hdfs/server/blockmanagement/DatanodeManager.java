@@ -254,11 +254,11 @@ public class DatanodeManager {
    * @param nodeInfo datanode descriptor.
    * @throws IOException 
    */
-  private void removeDatanode(DatanodeDescriptor nodeInfo, boolean isTransactional) throws IOException {
+  private void removeDatanode(DatanodeDescriptor nodeInfo) throws IOException {
     assert namesystem.hasWriteLock();
     //FIXME[H]: Important! What happens if dnd info is removed from in memory datastructures but it fails to remove them from DB?
     heartbeatManager.removeDatanode(nodeInfo);
-    blockManager.removeBlocksAssociatedTo(nodeInfo, isTransactional);
+    blockManager.removeBlocksAssociatedTo(nodeInfo);
     networktopology.remove(nodeInfo);
     host2DatanodeMap.remove(nodeInfo);
     if (LOG.isDebugEnabled()) {
@@ -281,7 +281,7 @@ public class DatanodeManager {
         while (!done && tries > 0) {
           try {
             DBConnector.beginTransaction();
-            removeDatanode(descriptor, true);
+            removeDatanode(descriptor);
             DBConnector.commit();
             done = true;
           } catch (ClusterJException e) {
@@ -302,7 +302,7 @@ public class DatanodeManager {
 
   /** Remove a dead datanode. 
    * @throws IOException */
-  void removeDeadDatanode(final DatanodeID nodeID, boolean isTransactional) throws IOException {
+  void removeDeadDatanode(final DatanodeID nodeID) throws IOException {
       synchronized(datanodeMap) {
         DatanodeDescriptor d;
         try {
@@ -313,7 +313,7 @@ public class DatanodeManager {
         if (d != null && isDatanodeDead(d)) {
           NameNode.stateChangeLog.info(
               "BLOCK* removeDeadDatanode: lost heartbeat from " + d.getName());
-          removeDatanode(d, isTransactional);
+          removeDatanode(d);
         }
       }
   }
@@ -589,7 +589,7 @@ public class DatanodeManager {
                         + "node from name: " + nodeN.getName());
       // nodeN previously served a different data storage, 
       // which is not served by anybody anymore.
-      removeDatanode(nodeN, transactional);
+      removeDatanode(nodeN);
       // physically remove node from datanodeMap
       wipeDatanode(nodeN);
       nodeN = null;

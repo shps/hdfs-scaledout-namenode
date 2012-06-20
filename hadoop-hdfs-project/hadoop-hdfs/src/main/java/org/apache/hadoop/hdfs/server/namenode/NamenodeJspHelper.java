@@ -751,7 +751,7 @@ class NamenodeJspHelper {
           doc.startTag("file");
 
           doc.startTag("local_name");
-          doc.pcdata(inode.getLocalName());
+          doc.pcdata(inode.getName());
           doc.endTag();
 
           doc.startTag("local_directory");

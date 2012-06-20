@@ -17,6 +17,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
 /**
  *
@@ -324,6 +326,46 @@ public class EntityManager {
   public List<PendingBlockInfo> findTimedoutPendingBlocks(long timelimit) {
     try {
       return context().findTimedoutPendingBlocks(timelimit);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public INode findInodeById(long inodeId) {
+    try {
+      return context().findInodeById(inodeId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<INode> findInodesByParentIdSortedByName(long id) {
+    try {
+      return context().findInodesByParentIdSortedByName(id);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public INode findInodeByNameAndParentId(String name, long parentId) {
+    try {
+      return context().findInodeByNameAndParentId(name, parentId);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return null;
+  }
+
+  public List<INode> findInodesByIds(List<Long> ids) {
+    try {
+      return context().findInodesByIds(ids);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }

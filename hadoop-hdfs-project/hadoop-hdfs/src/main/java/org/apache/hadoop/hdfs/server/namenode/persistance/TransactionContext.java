@@ -8,6 +8,8 @@ import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -17,9 +19,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.Lease;
-import org.apache.hadoop.hdfs.server.namenode.LeasePath;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import se.sics.clusterj.*;
 
 /**
@@ -104,7 +104,7 @@ public class TransactionContext {
     modifiedReplicasUc.clear();
     removedReplicasUc.clear();
     blockReplicasUc.clear();
-    
+
     modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
@@ -137,6 +137,12 @@ public class TransactionContext {
     removedLeases.clear();
     leases.clear();
     allLeasesRead = false;
+    
+    inodesIdIndex.clear();
+    inodesNameParentIndex.clear();
+    inodesParentIndex.clear();
+    removedInodes.clear();
+    modifiedInodes.clear();
   }
 
   void begin() {
@@ -262,6 +268,19 @@ public class TransactionContext {
       session.deletePersistent(lTable);
       builder.append("rm Lease:").append(l.toString()).append("\n");
     }
+    
+    for (INode inode : modifiedInodes.values()) {
+      INodeTableSimple persistable = session.newInstance(INodeTableSimple.class);
+      InodeFactory.createPersistable(inode, persistable);
+      session.savePersistent(persistable);
+      builder.append("w Inode:").append(inode.toString()).append("\n");
+    }
+    
+    for (INode inode : removedInodes.values()) {
+      INodeTableSimple persistable = session.newInstance(INodeTableSimple.class, inode.getId());
+      session.deletePersistent(persistable);
+      builder.append("rm Inode:").append(inode.getName()).append("\n");
+    }
 
 
     logger.debug("\nTx commit[" + builder.toString() + "]");
@@ -375,6 +394,16 @@ public class TransactionContext {
 
       pendings.put(pendingBlock.getBlockId(), pendingBlock);
       modifiedPendings.put(pendingBlock.getBlockId(), pendingBlock);
+    } else if (obj instanceof INode) {
+      INode inode = (INode) obj;
+
+      if (removedInodes.containsKey(inode.getId())) {
+        throw new TransactionContextException("Removed  inode passed to be persisted");
+      }
+      
+      inodesIdIndex.put(inode.getId(), inode);
+      inodesNameParentIndex.put(inode.nameParentKey(), inode);
+      modifiedInodes.put(inode.getId(), inode);
     } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
@@ -414,7 +443,6 @@ public class TransactionContext {
 
       } else if (obj instanceof ReplicaUnderConstruction) {
         ReplicaUnderConstruction replica = (ReplicaUnderConstruction) obj;
-
         modifiedReplicasUc.remove(replica.cacheKey());
         removedReplicasUc.put(replica.cacheKey(), replica);
       } else if (obj instanceof IndexedReplica) {
@@ -481,6 +509,13 @@ public class TransactionContext {
         idToLease.remove(lease.getHolderID());
         modifiedLeases.remove(lease);
         removedLeases.put(lease, lease);
+      } else if (obj instanceof INode) {
+        INode inode = (INode) obj;
+        inodesIdIndex.remove(inode.getId());
+        inodesNameParentIndex.remove(inode.nameParentKey());
+        modifiedInodes.remove(inode.getId());
+        
+        removedInodes.put(inode.getId(), inode);
       } else {
         done = false;
         throw new TransactionContextException("Unkown type passed for being persisted");
@@ -599,7 +634,7 @@ public class TransactionContext {
     findAllBlocks();
     return blocks.size();
   }
-  
+
   public List<BlockInfo> findBlocksByStorageId(String name) throws IOException, TransactionContextException {
     beforeTxCheck();
     try {
@@ -626,7 +661,9 @@ public class TransactionContext {
     List<BlockInfo> finalList = new ArrayList<BlockInfo>();
 
     for (BlockInfo blockInfo : newBlocks) {
-      if (blocks.containsKey(blockInfo.getBlockId()) && !removedBlocks.containsKey(blockInfo.getBlockId())) {
+      if (removedBlocks.containsKey(blockInfo.getBlockId()))
+        continue;
+      if (blocks.containsKey(blockInfo.getBlockId())) {
         finalList.add(blocks.get(blockInfo.getBlockId()));
       } else {
         blocks.put(blockInfo.getBlockId(), blockInfo);
@@ -1112,9 +1149,11 @@ public class TransactionContext {
   }
 
   /**
-   * Finds the hard-limit expired leases. i.e. All leases older than the given time limit.
+   * Finds the hard-limit expired leases. i.e. All leases older than the given
+   * time limit.
+   *
    * @param timeLimit
-   * @return 
+   * @return
    */
   public SortedSet<Lease> findAllExpiredLeases(long timeLimit) throws TransactionContextException {
     beforeTxCheck();
@@ -1177,4 +1216,151 @@ public class TransactionContext {
 
     return lSet;
   }
+  
+  private Map<Long, INode> inodesIdIndex = new HashMap<Long, INode>();
+  private Map<String, INode> inodesNameParentIndex = new HashMap<String, INode>();
+  private Map<Long, List<INode>> inodesParentIndex = new HashMap<Long, List<INode>>();
+  private Map<Long, INode> modifiedInodes = new HashMap<Long, INode>();
+  private Map<Long, INode> removedInodes = new HashMap<Long, INode>();
+
+  public INode findInodeById(long inodeId) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = true;
+    try {
+      if (removedInodes.containsKey(inodeId))
+        return null;
+      if (inodesIdIndex.containsKey(inodeId)) {
+        return inodesIdIndex.get(inodeId);
+      }
+      Session session = DBConnector.obtainSession();
+      INodeTableSimple persistable = session.find(INodeTableSimple.class, inodeId);
+      if (persistable == null)
+        return null;
+      INode inode = InodeFactory.createInode(persistable);
+      done = true;
+      inodesIdIndex.put(inodeId, inode);
+      inodesNameParentIndex.put(inode.nameParentKey(), inode);
+      return inode;
+    } catch (IOException ex) {
+      done = false;
+      throw new TransactionContextException(ex);
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+
+  public List<INode> findInodesByParentIdSortedByName(long parentId) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = false;
+    try {
+      if (inodesParentIndex.containsKey(parentId)) {
+        done = true;
+        return inodesParentIndex.get(parentId);
+      }
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+      Predicate pred1 = dobj.get("parentID").equal(dobj.param("parentID"));
+      dobj.where(pred1);
+      Query<INodeTableSimple> query = session.createQuery(dobj);
+      query.setParameter("parentID", parentId);
+      List<INodeTableSimple> results = query.getResultList();
+      List<INode> inodes = InodeFactory.createInodeList(results);
+      done = true;
+      List<INode> syncInodes = syncInodeInstances(inodes);
+      Collections.sort(syncInodes, INode.Order.ByName);
+      inodesParentIndex.put(parentId, syncInodes);
+      return syncInodes;
+    } catch (IOException ex) {
+      done = false;
+      throw new TransactionContextException(ex);
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+
+  public INode findInodeByNameAndParentId(String name, long perentId) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = true;
+    try {
+      String key = perentId + name;
+      if (inodesNameParentIndex.containsKey(key)) {
+        return inodesNameParentIndex.get(key);
+      }
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+      Predicate pred1 = dobj.get("name").equal(dobj.param("name"));
+      Predicate pred2 = dobj.get("parentID").equal(dobj.param("parentID"));
+      dobj.where(pred1.and(pred2));
+      Query<INodeTableSimple> query = session.createQuery(dobj);
+      query.setParameter("name", name);
+      query.setParameter("parentID", perentId);
+      List<INodeTableSimple> results = query.getResultList();
+      if (results.size() > 1) {
+        throw new TransactionContextException("This parent has two chidlren with the same name");
+      } else if (results.isEmpty()) {
+        return null;
+      } else {
+        INode inode = InodeFactory.createInode(results.get(0));
+        if (removedInodes.containsKey(inode.getId()))
+          return null;
+        inodesIdIndex.put(inode.getId(), inode);
+        inodesNameParentIndex.put(inode.nameParentKey(), inode);
+        return inode;
+      }
+    } catch (IOException ex) {
+      done = false;
+      throw new TransactionContextException(ex);
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+
+  public List<INode> findInodesByIds(List<Long> ids) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = false;
+
+    try {
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<INodeTableSimple> dobj = qb.createQueryDefinition(INodeTableSimple.class);
+      PredicateOperand field = dobj.get("id");
+      PredicateOperand values = dobj.param("param");
+      Predicate predicate = field.in(values);
+      dobj.where(predicate);
+      Query<INodeTableSimple> query = session.createQuery(dobj);
+      query.setParameter("param", ids.toArray());
+      List<INodeTableSimple> results = query.getResultList();
+      List<INode> inodes = InodeFactory.createInodeList(results);
+      List<INode> syncInodes = syncInodeInstances(inodes);
+      done = true;
+      return syncInodes;
+    } catch (IOException ex) {
+      done = false;
+      throw new TransactionContextException(ex);
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+  
+    private List<INode> syncInodeInstances(List<INode> newInodes) {
+    List<INode> finalList = new ArrayList<INode>();
+
+    for (INode inode : newInodes) {
+      if (removedInodes.containsKey(inode.getId()))
+        continue;
+      if (inodesIdIndex.containsKey(inode.getId())) {
+        finalList.add(inodesIdIndex.get(inode.getId()));
+      } else {
+        inodesIdIndex.put(inode.getId(), inode);
+        inodesNameParentIndex.put(inode.nameParentKey(), inode);
+        finalList.add(inode);
+      }
+    }
+
+    return finalList;
+  }
+
+
 }

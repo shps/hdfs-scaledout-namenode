@@ -173,7 +173,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    *
    * @throws IOException
    */
-  public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr, boolean isTransactional) throws IOException {
+  public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr) throws IOException {
 
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
 

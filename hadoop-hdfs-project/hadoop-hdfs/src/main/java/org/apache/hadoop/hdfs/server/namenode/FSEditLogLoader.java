@@ -183,32 +183,20 @@ public class FSEditLogLoader {
             }
 
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-            fsDir.unprotectedDelete(addCloseOp.path, addCloseOp.mtime, false);
+            fsDir.unprotectedDelete(addCloseOp.path, addCloseOp.mtime);
 
             // add to the file tree
-            // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
                 addCloseOp.path, permissions,
                 blocks, replication,
-                addCloseOp.mtime, addCloseOp.atime, blockSize, false);
+                addCloseOp.mtime, addCloseOp.atime, blockSize);
             if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
               //
               // Replace current node with a INodeUnderConstruction.
               // Recreate in-memory lease record.
               //
-              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                        node.getLocalNameBytes(),
-                                        node.getReplication(),
-                                        node.getModificationTime(),
-                                        node.getPreferredBlockSize(),
-                                        node.getPermissionStatus(),
-                                        addCloseOp.clientName,
-                                        addCloseOp.clientMachine,
-                                        null);
-              cons.setBlocks(node.getBlocks());
-              //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
-              fsDir.replaceNode(addCloseOp.path, node, cons, false);
-              fsNamesys.leaseManager.addLease(cons.getClientName(),
+              node.convertToCompleteInode();
+              fsNamesys.leaseManager.addLease(node.getClientName(),
                                               addCloseOp.path);
             }
             break;
@@ -220,14 +208,14 @@ public class FSEditLogLoader {
             //[Hooman]TODO: the whole loadEditLog operations should be done in one transaction?
             //For now, these operations are done in separate transactions.
             fsDir.unprotectedSetReplication(setReplicationOp.path,
-                                            replication, null, false); 
+                                            replication, null); 
             break;
           }
           case OP_CONCAT_DELETE: {
             ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
-                concatDeleteOp.timestamp, false);
+                concatDeleteOp.timestamp);
             break;
           }
           case OP_RENAME_OLD: {
@@ -235,15 +223,15 @@ public class FSEditLogLoader {
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
-                                      renameOp.timestamp, false);
+                                      renameOp.timestamp);
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo, false);
+            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
             break;
           }
           case OP_DELETE: {
             DeleteOp deleteOp = (DeleteOp)op;
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-            fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp,false);
+            fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
             break;
           }
           case OP_MKDIR: {
@@ -255,7 +243,7 @@ public class FSEditLogLoader {
 
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedMkdir(mkdirOp.path, permissions,
-                                   mkdirOp.timestamp, false);
+                                   mkdirOp.timestamp);
             break;
           }
           case OP_SET_GENSTAMP: {
@@ -267,14 +255,14 @@ public class FSEditLogLoader {
             SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
             //[Hooman]TODO: This is done in its own transaction.
             fsDir.unprotectedSetPermission(setPermissionsOp.src,
-                                           setPermissionsOp.permissions, false);
+                                           setPermissionsOp.permissions);
             break;
           }
           case OP_SET_OWNER: {
             SetOwnerOp setOwnerOp = (SetOwnerOp)op;
             //[Hooman]TODO: This is done in its own transaction.
             fsDir.unprotectedSetOwner(setOwnerOp.src, setOwnerOp.username,
-                                      setOwnerOp.groupname, false);
+                                      setOwnerOp.groupname);
             break;
           }
             //[Hooman]TODO: This is done in its own transaction.
@@ -282,7 +270,7 @@ public class FSEditLogLoader {
             SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
             fsDir.unprotectedSetQuota(setNSQuotaOp.src,
                                       setNSQuotaOp.nsQuota,
-                                      HdfsConstants.QUOTA_DONT_SET, false);
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
             //[Hooman]TODO: This is done in its own transaction.
@@ -290,7 +278,7 @@ public class FSEditLogLoader {
             ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
             fsDir.unprotectedSetQuota(clearNSQuotaOp.src,
                                       HdfsConstants.QUOTA_RESET,
-                                      HdfsConstants.QUOTA_DONT_SET, false);
+                                      HdfsConstants.QUOTA_DONT_SET);
             break;
           }
             //[Hooman]TODO: This is done in its own transaction.
@@ -298,7 +286,7 @@ public class FSEditLogLoader {
             SetQuotaOp setQuotaOp = (SetQuotaOp)op;
             fsDir.unprotectedSetQuota(setQuotaOp.src,
                                       setQuotaOp.nsQuota,
-                                      setQuotaOp.dsQuota, false);
+                                      setQuotaOp.dsQuota);
             break;
 
           case OP_TIMES: {
@@ -306,7 +294,7 @@ public class FSEditLogLoader {
 
             fsDir.unprotectedSetTimes(timesOp.path,
                                       timesOp.mtime,
-                                      timesOp.atime, true, false);
+                                      timesOp.atime, true);
             break;
           }
           case OP_SYMLINK: {
@@ -314,7 +302,7 @@ public class FSEditLogLoader {
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
                                      symlinkOp.mtime, symlinkOp.atime,
-                                     symlinkOp.permissionStatus, false);
+                                     symlinkOp.permissionStatus);
             break;
           }
           case OP_RENAME: {
@@ -323,9 +311,9 @@ public class FSEditLogLoader {
             HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
-                                      renameOp.timestamp, false, renameOp.options);
+                                      renameOp.timestamp, renameOp.options);
             // KTHFS: Added 'true' for isTransactional. Later needs to be changed when we add the begin and commit tran clause
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo, false);
+            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
             break;
           }
           case OP_GET_DELEGATION_TOKEN: {
@@ -364,12 +352,11 @@ public class FSEditLogLoader {
 
             Lease lease = fsNamesys.leaseManager.getLease(
                 reassignLeaseOp.leaseHolder);
-            INodeFileUnderConstruction pendingFile =
-                (INodeFileUnderConstruction) fsDir.getFileINode(
+            INodeFile pendingFile =
+                (INodeFile) fsDir.getFileINode(
                     reassignLeaseOp.path);
-            //[Hooman]TODO: add isTransactional whenever you reach this method from the callers.
             fsNamesys.reassignLeaseInternal(lease,
-                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile, false);
+                reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
             break;
           }
           case OP_START_LOG_SEGMENT:

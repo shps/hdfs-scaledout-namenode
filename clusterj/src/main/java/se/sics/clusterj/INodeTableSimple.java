@@ -99,11 +99,6 @@ public interface INodeTableSimple {
     String getClientNode ();
     void setClientNode (String clientNode);
 
-    //  marker for InodeFile
-    @Column(name = "isClosedFile")
-    boolean getIsClosedFile ();
-    void setIsClosedFile (boolean isClosedFile);
-
     // InodeFile
     @Column(name = "header")
     long getHeader ();
