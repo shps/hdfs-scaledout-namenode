@@ -81,7 +81,7 @@ public class PendingBlockClusterj extends PendingBlockStorage {
 
   @Override
   public void add(PendingBlockInfo entity) throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
+    update(entity);
   }
 
   @Override

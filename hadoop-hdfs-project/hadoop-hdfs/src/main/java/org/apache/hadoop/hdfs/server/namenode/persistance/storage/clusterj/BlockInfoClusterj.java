@@ -42,26 +42,6 @@ public class BlockInfoClusterj extends BlockInfoStorage {
   }
 
   @Override
-  public List<BlockInfo> findList(Finder<BlockInfo> finder, Object... params) {
-    BlockInfoFinder bFinder = (BlockInfoFinder) finder;
-    List<BlockInfo> result = null;
-    switch (bFinder) {
-      case ByInodeId:
-        long inodeId = (Long) params[0];
-        result = findByInodeId(inodeId);
-        break;
-      case ByStorageId:
-        String storageId = (String) params[0];
-        result = findByStorageId(storageId);
-        break;
-      case All:
-        result = findAllBlocks();
-    }
-
-    return result;
-  }
-
-  @Override
   public BlockInfo find(Finder<BlockInfo> finder, Object... params) {
     BlockInfoFinder bFinder = (BlockInfoFinder) finder;
     BlockInfo result = null;
@@ -92,7 +72,8 @@ public class BlockInfoClusterj extends BlockInfoStorage {
     return block;
   }
 
-  private List<BlockInfo> findByInodeId(long id) {
+  @Override
+  protected List<BlockInfo> findByInodeId(long id) {
     if (inodeBlocks.containsKey(id)) {
       return inodeBlocks.get(id);
     } else {
@@ -111,21 +92,6 @@ public class BlockInfoClusterj extends BlockInfoStorage {
       }
       return syncedList;
     }
-  }
-
-  private List<BlockInfo> syncBlockInfoInstances(List<BlockInfo> newBlocks) {
-    List<BlockInfo> finalList = new ArrayList<BlockInfo>();
-
-    for (BlockInfo blockInfo : newBlocks) {
-      if (blocks.containsKey(blockInfo.getBlockId()) && !removedBlocks.containsKey(blockInfo.getBlockId())) {
-        finalList.add(blocks.get(blockInfo.getBlockId()));
-      } else {
-        blocks.put(blockInfo.getBlockId(), blockInfo);
-        finalList.add(blockInfo);
-      }
-    }
-
-    return finalList;
   }
 
   private List<BlockInfo> findAllBlocks() {

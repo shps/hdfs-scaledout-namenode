@@ -53,7 +53,7 @@ public class TestPendingReplication extends TestCase {
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
     
-    DBConnector.commit(); //FIXME[H]: An improved transaction context is required to handle add and remove in the same transactions.
+    DBConnector.commit();
     DBConnector.beginTransaction();
     //
     // remove one item and reinsert it
