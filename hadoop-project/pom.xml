@@ -615,7 +615,6 @@
             <exclude>**/Test*$*.java</exclude>
 <!--hold start-->
 <!--hold end-->
-      <exclude>**/TestSecretHelper.java</exclude> <!-- kamal: delegation key reverted into the original hdfs implementation-->
       <exclude>**/TestFileCreationNamenodeRestart.java</exclude><!--kamal: will be fixed at the point of NN restart support-->
       <exclude>**/TestDatanodeBlockScanner.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
       <exclude>**/TestClientReportBadBlock.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
