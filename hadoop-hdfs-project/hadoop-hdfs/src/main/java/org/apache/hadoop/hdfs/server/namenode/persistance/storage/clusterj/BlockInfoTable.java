@@ -8,61 +8,59 @@ import com.mysql.clusterj.annotation.Column;
 import com.mysql.clusterj.annotation.Index;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
-
-
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
 
 /**
  *
  * @author wmalik
  */
-@PersistenceCapable(table="BlockInfo")
+@PersistenceCapable(table = BlockInfoStorage.TABLE_NAME)
 public interface BlockInfoTable {
 
-
   @PrimaryKey
-  @Column(name = "blockId")
-  long getBlockId();     
+  @Column(name = BlockInfoStorage.BLOCK_ID)
+  long getBlockId();
+
   void setBlockId(long bid);
 
-  @Column(name = "blockIndex")
-  int getBlockIndex();     
+  @Column(name = BlockInfoStorage.BLOCK_INDEX)
+  int getBlockIndex();
+
   void setBlockIndex(int idx);
 
-
-  @Column(name = "iNodeID")
-  @Index(name="idx_inodeid")
+  @Column(name = BlockInfoStorage.INODE_ID)
+  @Index(name = "idx_inodeid")
   long getINodeID();
+
   void setINodeID(long iNodeID);
 
-  @Column(name = "numBytes")
+  @Column(name = BlockInfoStorage.NUM_BYTES)
   long getNumBytes();
-  void setNumBytes (long numbytes);
 
-  @Column(name = "generationStamp")
+  void setNumBytes(long numbytes);
+
+  @Column(name = BlockInfoStorage.GENERATION_STAMP)
   long getGenerationStamp();
+
   void setGenerationStamp(long genstamp);
 
-  @Column(name = "replication")
-  int getReplication();
-  void setReplication(int replication);
-
-  @Column(name = "BlockUCState")
+  @Column(name = BlockInfoStorage.BLOCK_UNDER_CONSTRUCTION_STATE)
   int getBlockUCState();
+
   void setBlockUCState(int BlockUCState);
 
-  @Column(name = "timestamp")
+  @Column(name = BlockInfoStorage.TIME_STAMP)
   long getTimestamp();
+
   void setTimestamp(long ts);
-  
-  @Column(name = "primaryNodeIndex")
+
+  @Column(name = BlockInfoStorage.PRIMARY_NODE_INDEX)
   int getPrimaryNodeIndex();
+
   void setPrimaryNodeIndex(int replication);
-  
-  @Column(name = "blockRecoveryId")
+
+  @Column(name = BlockInfoStorage.BLOCK_RECOVERY_ID)
   long getBlockRecoveryId();
+
   void setBlockRecoveryId(long recoveryId);
-  
-  
-
-
 }

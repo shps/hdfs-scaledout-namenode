@@ -6,6 +6,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionStorage;
 
 /**
  *
@@ -141,23 +149,30 @@ public enum DerbyConnector {
   private void createTables(Statement s) throws SQLException {
     System.out.println("Creating tables...");
 
-    s.execute("CREATE TABLE block_info ("
-            + "blockId BIGINT NOT NULL,"
-            + "blockIndex INTEGER DEFAULT NULL,"
-            + "iNodeID BIGINT DEFAULT NULL,"
-            + "numBytes BIGINT DEFAULT NULL,"
-            + "generationStamp BIGINT DEFAULT NULL,"
-            + "BlockUCState INTEGER DEFAULT NULL,"
-            + "\"timestamp\" BIGINT DEFAULT NULL,"
-            + "primaryNodeIndex INTEGER DEFAULT NULL,"
-            + "blockRecoveryId BIGINT DEFAULT NULL,"
-            + "PRIMARY KEY (blockId))");
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,"
+            + "%s INTEGER DEFAULT NULL,"
+            + "%s BIGINT DEFAULT NULL,"
+            + "%s BIGINT DEFAULT NULL,"
+            + "%s BIGINT DEFAULT NULL,"
+            + "%s INTEGER DEFAULT NULL,"
+            + "%s BIGINT DEFAULT NULL,"
+            + "%s INTEGER DEFAULT NULL,"
+            + "%s BIGINT DEFAULT NULL,"
+            + "PRIMARY KEY (%s))", BlockInfoStorage.TABLE_NAME,
+            BlockInfoStorage.BLOCK_ID, BlockInfoStorage.BLOCK_INDEX,
+            BlockInfoStorage.INODE_ID, BlockInfoStorage.NUM_BYTES,
+            BlockInfoStorage.GENERATION_STAMP, BlockInfoStorage.BLOCK_UNDER_CONSTRUCTION_STATE,
+            BlockInfoStorage.TIME_STAMP, BlockInfoStorage.PRIMARY_NODE_INDEX,
+            BlockInfoStorage.BLOCK_RECOVERY_ID, BlockInfoStorage.BLOCK_ID));
     System.out.println("Table block_info is created.");
 
-    s.execute("CREATE TABLE ExcessReplica ("
-            + "blockId BIGINT NOT NULL,"
-            + "storageId VARCHAR(128) NOT NULL,"
-            + "PRIMARY KEY (blockId,storageId))");
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,"
+            + "%s VARCHAR(128) NOT NULL,"
+            + "PRIMARY KEY (%s,%s))", ExcessReplicaStorage.TABLE_NAME,
+            ExcessReplicaStorage.BLOCK_ID, ExcessReplicaStorage.STORAGE_ID,
+            ExcessReplicaStorage.BLOCK_ID, ExcessReplicaStorage.STORAGE_ID));
     System.out.println("Table ExcessReplica is created.");
 
     s.execute("CREATE TABLE inode ("
@@ -183,46 +198,60 @@ public enum DerbyConnector {
             + "PRIMARY KEY (id) )");
     System.out.println("Table inode is created.");
 
-    s.execute("CREATE TABLE invalidated_block (   "
-            + "blockId BIGINT NOT NULL,   "
-            + "storageId varchar(128) NOT NULL,   "
-            + "generationStamp BIGINT DEFAULT NULL,   "
-            + "numBytes BIGINT DEFAULT NULL,   "
-            + "PRIMARY KEY (blockId,storageId) )");
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,   "
+            + "%s varchar(128) NOT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "PRIMARY KEY (%s,%s) )", InvalidatedBlockStorage.TABLE_NAME,
+            InvalidatedBlockStorage.BLOCK_ID, InvalidatedBlockStorage.STORAGE_ID,
+            InvalidatedBlockStorage.GENERATION_STAMP, InvalidatedBlockStorage.NUM_BYTES,
+            InvalidatedBlockStorage.BLOCK_ID, InvalidatedBlockStorage.STORAGE_ID));
     System.out.println("Table invalidated_block is created.");
 
-    s.execute("CREATE TABLE lease (   "
-            + "holder varchar(255) NOT NULL,   "
-            + "lastUpdate BIGINT DEFAULT NULL,   "
-            + "holderID INTEGER DEFAULT NULL,   "
-            + "PRIMARY KEY (holder) )");
+    s.execute(String.format("CREATE TABLE %s (   "
+            + "%s varchar(255) NOT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s INTEGER DEFAULT NULL,   "
+            + "PRIMARY KEY (%s) )", LeaseStorage.TABLE_NAME,
+            LeaseStorage.HOLDER, LeaseStorage.LAST_UPDATE, LeaseStorage.HOLDER_ID,
+            LeaseStorage.HOLDER));
     System.out.println("Table lease is created.");
 
-    s.execute("CREATE TABLE lease_path (   "
-            + "holderID INTEGER NOT NULL,   "
-            + "path varchar(255) NOT NULL,   "
-            + "PRIMARY KEY (path) )");
+    s.execute(String.format("CREATE TABLE %s (   "
+            + "%s INTEGER NOT NULL,   "
+            + "%s varchar(255) NOT NULL,   "
+            + "PRIMARY KEY (%s) )", LeasePathStorage.TABLE_NAME,
+            LeasePathStorage.HOLDER_ID, LeasePathStorage.PATH, LeasePathStorage.PATH));
     System.out.println("Table lease_path is created.");
 
-    s.execute("CREATE TABLE pending_block (   "
-            + "blockId BIGINT NOT NULL,   \"timestamp\" BIGINT NOT NULL,   "
-            + "numReplicasInProgress INTEGER NOT NULL,   "
-            + "PRIMARY KEY (blockId) )");
+    s.execute(String.format("CREATE TABLE %s (   "
+            + "%s BIGINT NOT NULL, %s BIGINT NOT NULL,"
+            + "%s INTEGER NOT NULL,   "
+            + "PRIMARY KEY (%s) )", PendingBlockStorage.TABLE_NAME,
+            PendingBlockStorage.BLOCK_ID, PendingBlockStorage.TIME_STAMP,
+            PendingBlockStorage.NUM_REPLICAS_IN_PROGRESS, PendingBlockStorage.BLOCK_ID));
     System.out.println("Table pending_block is created.");
 
-    s.execute("CREATE TABLE replica_uc (   "
-            + "blockId BIGINT NOT NULL,   "
-            + "storageId varchar(128) NOT NULL,   "
-            + "state INTEGER DEFAULT NULL,   "
-            + "indx INTEGER NOT NULL,   "
-            + "PRIMARY KEY (blockId,storageId) )");
+    s.execute(String.format("CREATE TABLE %s (   "
+            + "%s BIGINT NOT NULL,   "
+            + "%s varchar(128) NOT NULL,   "
+            + "%s INTEGER DEFAULT NULL,   "
+            + "%s INTEGER NOT NULL,   "
+            + "PRIMARY KEY (%s,%s) )", ReplicaUnderConstructionStorage.TABLE_NAME,
+            ReplicaUnderConstructionStorage.BLOCK_ID, ReplicaUnderConstructionStorage.STORAGE_ID,
+            ReplicaUnderConstructionStorage.STATE, ReplicaUnderConstructionStorage.REPLICA_INDEX,
+            ReplicaUnderConstructionStorage.BLOCK_ID, ReplicaUnderConstructionStorage.STORAGE_ID));
     System.out.println("Table replica_uc is created.");
 
-    s.execute("CREATE TABLE triplets (   "
-            + "blockId BIGINT NOT NULL,   "
-            + "storageId varchar(128) NOT NULL,   "
-            + "\"index\" INTEGER NOT NULL,   "
-            + "PRIMARY KEY (blockId,storageId) )");
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,   "
+            + "%s varchar(128) NOT NULL,   "
+            + "%s INTEGER NOT NULL,   "
+            + "PRIMARY KEY (%s,%s) )", IndexedReplicaStorage.TABLE_NAME,
+            IndexedReplicaStorage.BLOCK_ID, IndexedReplicaStorage.STORAGE_ID,
+            IndexedReplicaStorage.REPLICA_INDEX, IndexedReplicaStorage.BLOCK_ID,
+            IndexedReplicaStorage.STORAGE_ID));
     System.out.println("Table tripletes is created.");
   }
 

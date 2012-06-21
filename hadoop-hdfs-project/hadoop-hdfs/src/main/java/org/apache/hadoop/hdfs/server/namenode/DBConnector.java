@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INode
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InvalidateBlocksTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeasePathsTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeaseTable;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.PendingReplicationBlockTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.PendingBlockTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ReplicaUcTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.TripletsTable;
 
@@ -144,7 +144,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
       session.deletePersistentAll(ReplicaUcTable.class);
       session.deletePersistentAll(InvalidateBlocksTable.class);
       session.deletePersistentAll(ExcessReplicaTable.class);
-      session.deletePersistentAll(PendingReplicationBlockTable.class);
+      session.deletePersistentAll(PendingBlockTable.class);
       tx.commit();
       session.flush();
       return true;

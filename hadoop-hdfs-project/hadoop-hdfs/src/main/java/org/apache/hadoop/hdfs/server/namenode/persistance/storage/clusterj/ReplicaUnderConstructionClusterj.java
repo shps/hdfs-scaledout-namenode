@@ -4,13 +4,11 @@ import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.ReplicaUcFactory;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionStorage;
 
 /**
@@ -22,51 +20,6 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstructionSt
   private Session session = DBConnector.obtainSession();
 
   @Override
-  public void remove(ReplicaUnderConstruction replica) throws TransactionContextException {
-    modifiedReplicasUc.remove(replica.cacheKey());
-    removedReplicasUc.put(replica.cacheKey(), replica);
-  }
-
-  @Override
-  public List<ReplicaUnderConstruction> findList(Finder<ReplicaUnderConstruction> finder, Object... params) {
-
-    ReplicaUnderConstructionFinder rFinder = (ReplicaUnderConstructionFinder) finder;
-    List<ReplicaUnderConstruction> result = null;
-    switch (rFinder) {
-      case ByBlockId:
-        long blockId = (Long) params[0];
-        result = findReplicaUnderConstructionByBlockId(blockId);
-        break;
-    }
-
-    return result;
-  }
-
-  @Override
-  public ReplicaUnderConstruction find(Finder<ReplicaUnderConstruction> finder, Object... params) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public int countAll() {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void update(ReplicaUnderConstruction replica) throws TransactionContextException {
-    if (removedReplicasUc.containsKey(replica.cacheKey())) {
-      throw new TransactionContextException("Removed  under constructionreplica passed to be persisted");
-    }
-
-    modifiedReplicasUc.put(replica.cacheKey(), replica);
-  }
-
-  @Override
-  public void add(ReplicaUnderConstruction entity) throws TransactionContextException {
-    update(entity);
-  }
-
-  @Override
   public void commit() {
     for (ReplicaUnderConstruction replica : removedReplicasUc.values()) {
       Object[] pk = new Object[2];
@@ -75,27 +28,38 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstructionSt
       session.deletePersistent(ReplicaUcTable.class, pk);
     }
 
-    for (ReplicaUnderConstruction replica : modifiedReplicasUc.values()) {
+    for (ReplicaUnderConstruction replica : newReplicasUc.values()) {
       ReplicaUcTable newInstance = session.newInstance(ReplicaUcTable.class);
-      ReplicaUcFactory.createPersistable(replica, newInstance);
+      createPersistable(replica, newInstance);
       session.savePersistent(newInstance);
     }
   }
 
-  private List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) {
+  @Override
+  protected List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) {
+    QueryBuilder qb = session.getQueryBuilder();
+    QueryDomainType<ReplicaUcTable> dobj = qb.createQueryDefinition(ReplicaUcTable.class);
+    dobj.where(dobj.get(BLOCK_ID).equal(dobj.param("param")));
+    Query<ReplicaUcTable> query = session.createQuery(dobj);
+    query.setParameter("param", blockId);
+    List<ReplicaUcTable> storedReplicas = query.getResultList();
+    List<ReplicaUnderConstruction> replicas = createReplicaList(storedReplicas);
 
-    if (blockReplicasUc.containsKey(blockId)) {
-      return blockReplicasUc.get(blockId);
-    } else {
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<ReplicaUcTable> dobj = qb.createQueryDefinition(ReplicaUcTable.class);
-      dobj.where(dobj.get("blockId").equal(dobj.param("param")));
-      Query<ReplicaUcTable> query = session.createQuery(dobj);
-      query.setParameter("param", blockId);
-      List<ReplicaUcTable> storedReplicas = query.getResultList();
-      List<ReplicaUnderConstruction> replicas = ReplicaUcFactory.createReplicaList(storedReplicas);
-      blockReplicasUc.put(blockId, replicas);
-      return replicas;
+    return replicas;
+  }
+  
+  private List<ReplicaUnderConstruction> createReplicaList(List<ReplicaUcTable> replicaUc) {
+    List<ReplicaUnderConstruction> replicas = new ArrayList<ReplicaUnderConstruction>(replicaUc.size());
+    for (ReplicaUcTable t : replicaUc) {
+      replicas.add(new ReplicaUnderConstruction(HdfsServerConstants.ReplicaState.values()[t.getState()], t.getStorageId(), t.getBlockId(), t.getIndex()));
     }
+    return replicas;
+  }
+
+  private void createPersistable(ReplicaUnderConstruction replica, ReplicaUcTable newInstance) {
+    newInstance.setBlockId(replica.getBlockId());
+    newInstance.setIndex(replica.getIndex());
+    newInstance.setStorageId(replica.getStorageId());
+    newInstance.setState(replica.getState().ordinal());
   }
 }

@@ -1,21 +1,23 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
 
 /**
  *
@@ -27,60 +29,34 @@ public class BlockInfoDerby extends BlockInfoStorage {
   protected Map<Long, BlockInfo> newBlocks = new HashMap<Long, BlockInfo>();
 
   @Override
+  public void clear() {
+    super.clear();
+    newBlocks.clear();
+  }
+
+  @Override
   public void remove(BlockInfo block) throws TransactionContextException {
-    if (block.getBlockId() == 0l) {
-      throw new TransactionContextException("Unassigned-Id block passed to be removed");
-    }
-
-    BlockInfo attachedBlock = blocks.get(block.getBlockId());
-
-    if (attachedBlock == null) {
-      throw new TransactionContextException("Unattached block passed to be removed");
-    }
-
-    blocks.remove(block.getBlockId());
-    modifiedBlocks.remove(block.getBlockId());
+    super.remove(block);
     newBlocks.remove(block.getBlockId());
-    removedBlocks.put(block.getBlockId(), attachedBlock);
-  }
-
-  @Override
-  public Collection<BlockInfo> findList(Finder<BlockInfo> finder, Object... params) {
-    BlockInfoFinder bFinder = (BlockInfoFinder) finder;
-    List<BlockInfo> result = null;
-    switch (bFinder) {
-      case ByInodeId:
-        long inodeId = (Long) params[0];
-        result = findByInodeId(inodeId);
-        break;
-      case ByStorageId:
-        String storageId = (String) params[0];
-        result = findByStorageId(storageId);
-        break;
-      case All:
-        result = findAllBlocks();
-    }
-
-    return result;
-  }
-
-  @Override
-  public BlockInfo find(Finder<BlockInfo> finder, Object... params) {
-    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
   public int countAll() {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select count(*) from %s", TABLE_NAME);
+      PreparedStatement s;
+      s = conn.prepareStatement(query);
 
-  @Override
-  public void update(BlockInfo block) throws TransactionContextException {
-    if (removedBlocks.containsKey(block.getBlockId())) {
-      throw new TransactionContextException("Removed block passed to be persisted");
+      ResultSet result = s.executeQuery();
+      if (result.next()) {
+        return result.getInt(1);
+      }
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
     }
-    blocks.put(block.getBlockId(), block);
-    modifiedBlocks.put(block.getBlockId(), block);
+
+    return -1;
   }
 
   @Override
@@ -94,12 +70,15 @@ public class BlockInfoDerby extends BlockInfoStorage {
 
   @Override
   public void commit() {
-    String insertQuery = "insert into block_info values(?,?,?,?,?,?,?,?,?)";
-    String deleteQuery = "delete from block_info where blockId = ?";
-    String updateQuery = "update block_info set "
-            + "blockIndex=?, iNodeID=?, numBytes=?, generationStamp=?,"
-            + "BlockUCState=?, \"timestamp=\"=?, primaryNodeIndex=?,"
-            + "blockRecoveryId=? where blockId=?";
+    String insertQuery = String.format("insert into %s values(?,?,?,?,?,?,?,?,?)",
+            TABLE_NAME);
+    String deleteQuery = String.format("delete from %s where %s = ?",
+            TABLE_NAME, BLOCK_ID);
+    String updateQuery = String.format("update %s set "
+            + "%s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=? where %s=?",
+            TABLE_NAME, BLOCK_INDEX, INODE_ID, NUM_BYTES, GENERATION_STAMP,
+            BLOCK_UNDER_CONSTRUCTION_STATE, TIME_STAMP, PRIMARY_NODE_INDEX,
+            BLOCK_RECOVERY_ID, BLOCK_ID);
     try {
       Connection conn = connector.obtainSession();
 
@@ -151,26 +130,126 @@ public class BlockInfoDerby extends BlockInfoStorage {
     }
   }
 
-  private List<BlockInfo> findByInodeId(long id) {
-    if (inodeBlocks.containsKey(id)) {
-      return inodeBlocks.get(id);
-    } else {
+  @Override
+  protected List<BlockInfo> findByInodeId(long id) {
+    List<BlockInfo> syncedList = null;
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select * from %s where %s = ?",
+              TABLE_NAME, INODE_ID);
+      PreparedStatement s;
+      s = conn.prepareStatement(query);
+      s.setLong(1, id);
+      ResultSet result = s.executeQuery();
+      syncedList = syncBlockInfoInstances(result);
+    } catch (IOException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    }
 
-      List<BlockInfo> syncedList = null;
-      try {
-        Connection conn = connector.obtainSession();
-        String query = "select * from block_info where iNodeID = ?";
-        PreparedStatement s;
-        s = conn.prepareStatement(query);
+    return syncedList;
+  }
 
-        ResultSet result = s.executeQuery();
-        syncedList = syncBlockInfoInstances(BlockInfoFactory.createBlockInfoList(resultList));
-        inodeBlocks.put(id, syncedList);
-      } catch (SQLException ex) {
-        Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+  @Override
+  protected List<BlockInfo> findByStorageId(String storageId) {
+    List<BlockInfo> syncedList = null;
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select * from %s where %s in (select %s from %s where %s=?)",
+              TABLE_NAME, BLOCK_ID, IndexedReplicaStorage.BLOCK_ID,
+              IndexedReplicaStorage.TABLE_NAME, IndexedReplicaStorage.STORAGE_ID);
+      PreparedStatement s;
+      s = conn.prepareStatement(query);
+      s.setString(1, storageId);
+      ResultSet result = s.executeQuery();
+      syncedList = syncBlockInfoInstances(result);
+    } catch (IOException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return syncedList;
+  }
+
+  @Override
+  protected List<BlockInfo> findAllBlocks() {
+    List<BlockInfo> syncedList = null;
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select * from %s", TABLE_NAME);
+      PreparedStatement s;
+      s = conn.prepareStatement(query);
+      ResultSet result = s.executeQuery();
+      syncedList = syncBlockInfoInstances(result);
+    } catch (IOException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return syncedList;
+  }
+
+  @Override
+  protected BlockInfo findById(long id) {
+    BlockInfo blockInfo = null;
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select * from %s where %s=?",
+              TABLE_NAME, BLOCK_ID);
+      PreparedStatement s = conn.prepareStatement(query);
+      s.setLong(1, id);
+      ResultSet resultSet = s.executeQuery();
+      if (resultSet.next()) {
+        blockInfo = createBlockInfo(resultSet);
+      }
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    }
+
+    return blockInfo;
+  }
+
+  private List<BlockInfo> syncBlockInfoInstances(ResultSet resultSet) throws IOException, SQLException {
+    List<BlockInfo> finalList = new ArrayList<BlockInfo>();
+
+    while (resultSet.next()) {
+      BlockInfo blockInfo = createBlockInfo(resultSet);
+      if (blocks.containsKey(blockInfo.getBlockId()) && !removedBlocks.containsKey(blockInfo.getBlockId())) {
+        finalList.add(blocks.get(blockInfo.getBlockId()));
+      } else {
+        blocks.put(blockInfo.getBlockId(), blockInfo);
+        finalList.add(blockInfo);
+      }
+    }
+
+    return finalList;
+  }
+
+  private BlockInfo createBlockInfo(ResultSet rs) {
+    BlockInfo blockInfo = null;
+    try {
+      Block b = new Block(rs.getLong(BLOCK_ID), rs.getLong(NUM_BYTES), rs.getLong(GENERATION_STAMP));
+      int ucState = rs.getInt(BLOCK_UNDER_CONSTRUCTION_STATE);
+      if (ucState > 0) { //UNDER_CONSTRUCTION, UNDER_RECOVERY, COMMITED
+        blockInfo = new BlockInfoUnderConstruction(b);
+        ((BlockInfoUnderConstruction) blockInfo).setBlockUCState(HdfsServerConstants.BlockUCState.values()[ucState]);
+        ((BlockInfoUnderConstruction) blockInfo).setPrimaryNodeIndex(rs.getInt(PRIMARY_NODE_INDEX));
+        ((BlockInfoUnderConstruction) blockInfo).setBlockRecoveryId(rs.getLong(BLOCK_RECOVERY_ID));
+      } else if (ucState == HdfsServerConstants.BlockUCState.COMPLETE.ordinal()) {
+        blockInfo = new BlockInfo(b);
       }
 
-      return syncedList;
+      blockInfo.setINodeId(rs.getLong(INODE_ID));
+      blockInfo.setTimestamp(rs.getLong(TIME_STAMP));
+      blockInfo.setBlockIndex(rs.getInt(BLOCK_INDEX));
+
+    } catch (SQLException ex) {
+      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
     }
+
+    return blockInfo;
   }
 }
