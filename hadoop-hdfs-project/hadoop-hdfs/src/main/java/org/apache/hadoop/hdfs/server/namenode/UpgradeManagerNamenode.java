@@ -70,7 +70,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return true;
   }
 
-  synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command
+  synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command, boolean isTransactional
                                                     ) throws IOException {
     if(NameNode.LOG.isDebugEnabled()) {
       NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
@@ -108,6 +108,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return reply;
   }
 
+  @Override
   public synchronized void completeUpgrade() throws IOException {
     // set and write new upgrade state into disk
     setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);

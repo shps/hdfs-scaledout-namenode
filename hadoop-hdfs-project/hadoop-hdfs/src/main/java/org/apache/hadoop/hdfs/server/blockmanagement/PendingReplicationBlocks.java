@@ -49,7 +49,8 @@ class PendingReplicationBlocks {
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
   //
-  private long timeout = 5 * 60 * 1000;
+  //private long timeout = 5 * 60 * 1000;
+  private long timeout = 2 * 60 * 1000;
 
   PendingReplicationBlocks(long timeoutPeriod) {
     if (timeoutPeriod > 0) {
@@ -152,7 +153,6 @@ class PendingReplicationBlocks {
       out.println("Metasave: Blocks being replicated: "
               + pendingBlocks.size());
       for (PendingBlockInfo pendingBlock : pendingBlocks) {
-        try {
           if (!isTimedout(pendingBlock)) {
             BlockInfo bInfo = em.findBlockById(pendingBlock.getBlockId());
             out.println(bInfo
@@ -160,9 +160,6 @@ class PendingReplicationBlocks {
                     + " NumReplicaInProgress: "
                     + pendingBlock.getNumReplicas());
           }
-        } catch (IOException ex) {
-          Logger.getLogger(PendingReplicationBlocks.class.getName()).log(Level.SEVERE, null, ex);
-        }
       }
     }
   }

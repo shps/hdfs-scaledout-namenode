@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.mysql.clusterj.ClusterJException;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 /**
@@ -61,23 +63,49 @@ class DecommissionManager {
      */
     @Override
     public void run() {
-      for(; fsnamesystem.isRunning(); ) {
+      for (; fsnamesystem.isRunning();) {
         fsnamesystem.writeLock();
         try {
-          check();
-        } finally {
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                check(true);
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  LOG.error("check() :: failed to check for decomissioned datanodes. Exception: " + ex.getMessage(), ex);
+                }
+              } // end catch
+            } // end while
+          } // end try-finally
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            }
+          }
+
+        }
+        finally {
           fsnamesystem.writeUnlock();
         }
-  
+
         try {
           Thread.sleep(recheckInterval);
-        } catch (InterruptedException ie) {
+        }
+        catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
         }
       }
     }
-    
-    private void check() {
+  
+    private void check(boolean isTransactional) {
       final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
       int count = 0;
       for(Map.Entry<String, DatanodeDescriptor> entry

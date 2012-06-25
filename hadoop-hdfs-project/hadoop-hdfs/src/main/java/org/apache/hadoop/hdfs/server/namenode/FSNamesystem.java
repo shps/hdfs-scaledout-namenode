@@ -392,6 +392,55 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
 
+      if (isWritingNN()) {
+        boolean isDone = false;
+        int tries = DBConnector.RETRY_COUNT;
+        try {
+          while (!isDone && tries > 0) {
+            try {
+              DBConnector.beginTransaction();
+              setBlockTotal();
+              DBConnector.commit();
+              isDone = true;
+            }
+            catch (ClusterJException ex) {
+              if (!isDone) {
+                DBConnector.safeRollback();
+                tries--;
+                FSNamesystem.LOG.error("activate() :: failed to activate FSNamesystem. Exception: " + ex.getMessage(), ex);
+              }
+            }
+          }
+        }
+        finally {
+          if (!isDone) {
+            DBConnector.safeRollback();
+          }
+        }
+
+        if (isDone) {
+          blockManager.activate(conf);
+          this.lmthread = new Daemon(leaseManager.new Monitor());
+          lmthread.start();
+        }
+      }
+//      TODO:kamal, resouce monitor
+//      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+//      nnrmthread.start();
+    }
+    finally {
+      writeUnlock();
+    }
+
+    if (isWritingNN()) {
+      registerMXBean();
+    }
+    DefaultMetricsSystem.instance().register(this);
+  }
+  void activateOld(Configuration conf) throws IOException {
+    writeLock();
+    try {
+
       if(isWritingNN()) {
       setBlockTotal();
       blockManager.activate(conf);
@@ -3205,7 +3254,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      if(!done) {
+        DBConnector.safeRollback();
+      }
       writeUnlock();
     }
     
@@ -3949,37 +4000,92 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
         try {
           Thread.sleep(recheckInterval);
-        } catch (InterruptedException ie) {
+        }
+        catch (InterruptedException ie) {
         }
       }
       if (!fsRunning) {
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread. ");
-      } else {
+      }
+      else {
         // leave safe mode and stop the monitor
         try {
-          leaveSafeMode(true);
-        } catch(SafeModeException es) { // should never happen
+
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                leaveSafeMode(true);
+
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  LOG.error("SafeModeMonitor.run() caused error in trying to leave safe mode.  Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          }
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            } // end if
+          }// end finally
+
+        }
+        catch (SafeModeException es) { // should never happen
           String msg = "SafeModeMonitor may not run during distributed upgrade.";
           assert false : msg;
           throw new RuntimeException(msg, es);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
           e.printStackTrace();
         }
       }
       smmthread = null;
     }
+    
   }
     
+  // @ClientProtocol
   boolean setSafeMode(SafeModeAction action) throws IOException {
     if (action != SafeModeAction.SAFEMODE_GET) {
       checkSuperuserPrivilege();
-      switch(action) {
-      case SAFEMODE_LEAVE: // leave safe mode
-        leaveSafeMode(false);
-        break;
-      case SAFEMODE_ENTER: // enter safe mode
-        enterSafeMode(false);
-        break;
+      switch (action) {
+        case SAFEMODE_LEAVE: // leave safe mode
+          boolean isDone = false;
+          int tries = DBConnector.RETRY_COUNT;
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                DBConnector.beginTransaction();
+                leaveSafeMode(false);
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  FSNamesystem.LOG.error("setSafeMode() :: failed to set safe mode. Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          } // end try-finally
+          finally {
+            if (!isDone) {
+              DBConnector.safeRollback();
+            }
+          }
+          break;
+        case SAFEMODE_ENTER: // enter safe mode
+          enterSafeMode(false);
+          break;
       }
     }
     return isInSafeMode();
@@ -4174,7 +4280,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
-    return upgradeManager.processUpgradeCommand(comm);
+
+    UpgradeCommand result = null;
+    boolean isDone = false;
+    int tries = DBConnector.RETRY_COUNT;
+    try {
+      while (!isDone && tries > 0) {
+        try {
+          DBConnector.beginTransaction();
+          result = upgradeManager.processUpgradeCommand(comm, true);
+          DBConnector.commit();
+          isDone = true;
+        }
+        catch (ClusterJException ex) {
+          if (!isDone) {
+            DBConnector.safeRollback();
+            tries--;
+            FSNamesystem.LOG.error("processDistributedUpgradeCommand() :: failed to process Distrubuted upgrade command. Exception: " + ex.getMessage(), ex);
+          }
+        } // end catch
+      } //end while
+    }//end try-finally
+    finally {
+      if (!isDone) {
+        DBConnector.safeRollback();
+      }
+    }
+    return result;
   }
 
   PermissionStatus createFsOwnerPermissions(FsPermission permission) {

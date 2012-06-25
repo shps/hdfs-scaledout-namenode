@@ -487,11 +487,11 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr, boolean transactional) 
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) 
     throws IOException {
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg, ipAddr)) {
-      startDecommission(nodeReg, transactional);
+      startDecommission(nodeReg);
     }
   }
 
@@ -513,7 +513,7 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node, boolean transactional) throws IOException {
+  private void startDecommission(DatanodeDescriptor node) throws IOException {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName() + " with " + 
           node.numBlocks() +  " blocks.");
@@ -526,7 +526,7 @@ public class DatanodeManager {
   }
 
   /** Stop decommissioning the specified datanodes. */
-  void stopDecommission(DatanodeDescriptor node, boolean transactional) throws IOException {
+  void stopDecommission(DatanodeDescriptor node) throws IOException {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
@@ -632,7 +632,7 @@ public class DatanodeManager {
         
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS, dnAddress, transactional);
+      checkDecommissioning(nodeS, dnAddress);
       
       return;
     } 
@@ -653,7 +653,7 @@ public class DatanodeManager {
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr, dnAddress, transactional);
+    checkDecommissioning(nodeDescr, dnAddress);
     
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
@@ -671,22 +671,32 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
+      boolean isDone = false;
       int tries = DBConnector.RETRY_COUNT;
-      boolean done = false;
-      while (!done && tries > 0) {
-        try {
-          DBConnector.beginTransaction();
-          refreshDatanodes(true);
-          DBConnector.commit();
-          done = true;
-        } catch (ClusterJException e) {
-          tries--;
+      try {
+        while (!isDone && tries > 0) {
+          try {
+            DBConnector.beginTransaction();
+            refreshDatanodes();
+            DBConnector.commit();
+            isDone = true;
+          }
+          catch (ClusterJException ex) {
+            if (!isDone) {
+              DBConnector.safeRollback();
+              tries--;
+              LOG.error("refreshNodes() :: failed to refresh Nodes. Exception: " + ex.getMessage(), ex);
+            }
+          } // end catch
+        } // end while
+      } // end try-finally
+      finally {
+        if (!isDone) {
           DBConnector.safeRollback();
-          LOG.error(e.getMessage(), e);
         }
       }
-    } finally {
-      DBConnector.safeRollback();
+    }
+    finally {
       namesystem.writeUnlock();
     }
   }
@@ -709,16 +719,16 @@ public class DatanodeManager {
    * 3. Added to exclude --> start decommission.
    * 4. Removed from exclude --> stop decommission.
    */
-  private void refreshDatanodes(boolean transactional) throws IOException {
+  private void refreshDatanodes() throws IOException {
     for(DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {
         node.setDisallowed(true); // case 2.
       } else {
         if (inExcludedHostsList(node, null)) {
-          startDecommission(node, transactional); // case 3.
+          startDecommission(node); // case 3.
         } else {
-          stopDecommission(node, transactional); // case 4.
+          stopDecommission(node); // case 4.
         }
       }
     }

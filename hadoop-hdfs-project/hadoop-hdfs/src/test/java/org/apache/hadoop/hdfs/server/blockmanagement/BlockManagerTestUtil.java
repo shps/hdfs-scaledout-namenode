@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -79,13 +80,11 @@ public class BlockManagerTestUtil {
   private static int getNumberOfRacks(final BlockManager blockManager,
       final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
-    final Collection<DatanodeDescriptor> corruptNodes = 
-       getCorruptReplicas(blockManager).getNodes(b);
     DBConnector.beginTransaction();
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if ((corruptNodes == null ) || !corruptNodes.contains(cur)) {
+        if (blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
           String rackName = cur.getNetworkLocation();
           if (!rackSet.contains(rackName)) {
             rackSet.add(rackName);
@@ -106,15 +105,6 @@ public class BlockManagerTestUtil {
     return blockManager.replicationThread;
   }
   
-  /**
-   * @param blockManager
-   * @return corruptReplicas from block manager
-   */
-  public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
-    return blockManager.corruptReplicas;
-    
-  }
-
   /**
    * @param blockManager
    * @return computed block replication and block invalidation work that can be

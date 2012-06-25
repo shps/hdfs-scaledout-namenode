@@ -127,9 +127,6 @@ public class BlockManager {
   /** Replication thread. */
    Daemon replicationThread;
   
-  /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
-  final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
-
   /** Blocks to be invalidated. */
   private InvalidateBlocks invalidateBlocks = null;
 
@@ -333,14 +330,11 @@ public class BlockManager {
                   " d: " + numReplicas.decommissionedReplicas() +
                   " c: " + numReplicas.corruptReplicas() +
                   " e: " + numReplicas.excessReplicas() + ") "); 
-
-        Collection<DatanodeDescriptor> corruptNodes = 
-                                      corruptReplicas.getNodes(block);
         List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
         
         for (DatanodeDescriptor node : dataNodes) {
           String state = "";
-          if (corruptNodes != null && corruptNodes.contains(node)) {
+          if (isItCorruptedReplica(block.getBlockId(), node.getStorageID())) {
             state = "(corrupt)";
           } else if (node.isDecommissioned() || 
               node.isDecommissionInProgress()) {
@@ -610,7 +604,7 @@ public class BlockManager {
     }
     // get block locations
     final int numCorruptNodes = countNodes(blk).corruptReplicas();
-    final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
+    final int numCorruptReplicas = numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
               + blk + " blockMap has " + numCorruptNodes
@@ -626,7 +620,7 @@ public class BlockManager {
       List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(blk));
 
       for (DatanodeDescriptor d : dataNodes) {
-        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
+        final boolean replicaCorrupt = em.findCorruptReplicaByPK(blk.getBlockId(), d.getStorageID()) != null;
         if (isCorrupt || (!isCorrupt && !replicaCorrupt)) {
           machines[j++] = d;
         }
@@ -913,7 +907,7 @@ public class BlockManager {
       em.persist(replica);
 
     // Add this replica to corruptReplicas Map
-    corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
+    em.persist(new CorruptReplica(storedBlock.getBlockId(), node.getStorageID()));
     if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(storedBlock, node);
@@ -955,7 +949,7 @@ public class BlockManager {
   void updateState() {
     pendingReplicationBlocksCount = pendingReplications.size();
     underReplicatedBlocksCount = neededReplications.size();
-    corruptReplicaBlocksCount = corruptReplicas.size();
+    corruptReplicaBlocksCount = em.countAllCorruptedReplicas();
   }
 
   /** Return number of under-replicated but not missing blocks */
@@ -1208,6 +1202,7 @@ public class BlockManager {
         }
 
         // remove from neededReplications
+        // -------------------------------------------------------------------------
         if(numEffectiveReplicas + targets.length >= requiredReplication) {
           neededReplications.remove(block, priority); // remove from neededReplications
           replIndex--;
@@ -1296,13 +1291,11 @@ public class BlockManager {
     int corrupt = 0;
     int excess = 0;
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
-
-    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(block);
     
     for (DatanodeDescriptor node : dataNodes) {
       Collection<Long> excessBlocks =
               em.findExcessReplicaByStorageId(node.getStorageID());
-      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+      if (isItCorruptedReplica(block.getBlockId(), node.getStorageID())) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         decommissioned++;
@@ -1315,7 +1308,7 @@ public class BlockManager {
       containingNodes.add(node);
       // Check if this replica is corrupt
       // If so, do not select the node as src node
-      if ((nodesCorrupt != null) && nodesCorrupt.contains(node)) {
+      if (isItCorruptedReplica(block.getBlockId(), node.getStorageID())) {
         continue;
       }
       if (node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
@@ -1362,11 +1355,7 @@ public class BlockManager {
 
       for (int i = 0; i < timedoutPendings.size(); i++) {
         PendingBlockInfo p = timedoutPendings.get(i);
-        try {
-          timedOutItems[i] = em.findBlockById(p.getBlockId());
-        } catch (IOException ex) {
-          LOG.error(ex.getMessage(), ex);
-        }
+        timedOutItems[i] = em.findBlockById(p.getBlockId());
       }
     }
 
@@ -1884,7 +1873,7 @@ public class BlockManager {
     }
     // If the file replication has reached desired value
     // we can remove any corrupt replicas the block may have
-    int corruptReplicasCount = corruptReplicas.numCorruptReplicas(storedBlock);
+    int corruptReplicasCount = numCorruptReplicas(storedBlock);
     int numCorruptNodes = num.corruptReplicas();
     if (numCorruptNodes != corruptReplicasCount) {
       LOG.warn("Inconsistent number of corrupt replicas for " +
@@ -1910,26 +1899,30 @@ public class BlockManager {
    * @param blk Block whose corrupt replicas need to be invalidated
    */
   private void invalidateCorruptReplicas(Block blk) {
-    Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
+    Collection<CorruptReplica> crs = em.findCorruptReplicaByBlockId(blk.getBlockId());
     boolean gotException = false;
-    if (nodes == null)
+    if (crs.isEmpty())
       return;
     // make a copy of the array of nodes in order to avoid
     // ConcurrentModificationException, when the block is removed from the node
-    DatanodeDescriptor[] nodesCopy = nodes.toArray(new DatanodeDescriptor[0]);
-    for (DatanodeDescriptor node : nodesCopy) {
+    List<CorruptReplica> list = new ArrayList<CorruptReplica>(crs);
+    for (CorruptReplica corruptReplica : list) {
       try {
-        invalidateBlock(blk, node);
+        invalidateBlock(blk, datanodeManager.getDatanodeByStorageId(corruptReplica.getStorageId()));
       } catch (IOException e) {
         NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
                                       "error in deleting bad block " + blk +
-                                      " on " + node + e);
+                                      " on " + corruptReplica.getStorageId() + e);
         gotException = true;
       }
     }
     // Remove the block from corruptReplicasMap
-    if (!gotException)
-      corruptReplicas.removeFromCorruptReplicasMap(blk);
+    if (!gotException) {
+      crs = em.findCorruptReplicaByBlockId(blk.getBlockId());
+      for (CorruptReplica r : crs) {
+        em.remove(r);
+      }
+    }
   }
 
   /**
@@ -2014,7 +2007,6 @@ public class BlockManager {
       delNodeHint = null;
     }
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
-    Collection<DatanodeDescriptor> corruptNodes = corruptReplicas.getNodes(block);
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
 
     for (DatanodeDescriptor cur : dataNodes) {
@@ -2022,7 +2014,7 @@ public class BlockManager {
       if (excessBlocks == null || !excessBlocks.contains(block.getBlockId())) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
-          if (corruptNodes == null || !corruptNodes.contains(cur)) {
+          if (!isItCorruptedReplica(block.getBlockId(), cur.getStorageID())) {
             nonExcess.add(cur);
           }
         }
@@ -2190,10 +2182,10 @@ public class BlockManager {
         NameNode.stateChangeLog.debug("BLOCK* removeStoredBlock: "
                 + block + " is removed from excessBlocks");
       }
-
-
       // Remove the replica from corruptReplicas
-      corruptReplicas.removeFromCorruptReplicasMap(block, node);
+      CorruptReplica cr = em.findCorruptReplicaByPK(block.getBlockId(), node.getStorageID());
+      if (cr != null)
+        em.remove(cr);
     }
   }
   
@@ -2376,12 +2368,11 @@ public class BlockManager {
     
     //Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(b);
     List<DatanodeDescriptor> liveDescriptors = new ArrayList<DatanodeDescriptor>();
-    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
     //while (nodeIter.hasNext()) {
     for(int i=0; i < dnDescriptors.length; i++){
       //DatanodeDescriptor node = nodeIter.next();
            DatanodeDescriptor node = dnDescriptors[i];
-      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+      if (isItCorruptedReplica(b.getBlockId(), node.getStorageID())) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
@@ -2409,10 +2400,9 @@ public class BlockManager {
     int excess = 0;
     
     List<DatanodeDescriptor> dnDescriptors = getDatanodes(getStoredBlock(b));
-    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
     
     for (DatanodeDescriptor node : dnDescriptors) {
-      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+      if (isItCorruptedReplica(b.getBlockId(), node.getStorageID())) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
@@ -2452,10 +2442,9 @@ public class BlockManager {
     // else proceed with fast case
     int live = 0;
     List<DatanodeDescriptor> dnDescriptors = getDatanodes(b);
-    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
 
     for (DatanodeDescriptor node : dnDescriptors) {
-      if ((nodesCorrupt == null) || (!nodesCorrupt.contains(node))) {
+      if (!isItCorruptedReplica(b.getBlockId(), node.getStorageID())) {
         live++;
       }
 
@@ -2667,15 +2656,13 @@ public class BlockManager {
       return true;
     }
     boolean enoughRacks = false;
-    Collection<DatanodeDescriptor> corruptNodes =
-            corruptReplicas.getNodes(b);
     int numExpectedReplicas = getReplication(b);
     String rackName = null;
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(b));
 
     for (DatanodeDescriptor cur : dataNodes) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if ((corruptNodes == null) || !corruptNodes.contains(cur)) {
+        if (!isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
           if (numExpectedReplicas == 1) {
             enoughRacks = true;
             break;
@@ -2707,16 +2694,32 @@ public class BlockManager {
   }
 
   public INodeFile getINode(Block b) throws IOException {
-    return (b instanceof BlockInfo) ? ((BlockInfo) b).getINode() : null;
+    if(b instanceof BlockInfo) {
+      return ((BlockInfo)b).getINode();
+    }
+    else {
+      b = em.findBlockById(b.getBlockId());
+      if(b == null) {
+        return null;
+      }
+      return ((BlockInfo) b).getINode();
+    }
   }
 
   public int numCorruptReplicas(Block block) {
-    return corruptReplicas.numCorruptReplicas(block);
+    return em.findCorruptReplicaByBlockId(block.getBlockId()).size();
+  }
+  
+  public boolean isItCorruptedReplica(long blockId, String storageId) {
+    return em.findCorruptReplicaByPK(blockId, storageId) != null;
   }
 
   public void removeBlockFromMap(Block block) throws IOException {
     try {
-      corruptReplicas.removeFromCorruptReplicasMap(block);
+      Collection<CorruptReplica> crs = em.findCorruptReplicaByBlockId(block.getBlockId());
+      for (CorruptReplica r : crs) {
+        em.remove(r);
+      }
       BlockInfo bi = getStoredBlock(block);
       if (bi != null) {
         INodeFile iNode = bi.getINode();
@@ -2732,6 +2735,13 @@ public class BlockManager {
             em.remove(ruc);
         }
         em.remove(bi);
+        
+        // Remove all the replicas for this block
+        List<IndexedReplica> replicas = em.findReplicasByBlockId(block.getBlockId());
+        for(IndexedReplica r : replicas) {
+          em.remove(r);
+        }
+        
       }
     } catch (Exception ex) {
       Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
@@ -2761,10 +2771,10 @@ public class BlockManager {
    * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
    *
    */
-  public long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
+  public Long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
                                    Long startingBlockId) {
-    return corruptReplicas.getCorruptReplicaBlockIds(numExpectedBlocks,
-                                                     startingBlockId);
+    //this feature is distabled temprarily, it is not essential
+    return em.findAllCorruptReplicas().toArray(new Long[0]);
   }
 
   /**
@@ -2818,33 +2828,53 @@ public class BlockManager {
     @Override
     public void run() {
       while (namesystem.isRunning()) {
+        boolean isDone = false;
         try {
-          boolean done = false;
+          
           int tries = DBConnector.RETRY_COUNT;
-          while (!done && tries > 0) {
-            try {
-              DBConnector.beginTransaction();
-              computeDatanodeWork();
-              processPendingReplications();
-              DBConnector.commit();
-              done = true;
-              Thread.sleep(replicationRecheckInterval);
-            } catch (ClusterJException e) {
-              tries--;
+
+          try {
+            while (!isDone && tries > 0) {
+              try {
+                isDone = false;
+                DBConnector.beginTransaction();
+                computeDatanodeWork();
+                processPendingReplications();
+
+                DBConnector.commit();
+                isDone = true;
+              }
+              catch (ClusterJException ex) {
+                if (!isDone) {
+                  DBConnector.safeRollback();
+                  tries--;
+                  LOG.error("ReplicationMonitor.run() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
+                } // end if
+              } // end catch
+            } // end while
+          } // end try
+          finally {
+            if (!isDone) {
               DBConnector.safeRollback();
-              LOG.error(e.getMessage(), e);
             }
           }
-        } catch (InterruptedException ie) {
+          Thread.sleep(replicationRecheckInterval);
+        }
+        catch (InterruptedException ie) {
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
           break;
-        } catch (IOException ie) {
+        }
+        catch (IOException ie) {
           LOG.warn("ReplicationMonitor thread received exception. ", ie);
-        } catch (Throwable t) {
+        }
+        catch (Throwable t) {
           LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
           Runtime.getRuntime().exit(-1);
         } finally {
-          DBConnector.safeRollback();
+          if(!isDone) {
+            
+            DBConnector.safeRollback();
+          }
         }
       }
     }

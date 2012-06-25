@@ -125,8 +125,15 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
     try {
       UpgradeManagerDatanode upgradeManager = 
         dataNode.getUpgradeManagerDatanode(bpid);
-      if(upgradeManager != null)
+      if(upgradeManager != null) {
+        /*
+              'isTransactional = false' is not used here in the Datanode functionality as they have no contact to NDB
+         *   This variable is just needed by the abstract function of this super class. 
+         *   Its used by the Namenode Upgrade Manager (see @UpgradeManagerNamenode)
+         * 
+         */
         upgradeManager.completeUpgrade();
+      }
     } catch(IOException e) {
       DataNode.LOG.error("Exception in completeUpgrade", e);
     }

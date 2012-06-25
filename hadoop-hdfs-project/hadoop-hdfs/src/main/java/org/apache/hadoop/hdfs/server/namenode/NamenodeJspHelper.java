@@ -869,7 +869,7 @@ class NamenodeJspHelper {
       doc.endTag();
      
       doc.startTag("corrupt_replica_block_ids");
-      final long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
+      final Long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
           numCorruptBlocks, startingBlockId);
       if (corruptBlockIds != null) {
         for (Long blockId: corruptBlockIds) {

@@ -86,14 +86,39 @@ public class TestDiskError {
     cluster.waitActive();
     final int dnIndex = 0;
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = MiniDFSCluster.getStorageDir(dnIndex, 0);
-    File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
+    
+    /*
+     * Datanode storage directory
+     * --------------------------------
+     * |data
+     *      |current
+     *            |finalized (Replicas that are finalized)
+     *            |Rbw  (Replicas currently being written)
+     * 
+     * When datanode restarts, it reads replicas finalized replicas from 'finalized' directory and add them to the replicasMap as FinalizedReplica. 
+     * It also reads replicas being written from 'rbw' directory and adds them to the replicasMap as ReplicaWaitingToBeRecovered with its length set to be the number of bytes that match its crc.
+     */
+    // Every data node also has two storage directory. 'dnIndex' specifies the datanode index and '0' or '1' specifies the storage-directory-index
+    // gets the first storage directory
+    File storageDir = MiniDFSCluster.getStorageDir(dnIndex, 0); 
+    
+    // gets the "replicas currently being written" to directory of storage directory 1
+    File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid); // Rbw: Replicas being written to
+    
+    // gets the second storage directory
     storageDir = MiniDFSCluster.getStorageDir(dnIndex, 1);
+    
+    // gets the "replicas currently being written" to directory of storage directory 2
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     try {
       // make the data directory of the first datanode to be readonly
       assertTrue("Couldn't chmod local vol", dir1.setReadOnly());
       assertTrue("Couldn't chmod local vol", dir2.setReadOnly());
+
+      // check to see if it has become read only! It could be possible that root user will be able to 'write'
+      // This test case is completely dependent on the operating system!!!
+      assertTrue(!dir1.canWrite());
+      assertTrue(!dir2.canWrite());
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);

@@ -27,6 +27,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import se.sics.clusterj.CorruptReplicasTable;
+import se.sics.clusterj.UnderReplicaBlocksTable;
 import se.sics.clusterj.ExcessReplicaTable;
 import se.sics.clusterj.InvalidateBlocksTable;
 import se.sics.clusterj.PendingReplicationBlockTable;
@@ -68,13 +70,9 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
       p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
       sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
     }
+
   }
 
-  /*
-   * Return a session from a random session factory in our pool.
-   *
-   * NOTE: Do not close the session returned by this call or you will die.
-   */
   public synchronized static Session obtainSession() {
     long threadId = Thread.currentThread().getId();
 
@@ -96,85 +94,81 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
   public static void beginTransaction() {
     Session session = obtainSession();
 //            session.setLockMode(LockMode.SHARED);
-            session.currentTransaction().begin();
-            EntityManager.getInstance().begin();
-        }
-        
-        /**
-         * Commit a transaction.
-         */
-        public static void commit() throws ClusterJUserException
-        {
-            Session session = obtainSession();
-            Transaction tx = session.currentTransaction();
-            if (!tx.isActive())
-                throw new ClusterJUserException("The transaction is not began!");
-            
-            EntityManager.getInstance().commit();
-            tx.commit();
-            session.flush();
-        }
-        
-        /**
-         * It rolls back only when the transaction is active.
-         */
-        public static void safeRollback() throws ClusterJUserException
-        {
-            Session session = obtainSession();
-            Transaction tx = session.currentTransaction();
-            if (tx.isActive())
-            {
-                tx.rollback();
-            }
-            
-            EntityManager.getInstance().rollback();
-        }
-        
-        /**
-         * This is called only when MiniDFSCluster wants to format the Namenode.
-         */
-        public static boolean formatDB()
-        {
-          Session session = obtainSession();
-          Transaction tx = session.currentTransaction();
-          try
-          {
-            tx.begin();
-            session.deletePersistentAll(INodeTableSimple.class);
-            session.deletePersistentAll(BlockInfoTable.class);
-            session.deletePersistentAll(LeaseTable.class);
-            session.deletePersistentAll(LeasePathsTable.class);
-            session.deletePersistentAll(TripletsTable.class);
-            session.deletePersistentAll(ReplicaUcTable.class);
-            session.deletePersistentAll(InvalidateBlocksTable.class);
-            session.deletePersistentAll(ExcessReplicaTable.class);
-            session.deletePersistentAll(PendingReplicationBlockTable.class);
-            tx.commit();
-            session.flush();
-            return true;
-          }
-          catch(ClusterJException ex)
-          {
-            LOG.error(ex.getMessage(), ex);
-            tx.rollback();
-          }
+    session.currentTransaction().begin();
+    EntityManager.getInstance().begin();
+  }
 
-          return false;
-        }
-        
-        public static boolean checkTransactionState(boolean isTransactional)
-        {
-            Session session = DBConnector.obtainSession();
-            boolean isActive = session.currentTransaction().isActive();
-            boolean isValid = isActive == isTransactional;
-            assert isValid : 
-                "Current transaction's isActive value is " + isActive + 
-                " but isTransactional's value is " + isTransactional;
-            //TODO[Hooman]: An exception should bubble up from here..
-            if (!isValid)
-                LOG.error("Current transaction's isActive value is " + isActive + 
-                " but isTransactional's value is " + isTransactional);
-            
-            return isValid;
-        }
+  /**
+   * Commit a transaction.
+   */
+  public static void commit() throws ClusterJUserException {
+    Session session = obtainSession();
+    Transaction tx = session.currentTransaction();
+    if (!tx.isActive()) {
+      throw new ClusterJUserException("The transaction is not began!");
+    }
+
+    EntityManager.getInstance().commit();
+    tx.commit();
+    session.flush();
+  }
+
+  /**
+   * It rolls back only when the transaction is active.
+   */
+  public static void safeRollback() throws ClusterJUserException {
+    Session session = obtainSession();
+    Transaction tx = session.currentTransaction();
+    if (tx.isActive()) {
+      tx.rollback();
+    }
+
+    EntityManager.getInstance().rollback();
+  }
+
+  /**
+   * This is called only when MiniDFSCluster wants to format the Namenode.
+   */
+  public static boolean formatDB() {
+    Session session = obtainSession();
+    Transaction tx = session.currentTransaction();
+    try {
+      tx.begin();
+      session.deletePersistentAll(INodeTableSimple.class);
+      session.deletePersistentAll(BlockInfoTable.class);
+      session.deletePersistentAll(LeaseTable.class);
+      session.deletePersistentAll(LeasePathsTable.class);
+      session.deletePersistentAll(TripletsTable.class);
+      session.deletePersistentAll(ReplicaUcTable.class);
+      session.deletePersistentAll(InvalidateBlocksTable.class);
+      session.deletePersistentAll(ExcessReplicaTable.class);
+      session.deletePersistentAll(PendingReplicationBlockTable.class);
+      session.deletePersistentAll(CorruptReplicasTable.class);
+      session.deletePersistentAll(UnderReplicaBlocksTable.class);
+      tx.commit();
+      session.flush();
+      return true;
+    } catch (ClusterJException ex) {
+      LOG.error(ex.getMessage(), ex);
+      tx.rollback();
+    }
+
+    return false;
+  }
+
+  public static boolean checkTransactionState(boolean isTransactional) {
+    Session session = DBConnector.obtainSession();
+    boolean isActive = session.currentTransaction().isActive();
+    boolean isValid = isActive == isTransactional;
+    assert isValid :
+            "Current transaction's isActive value is " + isActive
+            + " but isTransactional's value is " + isTransactional;
+    //TODO[Hooman]: An exception should bubble up from here..
+    if (!isValid) {
+      LOG.error("Current transaction's isActive value is " + isActive
+              + " but isTransactional's value is " + isTransactional);
+    }
+
+    return isValid;
+  }
 }
