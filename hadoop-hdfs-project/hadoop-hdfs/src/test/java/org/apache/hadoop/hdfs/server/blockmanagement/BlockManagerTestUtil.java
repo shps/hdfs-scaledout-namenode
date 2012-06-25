@@ -84,7 +84,7 @@ public class BlockManagerTestUtil {
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if (blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
+        if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
           String rackName = cur.getNetworkLocation();
           if (!rackSet.contains(rackName)) {
             rackSet.add(rackName);
