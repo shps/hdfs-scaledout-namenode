@@ -92,14 +92,6 @@ public class EntityManager {
     }
   }
 
-  public void update(Object newValue) {
-    try {
-      context().update(newValue);
-    } catch (TransactionContextException ex) {
-      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-  }
-
   public List<IndexedReplica> findReplicasByBlockId(long id) {
     try {
       return context().findReplicasByBlockId(id);
@@ -434,48 +426,58 @@ public class EntityManager {
     return 0;
   }
 
-  public boolean containsUnderReplicatedBlock(long blockId) {
+  public UnderReplicatedBlock findUnderReplicatedBlockByBlockId(long blockId) {
     try {
-      return context().containsUnderReplicatedBlock(blockId);
-    } catch (TransactionContextException ex) {
-      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    return false;
-  }
-
-  public List<UnderReplicatedBlock> findAllUnderReplicatedBlocks() {
-    try {
-      return context().findAllUnderReplicatedBlocks();
+      return context().findUnderReplicatedBlockByBlockId(blockId);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
     return null;
   }
 
-  public List<UnderReplicatedBlock> findAllCorruptedUnderReplicatedBlocks(int corruptLevel) {
+  public List<UnderReplicatedBlock> findAllUnderReplicatedBlocksSortedByLevel() {
     try {
-      return context().findAllCorruptedUnderReplicatedBlocks(corruptLevel);
+      return context().findAllUnderReplicatedBlocksSortedByLevel();
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
     return null;
   }
 
-  public int countNonCorruptedUnderReplicatedBlocks(int level) {
+  public List<UnderReplicatedBlock> findUnderReplicatedBlocksByLevel(int level) {
     try {
-      return context().countNonCorruptedUnderReplicatedBlocks(level);
+      return context().findUnderReplicatedBlocksByLevel(level);
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return null;
+  }
+
+  public int countAllUnderReplicatedBlocks() {
+    try {
+      return context().countAllUnderReplicatedBlocks();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return 0;
+  }
+  
+  public int countUnderReplicatedBlocksLowerThanLevel(int level) {
+    try {
+      return context().countUnderReplicatedBlocksLowerThanLevel(level);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
     return 0;
   }
 
-  public int countCorruptedUnderReplicatedBlocks(int level) {
+  public int countUnderReplicatedBlocksByLevel(int level) {
     try {
-      return context().countCorruptedUnderReplicatedBlocks(level);
+      return context().countUnderReplicatedBlocksByLevel(level);
     } catch (TransactionContextException ex) {
       Logger.getLogger(EntityManager.class.getName()).log(Level.SEVERE, null, ex);
     }
     return 0;
   }
+  
 }

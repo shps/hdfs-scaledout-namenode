@@ -4822,10 +4822,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         startBlockId = Block.filename2id(startBlockAfter);
       }
 
-      final Iterator<Block> blkIterator = blockManager.getCorruptReplicaBlockIterator();
-      while (blkIterator.hasNext()) {
-        Block blk = blkIterator.next();
-        INode inode = blockManager.getINode(blk);
+      List<UnderReplicatedBlock> urblks = em.findUnderReplicatedBlocksByLevel(blockManager.UNDER_REPLICATED_LEVEL_FOR_CORRUPTS);
+      for(UnderReplicatedBlock urblk : urblks) {
+        BlockInfo blk = em.findBlockById(urblk.getBlockId());
+        INode inode = blk.getINode();
         if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
           String src = inode.getFullPathName();
           if (((startBlockAfter == null) || (blk.getBlockId() > startBlockId))
@@ -4837,6 +4837,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         }
       }
+
       LOG.info("list corrupt file blocks returned: " + count);
       return corruptFiles;
     } finally {

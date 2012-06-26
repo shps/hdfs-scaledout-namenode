@@ -1,6 +1,34 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Collections;
+import java.util.Comparator;
+
 public class UnderReplicatedBlock {
+  public static enum Order implements Comparator<UnderReplicatedBlock> {
+
+    ByLevel() {
+
+      @Override
+      public int compare(UnderReplicatedBlock o1, UnderReplicatedBlock o2) {
+        if (o1.getLevel() < o2.level) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
+    };
+    
+    @Override
+    public abstract int compare(UnderReplicatedBlock o1, UnderReplicatedBlock o2);
+
+    public Comparator acsending() {
+      return this;
+    }
+
+    public Comparator descending() {
+      return Collections.reverseOrder(this);
+    }
+  }
 
   int level;
   long blockId;
@@ -16,6 +44,10 @@ public class UnderReplicatedBlock {
 
   public int getLevel() {
     return level;
+  }
+
+  public void setLevel(int level) {
+    this.level = level;
   }
 
   @Override

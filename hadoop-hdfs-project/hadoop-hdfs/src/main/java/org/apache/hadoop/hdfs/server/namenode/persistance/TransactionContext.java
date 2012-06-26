@@ -109,10 +109,9 @@ public class TransactionContext {
   /**
    * Under replicated blocks
    */
-  private Map<UnderReplicatedBlock, UnderReplicatedBlock> urBlocks = new HashMap<UnderReplicatedBlock, UnderReplicatedBlock>();
-  private Map<UnderReplicatedBlock, UnderReplicatedBlock> modifiedurBlocks = new HashMap<UnderReplicatedBlock, UnderReplicatedBlock>();
-  private Map<UnderReplicatedBlock, UnderReplicatedBlock> removedurBlocks = new HashMap<UnderReplicatedBlock, UnderReplicatedBlock>();
-  private long numUrBlocks = 0;
+  private Map<Long, UnderReplicatedBlock> urBlocks = new HashMap<Long, UnderReplicatedBlock>();
+  private Map<Long, UnderReplicatedBlock> modifiedurBlocks = new HashMap<Long, UnderReplicatedBlock>();
+  private Map<Long, UnderReplicatedBlock> removedurBlocks = new HashMap<Long, UnderReplicatedBlock>();
   private boolean allUrBlocksRead = false;
 
   private void resetContext() {
@@ -144,18 +143,6 @@ public class TransactionContext {
     modifiedExReplica.clear();
     removedExReplica.clear();
 
-    corruptReplicas.clear();
-    blockCorruptReplicas.clear();
-    modifiedCorruptReplicas.clear();
-    removedCorruptReplicas.clear();
-    allCorruptBlocksRead = false;
-
-    urBlocks.clear();
-    modifiedurBlocks.clear();
-    removedurBlocks.clear();
-    numUrBlocks = 0;
-    allUrBlocksRead = false;
-
     pendings.clear();
     modifiedPendings.clear();
     removedPendings.clear();
@@ -179,6 +166,18 @@ public class TransactionContext {
     inodesParentIndex.clear();
     removedInodes.clear();
     modifiedInodes.clear();
+    
+    corruptReplicas.clear();
+    blockCorruptReplicas.clear();
+    modifiedCorruptReplicas.clear();
+    removedCorruptReplicas.clear();
+    allCorruptBlocksRead = false;
+
+    urBlocks.clear();
+    modifiedurBlocks.clear();
+    removedurBlocks.clear();
+    allUrBlocksRead = false;
+
   }
 
   void begin() {
@@ -525,12 +524,12 @@ public class TransactionContext {
       modifiedCorruptReplicas.put(corruptreplica.persistanceKey(), corruptreplica);
     } else if (obj instanceof UnderReplicatedBlock) {
       UnderReplicatedBlock urBlock = (UnderReplicatedBlock) obj;
-      if (removedurBlocks.get(urBlock) != null) {
+      if (removedurBlocks.get(urBlock.getBlockId()) != null) {
         throw new TransactionContextException("Removed under replica passed to be persisted");
       }
 
-      urBlocks.put(urBlock, urBlock);
-      modifiedurBlocks.put(urBlock, urBlock);
+      urBlocks.put(urBlock.getBlockId(), urBlock);
+      modifiedurBlocks.put(urBlock.getBlockId(), urBlock);
     } else {
       throw new TransactionContextException("Unkown type passed for being persisted");
     }
@@ -657,12 +656,12 @@ public class TransactionContext {
       } else if (obj instanceof UnderReplicatedBlock) {
         UnderReplicatedBlock urBlock = (UnderReplicatedBlock) obj;
 
-        if (!urBlocks.containsKey(urBlock)) {
+        if (!urBlocks.containsKey(urBlock.getBlockId())) {
           throw new TransactionContextException("Unattached under replica [blk:" + urBlock.getBlockId() + ", level: " + urBlock.getLevel() + " ] passed to be removed");
         }
-        urBlocks.remove(urBlock);
-        modifiedurBlocks.remove(urBlock);
-        removedurBlocks.put(urBlock, urBlock);
+        urBlocks.remove(urBlock.getBlockId());
+        modifiedurBlocks.remove(urBlock.getBlockId());
+        removedurBlocks.put(urBlock.getBlockId(), urBlock);
 
       } else {
         done = false;
@@ -685,36 +684,6 @@ public class TransactionContext {
 
         // Delete from Db
         DBConnector.obtainSession().deletePersistentAll(UnderReplicaBlocksTable.class);
-        done = true;
-      } else {
-        done = false;
-        throw new TransactionContextException("Unkown type passed for being persisted");
-      }
-    } finally {
-      afterTxCheck(done);
-    }
-  }
-
-  public void update(Object newValue) throws TransactionContextException {
-    beforeTxCheck();
-    boolean done = false;
-    try {
-      if (newValue instanceof UnderReplicatedBlock) {
-        UnderReplicatedBlock urBlockNew = (UnderReplicatedBlock) newValue;
-
-        /*
-         * Called from NameNodeRpcServer.reportBadBlocks(..)
-         * BlockManager.findAndMarkBlockAsCorrupt
-         * BlockManager.markBlockAsCorrupt BlockManager.updateNeededReplications
-         * ===> When the block is detected corrupt by the client, the NN will
-         * mark the block as corrupt After marking it as corrupt, it checks if
-         * there is enough replications for this block. If the number of live
-         * replica is less than the the minimum replication required, it will
-         * save it as an under-replicated block with some prioroity level
-         */
-        // Update the maps and replaces the old value (if present) with the new value into the map
-        urBlocks.put(urBlockNew, urBlockNew);
-        modifiedurBlocks.put(urBlockNew, urBlockNew);
         done = true;
       } else {
         done = false;
@@ -1065,229 +1034,6 @@ public class TransactionContext {
       ExcessReplica result = ReplicaFactory.createReplica(invTable);
       this.exReplicas.put(result, result);
       return result;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public Collection<CorruptReplica> findAllCorruptReplicas() throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (allCorruptBlocksRead) {
-        return corruptReplicas.values();
-      }
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<CorruptReplicasTable> dobj = qb.createQueryDefinition(CorruptReplicasTable.class);
-      Query<CorruptReplicasTable> query = session.createQuery(dobj);
-      List<CorruptReplicasTable> ibts = query.getResultList();
-      syncCorruptReplicaInstances(ReplicaFactory.createCorruptReplicaList(ibts));
-      allCorruptBlocksRead = true;
-      return corruptReplicas.values();
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public long countAllCorruptedReplicas() throws TransactionContextException {
-    beforeTxCheck();
-    try {
-    if (allCorruptBlocksRead)
-      return corruptReplicas.size();
-    return findAllCorruptReplicas().size();
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-  
-  public Collection<CorruptReplica> findCorruptReplicaByBlockId(long blockId) throws TransactionContextException {
-    beforeTxCheck();
-    boolean done = true;
-    try {
-      if (blockCorruptReplicas.containsKey(blockId))
-        return blockCorruptReplicas.get(blockId);
-      
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<CorruptReplicasTable> dobj = qb.createQueryDefinition(CorruptReplicasTable.class);
-      Predicate pred = dobj.get("blockId").equal(dobj.param("blockId"));
-      dobj.where(pred);
-      Query<CorruptReplicasTable> query = session.createQuery(dobj);
-      query.setParameter("blockId", blockId);
-      List<CorruptReplicasTable> creplicas = query.getResultList();
-      List<CorruptReplica> syncList = syncCorruptReplicaInstances(ReplicaFactory.createCorruptReplicaList(creplicas));
-      blockCorruptReplicas.put(blockId, syncList);
-      return syncList;
-    } finally {
-      afterTxCheck(done);
-    }
-  }
-
-  public CorruptReplica findCorruptReplicaByPK(long blockId, String storageId) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (corruptReplicas.containsKey(blockId + storageId)) {
-        return corruptReplicas.get(blockId + storageId);
-      }
-
-      Session session = DBConnector.obtainSession();
-      Object[] keys = new Object[2];
-      keys[0] = blockId;
-      keys[1] = storageId;
-      CorruptReplicasTable corruptReplicaTable = session.find(CorruptReplicasTable.class, keys);
-      if (corruptReplicaTable != null) {
-        CorruptReplica replica = ReplicaFactory.createReplica(corruptReplicaTable);
-        corruptReplicas.put(blockId+storageId, replica);
-        return replica;
-      }
-      return null;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  private List<CorruptReplica> syncCorruptReplicaInstances(List<CorruptReplica> crs) {
-
-    ArrayList<CorruptReplica> finalList = new ArrayList<CorruptReplica>();
-
-    for (CorruptReplica replica : crs) {
-      if (removedCorruptReplicas.containsKey(replica.persistanceKey())) {
-        continue;
-      }
-      if (corruptReplicas.containsKey(replica.persistanceKey())) {
-        finalList.add(corruptReplicas.get(replica.persistanceKey()));
-      } else {
-        corruptReplicas.put(replica.persistanceKey(), replica);
-        finalList.add(replica);
-      }
-    }
-
-    return finalList;
-  }
-
-  public boolean containsUnderReplicatedBlock(long blockId) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-
-      // Not found in memory, search in database
-      Session session = DBConnector.obtainSession();
-      UnderReplicaBlocksTable urBlockTable = session.find(UnderReplicaBlocksTable.class, blockId);
-      if (urBlockTable != null) {
-        UnderReplicatedBlock urBlock = ReplicaFactory.createReplica(urBlockTable);
-        urBlocks.put(urBlock, urBlock);
-        return true;
-      }
-      // Not found
-      return false;
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public List<UnderReplicatedBlock> findAllUnderReplicatedBlocks() throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      if (allUrBlocksRead) {
-        return new ArrayList(urBlocks.values());
-      }
-
-      Session session = DBConnector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
-      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
-      List<UnderReplicaBlocksTable> ibts = query.getResultList();
-      numUrBlocks = 0;
-      syncUnderReplicatedBlockInstances(ibts);
-
-      allCorruptBlocksRead = true;
-
-      return new ArrayList(urBlocks.values());
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public List<UnderReplicatedBlock> findAllCorruptedUnderReplicatedBlocks(int corruptLevel) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      Session session = DBConnector.obtainSession();
-
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
-      Predicate pred = dobj.get("level").equal(dobj.param("level"));
-      dobj.where(pred);
-      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
-      query.setParameter("level", corruptLevel);
-
-      List<UnderReplicaBlocksTable> urCorruptedBlocks = query.getResultList();
-      syncUnderReplicatedBlockInstances(urCorruptedBlocks);
-
-      // After sync, only get the corrupt replica blocks with level 'corruptLevel'
-      List<UnderReplicatedBlock> finalUrCorruptedBlocks = new ArrayList<UnderReplicatedBlock>();
-      for (UnderReplicatedBlock urb : urBlocks.values()) {
-        if (urb.getLevel() == corruptLevel) {
-          finalUrCorruptedBlocks.add(urb);
-        }
-      }
-      return finalUrCorruptedBlocks;
-
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  private Collection<UnderReplicatedBlock> syncUnderReplicatedBlockInstances(List<UnderReplicaBlocksTable> urBlockRecords) {
-
-    for (UnderReplicaBlocksTable record : urBlockRecords) {
-      UnderReplicatedBlock urBlock = ReplicaFactory.createReplica(record);
-      if (!removedurBlocks.containsKey(urBlock)) {
-        numUrBlocks++;
-        if (!this.urBlocks.containsKey(urBlock)) {
-          urBlocks.put(urBlock, urBlock);
-        }
-      }
-    }
-
-    return urBlocks.values();
-  }
-
-  public int countNonCorruptedUnderReplicatedBlocks(int level) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      Session session = DBConnector.obtainSession();
-
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
-      Predicate pred = dobj.get("level").lessThan(dobj.param("level"));
-      dobj.where(pred);
-      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
-      query.setParameter("level", level);
-
-      List<UnderReplicaBlocksTable> urNoncorruptedBlocks = query.getResultList();
-      syncUnderReplicatedBlockInstances(urNoncorruptedBlocks);
-      return urNoncorruptedBlocks.size();
-
-    } finally {
-      afterTxCheck(true);
-    }
-  }
-
-  public int countCorruptedUnderReplicatedBlocks(int level) throws TransactionContextException {
-    beforeTxCheck();
-    try {
-      Session session = DBConnector.obtainSession();
-
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
-      Predicate pred = dobj.get("level").equal(dobj.param("level"));
-      dobj.where(pred);
-      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
-      query.setParameter("level", level);
-
-      List<UnderReplicaBlocksTable> urCorruptedBlocks = query.getResultList();
-      syncUnderReplicatedBlockInstances(urCorruptedBlocks);
-      return urCorruptedBlocks.size();
-
     } finally {
       afterTxCheck(true);
     }
@@ -1763,6 +1509,263 @@ public class TransactionContext {
         inodesIdIndex.put(inode.getId(), inode);
         inodesNameParentIndex.put(inode.nameParentKey(), inode);
         finalList.add(inode);
+      }
+    }
+
+    return finalList;
+  }
+  
+    public Collection<CorruptReplica> findAllCorruptReplicas() throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (allCorruptBlocksRead) {
+        return corruptReplicas.values();
+      }
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<CorruptReplicasTable> dobj = qb.createQueryDefinition(CorruptReplicasTable.class);
+      Query<CorruptReplicasTable> query = session.createQuery(dobj);
+      List<CorruptReplicasTable> ibts = query.getResultList();
+      syncCorruptReplicaInstances(ReplicaFactory.createCorruptReplicaList(ibts));
+      allCorruptBlocksRead = true;
+      return corruptReplicas.values();
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public long countAllCorruptedReplicas() throws TransactionContextException {
+    beforeTxCheck();
+    try {
+    if (allCorruptBlocksRead)
+      return corruptReplicas.size();
+    return findAllCorruptReplicas().size();
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+  
+  public Collection<CorruptReplica> findCorruptReplicaByBlockId(long blockId) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = true;
+    try {
+      if (blockCorruptReplicas.containsKey(blockId))
+        return blockCorruptReplicas.get(blockId);
+      
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<CorruptReplicasTable> dobj = qb.createQueryDefinition(CorruptReplicasTable.class);
+      Predicate pred = dobj.get("blockId").equal(dobj.param("blockId"));
+      dobj.where(pred);
+      Query<CorruptReplicasTable> query = session.createQuery(dobj);
+      query.setParameter("blockId", blockId);
+      List<CorruptReplicasTable> creplicas = query.getResultList();
+      List<CorruptReplica> syncList = syncCorruptReplicaInstances(ReplicaFactory.createCorruptReplicaList(creplicas));
+      blockCorruptReplicas.put(blockId, syncList);
+      return syncList;
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+
+  public CorruptReplica findCorruptReplicaByPK(long blockId, String storageId) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (corruptReplicas.containsKey(blockId + storageId)) {
+        return corruptReplicas.get(blockId + storageId);
+      }
+
+      Session session = DBConnector.obtainSession();
+      Object[] keys = new Object[2];
+      keys[0] = blockId;
+      keys[1] = storageId;
+      CorruptReplicasTable corruptReplicaTable = session.find(CorruptReplicasTable.class, keys);
+      if (corruptReplicaTable != null) {
+        CorruptReplica replica = ReplicaFactory.createReplica(corruptReplicaTable);
+        corruptReplicas.put(blockId+storageId, replica);
+        return replica;
+      }
+      return null;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  private List<CorruptReplica> syncCorruptReplicaInstances(List<CorruptReplica> crs) {
+
+    ArrayList<CorruptReplica> finalList = new ArrayList<CorruptReplica>();
+
+    for (CorruptReplica replica : crs) {
+      if (removedCorruptReplicas.containsKey(replica.persistanceKey())) {
+        continue;
+      }
+      if (corruptReplicas.containsKey(replica.persistanceKey())) {
+        finalList.add(corruptReplicas.get(replica.persistanceKey()));
+      } else {
+        corruptReplicas.put(replica.persistanceKey(), replica);
+        finalList.add(replica);
+      }
+    }
+
+    return finalList;
+  }
+
+  public UnderReplicatedBlock findUnderReplicatedBlockByBlockId(long blockId) throws TransactionContextException {
+    beforeTxCheck();
+    boolean done = true;
+    try {
+      if (urBlocks.containsKey(blockId))
+        return urBlocks.get(blockId);
+      
+      Session session = DBConnector.obtainSession();
+      UnderReplicaBlocksTable urbt = session.find(UnderReplicaBlocksTable.class, blockId);
+      if (urbt == null)
+        return null;
+      UnderReplicatedBlock block = UnderReplicatedBlockFactory.createUrBlock(urbt);
+      if (block != null)
+        urBlocks.put(block.getBlockId(), block);
+      return block;
+    } finally {
+      afterTxCheck(done);
+    }
+  }
+  public List<UnderReplicatedBlock> findAllUnderReplicatedBlocksSortedByLevel() throws TransactionContextException {
+    beforeTxCheck();
+    List<UnderReplicatedBlock> finalList = null;
+    try {
+      if (allUrBlocksRead) {
+        finalList = new ArrayList(urBlocks.values());
+      } else {
+
+      Session session = DBConnector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
+      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
+      List<UnderReplicaBlocksTable> urbks = query.getResultList();
+      List<UnderReplicatedBlock> synced = syncUnderReplicatedBlockInstances(UnderReplicatedBlockFactory.createUrBlockList(urbks));
+      allCorruptBlocksRead = true;
+      finalList = synced;
+      }
+      Collections.sort(finalList, UnderReplicatedBlock.Order.ByLevel);
+      return finalList;
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public List<UnderReplicatedBlock> findUnderReplicatedBlocksByLevel(int level) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      if (allUrBlocksRead) {
+        List<UnderReplicatedBlock> list = new ArrayList<UnderReplicatedBlock>();
+        for (UnderReplicatedBlock block : urBlocks.values()) {
+          if (block.getLevel() == level)
+            list.add(block);
+        }
+        
+        return list;
+      }
+      Session session = DBConnector.obtainSession();
+
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
+      Predicate pred = dobj.get("level").equal(dobj.param("level"));
+      dobj.where(pred);
+      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
+      query.setParameter("level", level);
+
+      List<UnderReplicaBlocksTable> urbkst = query.getResultList();
+      List<UnderReplicatedBlock> synced = syncUnderReplicatedBlockInstances(UnderReplicatedBlockFactory.createUrBlockList(urbkst));
+
+      return synced;
+
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public int countAllUnderReplicatedBlocks() throws TransactionContextException {
+    return findAllUnderReplicatedBlocksSortedByLevel().size();
+  }
+  
+  public int countUnderReplicatedBlocksLowerThanLevel(int level) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+       if (allUrBlocksRead) {
+         int count = 0;
+        for (UnderReplicatedBlock block : urBlocks.values()) {
+          if (block.getLevel() < level)
+            count++;
+        }
+        
+        return count;
+      }
+
+      Session session = DBConnector.obtainSession();
+
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
+      Predicate pred = dobj.get("level").lessThan(dobj.param("level"));
+      dobj.where(pred);
+      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
+      query.setParameter("level", level);
+
+      List<UnderReplicaBlocksTable> urbkst = query.getResultList();
+      List<UnderReplicatedBlock> synced = syncUnderReplicatedBlockInstances(UnderReplicatedBlockFactory.createUrBlockList(urbkst));
+
+      return synced.size();
+
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  public int countUnderReplicatedBlocksByLevel(int level) throws TransactionContextException {
+    beforeTxCheck();
+    try {
+      
+      if (allUrBlocksRead) {
+        int count = 0;
+        for (UnderReplicatedBlock block : urBlocks.values()) {
+          if (block.getLevel() == level) {
+            count++;
+          }
+        }
+
+        return count;
+      }
+
+      Session session = DBConnector.obtainSession();
+
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<UnderReplicaBlocksTable> dobj = qb.createQueryDefinition(UnderReplicaBlocksTable.class);
+      Predicate pred = dobj.get("level").equal(dobj.param("level"));
+      dobj.where(pred);
+      Query<UnderReplicaBlocksTable> query = session.createQuery(dobj);
+      query.setParameter("level", level);
+
+      List<UnderReplicaBlocksTable> urbkst = query.getResultList();
+      List<UnderReplicatedBlock> synced = syncUnderReplicatedBlockInstances(UnderReplicatedBlockFactory.createUrBlockList(urbkst));
+
+      return synced.size();
+
+    } finally {
+      afterTxCheck(true);
+    }
+  }
+
+  private List<UnderReplicatedBlock> syncUnderReplicatedBlockInstances(List<UnderReplicatedBlock> blocks) {
+    ArrayList<UnderReplicatedBlock> finalList = new ArrayList<UnderReplicatedBlock>();
+
+    for (UnderReplicatedBlock block : blocks) {
+      if (removedurBlocks.containsKey(block.getBlockId())) {
+        continue;
+      }
+      if (urBlocks.containsKey(block.getBlockId())) {
+        finalList.add(urBlocks.get(block.getBlockId()));
+      } else {
+        urBlocks.put(block.getBlockId(), block);
+        finalList.add(block);
       }
     }
 

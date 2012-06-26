@@ -82,7 +82,8 @@ public class BlockManager {
 
   /** Default load factor of map */
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
-
+  public static final int UNDER_REPLICATED_LEVEL_FOR_CORRUPTS = 4;
+  
   private final Namesystem namesystem;
 
   private DatanodeManager datanodeManager = null;
@@ -305,7 +306,8 @@ public class BlockManager {
     synchronized (neededReplications) {
       out.println("Metasave: Blocks waiting for replication: " + 
                   neededReplications.size());
-      for (Block block : neededReplications) {
+      for (UnderReplicatedBlock urb : em.findAllUnderReplicatedBlocksSortedByLevel()) {
+        Block block = em.findBlockById(urb.getBlockId());
         List<DatanodeDescriptor> containingNodes =
                                           new ArrayList<DatanodeDescriptor>();
         List<DatanodeDescriptor> containingLiveReplicasNodes =
@@ -1021,32 +1023,32 @@ public class BlockManager {
         if (neededReplications.size() == 0) {
           return blocksToReplicate;
         }
-
-        // Go through all blocks that need replications.
-        UnderReplicatedBlocks.BlockIterator neededReplicationsIterator = 
-            neededReplications.iterator();
+        
+        List<UnderReplicatedBlock> urblocks = em.findAllUnderReplicatedBlocksSortedByLevel();
+        Iterator<UnderReplicatedBlock> iterator = urblocks.iterator();
         // skip to the first unprocessed block, which is at replIndex
-        for (int i = 0; i < replIndex && neededReplicationsIterator.hasNext(); i++) {
-          neededReplicationsIterator.next();
+        for (int i = 0; i < replIndex && iterator.hasNext(); i++) {
+          iterator.next();
         }
+        // Go through all blocks that need replications.
         // # of blocks to process equals either twice the number of live
         // data-nodes or the number of under-replicated blocks whichever is less
         blocksToProcess = Math.min(blocksToProcess, neededReplications.size());
 
         for (int blkCnt = 0; blkCnt < blocksToProcess; blkCnt++, replIndex++) {
-          if (!neededReplicationsIterator.hasNext()) {
+          if (!iterator.hasNext()) {
             // start from the beginning
             replIndex = 0;
             blocksToProcess = Math.min(blocksToProcess, neededReplications
                 .size());
             if (blkCnt >= blocksToProcess)
               break;
-            neededReplicationsIterator = neededReplications.iterator();
-            assert neededReplicationsIterator.hasNext() : "neededReplications should not be empty.";
+            iterator = urblocks.iterator();
+            assert iterator.hasNext() : "neededReplications should not be empty.";
           }
-
-          Block block = neededReplicationsIterator.next();
-          int priority = neededReplicationsIterator.getPriority();
+          UnderReplicatedBlock urb = iterator.next();
+          Block block = em.findBlockById(urb.getBlockId());
+          int priority = urb.getLevel();
           if (priority < 0 || priority >= blocksToReplicate.size()) {
             LOG.warn("Unexpected replication priority: "
                 + priority + " " + block);
@@ -2775,14 +2777,6 @@ public class BlockManager {
                                    Long startingBlockId) {
     //this feature is distabled temprarily, it is not essential
     return em.findAllCorruptReplicas().toArray(new Long[0]);
-  }
-
-  /**
-   * Return an iterator over the set of blocks for which there are no replicas.
-   */
-  public Iterator<Block> getCorruptReplicaBlockIterator() {
-    return neededReplications.iterator(
-        UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
   }
 
   /** @return the size of UnderReplicatedBlocks */
