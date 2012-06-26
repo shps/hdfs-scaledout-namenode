@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -410,8 +409,9 @@ public class BlockManager {
    * @throws IOException if the block does not have at least a minimal number of
    * replicas reported from data-nodes.
    */
-  public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode,
-          Block commitBlock, boolean isTransactional) throws IOException {
+  public boolean commitOrCompleteLastBlock(INodeFile fileINode,
+          Block commitBlock) throws IOException {
+    assert fileINode.isUnderConstruction();
     if (commitBlock == null) {
       return false; // not committing, this is a block allocation retry
     }
@@ -501,7 +501,8 @@ public class BlockManager {
    * @return the last block locations if the block is partial or null otherwise
    */
   public LocatedBlock convertLastBlockToUnderConstruction(
-      INodeFileUnderConstruction fileINode, boolean isTransactional) throws IOException {
+      INodeFile fileINode) throws IOException {
+    assert fileINode.isUnderConstruction();
     BlockInfo oldBlock = fileINode.getLastBlock();
     if(oldBlock == null ||
         fileINode.getPreferredBlockSize() == oldBlock.getNumBytes())
@@ -788,12 +789,12 @@ public class BlockManager {
    
   /** Remove the blocks associated to the given datanode. 
    * @throws IOException */
-  void removeBlocksAssociatedTo(final DatanodeDescriptor node, boolean isTransactional) throws IOException {
+  void removeBlocksAssociatedTo(final DatanodeDescriptor node) throws IOException {
     final Iterator<? extends Block> it = 
             em.findList(BlockInfoFinder.ByStorageId, node.getStorageID()).iterator();
     
     while(it.hasNext()) {
-      removeStoredBlock(it.next(), node, isTransactional);
+      removeStoredBlock(it.next(), node);
     }
 
     node.resetBlocks();
@@ -858,7 +859,7 @@ public class BlockManager {
 								  + blk + " not found.");
 								  return;
 					  }
-					  markBlockAsCorrupt(storedBlock, dn, true);
+					  markBlockAsCorrupt(storedBlock, dn);
 					  DBConnector.commit();
 					  isDone = true;
 				  }
@@ -888,7 +889,7 @@ public class BlockManager {
 		  }
 
   private void markBlockAsCorrupt(BlockInfo storedBlock,
-                                  DatanodeInfo dn, boolean isTransactional) throws IOException {
+                                  DatanodeInfo dn) throws IOException {
     assert storedBlock != null : "storedBlock should not be null";
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
@@ -916,7 +917,7 @@ public class BlockManager {
     corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
     if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
-      invalidateBlock(storedBlock, node, isTransactional);
+      invalidateBlock(storedBlock, node);
     } else if (namesystem.isPopulatingReplQueues()) {
       // add the block to neededReplication
       updateNeededReplications(storedBlock, -1, 0);
@@ -926,7 +927,7 @@ public class BlockManager {
   /**
    * Invalidates the given block on the given datanode.
    */
-  private void invalidateBlock(Block blk, DatanodeInfo dn, boolean isTransactional)
+  private void invalidateBlock(Block blk, DatanodeInfo dn)
       throws IOException {
     NameNode.stateChangeLog.info("BLOCK* invalidateBlock: "
                                  + blk + " on " + dn.getName());
@@ -941,7 +942,7 @@ public class BlockManager {
     int count = countNodes(blk).liveReplicas();
     if (count > 1) {
       addToInvalidates(blk, dn);
-      removeStoredBlock(blk, node, isTransactional);
+      removeStoredBlock(blk, node);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("BLOCK* invalidateBlocks: "
             + blk + " on " + dn.getName() + " listed for deletion.");
@@ -1322,7 +1323,8 @@ public class BlockManager {
       if (node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
         continue; // already reached replication limit
       }      // the block must not be scheduled for removal on srcNode
-      if (excessBlocks != null && excessBlocks.contains(block.getBlockId())) {
+      if (excessBlocks != null && 
+              excessBlocks.contains(new ExcessReplica(node.getStorageID(), block.getBlockId()))) {
         continue;
       }
       // never use already decommissioned nodes
@@ -1448,11 +1450,11 @@ public class BlockManager {
 					  {
 						  // The first block report can be processed a lot more efficiently than
 						  // ordinary block reports.  This shortens restart times.
-						  processFirstBlockReport(node, newReport, true);
+						  processFirstBlockReport(node, newReport);
 					  }
 					  else
 					  {
-						  processReport(node, newReport, true);
+						  processReport(node, newReport);
 					  }
 					  DBConnector.commit();
 					  isDone = true;
@@ -1490,7 +1492,7 @@ public class BlockManager {
 		  }
 
   private void processReport(final DatanodeDescriptor node,
-      final BlockListAsLongs report, boolean isTransactional) throws IOException {
+      final BlockListAsLongs report) throws IOException {
     // Normal case:
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
@@ -1504,13 +1506,13 @@ public class BlockManager {
 
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
-      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState, isTransactional);
+      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
     }
     for (Block b : toRemove) {
-      removeStoredBlock(b, node, isTransactional);
+      removeStoredBlock(b, node);
     }
     for (BlockInfo b : toAdd) {
-      addStoredBlock(b, node, null, true, isTransactional);
+      addStoredBlock(b, node, null, true);
     }
     for (Block b : toInvalidate) {
       NameNode.stateChangeLog.info("BLOCK* processReport: block "
@@ -1519,7 +1521,7 @@ public class BlockManager {
       addToInvalidates(b, node);
     }
     for (BlockInfo b : toCorrupt) {
-      markBlockAsCorrupt(b, node, isTransactional);
+      markBlockAsCorrupt(b, node);
     }
   }
 
@@ -1535,7 +1537,7 @@ public class BlockManager {
    * @throws IOException 
    */
   private void processFirstBlockReport(final DatanodeDescriptor node,
-      final BlockListAsLongs report, boolean isTransactional) throws IOException {
+      final BlockListAsLongs report) throws IOException {
     if (report == null) return;
     assert (namesystem.hasWriteLock());
     assert (node.numBlocks() == 0);
@@ -1551,7 +1553,7 @@ public class BlockManager {
       // If block is corrupt, mark it and continue to next block.
       BlockUCState ucState = storedBlock.getBlockUCState();
       if (isReplicaCorrupt(iblk, reportedState, storedBlock, ucState, node)) {
-        markBlockAsCorrupt(storedBlock, node, isTransactional);
+        markBlockAsCorrupt(storedBlock, node);
         continue;
       }
       
@@ -1565,7 +1567,7 @@ public class BlockManager {
       }      
       //add replica if appropriate
       if (reportedState == ReplicaState.FINALIZED) {
-        addStoredBlockImmediate(storedBlock, node, isTransactional);
+        addStoredBlockImmediate(storedBlock, node);
       }
     }
   }
@@ -1743,14 +1745,13 @@ public class BlockManager {
   void addStoredBlockUnderConstruction(
       BlockInfoUnderConstruction block, 
       DatanodeDescriptor node, 
-      ReplicaState reportedState,
-      boolean isTransactional) 
+      ReplicaState reportedState)
   throws IOException {
     ReplicaUnderConstruction expReplica = block.addExpectedReplica(node.getStorageID(), reportedState);
     if (expReplica != null)
       em.add(expReplica);
     if (reportedState == ReplicaState.FINALIZED && !block.hasReplicaIn(node.getStorageID())) {
-      addStoredBlock(block, node, null, true, isTransactional);
+      addStoredBlock(block, node, null, true);
     }
   }
   
@@ -1766,13 +1767,13 @@ public class BlockManager {
    * @throws IOException
    */
   private void addStoredBlockImmediate(BlockInfo storedBlock,
-                               DatanodeDescriptor node, boolean isTransactional)
+                               DatanodeDescriptor node)
   throws IOException {
 	  BlockManager.LOG.debug("WASIF inside BM.addStoredBlockImmediate " + storedBlock.getBlockId());  
     assert (storedBlock != null && namesystem.hasWriteLock());
     if (!namesystem.isInStartupSafeMode() 
         || namesystem.isPopulatingReplQueues()) {
-      addStoredBlock(storedBlock, node, null, false, isTransactional);
+      addStoredBlock(storedBlock, node, null, false);
       return;
     }
     
@@ -1801,7 +1802,7 @@ public class BlockManager {
   private Block addStoredBlock(final BlockInfo block,
                                DatanodeDescriptor node,
                                DatanodeDescriptor delNodeHint,
-                               boolean logEveryBlock, boolean isTransactional)
+                               boolean logEveryBlock)
   throws IOException {
     assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
@@ -1891,7 +1892,7 @@ public class BlockManager {
           " but corrupt replicas map has " + corruptReplicasCount);
     }
     if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication))
-      invalidateCorruptReplicas(storedBlock, isTransactional);
+      invalidateCorruptReplicas(storedBlock);
     return storedBlock;
   }
 
@@ -1908,7 +1909,7 @@ public class BlockManager {
    *
    * @param blk Block whose corrupt replicas need to be invalidated
    */
-  private void invalidateCorruptReplicas(Block blk, boolean isTransactional) {
+  private void invalidateCorruptReplicas(Block blk) {
     Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
     boolean gotException = false;
     if (nodes == null)
@@ -1918,7 +1919,7 @@ public class BlockManager {
     DatanodeDescriptor[] nodesCopy = nodes.toArray(new DatanodeDescriptor[0]);
     for (DatanodeDescriptor node : nodesCopy) {
       try {
-        invalidateBlock(blk, node, isTransactional);
+        invalidateBlock(blk, node);
       } catch (IOException e) {
         NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
                                       "error in deleting bad block " + blk +
@@ -2151,14 +2152,14 @@ public class BlockManager {
    * removed block is still valid.
    * @throws IOException 
    */
-  public void removeStoredBlock(Block block, DatanodeDescriptor node, boolean isTransactional) throws IOException {
+  public void removeStoredBlock(Block block, DatanodeDescriptor node) throws IOException {
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* removeStoredBlock: "
           + block + " from " + node.getName());
     }
     assert (namesystem.hasWriteLock());
     {
-      if (!removeNode(block, node, isTransactional)) {
+      if (!removeNode(block, node)) {
         if(NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("BLOCK* removeStoredBlock: "
               + block + " has already been removed from node " + node);
@@ -2205,21 +2206,24 @@ public class BlockManager {
    * only if it does not belong to any file and data-nodes.
    * @throws IOException 
    */
-  boolean removeNode(Block b, DatanodeDescriptor node, boolean isTransactional) throws IOException {
+  boolean removeNode(Block b, DatanodeDescriptor node) throws IOException {
     BlockInfo info = getStoredBlock(b);
-    if (info == null)
+    if (info == null) {
       return false;
+    }
     // remove block from the data-node list and the node from the block info
     IndexedReplica removedReplica = info.removeReplica(node);
-    if (removedReplica != null)
+    if (removedReplica != null) {
       em.remove(removedReplica);
-    
-    if (info.getReplicas().isEmpty()     // no datanodes left
-              && info.getINode() == null) {  try {
+    }
+
+    if (info.getReplicas().isEmpty() // no datanodes left
+            && info.getINode() == null) {
+      try {
         // does not belong to a file
-      info.getINode().removeBlock(info);
-      info.setINode(null);
-      em.remove(info);
+        info.getINode().removeBlock(info);
+        info.setINode(null);
+        em.remove(info);
       } catch (Exception ex) {
         Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
       }
@@ -2248,7 +2252,7 @@ public class BlockManager {
    * The given node is reporting that it received a certain block.
    */
   @VisibleForTesting
-  void addBlock(DatanodeDescriptor node, Block block, String delHint, boolean isTransactional)
+  void addBlock(DatanodeDescriptor node, Block block, String delHint)
       throws IOException {
     // decrement number of blocks scheduled to this datanode.
     node.decBlocksScheduled();
@@ -2281,10 +2285,10 @@ public class BlockManager {
       : "The block should be only in one of the lists.";
 
     for (StatefulBlockInfo b : toUC) { 
-      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState, isTransactional);
+      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
     }
     for (BlockInfo b : toAdd) {
-      addStoredBlock(b, node, delHintNode, true, isTransactional);
+      addStoredBlock(b, node, delHintNode, true);
     }
     for (Block b : toInvalidate) {
       NameNode.stateChangeLog.info("BLOCK* addBlock: block "
@@ -2293,7 +2297,7 @@ public class BlockManager {
       addToInvalidates(b, node);
     }
     for (BlockInfo b : toCorrupt) {
-      markBlockAsCorrupt(b, node, isTransactional);
+      markBlockAsCorrupt(b, node);
     }
   }
 
@@ -2326,12 +2330,12 @@ public class BlockManager {
                             if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
                                 // KTHFS:  removes block from triplets table
                                 removeStoredBlock(
-                                        receivedAndDeletedBlocks[i].getBlock(), node, true);
+                                        receivedAndDeletedBlocks[i].getBlock(), node);
                                 deleted++;
                             } else {
                                 // KTHFS:  adds block from triplets table
                                 addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
-                                        receivedAndDeletedBlocks[i].getDelHints(), true);
+                                        receivedAndDeletedBlocks[i].getDelHints());
                                 received++;
                             }
 
@@ -2584,10 +2588,10 @@ public class BlockManager {
     return em.countAll(BlockInfo.class);
   }
 
-  public void removeBlock(Block block, boolean isTransactional) throws IOException {
+  public void removeBlock(Block block) throws IOException {
     block.setNumBytes(BlockCommand.NO_ACK);
     addToInvalidates(block);
-    removeBlockFromMap(block, isTransactional);
+    removeBlockFromMap(block);
   }
 
   public BlockInfo getStoredBlock(Block block) throws IOException {
@@ -2712,7 +2716,7 @@ public class BlockManager {
     return corruptReplicas.numCorruptReplicas(block);
   }
 
-  public void removeBlockFromMap(Block block, boolean isTransactional) throws IOException {
+  public void removeBlockFromMap(Block block) throws IOException {
     try {
       corruptReplicas.removeFromCorruptReplicasMap(block);
       BlockInfo bi = getStoredBlock(block);

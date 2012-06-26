@@ -70,7 +70,7 @@ public abstract class PendingBlockStorage implements Storage<PendingBlockInfo> {
       case ByPKey:
         long blockId = (Long) params[0];
         if (this.pendings.containsKey(blockId)) {
-          return this.pendings.get(blockId);
+          result = this.pendings.get(blockId);
         } else if (!this.removedPendings.containsKey(blockId)) {
           result = findByPKey(blockId);
           if (result != null) {

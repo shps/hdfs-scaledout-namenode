@@ -54,7 +54,7 @@ public class InvalidatedBlockClusterj extends InvalidatedBlockStorage {
   protected List<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<InvalidateBlocksTable> qdt = qb.createQueryDefinition(InvalidateBlocksTable.class);
-    qdt.where(qdt.get(STORAGE_ID).equal(qdt.param("param")));
+    qdt.where(qdt.get("storageId").equal(qdt.param("param")));
     Query<InvalidateBlocksTable> query = session.createQuery(qdt);
     query.setParameter("param", storageId);
     List<InvalidateBlocksTable> invBlockTables = query.getResultList();

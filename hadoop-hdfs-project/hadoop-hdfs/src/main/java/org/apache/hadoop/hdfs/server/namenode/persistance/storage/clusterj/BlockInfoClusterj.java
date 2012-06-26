@@ -15,7 +15,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
 
 /**
  *
@@ -45,7 +44,7 @@ public class BlockInfoClusterj extends BlockInfoStorage {
   protected List<BlockInfo> findByInodeId(long id) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<BlockInfoTable> dobj = qb.createQueryDefinition(BlockInfoTable.class);
-    dobj.where(dobj.get(INODE_ID).equal(dobj.param("param")));
+    dobj.where(dobj.get("iNodeId").equal(dobj.param("param")));
     Query<BlockInfoTable> query = session.createQuery(dobj);
     query.setParameter("param", id);
     List<BlockInfoTable> resultList = query.getResultList();
@@ -78,7 +77,7 @@ public class BlockInfoClusterj extends BlockInfoStorage {
     List<BlockInfo> ret = new ArrayList<BlockInfo>();
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
-    dobj.where(dobj.get(IndexedReplicaStorage.TABLE_NAME).equal(dobj.param("param")));
+    dobj.where(dobj.get("storageId").equal(dobj.param("param")));
     Query<TripletsTable> query = session.createQuery(dobj);
     query.setParameter("param", storageId);
     List<TripletsTable> triplets = query.getResultList();
@@ -138,7 +137,7 @@ public class BlockInfoClusterj extends BlockInfoStorage {
       blockInfo = new BlockInfo(b);
     }
 
-    blockInfo.setINodeId(bit.getINodeID());
+    blockInfo.setINodeId(bit.getINodeId());
     blockInfo.setTimestamp(bit.getTimestamp());
     blockInfo.setBlockIndex(bit.getBlockIndex());
 
@@ -149,7 +148,7 @@ public class BlockInfoClusterj extends BlockInfoStorage {
     persistable.setBlockId(block.getBlockId());
     persistable.setNumBytes(block.getNumBytes());
     persistable.setGenerationStamp(block.getGenerationStamp());
-    persistable.setINodeID(block.getINode().getID());
+    persistable.setINodeId(block.getINode().getId());
     persistable.setTimestamp(block.getTimestamp());
     persistable.setBlockIndex(block.getBlockIndex());
     persistable.setBlockUCState(block.getBlockUCState().ordinal());
@@ -158,6 +157,5 @@ public class BlockInfoClusterj extends BlockInfoStorage {
       persistable.setPrimaryNodeIndex(ucBlock.getPrimaryNodeIndex());
       persistable.setBlockRecoveryId(ucBlock.getBlockRecoveryId());
     }
-
   }
 }

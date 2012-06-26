@@ -10,4 +10,8 @@ public class TransactionContextException extends Exception {
     super(msg);
   }
   
+  public TransactionContextException(Exception e) {
+    super(e);
+  }
+  
 }

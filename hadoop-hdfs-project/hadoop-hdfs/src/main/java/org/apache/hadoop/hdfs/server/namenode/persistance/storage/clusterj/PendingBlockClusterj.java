@@ -79,7 +79,7 @@ public class PendingBlockClusterj extends PendingBlockStorage {
   protected List<PendingBlockInfo> findByTimeLimit(long timeLimit) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<PendingBlockTable> qdt = qb.createQueryDefinition(PendingBlockTable.class);
-    PredicateOperand predicateOp = qdt.get(TIME_STAMP);
+    PredicateOperand predicateOp = qdt.get("timestamp");
     String paramName = "timelimit";
     PredicateOperand param = qdt.param(paramName);
     Predicate lessThan = predicateOp.lessThan(param);

@@ -18,6 +18,9 @@ public abstract class ReplicaUnderConstructionStorage implements Storage<Replica
   public static final String STORAGE_ID = "storage_id";
   public static final String STATE = "state";
   public static final String REPLICA_INDEX = "replica_index";
+  /**
+   * Mappings
+   */
   protected Map<String, ReplicaUnderConstruction> newReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
   protected Map<String, ReplicaUnderConstruction> removedReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
   protected Map<Long, List<ReplicaUnderConstruction>> blockReplicasUc = new HashMap<Long, List<ReplicaUnderConstruction>>();
@@ -44,7 +47,7 @@ public abstract class ReplicaUnderConstructionStorage implements Storage<Replica
       case ByBlockId:
         long blockId = (Long) params[0];
         if (blockReplicasUc.containsKey(blockId)) {
-          return blockReplicasUc.get(blockId);
+          result = blockReplicasUc.get(blockId);
         } else {
           result = findReplicaUnderConstructionByBlockId(blockId);
           blockReplicasUc.put(blockId, result);

@@ -13,7 +13,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.LeaseFactory;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseStorage;
 
 /**
@@ -33,7 +32,7 @@ public class LeaseClusterj extends LeaseStorage {
   public void commit() {
     for (Lease l : modifiedLeases.values()) {
       LeaseTable lTable = session.newInstance(LeaseTable.class);
-      LeaseFactory.createPersistableLeaseInstance(l, lTable);
+      createPersistableLeaseInstance(l, lTable);
       session.savePersistent(lTable);
     }
 
@@ -48,7 +47,7 @@ public class LeaseClusterj extends LeaseStorage {
   protected Lease findByPKey(String holder) {
     LeaseTable lTable = session.find(LeaseTable.class, holder);
     if (lTable != null) {
-      Lease lease = LeaseFactory.createLease(lTable);
+      Lease lease = createLease(lTable);
       return lease;
     }
     return null;
@@ -60,7 +59,7 @@ public class LeaseClusterj extends LeaseStorage {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<LeaseTable> dobj = qb.createQueryDefinition(LeaseTable.class);
 
-    dobj.where(dobj.get(HOLDER_ID).equal(dobj.param("param")));
+    dobj.where(dobj.get("holderId").equal(dobj.param("param")));
 
     Query<LeaseTable> query = session.createQuery(dobj);
     query.setParameter("param", holderId); //the WHERE clause of SQL
@@ -70,7 +69,7 @@ public class LeaseClusterj extends LeaseStorage {
       LeaseManager.LOG.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
       return null;
     } else if (leaseTables.size() == 1) {
-      Lease lease = LeaseFactory.createLease(leaseTables.get(0));
+      Lease lease = createLease(leaseTables.get(0));
       return lease;
     } else {
       LeaseManager.LOG.info("No rows found for holderID:" + holderId + " in Lease table");
@@ -92,7 +91,7 @@ public class LeaseClusterj extends LeaseStorage {
   protected Collection<Lease> findByTimeLimit(long timeLimit) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType dobj = qb.createQueryDefinition(LeaseTable.class);
-    PredicateOperand propertyPredicate = dobj.get(LAST_UPDATE);
+    PredicateOperand propertyPredicate = dobj.get("lastUpdate");
     String param = "timelimit";
     PredicateOperand propertyLimit = dobj.param(param);
     Predicate lessThan = propertyPredicate.lessThan(propertyLimit);
@@ -107,7 +106,7 @@ public class LeaseClusterj extends LeaseStorage {
     SortedSet<Lease> lSet = new TreeSet<Lease>();
     if (lTables != null) {
       for (LeaseTable lt : lTables) {
-        Lease lease = LeaseFactory.createLease(lt);
+        Lease lease = createLease(lt);
         if (!removedLeases.containsKey(lease)) {
           if (leases.containsKey(lease.getHolder())) {
             lSet.add(leases.get(lease.getHolder()));
@@ -121,5 +120,15 @@ public class LeaseClusterj extends LeaseStorage {
     }
 
     return lSet;
+  }
+
+  private Lease createLease(LeaseTable lTable) {
+    return new Lease(lTable.getHolder(), lTable.getHolderID(), lTable.getLastUpdate());
+  }
+
+  private void createPersistableLeaseInstance(Lease lease, LeaseTable lTable) {
+    lTable.setHolder(lease.getHolder());
+    lTable.setHolderID(lease.getHolderID());
+    lTable.setLastUpdate(lease.getLastUpdated());
   }
 }

@@ -49,7 +49,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       DatanodeDescriptor dn = bm.getDatanodes(bm.getStoredBlock(b.getLocalBlock())).get(0);
       bm.addToInvalidates(b.getLocalBlock(), dn);
-      bm.removeNode(b.getLocalBlock(), dn, false);
+      bm.removeNode(b.getLocalBlock(), dn);
       DBConnector.commit();
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

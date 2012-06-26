@@ -423,7 +423,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
 
-  //TODO: kamal, tx
   @Override // ClientProtocol
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
       ExtendedBlock newBlock, DatanodeID[] newNodes)

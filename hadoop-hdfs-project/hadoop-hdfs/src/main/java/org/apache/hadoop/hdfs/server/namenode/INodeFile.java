@@ -21,13 +21,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
@@ -35,25 +36,47 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
  */
 public class INodeFile extends INode {
 
-  static final FsPermission UMASK = FsPermission.createImmutable((short) 0111);
-  /**
-   * Number of bits for Block size
-   */
-  static final short BLOCKBITS = 48;
-  /**
-   * Header mask 64-bit representation
-   * Format: [16 bits for replication][48 bits for PreferredBlockSize]
-   */ 
-  static final long HEADERMASK = 0xffffL << BLOCKBITS;
-  protected long header;
+  public static final FsPermission UMASK = FsPermission.createImmutable((short) 0111);
+  private short replication;
+  private long preferredBlockSize;
   private List<BlockInfo> blocks = null;
+  private boolean underConstruction = false;
+  private String clientName;         // lease holder
+  private String clientMachine;
+  private DatanodeID clientNode; // if client is a cluster node too.
 
-  protected INodeFile(PermissionStatus permissions,
+  public INodeFile(boolean underConstruction, PermissionStatus permissions,
           short replication, long modificationTime,
           long atime, long preferredBlockSize) {
     super(permissions, modificationTime, atime);
-    this.setReplication(replication);
-    this.setPreferredBlockSize(preferredBlockSize);
+    this.underConstruction = underConstruction;
+    this.replication = replication;
+    this.preferredBlockSize = preferredBlockSize;
+  }
+  
+  public INodeFile(boolean undercConstruction, PermissionStatus permissions, short replication,
+                                 long preferredBlockSize, long modTime, String clientName, 
+                                 String clientMachine, DatanodeID clientNode) {
+    this(undercConstruction, permissions.applyUMask(UMASK), replication, modTime, modTime, preferredBlockSize);
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
+    this.clientNode = clientNode;
+  }
+  
+  public INodeFile(boolean underConstruction, byte[] name,
+                             short blockReplication,
+                             long modificationTime,
+                             long preferredBlockSize,
+                             PermissionStatus perm,
+                             String clientName,
+                             String clientMachine,
+                             DatanodeID clientNode) {
+    this(underConstruction, perm, blockReplication, modificationTime, modificationTime,
+          preferredBlockSize);
+    this.name = name;
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
+    this.clientNode = clientNode;
   }
 
   @Override
@@ -61,51 +84,20 @@ public class INodeFile extends INode {
     return false;
   }
 
-  /**
-   * Get block replication for the file
-   *
-   * @return block replication value
-   */
   public short getReplication() {
-    return (short) ((header & HEADERMASK) >> BLOCKBITS);
+    return replication;
   }
 
   public void setReplication(short replication) {
-    if (replication <= 0) {
-      throw new IllegalArgumentException("Unexpected value for the replication");
-    }
-    header = ((long) replication << BLOCKBITS) | (header & ~HEADERMASK);
+    this.replication = replication;
   }
 
-  /**
-   * [STATELESS] get header If you need preferred block size, or other
-   * properties, select/set this value first.
-   */
-  public long getHeader() {
-    return header;
-  }
-
-  /**
-   * [STATELESS] set header
-   */
-  public void setHeader(long val) {
-    header = val;
-  }
-
-  /**
-   * Get preferred block size for the file
-   *
-   * @return preferred block size in bytes
-   */
   public long getPreferredBlockSize() {
-    return header & ~HEADERMASK;
+    return preferredBlockSize;
   }
 
-  public void setPreferredBlockSize(long preferredBlkSize) {
-    if ((preferredBlkSize < 0) || (preferredBlkSize > ~HEADERMASK)) {
-      throw new IllegalArgumentException("Unexpected value for the block size");
-    }
-    header = (header & HEADERMASK) | (preferredBlkSize & ~HEADERMASK);
+  public void setPreferredBlockSize(long preferredBlockSize) {
+    this.preferredBlockSize = preferredBlockSize;
   }
 
   /**
@@ -118,11 +110,11 @@ public class INodeFile extends INode {
     if (blocks == null) {
       blocks = (List<BlockInfo>) EntityManager.getInstance().findList(BlockInfoFinder.ByInodeId, id);
     }
-    
+
     Collections.sort(blocks, BlockInfo.Order.ByBlockIndex);
     return blocks;
   }
-  
+
   public void setBlocks(List<BlockInfo> blocks) {
     this.blocks = blocks;
   }
@@ -132,52 +124,53 @@ public class INodeFile extends INode {
     block.setBlockIndex(blks.size());
     blks.add(block);
   }
-  
+
   public void removeBlock(BlockInfo block) {
     List<BlockInfo> blks = getBlocks();
     int index = block.getBlockIndex();
-    
+
     blks.remove(block);
-    
-    if (index != blks.size())
+
+    if (index != blks.size()) {
       for (int i = index; i < blocks.size(); i++) {
         blocks.get(i).setBlockIndex(i);
         EntityManager.getInstance().update(blocks.get(i));
       }
+    }
   }
-  
+
   public void setBlock(int index, BlockInfo block) {
     List<BlockInfo> blks = getBlocks();
-    
+
     block.setBlockIndex(index);
     blks.set(index, block);
-    
+
     if (index < blks.size() - 1) {
       for (int i = index + 1; i < blks.size(); i++) {
         blks.get(i).setBlockIndex(i);
         EntityManager.getInstance().update(blks.get(i));
       }
     }
-      
+
   }
-  
+
   /**
    * Set the {@link FsPermission} of this {@link INodeFile}. Since this is a
    * file, the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
   @Override
-  protected void setPermission(FsPermission permission) {
+  public void setPermission(FsPermission permission) {
     super.setPermission(permission.applyUMask(UMASK));
   }
 
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> blocks, boolean isTransactional) {
-    collectSubtreeBlocksAndClearNoDelete(blocks, isTransactional);
-    INodeHelper.removeChild(super.id, isTransactional);
+  public int collectSubtreeBlocksAndClear(List<Block> blocks) {
+    collectSubtreeBlocksAndClearNoDelete(blocks);
+    EntityManager.getInstance().remove(this);
     return 1;
   }
 
-  int collectSubtreeBlocksAndClearNoDelete(List<Block> v, boolean isTransactional) {
+  public int collectSubtreeBlocksAndClearNoDelete(List<Block> v) {
 
     parent = null;
     List<BlockInfo> tempList = new ArrayList<BlockInfo>(getBlocks());
@@ -194,7 +187,7 @@ public class INodeFile extends INode {
   /**
    * {@inheritDoc}
    */
-  long[] computeContentSummary(long[] summary) {
+  public long[] computeContentSummary(long[] summary) {
     summary[0] += computeFileSize(true);
     summary[1]++;
     summary[3] += diskspaceConsumed();
@@ -204,38 +197,38 @@ public class INodeFile extends INode {
   /**
    * Compute file size. May or may not include BlockInfoUnderConstruction.
    */
-  long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
     List<BlockInfo> blks = getBlocks();
     if (blks.isEmpty()) {
       return 0;
     }
     final int last = blks.size() - 1;
     //check if the last block is BlockInfoUnderConstruction
-    long bytes =  blks.get(last) instanceof BlockInfoUnderConstruction
+    long bytes = blks.get(last) instanceof BlockInfoUnderConstruction
             && !includesBlockInfoUnderConstruction
             ? 0 : blks.get(last).getNumBytes();
-    
-    for (int i = 0; i < blks.size() - 1 ; i++) {
+
+    for (int i = 0; i < blks.size() - 1; i++) {
       bytes += blks.get(i).getNumBytes();
     }
-      
+
     return bytes;
   }
 
   @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
+  public DirCounts spaceConsumedInTree(DirCounts counts) {
     counts.nsCount += 1;
     counts.dsCount += diskspaceConsumed();
     return counts;
   }
 
-  long diskspaceConsumed() {
+  public long diskspaceConsumed() {
     List<BlockInfo> list = getBlocks();
     Block[] array = list.toArray(new Block[list.size()]);
     return diskspaceConsumed(array);
   }
 
-  long diskspaceConsumed(Block[] blkArr) {
+  public long diskspaceConsumed(Block[] blkArr) {
     long size = 0;
     if (blkArr == null) {
       return 0;
@@ -262,7 +255,7 @@ public class INodeFile extends INode {
    *
    * @throws IOException
    */
-  BlockInfo getPenultimateBlock() throws IOException {
+  public BlockInfo getPenultimateBlock() throws IOException {
     if (getBlocks().size() <= 1) {
       return null;
     }
@@ -280,4 +273,64 @@ public class INodeFile extends INode {
     return blocks.get(blocks.size() - 1);
   }
 
+  public String getClientName() {
+    return clientName;
+  }
+
+  public void setClientName(String clientName) {
+    this.clientName = clientName;
+  }
+
+  public String getClientMachine() {
+    return clientMachine;
+  }
+
+  public DatanodeID getClientNode() {
+    return clientNode;
+  }
+
+  /**
+   * Is this inode being constructed?
+   */
+  @Override
+  public boolean isUnderConstruction() {
+    return underConstruction;
+  }
+  
+  public void convertToCompleteInode() {
+    this.underConstruction = false;
+  }
+  
+  public void convertToUnderConstruction(String clientName, String clientMachine, DatanodeID clientNode) {
+    this.underConstruction = true;
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
+    this.clientNode = clientNode;
+  }
+  
+  /**
+   * Convert the last block of the file to an under-construction block. Set its
+   * locations.
+   */
+  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock)
+          throws IOException {
+    if (getBlocks().isEmpty()) {
+      throw new IOException("Trying to update non-existant block. "
+              + "File is empty.");
+    }
+
+    BlockInfoUnderConstruction bUc;
+    if (getBlocks().contains(lastBlock));
+    removeBlock(lastBlock);
+    if (lastBlock.isComplete()) {
+      bUc = new BlockInfoUnderConstruction(lastBlock);
+    } else {
+      bUc = (BlockInfoUnderConstruction) lastBlock;
+      bUc.setBlockUCState(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION);
+    }
+
+    bUc.setINode(this);
+    addBlock(bUc);
+    return bUc;
+  }
 }

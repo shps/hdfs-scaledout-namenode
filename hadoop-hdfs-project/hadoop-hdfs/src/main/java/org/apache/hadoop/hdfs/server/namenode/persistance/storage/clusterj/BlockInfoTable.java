@@ -30,9 +30,9 @@ public interface BlockInfoTable {
 
   @Column(name = BlockInfoStorage.INODE_ID)
   @Index(name = "idx_inodeid")
-  long getINodeID();
+  long getINodeId();
 
-  void setINodeID(long iNodeID);
+  void setINodeId(long iNodeID);
 
   @Column(name = BlockInfoStorage.NUM_BYTES)
   long getNumBytes();

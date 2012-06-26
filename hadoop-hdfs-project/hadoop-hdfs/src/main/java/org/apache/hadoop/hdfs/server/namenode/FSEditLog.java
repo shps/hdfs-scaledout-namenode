@@ -502,7 +502,8 @@ public class FSEditLog  {
    * Records the block locations of the last block.
    * @throws IOException 
    */
-  public void logOpenFile(String path, INodeFileUnderConstruction newNode) throws IOException {
+  public void logOpenFile(String path, INodeFile newNode) throws IOException {
+    assert newNode.isUnderConstruction();
     AddOp op = AddOp.getInstance()
       .setPath(path)
       .setReplication(newNode.getReplication())

@@ -39,7 +39,7 @@ public class LeasePathClusterj extends LeasePathStorage {
   protected TreeSet<LeasePath> findByHolderId(int holderId) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<LeasePathsTable> dobj = qb.createQueryDefinition(LeasePathsTable.class);
-    dobj.where(dobj.get(HOLDER_ID).equal(dobj.param("param")));
+    dobj.where(dobj.get("holderId").equal(dobj.param("param")));
     Query<LeasePathsTable> query = session.createQuery(dobj);
     query.setParameter("param", holderId);
     List<LeasePathsTable> paths = query.getResultList();
@@ -90,7 +90,7 @@ public class LeasePathClusterj extends LeasePathStorage {
   protected TreeSet<LeasePath> findByPrefix(String prefix) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType dobj = qb.createQueryDefinition(LeasePathsTable.class);
-    PredicateOperand propertyPredicate = dobj.get(PATH);
+    PredicateOperand propertyPredicate = dobj.get("path");
     String param = "prefix";
     PredicateOperand propertyLimit = dobj.param(param);
     Predicate like = propertyPredicate.like(propertyLimit);

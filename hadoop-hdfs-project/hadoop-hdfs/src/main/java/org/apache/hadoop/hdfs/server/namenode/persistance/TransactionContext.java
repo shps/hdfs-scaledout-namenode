@@ -60,10 +60,11 @@ public class TransactionContext {
     if (!activeTxExpected) {
       throw new TransactionContextException("Transaction was not begun");
     }
+
     if (storages.containsKey(obj.getClass())) {
       storages.get(obj.getClass()).update(obj);
     } else {
-      throw new TransactionContextException("Unknown class class type to update. Class type: " + obj.getClass());
+      throw new TransactionContextException("Unknown class class type to add. Class type: " + obj.getClass());
     }
   }
 
@@ -85,8 +86,7 @@ public class TransactionContext {
       if (storages.containsKey(obj.getClass())) {
         storages.get(obj.getClass()).remove(obj);
       } else {
-        done = false;
-        throw new TransactionContextException("Unknown class class type to remove. Class type: " + obj.getClass());
+        throw new TransactionContextException("Unknown class class type to add. Class type: " + obj.getClass());
       }
     } finally {
       afterTxCheck(done);
@@ -96,7 +96,11 @@ public class TransactionContext {
   public <T> T find(Finder<T> finder, Object... params) throws TransactionContextException {
     beforeTxCheck();
     try {
-      return (T) storages.get(finder.getType()).find(finder, params);
+      if (storages.containsKey(finder.getType())) {
+        return (T) storages.get(finder.getType()).find(finder, params);
+      } else {
+        throw new TransactionContextException("Unknown class class type to add. Class type: " + finder.getType());
+      }
     } finally {
       afterTxCheck(true);
     }
@@ -105,7 +109,11 @@ public class TransactionContext {
   public <T> Collection<T> findList(Finder<T> finder, Object... params) throws TransactionContextException {
     beforeTxCheck();
     try {
-      return storages.get(finder.getType()).findList(finder, params);
+      if (storages.containsKey(finder.getType())) {
+        return storages.get(finder.getType()).findList(finder, params);
+      } else {
+        throw new TransactionContextException("Unknown class class type to add. Class type: " + finder.getType());
+      }
     } finally {
       afterTxCheck(true);
     }
@@ -114,7 +122,11 @@ public class TransactionContext {
   public int countAll(Class type) throws TransactionContextException {
     beforeTxCheck();
     try {
-      return storages.get(type).countAll();
+      if (storages.containsKey(type)) {
+        return storages.get(type).countAll();
+      } else {
+        throw new TransactionContextException("Unknown class class type to add. Class type: " + type);
+      }
     } finally {
       afterTxCheck(true);
     }

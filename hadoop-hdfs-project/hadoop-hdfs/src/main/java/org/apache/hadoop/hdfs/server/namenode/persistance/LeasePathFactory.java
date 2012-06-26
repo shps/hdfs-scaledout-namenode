@@ -15,7 +15,7 @@ public class LeasePathFactory {
     if (leasePathTables != null) {
       for (int i = 0; i < lPaths.length; i++) {
         LeasePathsTable lpt = leasePathTables.get(i);
-        lPaths[i] = (new LeasePath(lpt.getPath(), lpt.getHolderID()));
+        lPaths[i] = (new LeasePath(lpt.getPath(), lpt.getHolderId()));
       }
     }
 
@@ -23,11 +23,11 @@ public class LeasePathFactory {
   }
 
   public static LeasePath createLeasePath(LeasePathsTable leasePathTable) {
-    return new LeasePath(leasePathTable.getPath(), leasePathTable.getHolderID());
+    return new LeasePath(leasePathTable.getPath(), leasePathTable.getHolderId());
   }
 
   public static void createPersistableLeasePathInstance(LeasePath lp, LeasePathsTable lTable) {
-    lTable.setHolderID(lp.getHolderId());
+    lTable.setHolderId(lp.getHolderId());
     lTable.setPath(lp.getPath());
   }
 }

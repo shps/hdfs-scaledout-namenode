@@ -39,7 +39,7 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstructionSt
   protected List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<ReplicaUcTable> dobj = qb.createQueryDefinition(ReplicaUcTable.class);
-    dobj.where(dobj.get(BLOCK_ID).equal(dobj.param("param")));
+    dobj.where(dobj.get("blockId").equal(dobj.param("param")));
     Query<ReplicaUcTable> query = session.createQuery(dobj);
     query.setParameter("param", blockId);
     List<ReplicaUcTable> storedReplicas = query.getResultList();
@@ -51,7 +51,8 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstructionSt
   private List<ReplicaUnderConstruction> createReplicaList(List<ReplicaUcTable> replicaUc) {
     List<ReplicaUnderConstruction> replicas = new ArrayList<ReplicaUnderConstruction>(replicaUc.size());
     for (ReplicaUcTable t : replicaUc) {
-      replicas.add(new ReplicaUnderConstruction(HdfsServerConstants.ReplicaState.values()[t.getState()], t.getStorageId(), t.getBlockId(), t.getIndex()));
+      replicas.add(new ReplicaUnderConstruction(HdfsServerConstants.ReplicaState.values()[t.getState()],
+              t.getStorageId(), t.getBlockId(), t.getIndex()));
     }
     return replicas;
   }

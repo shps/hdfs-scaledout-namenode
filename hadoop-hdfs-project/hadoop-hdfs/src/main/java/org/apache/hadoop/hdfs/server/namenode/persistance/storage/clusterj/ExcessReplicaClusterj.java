@@ -53,7 +53,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaStorage {
 
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<ExcessReplicaTable> qdt = qb.createQueryDefinition(ExcessReplicaTable.class);
-    qdt.where(qdt.get(STORAGE_ID).equal(qdt.param("param")));
+    qdt.where(qdt.get("storageId").equal(qdt.param("param")));
     Query<ExcessReplicaTable> query = session.createQuery(qdt);
     query.setParameter("param", storageId);
     List<ExcessReplicaTable> invBlockTables = query.getResultList();

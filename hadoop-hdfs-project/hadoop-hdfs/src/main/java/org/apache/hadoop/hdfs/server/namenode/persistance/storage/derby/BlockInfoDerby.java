@@ -92,7 +92,7 @@ public class BlockInfoDerby extends BlockInfoStorage {
       for (BlockInfo block : newBlocks.values()) {
         insrt.setLong(1, block.getBlockId());
         insrt.setInt(2, block.getBlockIndex());
-        insrt.setLong(3, block.getINode().getID());
+        insrt.setLong(3, block.getINode().getId());
         insrt.setLong(4, block.getNumBytes());
         insrt.setLong(5, block.getGenerationStamp());
         insrt.setInt(6, block.getBlockUCState().ordinal());
@@ -109,7 +109,7 @@ public class BlockInfoDerby extends BlockInfoStorage {
       for (BlockInfo block : modifiedBlocks.values()) {
         updt.setLong(9, block.getBlockId());
         updt.setInt(1, block.getBlockIndex());
-        updt.setLong(2, block.getINode().getID());
+        updt.setLong(2, block.getINode().getId());
         updt.setLong(3, block.getNumBytes());
         updt.setLong(4, block.getGenerationStamp());
         updt.setInt(5, block.getBlockUCState().ordinal());

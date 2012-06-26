@@ -175,8 +175,9 @@ public class LeaseManager {
   /**
    * Finds the pathname for the specified pendingFile
    */
-  public synchronized String findPath(INodeFileUnderConstruction pendingFile)
+  public synchronized String findPath(INodeFile pendingFile)
           throws IOException {
+    assert pendingFile.isUnderConstruction();
     Lease lease = getLease(pendingFile.getClientName());
     if (lease != null) {
       String src = null;
@@ -213,7 +214,7 @@ public class LeaseManager {
   }
 
   synchronized void changeLease(String src, String dst,
-          String overwrite, String replaceBy, boolean isTransactional) {
+          String overwrite, String replaceBy) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".changelease: "
               + " src=" + src + ", dest=" + dst
@@ -237,7 +238,7 @@ public class LeaseManager {
     }
   }
 
-  synchronized void removeLeaseWithPrefixPath(String prefix, boolean isTransactional) {
+  synchronized void removeLeaseWithPrefixPath(String prefix) {
     for (Map.Entry<LeasePath, Lease> entry : findLeaseWithPrefixPath(prefix)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
@@ -298,7 +299,7 @@ public class LeaseManager {
               while (!isDone && tries > 0) {
                 try {
                   DBConnector.beginTransaction();
-                  checkLeases(true);
+                  checkLeases();
                   DBConnector.commit();
                   isDone = true;
                 } catch (ClusterJException ex) {
@@ -333,7 +334,7 @@ public class LeaseManager {
   }
 
   /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases(boolean isTransactional) {
+  private synchronized void checkLeases() {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
     SortedSet<Lease> sortedLeases = (SortedSet<Lease>) em.findList(LeaseFinder.ByTimeLimit, expiredTime);
@@ -362,7 +363,7 @@ public class LeaseManager {
         try {
           boolean leaseReleased = false;
           leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(),
-                  HdfsServerConstants.NAMENODE_LEASE_HOLDER, isTransactional);
+                  HdfsServerConstants.NAMENODE_LEASE_HOLDER);
           if (leaseReleased) {
             LOG.info("Lease recovery for file " + lPath
                     + " is complete. File closed.");
@@ -379,7 +380,9 @@ public class LeaseManager {
       }
 
       for (LeasePath lPath : removing) {
-        removeLease(oldest, lPath);
+        if (oldest.getPaths().contains(lPath)) {
+          removeLease(oldest, lPath);
+        }
       }
 
       if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed

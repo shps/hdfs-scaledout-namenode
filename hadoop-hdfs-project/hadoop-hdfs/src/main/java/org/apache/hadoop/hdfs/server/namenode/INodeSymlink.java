@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 /**
  * An INode representing a symbolic link.
@@ -31,7 +32,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 public class INodeSymlink extends INode {
   private byte[] symlink; // The target URI
 
-  INodeSymlink(String value, long modTime, long atime,
+  public INodeSymlink(String value, long modTime, long atime,
                PermissionStatus permissions) {
     super(permissions, modTime, atime);
     assert value != null;
@@ -40,11 +41,12 @@ public class INodeSymlink extends INode {
     setAccessTime(atime);
   }
 
+  @Override
   public boolean isLink() {
     return true;
   }
   
-  void setLinkValue(String value) {
+  final void setLinkValue(String value) {
     this.symlink = DFSUtil.string2Bytes(value);
   }
 
@@ -57,21 +59,19 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
+  public DirCounts spaceConsumedInTree(DirCounts counts) {
     counts.nsCount += 1;
     return counts;
   }
   
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v, boolean isTransactional) {
-	// [Stateless] Remove me from DB
-	//INodeHelper.removeChild(this);
-	  INodeHelper.removeChild(this.id, isTransactional);
+  public int collectSubtreeBlocksAndClear(List<Block> v) {
+    EntityManager.getInstance().remove(this);
     return 1;
   }
 
   @Override
-  long[] computeContentSummary(long[] summary) {
+  public long[] computeContentSummary(long[] summary) {
     summary[1]++; // Increment the file count
     return summary;
   }

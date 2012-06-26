@@ -5,10 +5,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
 
 /**
@@ -18,6 +21,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplica
 public class IndexedReplicaDerby extends IndexedReplicaStorage {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
+  protected Map<String, IndexedReplica> newReplicas = new HashMap<String, IndexedReplica>();
 
   @Override
   protected List<IndexedReplica> findReplicasById(long id) {
@@ -37,9 +41,11 @@ public class IndexedReplicaDerby extends IndexedReplicaStorage {
 
   @Override
   public void commit() {
-    String insert = String.format("insert into %s values(?,?)", TABLE_NAME);
+    String insert = String.format("insert into %s values(?,?,?)", TABLE_NAME);
     String delete = String.format("delete from %s where %s=? and %s=?",
             TABLE_NAME, BLOCK_ID, STORAGE_ID);
+    String update = String.format("update %s set %s=? where %s=? and %s=?",
+            TABLE_NAME, REPLICA_INDEX, BLOCK_ID, STORAGE_ID);
     try {
       Connection conn = connector.obtainSession();
       PreparedStatement insrt = conn.prepareStatement(insert);
@@ -49,6 +55,15 @@ public class IndexedReplicaDerby extends IndexedReplicaStorage {
         insrt.addBatch();
       }
       insrt.executeBatch();
+
+      PreparedStatement updt = conn.prepareStatement(update);
+      for (IndexedReplica replica : modifiedReplicas.values()) {
+        updt.setLong(2, replica.getBlockId());
+        updt.setString(3, replica.getStorageId());
+        updt.setInt(1, replica.getIndex());
+        updt.addBatch();
+      }
+      updt.executeBatch();
 
       PreparedStatement dlt = conn.prepareStatement(delete);
       for (IndexedReplica replica : removedReplicas.values()) {
@@ -69,5 +84,20 @@ public class IndexedReplicaDerby extends IndexedReplicaStorage {
               rSet.getString(STORAGE_ID), rSet.getInt(REPLICA_INDEX)));
     }
     return replicas;
+  }
+
+  @Override
+  public void add(IndexedReplica replica) throws TransactionContextException {
+    if (removedReplicas.containsKey(replica.cacheKey())) {
+      throw new TransactionContextException("Removed replica passed to be persisted");
+    }
+
+    newReplicas.put(replica.cacheKey(), replica);
+  }
+
+  @Override
+  public void clear() {
+    super.clear();
+    newReplicas.clear();
   }
 }

@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,20 +21,21 @@ public abstract class IndexedReplicaStorage implements Storage<IndexedReplica> {
   /**
    * Mappings
    */
-  protected Map<String, IndexedReplica> newReplicas = new HashMap<String, IndexedReplica>();
   protected Map<String, IndexedReplica> removedReplicas = new HashMap<String, IndexedReplica>();
+  protected Map<String, IndexedReplica> modifiedReplicas = new HashMap<String, IndexedReplica>();
   protected Map<Long, List<IndexedReplica>> blockReplicas = new HashMap<Long, List<IndexedReplica>>();
 
   @Override
   public void clear() {
-    newReplicas.clear();
+    modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
   }
 
   @Override
   public void remove(IndexedReplica replica) throws TransactionContextException {
-    newReplicas.remove(replica.cacheKey());
+    modifiedReplicas.remove(replica.cacheKey());
+    blockReplicas.get(replica.getBlockId()).remove(replica);
     removedReplicas.put(replica.cacheKey(), replica);
   }
 
@@ -46,13 +48,16 @@ public abstract class IndexedReplicaStorage implements Storage<IndexedReplica> {
       case ByBlockId:
         long id = (Long) params[0];
         if (blockReplicas.containsKey(id)) {
-          return blockReplicas.get(id);
+          result = blockReplicas.get(id);
         } else {
           result = findReplicasById(id);
           blockReplicas.put(id, result);
         }
         break;
     }
+    
+    if (result != null)
+      return new ArrayList<IndexedReplica>(result);
 
     return result;
   }
@@ -69,16 +74,16 @@ public abstract class IndexedReplicaStorage implements Storage<IndexedReplica> {
 
   @Override
   public void update(IndexedReplica replica) throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void add(IndexedReplica replica) throws TransactionContextException {
     if (removedReplicas.containsKey(replica.cacheKey())) {
       throw new TransactionContextException("Removed replica passed to be persisted");
     }
 
-    newReplicas.put(replica.cacheKey(), replica);
+    modifiedReplicas.put(replica.cacheKey(), replica);
+  }
+
+  @Override
+  public void add(IndexedReplica replica) throws TransactionContextException {
+    update(replica);
   }
 
   protected abstract List<IndexedReplica> findReplicasById(long id);

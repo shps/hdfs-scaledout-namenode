@@ -98,7 +98,6 @@ public abstract class InvalidatedBlockStorage implements Storage<InvalidatedBloc
         } else {
           result = new ArrayList<InvalidatedBlock>(invBlocks.values());
         }
-
         break;
     }
 

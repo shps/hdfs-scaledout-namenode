@@ -11,9 +11,9 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStora
 public interface LeasePathsTable {
 
   @Column(name = LeasePathStorage.HOLDER_ID)
-  int getHolderID();
+  int getHolderId();
 
-  void setHolderID(int holder_id);
+  void setHolderId(int holder_id);
 
   @PrimaryKey
   @Column(name = LeasePathStorage.PATH)

@@ -71,14 +71,13 @@ public abstract class ExcessReplicaStorage implements Storage<ExcessReplica> {
         String storageId = (String) params[1];
         ExcessReplica searchInstance = new ExcessReplica(storageId, blockId);
         if (exReplicas.containsKey(searchInstance)) {
-          return exReplicas.get(searchInstance);
+          result = exReplicas.get(searchInstance);
+        } else if (removedExReplica.containsKey(searchInstance)) {
+          result = null;
+        } else {
+          result = findByPkey(params);
+          this.exReplicas.put(result, result);
         }
-
-        if (removedExReplica.containsKey(searchInstance)) {
-          return null;
-        }
-        result = findByPkey(params);
-        this.exReplicas.put(result, result);
         break;
     }
 

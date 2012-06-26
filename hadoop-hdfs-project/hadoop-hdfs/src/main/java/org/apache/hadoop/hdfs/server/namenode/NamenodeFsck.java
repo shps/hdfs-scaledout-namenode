@@ -267,7 +267,7 @@ public class NamenodeFsck {
     // Get block locations without updating the file access time 
     // and without block access tokens
     LocatedBlocks blocks = namenode.getNamesystem().getBlockLocations(path, 0,
-        fileLen, false, false, false);
+        fileLen, false, false);
     if (blocks == null) { // the file is deleted
       return;
     }

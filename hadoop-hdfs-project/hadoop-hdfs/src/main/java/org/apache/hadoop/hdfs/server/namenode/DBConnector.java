@@ -23,7 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ExcessReplicaTable;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INodeTableSimple;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INodeTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InvalidateBlocksTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeasePathsTable;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeaseTable;
@@ -136,7 +136,7 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
     Transaction tx = session.currentTransaction();
     try {
       tx.begin();
-      session.deletePersistentAll(INodeTableSimple.class);
+      session.deletePersistentAll(INodeTable.class);
       session.deletePersistentAll(BlockInfoTable.class);
       session.deletePersistentAll(LeaseTable.class);
       session.deletePersistentAll(LeasePathsTable.class);

@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongExce
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -160,12 +161,16 @@ public class TestFsLimits {
     if (fs == null) fs = new TestFSDirectory();
 
     INode child = new INodeDirectory(name, perms);
-    child.setLocalName(name);
+    child.setName(name);
     
     Class<?> generated = null;
     try {
       fs.verifyFsLimits(inodes, 1, child);
-      rootInode.addChild(child, false, false, false, false);
+      INode addedChild = rootInode.addChild(child, false, false, false);
+      if (addedChild != null) {
+        EntityManager.getInstance().update(rootInode);
+        EntityManager.getInstance().add(child);
+      }
     } catch (QuotaExceededException e) {
       generated = e.getClass();
     }

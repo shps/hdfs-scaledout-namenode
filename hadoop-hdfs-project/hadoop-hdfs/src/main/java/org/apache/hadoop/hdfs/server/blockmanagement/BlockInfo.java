@@ -24,10 +24,9 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeHelper;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.INodeFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaFinder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoTable;
 
 /**
  * Internal class for block metadata.
@@ -90,7 +89,7 @@ public class BlockInfo extends Block {
 
   public INodeFile getINode() {
     if (inode == null) {
-      inode = (INodeFile) INodeHelper.getINode(inodeId);
+      inode = (INodeFile) EntityManager.getInstance().find(INodeFinder.ByPKey, inodeId);
     }
 
     return inode;
@@ -225,8 +224,5 @@ public class BlockInfo extends Block {
 
   public void setTimestamp(long ts) {
     this.timestamp = ts;
-  }
-
-  public void toPersistable(BlockInfoTable persistable) {
   }
 }

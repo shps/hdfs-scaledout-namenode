@@ -27,7 +27,7 @@ public class IndexedReplicaClusterj extends IndexedReplicaStorage {
       session.deletePersistent(TripletsTable.class, pk);
     }
 
-    for (IndexedReplica replica : newReplicas.values()) {
+    for (IndexedReplica replica : modifiedReplicas.values()) {
       TripletsTable newInstance = session.newInstance(TripletsTable.class);
       createPersistable(replica, newInstance);
       session.savePersistent(newInstance);
@@ -38,7 +38,7 @@ public class IndexedReplicaClusterj extends IndexedReplicaStorage {
   protected List<IndexedReplica> findReplicasById(long id) {
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<TripletsTable> dobj = qb.createQueryDefinition(TripletsTable.class);
-    dobj.where(dobj.get(BLOCK_ID).equal(dobj.param("param")));
+    dobj.where(dobj.get("blockId").equal(dobj.param("param")));
     Query<TripletsTable> query = session.createQuery(dobj);
     query.setParameter("param", id);
     List<TripletsTable> triplets = query.getResultList();

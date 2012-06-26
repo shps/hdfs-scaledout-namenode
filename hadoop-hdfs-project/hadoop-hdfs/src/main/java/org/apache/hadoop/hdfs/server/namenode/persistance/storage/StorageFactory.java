@@ -1,6 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
-import java.rmi.dgc.Lease;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -10,9 +9,16 @@ import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
+import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ExcessReplicaClusterj;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INodeClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.IndexedReplicaClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InvalidatedBlockClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeaseClusterj;
@@ -59,6 +65,12 @@ public class StorageFactory {
     storages.put(Lease.class, new LeaseClusterj());
     storages.put(LeasePath.class, new LeasePathClusterj());
     storages.put(PendingBlockInfo.class, new PendingBlockClusterj());
+    INodeClusterj inodeClusterj = new INodeClusterj();
+    storages.put(INode.class, inodeClusterj);
+    storages.put(INodeDirectory.class, inodeClusterj);
+    storages.put(INodeFile.class, inodeClusterj);
+    storages.put(INodeDirectoryWithQuota.class, inodeClusterj);
+    storages.put(INodeSymlink.class, inodeClusterj);
 
     return storages;
   }
