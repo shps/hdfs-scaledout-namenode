@@ -123,12 +123,12 @@ public class LeaseClusterj extends LeaseStorage {
   }
 
   private Lease createLease(LeaseTable lTable) {
-    return new Lease(lTable.getHolder(), lTable.getHolderID(), lTable.getLastUpdate());
+    return new Lease(lTable.getHolder(), lTable.getHolderId(), lTable.getLastUpdate());
   }
 
   private void createPersistableLeaseInstance(Lease lease, LeaseTable lTable) {
     lTable.setHolder(lease.getHolder());
-    lTable.setHolderID(lease.getHolderID());
+    lTable.setHolderId(lease.getHolderID());
     lTable.setLastUpdate(lease.getLastUpdated());
   }
 }

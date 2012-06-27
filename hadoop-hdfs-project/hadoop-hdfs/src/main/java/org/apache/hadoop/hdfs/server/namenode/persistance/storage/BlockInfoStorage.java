@@ -87,7 +87,8 @@ public abstract class BlockInfoStorage implements Storage<BlockInfo> {
         result = blocks.get(id);
         if (result == null) {
           result = findById(id);
-          blocks.put(id, result);
+          if (result != null)
+            blocks.put(id, result);
         }
         break;
     }

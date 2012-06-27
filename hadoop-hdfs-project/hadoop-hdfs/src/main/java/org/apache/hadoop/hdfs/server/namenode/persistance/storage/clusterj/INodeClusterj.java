@@ -33,15 +33,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 public class INodeClusterj extends INodeStorage {
 
   private Session session = DBConnector.obtainSession();
-  /**
-   * Number of bits for Block size
-   */
-  static final short BLOCKBITS = 48;
-  /**
-   * Header mask 64-bit representation Format: [16 bits for replication][48 bits
-   * for PreferredBlockSize]
-   */
-  static final long HEADERMASK = 0xffffL << BLOCKBITS;
 
   @Override
   public int countAll() {
@@ -121,31 +112,6 @@ public class INodeClusterj extends INodeStorage {
     inode.setParentId(persistable.getParentId());
 
     return inode;
-  }
-
-  private short getReplication(long header) {
-    return (short) ((header & HEADERMASK) >> BLOCKBITS);
-  }
-
-  private long getHeader(short replication, long preferredBlockSize) {
-    long header = 0;
-
-    if (replication <= 0) {
-      throw new IllegalArgumentException("Unexpected value for the replication");
-    }
-
-    if ((preferredBlockSize < 0) || (preferredBlockSize > ~HEADERMASK)) {
-      throw new IllegalArgumentException("Unexpected value for the block size");
-    }
-
-    header = (header & HEADERMASK) | (preferredBlockSize & ~HEADERMASK);
-    header = ((long) replication << BLOCKBITS) | (header & ~HEADERMASK);
-
-    return header;
-  }
-
-  private long getPreferredBlockSize(long header) {
-    return header & ~HEADERMASK;
   }
 
   @Override

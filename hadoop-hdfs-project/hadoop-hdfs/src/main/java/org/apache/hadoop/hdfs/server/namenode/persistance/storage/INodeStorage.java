@@ -1,6 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +42,18 @@ public abstract class INodeStorage implements Storage<INode> {
   protected Map<Long, List<INode>> inodesParentIndex = new HashMap<Long, List<INode>>();
   protected Map<Long, INode> modifiedInodes = new HashMap<Long, INode>();
   protected Map<Long, INode> removedInodes = new HashMap<Long, INode>();
+  /**
+   * 
+   */
+  /**
+   * Number of bits for Block size
+   */
+  static final short BLOCKBITS = 48;
+  /**
+   * Header mask 64-bit representation Format: [16 bits for replication][48 bits
+   * for PreferredBlockSize]
+   */
+  static final long HEADERMASK = 0xffffL << BLOCKBITS;
 
   @Override
   public void remove(INode inode) throws TransactionContextException {
@@ -150,4 +161,29 @@ public abstract class INodeStorage implements Storage<INode> {
   protected abstract INode findInodeByNameAndParentId(String name, long parentId);
 
   protected abstract List<INode> findInodesByIds(List<Long> ids);
+  
+  protected short getReplication(long header) {
+    return (short) ((header & HEADERMASK) >> BLOCKBITS);
+  }
+
+  protected long getHeader(short replication, long preferredBlockSize) {
+    long header = 0;
+
+    if (replication <= 0) {
+      throw new IllegalArgumentException("Unexpected value for the replication");
+    }
+
+    if ((preferredBlockSize < 0) || (preferredBlockSize > ~HEADERMASK)) {
+      throw new IllegalArgumentException("Unexpected value for the block size");
+    }
+
+    header = (header & HEADERMASK) | (preferredBlockSize & ~HEADERMASK);
+    header = ((long) replication << BLOCKBITS) | (header & ~HEADERMASK);
+
+    return header;
+  }
+
+  protected long getPreferredBlockSize(long header) {
+    return header & ~HEADERMASK;
+  }
 }

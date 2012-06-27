@@ -513,6 +513,7 @@ public class BlockManager {
         "last block of the file is not in blocksMap";
 
     BlockInfoUnderConstruction ucBlock = fileINode.setLastBlock(oldBlock);
+    em.update(ucBlock);
     
     for (IndexedReplica replica : oldBlock.getReplicas()) {
       ReplicaUnderConstruction addedReplica = ucBlock.addExpectedReplica(replica.getStorageId(), HdfsServerConstants.ReplicaState.RBW);

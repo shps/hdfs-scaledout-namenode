@@ -24,7 +24,7 @@ public interface LeaseTable {
   void setLastUpdate(long last_upd);
 
   @Column(name = LeaseStorage.HOLDER_ID)
-  int getHolderID();
+  int getHolderId();
 
-  void setHolderID(int holder_id);
+  void setHolderId(int holder_id);
 }
