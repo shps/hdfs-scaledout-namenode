@@ -24,9 +24,11 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ClusterjConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -37,6 +39,7 @@ public class TestComputeInvalidateWork extends TestCase {
    * can schedule invalidate work correctly 
    */
   public void testCompInvalidate() throws Exception {
+    StorageConnector connector = StorageFactory.getConnector();
     final Configuration conf = new HdfsConfiguration();
     final int NUM_OF_DATANODES = 3;
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES).build();
@@ -51,7 +54,7 @@ public class TestComputeInvalidateWork extends TestCase {
       
       namesystem.writeLock();
       try {
-        DBConnector.beginTransaction();
+        connector.beginTransaction();
         EntityManager em = EntityManager.getInstance();
         for (int i=0; i<nodes.length; i++) {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
@@ -75,9 +78,9 @@ public class TestComputeInvalidateWork extends TestCase {
           assertEquals(2, bm.computeInvalidateWork(2));
         }
         
-//        DBConnector.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
+//        connector.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
       } finally {
-        DBConnector.safeRollback();
+        connector.rollback();
         namesystem.writeUnlock();
       }
     } finally {

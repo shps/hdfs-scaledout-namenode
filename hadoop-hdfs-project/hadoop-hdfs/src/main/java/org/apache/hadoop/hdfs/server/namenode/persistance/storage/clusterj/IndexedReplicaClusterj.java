@@ -7,7 +7,6 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
 
 /**
@@ -16,7 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplica
  */
 public class IndexedReplicaClusterj extends IndexedReplicaStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public void commit() {

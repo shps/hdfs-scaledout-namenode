@@ -25,8 +25,9 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * This class tests that methods in DatanodeDescriptor
@@ -55,12 +56,13 @@ public class TestDatanodeDescriptor extends TestCase {
   public void testBlocksCounter() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
-    DBConnector.setConfiguration(conf);
+    StorageConnector connector = StorageFactory.getConnector();
+    connector.setConfiguration(conf);
     EntityManager em = EntityManager.getInstance();
     
     DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
-    DBConnector.beginTransaction();
+    connector.beginTransaction();
     
     BlockInfo blk = new BlockInfo(new Block(1L));
     BlockInfo blk1 = new BlockInfo(new Block(2L));
@@ -98,6 +100,6 @@ public class TestDatanodeDescriptor extends TestCase {
     //We rollbalck here because this generated data does not have the required 
     //integrity to be persisted in database, for instance new block should be 
     //blong to an inode.
-    DBConnector.safeRollback();
+    connector.rollback();
   }
 }

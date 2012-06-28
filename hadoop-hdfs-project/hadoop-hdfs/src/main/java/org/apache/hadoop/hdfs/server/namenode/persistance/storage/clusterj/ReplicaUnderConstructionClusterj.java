@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionStorage;
 
 /**
@@ -17,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderCo
  */
 public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstructionStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public void commit() {

@@ -28,8 +28,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.util.Daemon;
 
 /**
@@ -56,6 +57,7 @@ class HeartbeatManager implements DatanodeStatistics {
   private final long heartbeatRecheckInterval;
   /** Heartbeat monitor thread */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
+  private StorageConnector connector = StorageFactory.getConnector();
 
   final FSNamesystem namesystem;
 
@@ -222,9 +224,9 @@ class HeartbeatManager implements DatanodeStatistics {
         }
         try {
           synchronized(this) {
-            DBConnector.beginTransaction();
+            connector.beginTransaction();
             dm.removeDeadDatanode(dead);
-            DBConnector.commit();
+            connector.commit();
           }
         } catch (IOException e) {
           e.printStackTrace();

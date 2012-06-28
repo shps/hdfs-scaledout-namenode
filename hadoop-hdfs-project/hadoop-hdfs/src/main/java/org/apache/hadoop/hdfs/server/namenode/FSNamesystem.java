@@ -140,6 +140,8 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.INodeFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -184,6 +186,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
   EntityManager em = EntityManager.getInstance();
+  private StorageConnector connector = StorageFactory.getConnector();
   
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {
@@ -322,7 +325,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
-    DBConnector.setConfiguration(conf);
+    connector.setConfiguration(conf);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
@@ -355,14 +358,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.dir.rootDir.setId(0);
       this.dir.rootDir.setParentId(-1);
       try {
-        DBConnector.beginTransaction();
+        connector.beginTransaction();
         em.add(this.dir.rootDir);
-        DBConnector.commit();
+        connector.commit();
       }catch (ClusterJException e) {
         LOG.error(e);
-        DBConnector.safeRollback();
+        connector.rollback();
       } finally {
-        DBConnector.safeRollback();
+        connector.rollback();
       }
     } else
         this.dir.rootDir = (INodeDirectoryWithQuota) rootInode;
@@ -648,13 +651,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     writeLock();
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
       while (!isDone && tries > 0) {
         try {
           // the optimized place, to begin the transaction will be decided later.
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
 
           if (isInSafeMode()) {
             throw new SafeModeException("Cannot set permission for " + src, safeMode);
@@ -662,21 +665,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
           checkOwner(src);
           dir.setPermission(src, permission);
-          DBConnector.commit();
+          connector.commit();
           isDone = true;
 
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(src, false);
           }
         } catch (ClusterJException ex) {
-          DBConnector.safeRollback();
+          connector.rollback();
           tries--;
           //For now, the ClusterJException are just catched here.
           FSNamesystem.LOG.error(ex.getMessage(), ex);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
 
@@ -699,7 +702,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try
     {
         // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
@@ -707,7 +710,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         {
             try {
               // the optimized place, to begin the transaction will be decided later.
-              DBConnector.beginTransaction();
+              connector.beginTransaction();
 
               if (isInSafeMode()) {
                 throw new SafeModeException("Cannot set owner for " + src, safeMode);
@@ -724,7 +727,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               }
               
               dir.setOwner(src, username, group);
-              DBConnector.commit();
+              connector.commit();
               isDone = true;
               
               if (auditLog.isInfoEnabled() && isExternalInvocation()) {
@@ -733,7 +736,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
             catch(ClusterJException ex)
             {
-                DBConnector.safeRollback();
+                connector.rollback();
                 tries--;
                 //For now, the ClusterJException are just catched here.
                 FSNamesystem.LOG.error(ex.getMessage(), ex);
@@ -741,7 +744,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
     }
     finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     
@@ -799,25 +802,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlocks getBlockLocations(String clientMachine, String src,
           long offset, long length) throws AccessControlException,
           FileNotFoundException, UnresolvedLinkException, IOException {
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     boolean isDone = false;
     try {
       while (!isDone && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
 
-          DBConnector.commit();
+          connector.commit();
           isDone = true;
           return blocks;
         } catch (ClusterJException e) {
           LOG.error(e.getMessage(), e);
-          DBConnector.safeRollback();
+          connector.rollback();
           tries--;
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
     }
     return null;
   }
@@ -942,18 +945,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus resultingStat = null;
     writeLock();
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     boolean isDone = false;
     try {
         while (!isDone && tries > 0) {
             try
             {
-                DBConnector.beginTransaction();
+                connector.beginTransaction();
                 if (isInSafeMode()) {
                     throw new SafeModeException("Cannot concat " + target, safeMode);
                 }
                 concatInternal(target, srcs);
-                DBConnector.commit();
+                connector.commit();
                 isDone = true;
                 if (auditLog.isInfoEnabled() && isExternalInvocation()) {
                     resultingStat = dir.getFileInfo(target, false);
@@ -962,12 +965,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             catch(ClusterJException e)
             {
                 LOG.error(e.getMessage(), e);
-                DBConnector.safeRollback();
+                connector.rollback();
                 tries--;
             }
         }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     //getEditLog().logSync();
@@ -1090,11 +1093,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     writeLock();
     boolean done = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!done && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           // Write access is required to set access and modification times
           if (isPermissionEnabled) {
             checkPathAccess(src, FsAction.WRITE);
@@ -1111,16 +1114,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           } else {
             throw new FileNotFoundException("File " + src + " does not exist.");
           }
-          DBConnector.commit();
+          connector.commit();
           done = true;
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
   }
@@ -1134,28 +1137,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     writeLock();
     boolean done = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!done && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           if (!createParent) {
             verifyParentDir(link);
           }
           createSymlinkInternal(target, link, dirPerms, createParent, true);
-          DBConnector.commit();
+          connector.commit();
           done = true;
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(link, false);
           }
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     //getEditLog().logSync();
@@ -1217,14 +1220,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean isFile = false;
     writeLock();
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
                 // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
         while (!isDone && tries > 0)
         {
             try {
               // the optimized place, to begin the transaction will be decided later.
-              DBConnector.beginTransaction();
+              connector.beginTransaction();
               
               if (isInSafeMode()) {
                 throw new SafeModeException("Cannot set replication for " + src, safeMode);
@@ -1239,19 +1242,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               if (isFile) {
                 blockManager.setReplication(oldReplication[0], replication, src, blocks);
               }
-              DBConnector.commit();
+              connector.commit();
               isDone = true;
             }
             catch(ClusterJException ex)
             {
-                DBConnector.safeRollback();
+                connector.rollback();
                 tries--;
                 //For now, the ClusterJException are just catched here.
                 FSNamesystem.LOG.error(ex.getMessage(), ex);
             }
         }
     } finally {
-        DBConnector.safeRollback();
+        connector.rollback();
         writeUnlock();
         //TODO[Hooman]: If all the tries failed then throw exception to the client.
     }
@@ -1358,35 +1361,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     //      TODO:kamal, writing check
     writeLock();
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try
     {
       while(!isDone && tries > 0)
       {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           startFileInternal(src, permissions, holder, clientMachine, flag,
               createParent, replication, blockSize); 
-          DBConnector.commit();
+          connector.commit();
           isDone = true;
         }
         catch(IOException ioe) {
           //[W] An IOException does not mean that the writes should be rolled back in NDB
           //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
-          DBConnector.commit();
+          connector.commit();
           isDone = true;
           throw ioe;
         }
         catch(ClusterJException ex)
         {
           LOG.error(ex.getMessage(), ex);
-          DBConnector.safeRollback();
+          connector.rollback();
           tries--;
         }
       }
     }
     finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
       if (isDone)
       {
@@ -1571,17 +1574,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       boolean isDone = false;
-      int tries = DBConnector.RETRY_COUNT;
+      int tries = connector.RETRY_COUNT;
       try {
         while (!isDone && tries > 0) {
           try {
-            DBConnector.beginTransaction();
+            connector.beginTransaction();
             recoverLeaseInternal(inode, src, holder, clientMachine, true);
-            DBConnector.commit();
+            connector.commit();
             isDone = true;
           } catch (ClusterJException ex) {
             if (!isDone) {
-              DBConnector.safeRollback();
+              connector.rollback();
               tries--;
               FSNamesystem.LOG.error("recoverLease() :: failed to recover lease " + src + ". Exception: " + ex.getMessage(), ex);
             }
@@ -1589,7 +1592,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
       } finally {
         if (!isDone) {
-          DBConnector.safeRollback();
+          connector.rollback();
         }
       }
 
@@ -1696,34 +1699,34 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         LocatedBlock lb = null;
         writeLock();
-        int tries = DBConnector.RETRY_COUNT;
+        int tries = connector.RETRY_COUNT;
         boolean isDone = false;
         try {
             while (!isDone && tries > 0) {
                 try {
-                    DBConnector.beginTransaction();
+                    connector.beginTransaction();
                     // Holds the db locks in 'startFileInternal ()' method
                     lb = startFileInternal(src, null, holder, clientMachine,
                             EnumSet.of(CreateFlag.APPEND),
                             false, blockManager.maxReplication, (long) 0);
-                    DBConnector.commit();
+                    connector.commit();
                     isDone = true;
                 } 
                 catch(IOException ioe) {
                   //[W] An IOException does not mean that the writes should be rolled back in NDB
                   //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
-                  DBConnector.commit();
+                  connector.commit();
                   isDone = true;
                   throw ioe;
                 }
                 catch (ClusterJException e) {
                     LOG.error(e.getMessage(), e);
                     tries--;
-                    DBConnector.safeRollback();
+                    connector.rollback();
                 }
             }
         } finally {
-            DBConnector.safeRollback();
+            connector.rollback();
             writeUnlock();
         }
         //getEditLog().logSync();
@@ -1773,7 +1776,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   {
     writeLock();
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     LocatedBlock result = null;
     
     try
@@ -1782,22 +1785,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         {
             try
             {
-                DBConnector.beginTransaction();
+                connector.beginTransaction();
                 result = getAdditionalBlock(src, clientName, previous, excludedNodes);
-                DBConnector.commit();
+                connector.commit();
                 isDone = true;
             } 
             catch (ClusterJException e)
             {
                 LOG.error(e.getMessage(), e);
                 tries--;
-                DBConnector.safeRollback();
+                connector.rollback();
             }
         }
     }
     finally
     {
-        DBConnector.safeRollback();
+        connector.rollback();
         writeUnlock();
     }
     
@@ -1974,20 +1977,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       boolean isDone = false;
-      int tries = DBConnector.RETRY_COUNT;
+      int tries = connector.RETRY_COUNT;
       try {
         while (!isDone && tries > 0) {
           try {
-            DBConnector.beginTransaction();
+            connector.beginTransaction();
             INodeFile file = checkLease(src, holder);
             assert file.isUnderConstruction();
             dir.removeBlock(src, file, ExtendedBlock.getLocalBlock(b));
 
-            DBConnector.commit();
+            connector.commit();
             isDone = true;
           } catch (ClusterJException ex) {
             if (!isDone) {
-              DBConnector.safeRollback();
+              connector.rollback();
               tries--;
               FSNamesystem.LOG.error("abandonBlock() :: failed to abandon block from source: " + src + ". Exception: " + ex.getMessage(), ex);
             }
@@ -1996,7 +1999,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       } finally {
         if (!isDone) {
-          DBConnector.safeRollback();
+          connector.rollback();
         }
       }
 
@@ -2081,16 +2084,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    
     writeLock();
     boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;    
+    int tries = connector.RETRY_COUNT;    
     try {
         // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
         while (!isDone && tries > 0)
         {
             try {
-                DBConnector.beginTransaction();
+                connector.beginTransaction();
                 success = completeFileInternal(src, holder,
                         ExtendedBlock.getLocalBlock(last));
-                DBConnector.commit();
+                connector.commit();
                 isDone = true;
                 if (success)
                     NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
@@ -2098,7 +2101,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
             catch(ClusterJException ex)
             {
-                DBConnector.safeRollback();
+                connector.rollback();
                 tries--;
                 success = false;
                 //For now, the ClusterJException are just catched here.
@@ -2106,7 +2109,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
         }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     return success;
@@ -2283,14 +2286,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Starting the DB transaction
     boolean isDone = false;
     boolean isRenameDone = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!isDone && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           if (dir.renameTo(src, dst)) {
             unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
-            DBConnector.commit();
+            connector.commit();
             isDone = true;
             isRenameDone = true;
           } else {
@@ -2298,7 +2301,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         } catch (ClusterJException ex) {
           if (!isDone) {
-            DBConnector.safeRollback();
+            connector.rollback();
             tries--;
             FSNamesystem.LOG.error("renameToInternal() :: failed to rename " + src + " to " + dst + ". Exception: " + ex.getMessage(), ex);
           }
@@ -2306,7 +2309,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     } finally {
       if (!isDone) {
-        DBConnector.safeRollback();
+        connector.rollback();
       }
     }
     return isRenameDone;
@@ -2323,26 +2326,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     writeLock();
     boolean done = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!done && tries > 0)
       {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           renameToInternal(src, dst, options);
-          DBConnector.commit();
+          connector.commit();
           done = true;
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(dst, false);
           }
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     
@@ -2394,20 +2397,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       try
       {
           boolean isDone = false;
-          int tries = DBConnector.RETRY_COUNT;
+          int tries = connector.RETRY_COUNT;
           while(!isDone && tries > 0)
           {
               try
               {
-                  DBConnector.beginTransaction();
+                  connector.beginTransaction();
                   status = delete(src, recursive);
-                  DBConnector.commit();
+                  connector.commit();
                   isDone = true;
               }
               catch (ClusterJException e)
               {
                   tries--;
-                  DBConnector.safeRollback();
+                  connector.rollback();
                   LOG.error(e.getMessage(), e);
                   status = false;
               }
@@ -2415,7 +2418,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       finally
       {
-        DBConnector.safeRollback();
+        connector.rollback();
         writeUnlock();
       }
       return status;
@@ -2574,24 +2577,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try
     {
       boolean isDone = false;
-      int tries = DBConnector.RETRY_COUNT;
+      int tries = connector.RETRY_COUNT;
       try
       {
         while (!isDone && tries > 0)
         {
           try
           {
-            DBConnector.beginTransaction();
+            connector.beginTransaction();
             status = mkdirsInternal(src, permissions, createParent);
 
-            DBConnector.commit();
+            connector.commit();
             isDone = true;
           }
           catch(ClusterJException ex)
           {
             if(!isDone)
             {
-              DBConnector.safeRollback();
+              connector.rollback();
               tries--;
               FSNamesystem.LOG.error("mkdirs() :: failed to make a directory "+src+". Exception: "+ex.getMessage(), ex);
             }
@@ -2602,7 +2605,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       {
         if(!isDone)
         {
-          DBConnector.safeRollback();
+          connector.rollback();
         }
       }
     }
@@ -2681,13 +2684,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             throws IOException, UnresolvedLinkException {
         writeLock();
         boolean isDone = false;
-        int tries = DBConnector.RETRY_COUNT;
+        int tries = connector.RETRY_COUNT;
         try {
             // Maybe, it is better to release the write lock and try to acquire it again after each failer.[Hooman]
             while (!isDone && tries > 0) {
                 try {
                     
-                    DBConnector.beginTransaction();
+                    connector.beginTransaction();
                     if (isInSafeMode()) {
                         throw new SafeModeException("Cannot set quota on " + path, safeMode);
                     }
@@ -2695,16 +2698,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                         checkSuperuserPrivilege();
                     }
                     dir.setQuota(path, nsQuota, dsQuota);
-                    DBConnector.commit();
+                    connector.commit();
                     isDone = true;
                 } catch (ClusterJException e) {
-                    DBConnector.safeRollback();
+                    connector.rollback();
                     tries--;
                     FSNamesystem.LOG.error(e.getMessage(), e);
                 }
             }
         } finally {
-            DBConnector.safeRollback();
+            connector.rollback();
             writeUnlock();
         }
         //getEditLog().logSync();
@@ -2945,11 +2948,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
 
     boolean done = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!done && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
 
           if (isInSafeMode()) {
             throw new SafeModeException(
@@ -3039,17 +3042,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             dir.persistBlocks(src, iFile);
           }
 
-          DBConnector.commit();
+          connector.commit();
           done = true;
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
       writeUnlock();
-      DBConnector.safeRollback();
+      connector.rollback();
     }
 
     //getEditLog().logSync();
@@ -3074,29 +3077,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     writeLock();
     boolean done = false;
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     try {
       while (!done && tries > 0) {
         try
         {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           if (isInSafeMode()) {
             throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
           }
           leaseManager.renewLease(holder);
-          DBConnector.commit();
+          connector.commit();
           done = true;
         }
         catch (ClusterJException e)
         {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
       writeUnlock();
-      DBConnector.safeRollback();
+      connector.rollback();
     }
   }
 
@@ -3120,12 +3123,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     DirectoryListing dl = null;
     readLock();
 
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     boolean isDone = false;
     try {
       while (!isDone && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           if (isPermissionEnabled) {
             if (dir.isDir(src)) {
               checkPathAccess(src, FsAction.READ_EXECUTE);
@@ -3140,18 +3143,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     "listStatus", src, null, null);
           }
           dl = dir.getListing(src, startAfter, needLocation);
-          DBConnector.commit();
+          connector.commit();
           isDone = true;
           return dl;
         } catch (ClusterJException e) {
           LOG.error(e.getMessage(), e);
-          DBConnector.safeRollback();
+          connector.rollback();
           tries--;
         }
       }
     } finally {
       readUnlock();
-      DBConnector.safeRollback();
+      connector.rollback();
     }
     return dl;
 
@@ -3189,24 +3192,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
     writeLock();
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     boolean done = false;
     try {
       while (!done && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true);
           checkSafeMode();
-          DBConnector.commit();
+          connector.commit();
           done = true;
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     
@@ -4471,14 +4474,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               + ", clientName=" + clientName
               + ")");
 
-      DBConnector.beginTransaction();
+      connector.beginTransaction();
       updatePipelineInternal(clientName, oldBlock, newBlock, newNodes);
-      DBConnector.commit();
+      connector.commit();
     } catch (ClusterJException e) {
       LOG.error(e);
-      DBConnector.safeRollback();
+      connector.rollback();
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       writeUnlock();
     }
     if (supportAppends) {

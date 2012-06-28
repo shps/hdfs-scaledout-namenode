@@ -20,12 +20,12 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -78,10 +78,11 @@ public class BlockManagerTestUtil {
    */
   private static int getNumberOfRacks(final BlockManager blockManager,
       final Block b) throws IOException {
+    StorageConnector connector = StorageFactory.getConnector();
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
        getCorruptReplicas(blockManager).getNodes(b);
-    DBConnector.beginTransaction();
+    connector.beginTransaction();
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
@@ -93,7 +94,7 @@ public class BlockManagerTestUtil {
         }
       }
     }
-    DBConnector.commit();
+    connector.commit();
     return rackSet.size();
   }
 

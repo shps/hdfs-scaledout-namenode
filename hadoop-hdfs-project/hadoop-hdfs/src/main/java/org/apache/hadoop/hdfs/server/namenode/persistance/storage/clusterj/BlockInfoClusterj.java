@@ -13,7 +13,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
 
 /**
@@ -22,7 +21,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStora
  */
 public class BlockInfoClusterj extends BlockInfoStorage {
 
-  Session session = DBConnector.obtainSession();
+  Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   protected BlockInfo findById(long blockId) {

@@ -17,6 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.BlockInfoClusterj;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ClusterjConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ExcessReplicaClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.INodeClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.IndexedReplicaClusterj;
@@ -32,12 +33,20 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.Repli
  */
 public class StorageFactory {
 
+  public static StorageConnector getConnector() {
+    return ClusterjConnector.INSTANCE;
+  }
+
   public enum StorageType {
 
     Clusterj, ApacheDerby, Mysql;
   }
+  
+  public static Map<Class, Storage> getStorageMap() {
+    return getStorageMap(StorageType.Clusterj);
+  }
 
-  public static Map<Class, Storage> getStorageMap(StorageType type) {
+  private static Map<Class, Storage> getStorageMap(StorageType type) {
     Map<Class, Storage> storageMap = null;
 
     switch (type) {

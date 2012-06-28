@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import java.util.AbstractMap.SimpleEntry;
 import com.mysql.clusterj.ClusterJException;
 import java.io.IOException;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -284,6 +286,8 @@ public class LeaseManager {
   class Monitor implements Runnable {
 
     final String name = getClass().getSimpleName();
+    
+    private StorageConnector connector = StorageFactory.getConnector();
 
     /** Check leases periodically. */
     @Override
@@ -293,18 +297,18 @@ public class LeaseManager {
         try {
           if (!fsnamesystem.isInSafeMode()) {
             boolean isDone = false;
-            int tries = DBConnector.RETRY_COUNT;
+            int tries = connector.RETRY_COUNT;
 
             try {
               while (!isDone && tries > 0) {
                 try {
-                  DBConnector.beginTransaction();
+                  connector.beginTransaction();
                   checkLeases();
-                  DBConnector.commit();
+                  connector.commit();
                   isDone = true;
                 } catch (ClusterJException ex) {
                   if (!isDone) {
-                    DBConnector.safeRollback();
+                    connector.rollback();
                     tries--;
                     FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
                   }
@@ -312,7 +316,7 @@ public class LeaseManager {
               }
             } finally {
               if (!isDone) {
-                DBConnector.safeRollback();
+                connector.rollback();
               }
             }
 

@@ -6,20 +6,16 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.log4j.Level;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.junit.Test;
 
 /**
@@ -101,7 +97,8 @@ public class TestPrintMetrics {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
-    DBConnector.setConfiguration(conf);
+    StorageConnector connector = StorageFactory.getConnector();
+    connector.setConfiguration(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());

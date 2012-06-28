@@ -1,11 +1,10 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.Storage;
-import com.mysql.clusterj.Session;
 import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 /**
  *
@@ -17,9 +16,11 @@ public class TransactionContext {
   private boolean activeTxExpected = false;
   private boolean externallyMngedTx = true;
   private Map<Class, Storage> storages;
+  private StorageConnector connector;
 
-  public TransactionContext(Map<Class, Storage> storages) {
+  public TransactionContext(StorageConnector connector, Map<Class, Storage> storages) {
     this.storages = storages;
+    this.connector = connector;
   }
 
   private void resetContext() {
@@ -133,11 +134,10 @@ public class TransactionContext {
   }
 
   private void beforeTxCheck() throws TransactionContextException {
-    Session session = DBConnector.obtainSession();
-    if (activeTxExpected && !session.currentTransaction().isActive()) {
+    if (activeTxExpected && !connector.isTransactionActive()) {
       throw new TransactionContextException("Active transaction is expected.");
     } else if (!activeTxExpected) {
-      DBConnector.beginTransaction();
+      connector.beginTransaction();
       externallyMngedTx = false;
     }
   }
@@ -145,9 +145,9 @@ public class TransactionContext {
   private void afterTxCheck(boolean done) {
     if (!externallyMngedTx) {
       if (done) {
-        DBConnector.commit();
+        connector.commit();
       } else {
-        DBConnector.safeRollback();
+        connector.rollback();
       }
     }
   }

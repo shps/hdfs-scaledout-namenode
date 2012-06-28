@@ -8,7 +8,6 @@ import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.util.List;
 import java.util.TreeSet;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.LeasePathFactory;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStorage;
@@ -19,7 +18,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStora
  */
 public class LeasePathClusterj extends LeasePathStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public void commit() {

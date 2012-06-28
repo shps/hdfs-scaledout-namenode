@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseStorage;
@@ -21,7 +20,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseStorage;
  */
 public class LeaseClusterj extends LeaseStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public int countAll() {

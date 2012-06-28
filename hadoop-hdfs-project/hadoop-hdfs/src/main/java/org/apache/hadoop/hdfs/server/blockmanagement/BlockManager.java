@@ -68,10 +68,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -81,7 +82,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaF
 @InterfaceAudience.Private
 public class BlockManager {
   static final Log LOG = LogFactory.getLog(BlockManager.class);
-
+  private StorageConnector connector = StorageFactory.getConnector();
   /** Default load factor of map */
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
 
@@ -841,14 +842,14 @@ public class BlockManager {
 	  try
 	  {
 		  boolean isDone = false;
-		  int tries = DBConnector.RETRY_COUNT;
+		  int tries = connector.RETRY_COUNT;
 		  try
 		  {
 			  while (!isDone && tries > 0)
 			  {
 				  try
 				  {
-					  DBConnector.beginTransaction();
+					  connector.beginTransaction();
 					  final BlockInfo storedBlock = getStoredBlock(blk.getLocalBlock());
 					  if (storedBlock == null)
 					  {
@@ -861,14 +862,14 @@ public class BlockManager {
 								  return;
 					  }
 					  markBlockAsCorrupt(storedBlock, dn);
-					  DBConnector.commit();
+					  connector.commit();
 					  isDone = true;
 				  }
 				  catch(ClusterJException ex)
 				  {
 					  if(!isDone)
 					  {
-						  DBConnector.safeRollback();
+						  connector.rollback();
 						  tries--;
 						  LOG.error("findAndMarkBlockAsCorrupt() :: failed to marck block as corrupt. BlockId:  "+blk.getBlockId()+" from DN:  "+dn.storageID+". Exception: "+ex.getMessage(), ex);
 					  }
@@ -879,7 +880,7 @@ public class BlockManager {
 		  {
 			  if(!isDone)
 			  {
-				  DBConnector.safeRollback();
+				  connector.rollback();
 			  }
 		  }
 	  }
@@ -1439,14 +1440,14 @@ public class BlockManager {
 		  }
 
 		  boolean isDone = false;
-		  int tries = DBConnector.RETRY_COUNT;
+		  int tries = connector.RETRY_COUNT;
 		  try
 		  {
 			  while (!isDone && tries > 0)
 			  {
 				  try
 				  {
-					  DBConnector.beginTransaction();
+					  connector.beginTransaction();
 					  if (node.numBlocks() == 0)
 					  {
 						  // The first block report can be processed a lot more efficiently than
@@ -1457,14 +1458,14 @@ public class BlockManager {
 					  {
 						  processReport(node, newReport);
 					  }
-					  DBConnector.commit();
+					  connector.commit();
 					  isDone = true;
 				  }
 				  catch(ClusterJException ex)
 				  {
 					  if(!isDone)
 					  {
-						  DBConnector.safeRollback();
+						  connector.rollback();
 						  tries--;
 						  LOG.error("processReport() :: failed to process block report from  "+nodeID.getStorageID()+". Exception: "+ex.getMessage(), ex);
 					  }
@@ -1475,7 +1476,7 @@ public class BlockManager {
 		  {
 			  if(!isDone)
 			  {
-				  DBConnector.safeRollback();
+				  connector.rollback();
 			  }
 		  }
 	  }
@@ -2321,12 +2322,12 @@ public class BlockManager {
 
             for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
                 boolean isDone = false;
-                int tries = DBConnector.RETRY_COUNT;
+                int tries = connector.RETRY_COUNT;
 
                 try {
                     while (!isDone && tries > 0) {
                         try {
-                            DBConnector.beginTransaction();
+                            connector.beginTransaction();
 
                             if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
                                 // KTHFS:  removes block from triplets table
@@ -2340,11 +2341,11 @@ public class BlockManager {
                                 received++;
                             }
 
-                            DBConnector.commit();
+                            connector.commit();
                             isDone = true;
                         } catch (ClusterJException ex) {
                             if (!isDone) {
-                                DBConnector.safeRollback();
+                                connector.rollback();
                                 tries--;
                                 LOG.error("blockReceivedAndDeleted() :: unable to process block reports. Exception: " + ex.getMessage(), ex);
                             }
@@ -2352,7 +2353,7 @@ public class BlockManager {
                     }
                 } finally {
                     if (!isDone) {
-                        DBConnector.safeRollback();
+                        connector.rollback();
                     }
                 }
 
@@ -2823,18 +2824,18 @@ public class BlockManager {
       while (namesystem.isRunning()) {
         try {
           boolean done = false;
-          int tries = DBConnector.RETRY_COUNT;
+          int tries = connector.RETRY_COUNT;
           while (!done && tries > 0) {
             try {
-              DBConnector.beginTransaction();
+              connector.beginTransaction();
               computeDatanodeWork();
               processPendingReplications();
-              DBConnector.commit();
+              connector.commit();
               done = true;
               Thread.sleep(replicationRecheckInterval);
             } catch (ClusterJException e) {
               tries--;
-              DBConnector.safeRollback();
+              connector.rollback();
               LOG.error(e.getMessage(), e);
             }
           }
@@ -2847,7 +2848,7 @@ public class BlockManager {
           LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
           Runtime.getRuntime().exit(-1);
         } finally {
-          DBConnector.safeRollback();
+          connector.rollback();
         }
       }
     }

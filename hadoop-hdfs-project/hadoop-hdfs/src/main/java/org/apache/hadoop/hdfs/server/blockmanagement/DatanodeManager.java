@@ -49,10 +49,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -85,6 +86,7 @@ public class DatanodeManager {
   private final HeartbeatManager heartbeatManager;
   
   private static EntityManager em = EntityManager.getInstance();
+  private StorageConnector connector = StorageFactory.getConnector();
 
   /**
    * Stores the datanode -> block map.  
@@ -273,20 +275,20 @@ public class DatanodeManager {
    */
   public void removeDatanode(final DatanodeID node) throws UnregisteredNodeException, IOException {
     namesystem.writeLock();
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = connector.RETRY_COUNT;
     boolean done = false;
     try {
       final DatanodeDescriptor descriptor = getDatanode(node);
       if (descriptor != null) {
         while (!done && tries > 0) {
           try {
-            DBConnector.beginTransaction();
+            connector.beginTransaction();
             removeDatanode(descriptor);
-            DBConnector.commit();
+            connector.commit();
             done = true;
           } catch (ClusterJException e) {
             tries--;
-            DBConnector.safeRollback();
+            connector.rollback();
             LOG.error(e.getMessage(), e);
           }
         }
@@ -295,7 +297,7 @@ public class DatanodeManager {
                 + node.getName() + " does not exist");
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       namesystem.writeUnlock();
     }
   }
@@ -671,22 +673,22 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
-      int tries = DBConnector.RETRY_COUNT;
+      int tries = connector.RETRY_COUNT;
       boolean done = false;
       while (!done && tries > 0) {
         try {
-          DBConnector.beginTransaction();
+          connector.beginTransaction();
           refreshDatanodes(true);
-          DBConnector.commit();
+          connector.commit();
           done = true;
         } catch (ClusterJException e) {
           tries--;
-          DBConnector.safeRollback();
+          connector.rollback();
           LOG.error(e.getMessage(), e);
         }
       }
     } finally {
-      DBConnector.safeRollback();
+      connector.rollback();
       namesystem.writeUnlock();
     }
   }

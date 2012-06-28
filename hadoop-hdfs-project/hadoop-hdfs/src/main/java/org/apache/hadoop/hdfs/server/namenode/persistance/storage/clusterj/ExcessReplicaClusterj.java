@@ -7,7 +7,6 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaStorage;
 
 /**
@@ -16,7 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaS
  */
 public class ExcessReplicaClusterj extends ExcessReplicaStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public int countAll() {

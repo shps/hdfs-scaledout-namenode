@@ -16,7 +16,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ClusterjConnector;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -117,7 +119,8 @@ public class TestGetBlockLocations {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
-    DBConnector.setConfiguration(conf);
+    StorageConnector connector = StorageFactory.getConnector();
+    connector.setConfiguration(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());

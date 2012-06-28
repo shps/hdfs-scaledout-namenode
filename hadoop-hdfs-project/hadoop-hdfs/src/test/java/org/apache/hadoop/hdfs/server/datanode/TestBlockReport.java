@@ -50,7 +50,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.junit.Ignore;
 
 /**
@@ -374,7 +375,8 @@ public class TestBlockReport {
     cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
-    DBConnector.beginTransaction();
+    StorageConnector connector = StorageFactory.getConnector();
+    connector.beginTransaction();
     assertEquals("Wrong number of Corrupted blocks",
       1, cluster.getNamesystem().getCorruptReplicaBlocks() +
 // the following might have to be added into the equation if 
@@ -382,7 +384,7 @@ public class TestBlockReport {
 // and then the expected number of has to be changed to '2'        
 //        cluster.getNamesystem().getPendingReplicationBlocks() +
         cluster.getNamesystem().getPendingDeletionBlocks());
-    DBConnector.commit();
+    connector.commit();
 
     // Get another block and screw its length to be less than original
     if (randIndex == 0)
@@ -617,7 +619,8 @@ public class TestBlockReport {
     
     BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
     if(LOG.isDebugEnabled()) {
-      DBConnector.beginTransaction();
+      StorageConnector connector = StorageFactory.getConnector();
+      connector.beginTransaction();
       LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());
       LOG.debug("Corrupted " + cluster.getNamesystem().getCorruptReplicaBlocks());
       LOG.debug("Under-replicated " + cluster.getNamesystem().
@@ -628,7 +631,7 @@ public class TestBlockReport {
           getPendingReplicationBlocks());
       LOG.debug("Excess " + cluster.getNamesystem().getExcessBlocks());
       LOG.debug("Total " + cluster.getNamesystem().getBlocksTotal());
-      DBConnector.commit();
+      connector.commit();
     }
   }
 

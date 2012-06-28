@@ -9,7 +9,6 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockStorage;
 
 /**
@@ -18,7 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockSt
  */
 public class PendingBlockClusterj extends PendingBlockStorage {
 
-  private Session session = DBConnector.obtainSession();
+  private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
   public void commit() {

@@ -32,10 +32,11 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * Test if live nodes count per node is correct 
@@ -191,10 +192,11 @@ public class TestNodeCount extends TestCase {
   NumberReplicas countNodes(Block block, FSNamesystem namesystem) {
     namesystem.readLock();
     try {
-      DBConnector.beginTransaction();
+      StorageConnector connector = StorageFactory.getConnector();
+      connector.beginTransaction();
       lastBlock = block;
       lastNum = namesystem.getBlockManager().countNodes(block);
-      DBConnector.commit();
+      connector.commit();
       return lastNum;
     }
     catch (IOException ex) {

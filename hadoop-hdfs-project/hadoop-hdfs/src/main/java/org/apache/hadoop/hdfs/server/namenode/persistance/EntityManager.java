@@ -5,6 +5,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.Storage;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
@@ -26,13 +27,14 @@ public class EntityManager {
     return instance;
   }
   ThreadLocal<TransactionContext> contexts = new ThreadLocal<TransactionContext>();
+  private StorageConnector connector = StorageFactory.getConnector();
 
   private TransactionContext context() {
     TransactionContext context = contexts.get();
 
     if (context == null) {
-      Map<Class, Storage> storageMap = StorageFactory.getStorageMap(StorageFactory.StorageType.Clusterj);
-      context = new TransactionContext(storageMap);
+      Map<Class, Storage> storageMap = StorageFactory.getStorageMap();
+      context = new TransactionContext(connector, storageMap);
       contexts.set(context);
     }
     return context;

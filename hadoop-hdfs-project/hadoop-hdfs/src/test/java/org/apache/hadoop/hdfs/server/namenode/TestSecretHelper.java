@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ClusterjConnector;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -40,32 +41,32 @@ import com.mysql.clusterj.ClusterJException;
  *
  */
 public class TestSecretHelper {
-  public static final Log LOG = LogFactory.getLog(TestSecretHelper.class);
-  private static final Configuration CONF = new HdfsConfiguration();
-  
-  @Before
-  public void connect() throws IOException {
-	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
-	  DBConnector.setConfiguration(CONF);
-	  DBConnector.formatDB();
-  }
-
-  @After
-  public void disconnect() throws IOException {
-  
-  }
-
-  
-  @Test
-  public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
-	  BlockTokenSecretManagerNN tokenMgr = 
-			  new BlockTokenSecretManagerNN(true, 60*60*1000L, 60*60*1000L); //60 minutes
-	  
-	  ExportedBlockKeys expKeys = tokenMgr.exportKeys();
-	  assertEquals(2, expKeys.getAllKeys().length);
-	  
-  }
-  
-  
+//  public static final Log LOG = LogFactory.getLog(TestSecretHelper.class);
+//  private static final Configuration CONF = new HdfsConfiguration();
+//  
+//  @Before
+//  public void connect() throws IOException {
+//	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
+//	  ClusterjConnector.setConfiguration(CONF);
+//	  ClusterjConnector.formatStorage();
+//  }
+//
+//  @After
+//  public void disconnect() throws IOException {
+//  
+//  }
+//
+//  
+//  @Test
+//  public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
+//	  BlockTokenSecretManagerNN tokenMgr = 
+//			  new BlockTokenSecretManagerNN(true, 60*60*1000L, 60*60*1000L); //60 minutes
+//	  
+//	  ExportedBlockKeys expKeys = tokenMgr.exportKeys();
+//	  assertEquals(2, expKeys.getAllKeys().length);
+//	  
+//  }
+//  
+//  
   
 }
