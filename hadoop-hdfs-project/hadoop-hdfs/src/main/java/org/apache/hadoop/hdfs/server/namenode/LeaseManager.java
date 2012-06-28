@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import java.util.AbstractMap.SimpleEntry;
-import com.mysql.clusterj.ClusterJException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
@@ -306,7 +306,7 @@ public class LeaseManager {
                   checkLeases();
                   connector.commit();
                   isDone = true;
-                } catch (ClusterJException ex) {
+                } catch (StorageException ex) {
                   if (!isDone) {
                     connector.rollback();
                     tries--;

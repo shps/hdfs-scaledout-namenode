@@ -9,7 +9,6 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
-import org.apache.hadoop.hdfs.server.namenode.persistance.LeasePathFactory;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStorage;
 
 /**
@@ -24,7 +23,7 @@ public class LeasePathClusterj extends LeasePathStorage {
   public void commit() {
     for (LeasePath lp : newLPaths.values()) {
       LeasePathsTable lTable = session.newInstance(LeasePathsTable.class);
-      LeasePathFactory.createPersistableLeasePathInstance(lp, lTable);
+      createPersistableLeasePathInstance(lp, lTable);
       session.savePersistent(lTable);
     }
 
@@ -51,7 +50,7 @@ public class LeasePathClusterj extends LeasePathStorage {
     TreeSet<LeasePath> finalList = new TreeSet<LeasePath>();
 
     for (LeasePathsTable lpt : lpTables) {
-      LeasePath lPath = LeasePathFactory.createLeasePath(lpt);
+      LeasePath lPath = createLeasePath(lpt);
       if (!removedLPaths.containsKey(lPath)) {
         if (this.leasePaths.containsKey(lPath)) {
           lPath = this.leasePaths.get(lPath);
@@ -80,7 +79,7 @@ public class LeasePathClusterj extends LeasePathStorage {
     LeasePathsTable lPTable = session.find(LeasePathsTable.class, path);
     LeasePath lPath = null;
     if (lPTable != null) {
-      lPath = LeasePathFactory.createLeasePath(lPTable);
+      lPath = createLeasePath(lPTable);
     }
     return lPath;
   }
@@ -112,5 +111,14 @@ public class LeasePathClusterj extends LeasePathStorage {
     List<LeasePathsTable> resultset = query.getResultList();
     TreeSet<LeasePath> lPathSet = syncLeasePathInstances(resultset, true);
     return lPathSet;
+  }
+
+  private LeasePath createLeasePath(LeasePathsTable leasePathTable) {
+    return new LeasePath(leasePathTable.getPath(), leasePathTable.getHolderId());
+  }
+
+  private void createPersistableLeasePathInstance(LeasePath lp, LeasePathsTable lTable) {
+    lTable.setHolderId(lp.getHolderId());
+    lTable.setPath(lp.getPath());
   }
 }

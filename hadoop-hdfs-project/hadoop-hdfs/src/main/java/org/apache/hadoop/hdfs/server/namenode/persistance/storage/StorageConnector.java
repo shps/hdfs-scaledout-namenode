@@ -2,6 +2,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 
 /**
  *
@@ -17,7 +18,7 @@ public interface StorageConnector<T> {
   
   public void beginTransaction();
   
-  public void commit();
+  public void commit() throws StorageException;
   
   public void rollback();
   

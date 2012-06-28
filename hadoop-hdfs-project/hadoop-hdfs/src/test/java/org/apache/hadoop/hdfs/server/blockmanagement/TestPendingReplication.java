@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,6 +27,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
@@ -53,8 +56,12 @@ public class TestPendingReplication extends TestCase {
     
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
-    
-    connector.commit();
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
     connector.beginTransaction();
     //
     // remove one item and reinsert it
@@ -70,7 +77,12 @@ public class TestPendingReplication extends TestCase {
     
     assertTrue(pendingReplications.size() == 9);
     
-    connector.commit(); 
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
     
     connector.beginTransaction(); //again wants to add the totally removed block
     pendingReplications.add(blk, 8);
@@ -119,7 +131,12 @@ public class TestPendingReplication extends TestCase {
     LOG.info("Had to wait for " + loop +
                        " seconds for the lot to timeout");
 
-    connector.commit();
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
     
     connector.beginTransaction();
     //
@@ -133,6 +150,11 @@ public class TestPendingReplication extends TestCase {
       assertTrue(timedOut.get(i).getBlockId() < 15);
     }
     
-    connector.commit();
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
   }
 }

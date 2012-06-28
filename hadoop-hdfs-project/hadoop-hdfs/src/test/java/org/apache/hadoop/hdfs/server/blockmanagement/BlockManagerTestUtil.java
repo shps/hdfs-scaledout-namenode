@@ -21,9 +21,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.util.Daemon;
@@ -94,7 +97,12 @@ public class BlockManagerTestUtil {
         }
       }
     }
-    connector.commit();
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
     return rackSet.size();
   }
 

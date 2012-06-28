@@ -128,7 +128,7 @@ public class LeaseDerby extends LeaseStorage {
   public void commit() {
     String insert = String.format("insert into %s values(?,?,?)", TABLE_NAME);
     String update = String.format("update %s set %s=?, %s=? where %s=?",
-            TABLE_NAME, LAST_UPDATE, HOLDER_ID);
+            TABLE_NAME, LAST_UPDATE, HOLDER_ID, HOLDER);
     String delete = String.format("delete from %s where %s=?",
             TABLE_NAME, HOLDER);
     Connection conn = connector.obtainSession();

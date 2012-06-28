@@ -26,6 +26,16 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.Lease
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.LeasePathClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.PendingBlockClusterj;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.ReplicaUnderConstructionClusterj;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.BlockInfoDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.DerbyConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.ExcessReplicaDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.INodeDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.IndexedReplicaDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.InvalidatedBlockDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.LeaseDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.LeasePathDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.PendingBlockDerby;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.ReplicaUnderConstructionDerby;
 
 /**
  *
@@ -33,17 +43,26 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.Repli
  */
 public class StorageFactory {
 
+  private static final StorageConnector defaultStorage = DerbyConnector.INSTANCE;
+
   public static StorageConnector getConnector() {
-    return ClusterjConnector.INSTANCE;
+    return defaultStorage;
   }
 
   public enum StorageType {
 
     Clusterj, ApacheDerby, Mysql;
   }
-  
+
   public static Map<Class, Storage> getStorageMap() {
-    return getStorageMap(StorageType.Clusterj);
+    if (defaultStorage instanceof DerbyConnector) {
+      return getStorageMap(StorageType.ApacheDerby);
+    } else if (defaultStorage instanceof ClusterjConnector) {
+      return getStorageMap(StorageType.Clusterj);
+    } else {
+      return null;
+    }
+
   }
 
   private static Map<Class, Storage> getStorageMap(StorageType type) {
@@ -54,9 +73,10 @@ public class StorageFactory {
         storageMap = getClusterJStorage();
         break;
       case ApacheDerby:
+        storageMap = getDerbyStorage();
         break;
       case Mysql:
-        break;
+        throw new UnsupportedOperationException("Mysql is not supported yet.");
     }
 
     return storageMap;
@@ -75,6 +95,28 @@ public class StorageFactory {
     storages.put(LeasePath.class, new LeasePathClusterj());
     storages.put(PendingBlockInfo.class, new PendingBlockClusterj());
     INodeClusterj inodeClusterj = new INodeClusterj();
+    storages.put(INode.class, inodeClusterj);
+    storages.put(INodeDirectory.class, inodeClusterj);
+    storages.put(INodeFile.class, inodeClusterj);
+    storages.put(INodeDirectoryWithQuota.class, inodeClusterj);
+    storages.put(INodeSymlink.class, inodeClusterj);
+
+    return storages;
+  }
+
+  private static Map<Class, Storage> getDerbyStorage() {
+    Map<Class, Storage> storages = new HashMap<Class, Storage>();
+    BlockInfoDerby bidrby = new BlockInfoDerby();
+    storages.put(BlockInfo.class, bidrby);
+    storages.put(BlockInfoUnderConstruction.class, bidrby);
+    storages.put(ReplicaUnderConstruction.class, new ReplicaUnderConstructionDerby());
+    storages.put(IndexedReplica.class, new IndexedReplicaDerby());
+    storages.put(ExcessReplica.class, new ExcessReplicaDerby());
+    storages.put(InvalidatedBlock.class, new InvalidatedBlockDerby());
+    storages.put(Lease.class, new LeaseDerby());
+    storages.put(LeasePath.class, new LeasePathDerby());
+    storages.put(PendingBlockInfo.class, new PendingBlockDerby());
+    INodeDerby inodeClusterj = new INodeDerby();
     storages.put(INode.class, inodeClusterj);
     storages.put(INodeDirectory.class, inodeClusterj);
     storages.put(INodeFile.class, inodeClusterj);

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.mysql.clusterj.ClusterJException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.IOException;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
@@ -286,7 +286,7 @@ public class DatanodeManager {
             removeDatanode(descriptor);
             connector.commit();
             done = true;
-          } catch (ClusterJException e) {
+          } catch (StorageException e) {
             tries--;
             connector.rollback();
             LOG.error(e.getMessage(), e);
@@ -681,7 +681,7 @@ public class DatanodeManager {
           refreshDatanodes(true);
           connector.commit();
           done = true;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           LOG.error(e.getMessage(), e);

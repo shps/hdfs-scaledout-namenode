@@ -6,20 +6,25 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.INodeStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionStorage;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public enum DerbyConnector {
+public enum DerbyConnector implements StorageConnector<Connection> {
 
   INSTANCE;
   /* the default framework is embedded*/
@@ -27,8 +32,87 @@ public enum DerbyConnector {
   private String driver = "org.apache.derby.jdbc.EmbeddedDriver";
   private String protocol = "jdbc:derby:memory:";
   private String dbName = "derbyDB"; // the name of the database
+  private ThreadLocal<Connection> connectionPool = new ThreadLocal<Connection>();
+  private ThreadLocal<Boolean> activeTransactions = new ThreadLocal<Boolean>();
 
-  public void startDatabase() {
+  @Override
+  public void setConfiguration(Configuration conf) {
+    stopDatabase();
+    startDatabase();
+  }
+
+  @Override
+  public Connection obtainSession() {
+    Connection conn = this.connectionPool.get();
+    if (conn == null) {
+      try {
+        conn = DriverManager.getConnection(protocol + dbName
+                + ";create=false");
+        conn.setAutoCommit(false);
+        this.connectionPool.set(conn);
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
+
+    return conn;
+  }
+
+  @Override
+  public void beginTransaction() {
+    Connection conn = obtainSession(); //reserve a connection for this thread.
+    EntityManager.getInstance().begin();
+    activeTransactions.set(true);
+  }
+
+  @Override
+  public void commit() throws StorageException {
+    Connection connection = connectionPool.get();
+    if (!isTransactionActive()) {
+      throw new StorageException("The transaction is not began!");
+    }
+
+    EntityManager.getInstance().commit();
+    try {
+      connection.commit();
+    } catch (SQLException ex) {
+      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      throw new StorageException(ex);
+    } finally {
+      this.activeTransactions.set(false);
+    }
+  }
+
+  @Override
+  public void rollback() {
+
+    if (isTransactionActive()) {
+      Connection connection = connectionPool.get();
+      try {
+        connection.rollback();
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      } finally {
+        this.activeTransactions.set(false);
+      }
+    }
+
+    EntityManager.getInstance().rollback();
+  }
+
+  @Override
+  public boolean formatStorage() {
+    this.stopDatabase(); //since it's in memory DB.
+    this.startDatabase();
+    return true;
+  }
+
+  @Override
+  public boolean isTransactionActive() {
+    return this.activeTransactions.get();
+  }
+
+  private void startDatabase() {
 
     System.out.println("Database is starting in " + framework + " mode");
 
@@ -84,11 +168,11 @@ public enum DerbyConnector {
     }
   }
 
-  public void stopDatabase() {
+  private void stopDatabase() {
     if (framework.equals("embedded")) {
       try {
         // the shutdown=true attribute shuts down Derby
-        DriverManager.getConnection("jdbc:derby:memory:;shutdown=true");
+        DriverManager.getConnection("jdbc:derby:memory:" + dbName + ";drop=true");
 
         // To shut down a specific database only, but keep the
         // engine running (for example for connecting to other
@@ -175,27 +259,36 @@ public enum DerbyConnector {
             ExcessReplicaStorage.BLOCK_ID, ExcessReplicaStorage.STORAGE_ID));
     System.out.println("Table ExcessReplica is created.");
 
-    s.execute("CREATE TABLE inode ("
-            + "id BIGINT NOT NULL,   "
-            + "name varchar(128) DEFAULT NULL,   "
-            + "parentid BIGINT DEFAULT NULL,   "
-            + "isDir CHAR (1) FOR BIT DATA DEFAULT NULL,   "
-            + "modificationTime BIGINT DEFAULT NULL,   "
-            + "aTime BIGINT DEFAULT NULL,   "
-            + "permission VARCHAR (128) FOR BIT DATA DEFAULT NULL,   "
-            + "nsquota BIGINT DEFAULT NULL,   "
-            + "dsquota BIGINT DEFAULT NULL,   "
-            + "isUnderConstruction CHAR (1) FOR BIT DATA DEFAULT NULL,   "
-            + "clientName varchar(45) DEFAULT NULL,   "
-            + "clientMachine varchar(45) DEFAULT NULL,   "
-            + "clientNode varchar(45) DEFAULT NULL,   "
-            + "isClosedFile CHAR (1) FOR BIT DATA DEFAULT NULL,   "
-            + "header BIGINT DEFAULT NULL,   "
-            + "isDirWithQuota CHAR (1) FOR BIT DATA DEFAULT NULL,   "
-            + "nscount BIGINT DEFAULT NULL,   "
-            + "dscount BIGINT DEFAULT NULL,   "
-            + "symlink varchar(8000) DEFAULT NULL,  "
-            + "PRIMARY KEY (id) )");
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,   "
+            + "%s varchar(128) DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s VARCHAR (128) DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s varchar(45) DEFAULT NULL,   "
+            + "%s varchar(45) DEFAULT NULL,   "
+            + "%s varchar(45) DEFAULT NULL,   "
+            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s BIGINT DEFAULT NULL,   "
+            + "%s varchar(8000) DEFAULT NULL,  "
+            + "PRIMARY KEY (%s) )", INodeStorage.TABLE_NAME,
+            INodeStorage.ID, INodeStorage.NAME, INodeStorage.PARENT_ID,
+            INodeStorage.IS_DIR, INodeStorage.MODIFICATION_TIME,
+            INodeStorage.ACCESS_TIME, INodeStorage.PERMISSION, INodeStorage.NSQUOTA,
+            INodeStorage.DSQUOTA, INodeStorage.IS_UNDER_CONSTRUCTION,
+            INodeStorage.CLIENT_NAME, INodeStorage.CLIENT_MACHINE,
+            INodeStorage.CLIENT_NODE, INodeStorage.IS_CLOSED_FILE,
+            INodeStorage.HEADER, INodeStorage.IS_DIR_WITH_QUOTA,
+            INodeStorage.NSCOUNT, INodeStorage.DSCOUNT, INodeStorage.SYMLINK,
+            INodeStorage.ID));
     System.out.println("Table inode is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
@@ -253,18 +346,5 @@ public enum DerbyConnector {
             IndexedReplicaStorage.REPLICA_INDEX, IndexedReplicaStorage.BLOCK_ID,
             IndexedReplicaStorage.STORAGE_ID));
     System.out.println("Table tripletes is created.");
-  }
-
-  public Connection obtainSession() {
-    Connection conn = null;
-    try {
-      conn = DriverManager.getConnection(protocol + dbName
-              + ";create=true");
-      conn.setAutoCommit(false);
-    } catch (SQLException ex) {
-      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
-    }
-
-    return conn;
   }
 }

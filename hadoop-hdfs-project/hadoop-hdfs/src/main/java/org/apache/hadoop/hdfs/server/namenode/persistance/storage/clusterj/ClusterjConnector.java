@@ -11,7 +11,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
-import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
@@ -21,6 +20,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 
@@ -88,11 +88,11 @@ public enum ClusterjConnector implements StorageConnector<Session> {
    * Commit a transaction.
    */
   @Override
-  public void commit() throws ClusterJUserException {
+  public void commit() throws StorageException {
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
     if (!tx.isActive()) {
-      throw new ClusterJUserException("The transaction is not began!");
+      throw new StorageException("The transaction is not began!");
     }
 
     EntityManager.getInstance().commit();
@@ -104,7 +104,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
    * It rolls back only when the transaction is active.
    */
   @Override
-  public void rollback() throws ClusterJUserException {
+  public void rollback(){
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
     if (tx.isActive()) {

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.mysql.clusterj.ClusterJException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -139,6 +140,7 @@ import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.INodeFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -361,7 +363,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         connector.beginTransaction();
         em.add(this.dir.rootDir);
         connector.commit();
-      }catch (ClusterJException e) {
+      }catch (StorageException e) {
         LOG.error(e);
         connector.rollback();
       } finally {
@@ -671,10 +673,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(src, false);
           }
-        } catch (ClusterJException ex) {
+        } catch (StorageException ex) {
           connector.rollback();
           tries--;
-          //For now, the ClusterJException are just catched here.
+          //For now, the StorageException are just catched here.
           FSNamesystem.LOG.error(ex.getMessage(), ex);
         }
       }
@@ -734,11 +736,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 resultingStat = dir.getFileInfo(src, false);
               }
             }
-            catch(ClusterJException ex)
+            catch(StorageException ex)
             {
                 connector.rollback();
                 tries--;
-                //For now, the ClusterJException are just catched here.
+                //For now, the StorageException are just catched here.
                 FSNamesystem.LOG.error(ex.getMessage(), ex);
             }
         }
@@ -813,7 +815,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           connector.commit();
           isDone = true;
           return blocks;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           LOG.error(e.getMessage(), e);
           connector.rollback();
           tries--;
@@ -962,7 +964,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     resultingStat = dir.getFileInfo(target, false);
                 }
             }
-            catch(ClusterJException e)
+            catch(StorageException e)
             {
                 LOG.error(e.getMessage(), e);
                 connector.rollback();
@@ -1116,7 +1118,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           connector.commit();
           done = true;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
@@ -1151,7 +1153,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(link, false);
           }
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
@@ -1245,11 +1247,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               connector.commit();
               isDone = true;
             }
-            catch(ClusterJException ex)
+            catch(StorageException ex)
             {
                 connector.rollback();
                 tries--;
-                //For now, the ClusterJException are just catched here.
+                //For now, the StorageException are just catched here.
                 FSNamesystem.LOG.error(ex.getMessage(), ex);
             }
         }
@@ -1374,13 +1376,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           isDone = true;
         }
         catch(IOException ioe) {
-          //[W] An IOException does not mean that the writes should be rolled back in NDB
-          //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
-          connector.commit();
-          isDone = true;
+          try {
+            //[W] An IOException does not mean that the writes should be rolled back in NDB
+            //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
+            connector.commit();
+            isDone = true;
+          } catch (StorageException ex) {
+            Logger.getLogger(FSNamesystem.class.getName()).log(Level.SEVERE, null, ex);
+            isDone = false;
+          }
           throw ioe;
         }
-        catch(ClusterJException ex)
+        catch(StorageException ex)
         {
           LOG.error(ex.getMessage(), ex);
           connector.rollback();
@@ -1582,7 +1589,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             recoverLeaseInternal(inode, src, holder, clientMachine, true);
             connector.commit();
             isDone = true;
-          } catch (ClusterJException ex) {
+          } catch (StorageException ex) {
             if (!isDone) {
               connector.rollback();
               tries--;
@@ -1686,65 +1693,69 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Append to an existing file in the namespace.
    */
-    LocatedBlock appendFile(String src, String holder, String clientMachine)
-            throws AccessControlException, SafeModeException,
-            FileAlreadyExistsException, FileNotFoundException,
-            ParentNotDirectoryException, IOException {
-        if (!isWritingNN()) {
-            throw new ImproperUsageException();
-        }
-        if (supportAppends == false) {
-            throw new UnsupportedOperationException("Append to hdfs not supported."
-                    + " Please refer to dfs.support.append configuration parameter.");
-        }
-        LocatedBlock lb = null;
-        writeLock();
-        int tries = connector.RETRY_COUNT;
-        boolean isDone = false;
-        try {
-            while (!isDone && tries > 0) {
-                try {
-                    connector.beginTransaction();
-                    // Holds the db locks in 'startFileInternal ()' method
-                    lb = startFileInternal(src, null, holder, clientMachine,
-                            EnumSet.of(CreateFlag.APPEND),
-                            false, blockManager.maxReplication, (long) 0);
-                    connector.commit();
-                    isDone = true;
-                } 
-                catch(IOException ioe) {
-                  //[W] An IOException does not mean that the writes should be rolled back in NDB
-                  //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
-                  connector.commit();
-                  isDone = true;
-                  throw ioe;
-                }
-                catch (ClusterJException e) {
-                    LOG.error(e.getMessage(), e);
-                    tries--;
-                    connector.rollback();
-                }
-            }
-        } finally {
-            connector.rollback();
-            writeUnlock();
-        }
-        //getEditLog().logSync();
-        if (lb != null) {
-            if (NameNode.stateChangeLog.isDebugEnabled()) {
-                NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
-                        + src + " for " + holder + " at " + clientMachine
-                        + " block " + lb.getBlock()
-                        + " block size " + lb.getBlock().getNumBytes());
-            }
-        }
-        if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-            logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
-                    "append", src, null, null);
-        }
-        return lb;
+  LocatedBlock appendFile(String src, String holder, String clientMachine)
+          throws AccessControlException, SafeModeException,
+          FileAlreadyExistsException, FileNotFoundException,
+          ParentNotDirectoryException, IOException {
+    if (!isWritingNN()) {
+      throw new ImproperUsageException();
     }
+    if (supportAppends == false) {
+      throw new UnsupportedOperationException("Append to hdfs not supported."
+              + " Please refer to dfs.support.append configuration parameter.");
+    }
+    LocatedBlock lb = null;
+    writeLock();
+    int tries = connector.RETRY_COUNT;
+    boolean isDone = false;
+    try {
+      while (!isDone && tries > 0) {
+        try {
+          connector.beginTransaction();
+          // Holds the db locks in 'startFileInternal ()' method
+          lb = startFileInternal(src, null, holder, clientMachine,
+                  EnumSet.of(CreateFlag.APPEND),
+                  false, blockManager.maxReplication, (long) 0);
+          connector.commit();
+          isDone = true;
+        } catch (IOException ioe) {
+          try {
+            //[W] An IOException does not mean that the writes should be rolled back in NDB
+            //    e.g. RecoveryInProgressException, AlreadyBeingCreatedException
+            connector.commit();
+            isDone = true;
+          } catch (StorageException ex) {
+            Logger.getLogger(FSNamesystem.class.getName()).log(Level.SEVERE, null, ex);
+            isDone = false;
+          }
+
+          throw ioe;
+        } catch (StorageException e) {
+          LOG.error(e.getMessage(), e);
+          tries--;
+          connector.rollback();
+        }
+      }
+    } finally {
+      connector.rollback();
+      writeUnlock();
+    }
+    //getEditLog().logSync();
+    if (lb != null) {
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
+                + src + " for " + holder + " at " + clientMachine
+                + " block " + lb.getBlock()
+                + " block size " + lb.getBlock().getNumBytes());
+      }
+    }
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+              Server.getRemoteIp(),
+              "append", src, null, null);
+    }
+    return lb;
+  }
 
   ExtendedBlock getExtendedBlock(Block blk) {
     return new ExtendedBlock(blockPoolId, blk);
@@ -1790,7 +1801,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 connector.commit();
                 isDone = true;
             } 
-            catch (ClusterJException e)
+            catch (StorageException e)
             {
                 LOG.error(e.getMessage(), e);
                 tries--;
@@ -1988,7 +1999,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
             connector.commit();
             isDone = true;
-          } catch (ClusterJException ex) {
+          } catch (StorageException ex) {
             if (!isDone) {
               connector.rollback();
               tries--;
@@ -2099,12 +2110,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
                                       + " is closed by " + holder);
             }
-            catch(ClusterJException ex)
+            catch(StorageException ex)
             {
                 connector.rollback();
                 tries--;
                 success = false;
-                //For now, the ClusterJException are just catched here.
+                //For now, the StorageException are just catched here.
                 FSNamesystem.LOG.error(ex.getMessage(), ex);
             }
         }
@@ -2299,7 +2310,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           } else {
             isRenameDone = false;
           }
-        } catch (ClusterJException ex) {
+        } catch (StorageException ex) {
           if (!isDone) {
             connector.rollback();
             tries--;
@@ -2338,7 +2349,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (auditLog.isInfoEnabled() && isExternalInvocation()) {
             resultingStat = dir.getFileInfo(dst, false);
           }
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
@@ -2407,7 +2418,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   connector.commit();
                   isDone = true;
               }
-              catch (ClusterJException e)
+              catch (StorageException e)
               {
                   tries--;
                   connector.rollback();
@@ -2590,7 +2601,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             connector.commit();
             isDone = true;
           }
-          catch(ClusterJException ex)
+          catch(StorageException ex)
           {
             if(!isDone)
             {
@@ -2700,7 +2711,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     dir.setQuota(path, nsQuota, dsQuota);
                     connector.commit();
                     isDone = true;
-                } catch (ClusterJException e) {
+                } catch (StorageException e) {
                     connector.rollback();
                     tries--;
                     FSNamesystem.LOG.error(e.getMessage(), e);
@@ -3044,7 +3055,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
           connector.commit();
           done = true;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
@@ -3090,7 +3101,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           connector.commit();
           done = true;
         }
-        catch (ClusterJException e)
+        catch (StorageException e)
         {
           tries--;
           connector.rollback();
@@ -3146,7 +3157,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           connector.commit();
           isDone = true;
           return dl;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           LOG.error(e.getMessage(), e);
           connector.rollback();
           tries--;
@@ -3202,7 +3213,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           checkSafeMode();
           connector.commit();
           done = true;
-        } catch (ClusterJException e) {
+        } catch (StorageException e) {
           tries--;
           connector.rollback();
           FSNamesystem.LOG.error(e.getMessage(), e);
@@ -4477,7 +4488,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       connector.beginTransaction();
       updatePipelineInternal(clientName, oldBlock, newBlock, newNodes);
       connector.commit();
-    } catch (ClusterJException e) {
+    } catch (StorageException e) {
       LOG.error(e);
       connector.rollback();
     } finally {

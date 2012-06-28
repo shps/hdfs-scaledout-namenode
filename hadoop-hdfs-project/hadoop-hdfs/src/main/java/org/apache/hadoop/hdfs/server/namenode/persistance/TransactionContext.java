@@ -1,5 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.Storage;
 import java.util.*;
 import org.apache.commons.logging.Log;
@@ -145,7 +147,11 @@ public class TransactionContext {
   private void afterTxCheck(boolean done) {
     if (!externallyMngedTx) {
       if (done) {
-        connector.commit();
+        try {
+          connector.commit();
+        } catch (StorageException ex) {
+          Logger.getLogger(TransactionContext.class.getName()).log(Level.SEVERE, null, ex);
+        }
       } else {
         connector.rollback();
       }

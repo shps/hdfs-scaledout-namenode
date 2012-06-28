@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -384,7 +386,12 @@ public class TestBlockReport {
 // and then the expected number of has to be changed to '2'        
 //        cluster.getNamesystem().getPendingReplicationBlocks() +
         cluster.getNamesystem().getPendingDeletionBlocks());
-    connector.commit();
+    try {
+      connector.commit();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestBlockReport.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
 
     // Get another block and screw its length to be less than original
     if (randIndex == 0)
@@ -631,7 +638,12 @@ public class TestBlockReport {
           getPendingReplicationBlocks());
       LOG.debug("Excess " + cluster.getNamesystem().getExcessBlocks());
       LOG.debug("Total " + cluster.getNamesystem().getBlocksTotal());
-      connector.commit();
+      try {
+        connector.commit();
+      } catch (StorageException ex) {
+        Logger.getLogger(TestBlockReport.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        assert false : ex.getMessage();
+      }
     }
   }
 

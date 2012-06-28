@@ -63,13 +63,13 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.mysql.clusterj.ClusterJException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -865,7 +865,7 @@ public class BlockManager {
 					  connector.commit();
 					  isDone = true;
 				  }
-				  catch(ClusterJException ex)
+				  catch(StorageException ex)
 				  {
 					  if(!isDone)
 					  {
@@ -1461,7 +1461,7 @@ public class BlockManager {
 					  connector.commit();
 					  isDone = true;
 				  }
-				  catch(ClusterJException ex)
+				  catch(StorageException ex)
 				  {
 					  if(!isDone)
 					  {
@@ -2343,7 +2343,7 @@ public class BlockManager {
 
                             connector.commit();
                             isDone = true;
-                        } catch (ClusterJException ex) {
+                        } catch (StorageException ex) {
                             if (!isDone) {
                                 connector.rollback();
                                 tries--;
@@ -2833,7 +2833,7 @@ public class BlockManager {
               connector.commit();
               done = true;
               Thread.sleep(replicationRecheckInterval);
-            } catch (ClusterJException e) {
+            } catch (StorageException e) {
               tries--;
               connector.rollback();
               LOG.error(e.getMessage(), e);

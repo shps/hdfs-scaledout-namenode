@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import junit.framework.TestCase;
 
@@ -34,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaFinder;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -196,12 +199,16 @@ public class TestNodeCount extends TestCase {
       connector.beginTransaction();
       lastBlock = block;
       lastNum = namesystem.getBlockManager().countNodes(block);
-      connector.commit();
+      try {
+        connector.commit();
+      } catch (StorageException ex) {
+        Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+        assert false : ex.getMessage();
+      }
       return lastNum;
-    }
-    catch (IOException ex) {
+    } catch (IOException ex) {
       return null;
-    }    finally {
+    } finally {
       namesystem.readUnlock();
     }
   }
