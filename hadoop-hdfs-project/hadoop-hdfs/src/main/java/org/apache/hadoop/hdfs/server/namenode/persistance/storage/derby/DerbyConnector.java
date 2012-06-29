@@ -30,7 +30,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   /* the default framework is embedded*/
   private String framework = "embedded";
   private String driver = "org.apache.derby.jdbc.EmbeddedDriver";
-  private String protocol = "jdbc:derby://localhost:1527/memory:";
+  private String protocol = "jdbc:derby:memory:";
   private String dbName = "derbyDB"; // the name of the database
   private ThreadLocal<Connection> connectionPool = new ThreadLocal<Connection>();
   private ThreadLocal<Boolean> activeTransactions = new ThreadLocal<Boolean>();
@@ -268,8 +268,8 @@ public enum DerbyConnector implements StorageConnector<Connection> {
      *  must be set before loading the driver to take effect.
      */
     try {
-      String driver2 = "org.apache.derby.jdbc.ClientDriver";
-      Class.forName(driver2).newInstance();
+//      String driver2 = "org.apache.derby.jdbc.ClientDriver";
+      Class.forName(driver).newInstance();
       System.out.println("Loaded the appropriate driver");
     } catch (ClassNotFoundException cnfe) {
       System.err.println("\nUnable to load the JDBC driver " + driver);

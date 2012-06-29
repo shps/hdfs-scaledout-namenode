@@ -21,7 +21,7 @@ public class LeasePathDerby extends LeasePathStorage {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
   protected Map<LeasePath, LeasePath> newLPaths = new HashMap<LeasePath, LeasePath>();
-  
+
   @Override
   protected TreeSet<LeasePath> findByHolderId(int holderId) {
     String query = String.format("select * from %s where %s=?", TABLE_NAME, HOLDER_ID);
@@ -94,6 +94,8 @@ public class LeasePathDerby extends LeasePathStorage {
     String insert = String.format("insert into %s(%s,%s) values(?,?)", TABLE_NAME,
             HOLDER_ID, PATH);
     String delete = String.format("delete from %s where %s=?", TABLE_NAME, PATH);
+    String update = String.format("update %s set %s=? where %s=?", TABLE_NAME,
+            HOLDER_ID, PATH);
 
     Connection conn = connector.obtainSession();
     try {
@@ -105,6 +107,14 @@ public class LeasePathDerby extends LeasePathStorage {
       }
       insrt.executeBatch();
 
+      PreparedStatement updt = conn.prepareStatement(insert);
+      for (LeasePath l : modifiedLPaths.values()) {
+        updt.setLong(1, l.getHolderId());
+        updt.setString(2, l.getPath());
+        updt.addBatch();
+      }
+      updt.executeBatch();
+
       PreparedStatement dlt = conn.prepareStatement(delete);
       for (LeasePath l : removedLPaths.values()) {
         dlt.setString(1, l.getPath());
@@ -113,8 +123,9 @@ public class LeasePathDerby extends LeasePathStorage {
       dlt.executeBatch();
     } catch (SQLException ex) {
       SQLException next;
-      while ((next = ex.getNextException()) != null)
+      while ((next = ex.getNextException()) != null) {
         Logger.getLogger(LeasePathDerby.class.getName()).log(Level.SEVERE, null, next);
+      }
     }
   }
 
@@ -177,6 +188,4 @@ public class LeasePathDerby extends LeasePathStorage {
     super.remove(lPath);
     newLPaths.remove(lPath);
   }
-  
-  
 }

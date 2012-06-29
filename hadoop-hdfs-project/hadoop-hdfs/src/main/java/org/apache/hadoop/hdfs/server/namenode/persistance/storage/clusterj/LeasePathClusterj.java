@@ -21,7 +21,7 @@ public class LeasePathClusterj extends LeasePathStorage {
 
   @Override
   public void commit() {
-    for (LeasePath lp : newLPaths.values()) {
+    for (LeasePath lp : modifiedLPaths.values()) {
       LeasePathsTable lTable = session.newInstance(LeasePathsTable.class);
       createPersistableLeasePathInstance(lp, lTable);
       session.savePersistent(lTable);
