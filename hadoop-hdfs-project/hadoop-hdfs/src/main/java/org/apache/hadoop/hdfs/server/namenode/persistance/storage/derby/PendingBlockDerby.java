@@ -57,11 +57,12 @@ public class PendingBlockDerby extends PendingBlockStorage {
 
   @Override
   protected PendingBlockInfo findByPKey(long blockId) {
-    String query = String.format("select * from %s", TABLE_NAME);
+    String query = String.format("select * from %s where %s=?", TABLE_NAME, BLOCK_ID);
     Connection conn = connector.obtainSession();
     PendingBlockInfo result = null;
     try {
       PreparedStatement s = conn.prepareStatement(query);
+      s.setLong(1, blockId);
       ResultSet rSet = s.executeQuery();
       if (rSet.next()) {
         result = new PendingBlockInfo(rSet.getLong(BLOCK_ID),
