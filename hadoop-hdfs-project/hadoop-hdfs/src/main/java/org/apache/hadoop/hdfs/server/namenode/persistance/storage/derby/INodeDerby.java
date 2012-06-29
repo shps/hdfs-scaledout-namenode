@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,16 +44,13 @@ public class INodeDerby extends INodeStorage {
       ResultSet rSet = s.executeQuery();
       if (rSet.next()) {
         return createInode(rSet);
-      } else {
-        return null;
       }
     } catch (IOException ex) {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
-      return null;
     } catch (SQLException ex) {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
-      return null;
     }
+    return null;
   }
 
   @Override
@@ -85,16 +83,14 @@ public class INodeDerby extends INodeStorage {
       ResultSet rSet = s.executeQuery();
       if (rSet.next()) {
         return createInode(rSet);
-      } else {
-        return null;
       }
     } catch (IOException ex) {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
-      return null;
     } catch (SQLException ex) {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
-      return null;
     }
+    
+    return null;
   }
 
   @Override
@@ -129,26 +125,50 @@ public class INodeDerby extends INodeStorage {
   public void commit() {
 
     String delete = String.format("delete from %s where %s=?", TABLE_NAME, ID);
+    String insert = String.format("insert into %s(%s,%s,%s,%s,"
+            + "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+            + "%s, %s, %s, %s) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", TABLE_NAME, IS_DIR_WITH_QUOTA,
+            IS_DIR, IS_UNDER_CONSTRUCTION, MODIFICATION_TIME, ACCESS_TIME, NAME, PERMISSION,
+            PARENT_ID, NSQUOTA, DSQUOTA, NSCOUNT, DSCOUNT, HEADER, CLIENT_NAME, CLIENT_MACHINE,
+            CLIENT_NODE, SYMLINK, ID);
+    String update = String.format("update %s set %s=?, %s=?, %s=?,"
+            + "%s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?, %s=?,"
+            + "%s=?, %s=?, %s=?, %s=? where %s=?", TABLE_NAME, IS_DIR_WITH_QUOTA,
+            IS_DIR, IS_UNDER_CONSTRUCTION, MODIFICATION_TIME, ACCESS_TIME, NAME, PERMISSION,
+            PARENT_ID, NSQUOTA, DSQUOTA, NSCOUNT, DSCOUNT, HEADER, CLIENT_NAME, CLIENT_MACHINE,
+            CLIENT_NODE, SYMLINK, ID);
     Connection conn = connector.obtainSession();
-    try {
-      for (INode inode : newInodes.values()) {
-        String query = createInsertQuery(inode);
-        conn.prepareStatement(query).executeUpdate();
-      }
 
-      for (INode inode : modifiedInodes.values()) {
-        String query = createUpdateQuery(inode);
-        conn.prepareStatement(query).executeUpdate();
+    try {
+      PreparedStatement insrt = conn.prepareStatement(insert);
+      for (INode inode : newInodes.values()) {
+        createUpdateQuery(inode, insrt);
+        insrt.addBatch();
       }
+      insrt.executeBatch();
+      insrt.close();
+
+      PreparedStatement updt = conn.prepareStatement(update);
+      for (INode inode : modifiedInodes.values()) {
+        createUpdateQuery(inode, updt);
+        updt.addBatch();
+      }
+      updt.executeBatch();
+      updt.close();
 
       PreparedStatement dlt = conn.prepareStatement(delete);
-      for (INode inode : newInodes.values()) {
+      for (INode inode : removedInodes.values()) {
         dlt.setLong(1, inode.getId());
         dlt.addBatch();
       }
       dlt.executeBatch();
+      dlt.close();
     } catch (SQLException ex) {
-      Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
+      SQLException next;
+      while ((next = ex.getNextException()) != null)
+      {
+        Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, next);
+      }
     }
   }
 
@@ -175,43 +195,33 @@ public class INodeDerby extends INodeStorage {
     newInodes.remove(inode.getId());
   }
 
-  private String createInsertQuery(INode inode) throws SQLException {
-    StringBuilder columns = new StringBuilder();
-    StringBuilder values = new StringBuilder();
+  private void createUpdateQuery(INode inode, PreparedStatement s) throws SQLException {
 
-    columns.append(ID);
-    values.append(inode.getId());
-
-    columns.append(", ").append(IS_DIR_WITH_QUOTA);
     if ((inode instanceof INodeDirectoryWithQuota)) {
-      values.append(",'1'");
+      s.setBytes(1, new byte[]{(byte)1});
     } else {
-      values.append(",'0'");
+      s.setBytes(1, new byte[]{(byte)0});
     }
 
-    columns.append(", ");
-    columns.append(IS_DIR);
     if (inode instanceof INodeDirectory) {
-      values.append(",'1'");
+      s.setBytes(2, new byte[]{(byte)1});
     } else {
-      values.append(",'0'");
+      s.setBytes(2, new byte[]{(byte)0});
     }
 
-    columns.append(",").append(IS_UNDER_CONSTRUCTION);
     if (inode instanceof INodeFile) {
-      values.append(",'1'");
+      if (((INodeFile) inode).isUnderConstruction()) {
+        s.setBytes(3, new byte[]{(byte)1});
+      } else {
+        s.setBytes(3, new byte[]{(byte)0});
+      }
     } else {
-      values.append(",'0'");
+      s.setBytes(3, new byte[]{(byte)0});
     }
-    columns.append(", ");
-    columns.append(MODIFICATION_TIME);
-    values.append(", ").append(inode.getModificationTime());
-    columns.append(", ");
-    columns.append(ACCESS_TIME);
-    values.append(", ").append(inode.getAccessTime());
-    columns.append(", ");
-    columns.append(NAME);
-    values.append(", '").append(inode.getName()).append("'");
+
+    s.setLong(4, inode.getModificationTime());
+    s.setLong(5, inode.getAccessTime());
+    s.setString(6, inode.getName());
 
     DataOutputBuffer permissionString = new DataOutputBuffer();
     try {
@@ -220,126 +230,43 @@ public class INodeDerby extends INodeStorage {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
     }
 
-    columns.append(", ");
-    columns.append(PERMISSION);
-    values.append(", '");
-    for (byte b : permissionString.getData()) {
-      values.append(b);
-    }
-    values.append("'");
-    columns.append(", ");
-    columns.append(PARENT_ID);
-    values.append(", ").append(inode.getParentId());
-    columns.append(", ");
-    columns.append(NSQUOTA);
-    values.append(", ").append(inode.getNsQuota());
-    columns.append(", ");
-    columns.append(DSQUOTA);
-    values.append(", ").append(inode.getDsQuota());
+    s.setBytes(7, permissionString.getData());
+    s.setLong(8, inode.getParentId());
+    s.setLong(9, inode.getNsQuota());
+    s.setLong(10, inode.getDsQuota());
 
     if (inode instanceof INodeDirectory) {
-      columns.append(", ");
-      columns.append(NSCOUNT);
-      values.append(", ").append(((INodeDirectory) inode).getNsCount());
-      columns.append(", ");
-      columns.append(DSCOUNT);
-      values.append(", ").append(((INodeDirectory) inode).getDsCount());
+      s.setLong(11, ((INodeDirectory) inode).getNsCount());
+      s.setLong(12, ((INodeDirectory) inode).getDsCount());
+    } else {
+      s.setNull(11, Types.BIGINT);
+      s.setNull(12, Types.BIGINT);
     }
 
     if (inode instanceof INodeFile) {
-      columns.append(", ");
-      columns.append(HEADER);
-      values.append(", ").append(getHeader(((INodeFile) inode).getReplication(), ((INodeFile) inode).getPreferredBlockSize()));
-      columns.append(", ");
-      columns.append(CLIENT_NAME);
-      values.append(", '").append(((INodeFile) inode).getClientName()).append("'");
-      columns.append(", ");
-      columns.append(CLIENT_MACHINE);
-      values.append(", '").append(((INodeFile) inode).getClientMachine()).append("'");
-      columns.append(", ");
-      columns.append(CLIENT_NODE);
+      s.setLong(13, getHeader(((INodeFile) inode).getReplication(), ((INodeFile) inode).getPreferredBlockSize()));
+      s.setString(14, ((INodeFile) inode).getClientName());
+      s.setString(15, ((INodeFile) inode).getClientMachine());
       if (((INodeFile) inode).getClientNode() != null) {
-        values.append(", '").append(((INodeFile) inode).getClientNode().getName()).append("'");
+        s.setString(16, ((INodeFile) inode).getClientNode().getName());
+      } else {
+        s.setNull(16, Types.VARCHAR);
       }
-    }
-
-    if (inode instanceof INodeSymlink) {
-      columns.append(", ");
-      columns.append(SYMLINK);
-      values.append(", '");
-      String linkValue = DFSUtil.bytes2String(((INodeSymlink) inode).getSymlink());
-      values.append(linkValue).append("'");
-    }
-
-    return "insert into " + TABLE_NAME + "(" + columns + ") values(" + values + ")";
-  }
-
-  private String createUpdateQuery(INode inode) throws SQLException {
-    StringBuilder query = new StringBuilder("update ").append(TABLE_NAME).append(" ");
-
-    query.append("set ").append(IS_DIR_WITH_QUOTA).append("='");
-    if ((inode instanceof INodeDirectoryWithQuota)) {
-      query.append("1'");
     } else {
-      query.append("0'");
-    }
-
-    query.append(", ").append(IS_DIR).append("=");
-    if (inode instanceof INodeDirectory) {
-      query.append("'1'");
-    } else {
-      query.append("'0'");
-    }
-
-    query.append(", ").append(IS_UNDER_CONSTRUCTION).append("=");
-    if (inode instanceof INodeFile) {
-      query.append("'1'");
-    } else {
-      query.append("'0'");
-    }
-    query.append(", ").append(MODIFICATION_TIME).append("=").append(inode.getModificationTime());
-    query.append(", ").append(ACCESS_TIME).append("=").append(inode.getAccessTime());
-    query.append(", ").append(NAME).append("='").append(inode.getName()).append("'");
-
-    DataOutputBuffer permissionString = new DataOutputBuffer();
-    try {
-      inode.getPermissionStatus().write(permissionString);
-    } catch (IOException ex) {
-      Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
-    }
-
-    query.append(", ").append(PERMISSION).append("='");
-    for (byte b : permissionString.getData()) {
-      query.append(b);
-    }
-    query.append("'");
-    query.append(", ").append(PARENT_ID).append("=").append(inode.getParentId());
-    query.append(", ").append(NSQUOTA).append("=").append(inode.getNsQuota());
-    query.append(", ").append(DSQUOTA).append("=").append(inode.getDsQuota());
-
-    if (inode instanceof INodeDirectory) {
-      query.append(", ").append(NSCOUNT).append("=").append(((INodeDirectory) inode).getNsCount());
-      query.append(", ").append(DSCOUNT).append("=").append(((INodeDirectory) inode).getDsCount());
-    }
-
-    if (inode instanceof INodeFile) {
-      query.append(", ").append(HEADER).append("=").
-              append(getHeader(((INodeFile) inode).getReplication(), ((INodeFile) inode).getPreferredBlockSize()));
-      query.append(", ").append(CLIENT_NAME).append("='").append(((INodeFile) inode).getClientName()).append("'");
-      query.append(", ").append(CLIENT_MACHINE).append("='").append(((INodeFile) inode).getClientMachine()).append("'");
-      if (((INodeFile) inode).getClientNode() != null) {
-        query.append(", ").append(CLIENT_NODE).append("='").
-                append(((INodeFile) inode).getClientNode().getName()).append("'");
-      }
+      s.setNull(13, Types.BIGINT);
+      s.setNull(14, Types.VARCHAR);
+      s.setNull(15, Types.VARCHAR);
+      s.setNull(16, Types.VARCHAR);
     }
 
     if (inode instanceof INodeSymlink) {
       String linkValue = DFSUtil.bytes2String(((INodeSymlink) inode).getSymlink());
-      query.append(", ").append(SYMLINK).append("='").append(linkValue).append("'");
+      s.setString(17, linkValue);
+    } else {
+      s.setNull(17, Types.VARCHAR);
     }
 
-    query.append(" where ").append(ID).append("=").append(inode.getId());
-    return query.toString();
+    s.setLong(18, inode.getId());
   }
 
   private INode createInode(ResultSet rSet) throws IOException, SQLException {
@@ -349,8 +276,8 @@ public class INodeDerby extends INodeStorage {
 
     INode inode = null;
 
-    if (rSet.getBoolean(IS_DIR)) {
-      if (rSet.getBoolean(IS_DIR_WITH_QUOTA)) {
+    if (rSet.getBytes(IS_DIR)[0] == 1) {
+      if (rSet.getBytes(IS_DIR_WITH_QUOTA)[0] == 1) {
         inode = new INodeDirectoryWithQuota(rSet.getString(NAME), ps, rSet.getLong(NSQUOTA),
                 rSet.getLong(DSQUOTA));
       } else {
@@ -366,7 +293,8 @@ public class INodeDerby extends INodeStorage {
               rSet.getLong(ACCESS_TIME), ps);
     } else {
 
-      inode = new INodeFile(rSet.getBoolean(IS_UNDER_CONSTRUCTION), rSet.getString(NAME).getBytes(),
+      inode = new INodeFile(rSet.getBytes(IS_UNDER_CONSTRUCTION)[0] == 1 ? true : false,
+              rSet.getString(NAME).getBytes(),
               getReplication(rSet.getLong(HEADER)),
               rSet.getLong(MODIFICATION_TIME),
               getPreferredBlockSize(rSet.getLong(HEADER)),

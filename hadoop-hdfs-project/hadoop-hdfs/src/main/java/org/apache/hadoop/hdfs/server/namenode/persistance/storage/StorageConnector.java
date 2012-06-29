@@ -25,4 +25,6 @@ public interface StorageConnector<T> {
   public boolean formatStorage();
   
   public boolean isTransactionActive();
+  
+  public void stopStorage();
 }

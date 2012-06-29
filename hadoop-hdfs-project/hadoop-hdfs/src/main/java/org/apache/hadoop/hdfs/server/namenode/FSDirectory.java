@@ -1744,7 +1744,10 @@ public class FSDirectory implements Closeable {
       updateCount(pathComponents, pos, -counts.getNsCount(), 
           -childDiskspace, true);
     } else {
-      em.add(addedNode);
+      if (reuseID)
+        em.update(addedNode); //for move or rename
+      else
+        em.add(addedNode);
       em.update(pathComponents[pos-1]);
     }
     

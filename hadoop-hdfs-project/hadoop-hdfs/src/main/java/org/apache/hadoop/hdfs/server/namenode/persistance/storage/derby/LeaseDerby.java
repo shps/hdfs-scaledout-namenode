@@ -135,8 +135,9 @@ public class LeaseDerby extends LeaseStorage {
     try {
       PreparedStatement updt = conn.prepareStatement(update);
       for (Lease l : modifiedLeases.values()) {
-        updt.setLong(2, l.getLastUpdated());
-        updt.setInt(3, l.getHolderID());
+        updt.setLong(1, l.getLastUpdated());
+        updt.setInt(2, l.getHolderID());
+        updt.setString(3, l.getHolder());
         updt.addBatch();
       }
       updt.executeBatch();

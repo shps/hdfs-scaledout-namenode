@@ -46,6 +46,11 @@
       <artifactId>derby</artifactId>
       <version>10.8.2.2</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.derby</groupId>
+      <artifactId>derbyclient</artifactId>
+      <version>10.8.2.2</version>
+    </dependency>
             
     <dependency>
       <groupId>mysql</groupId>

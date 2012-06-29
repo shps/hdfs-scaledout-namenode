@@ -52,6 +52,7 @@ public class IndexedReplicaDerby extends IndexedReplicaStorage {
       for (IndexedReplica replica : newReplicas.values()) {
         insrt.setLong(1, replica.getBlockId());
         insrt.setString(2, replica.getStorageId());
+        insrt.setInt(3, replica.getIndex());
         insrt.addBatch();
       }
       insrt.executeBatch();

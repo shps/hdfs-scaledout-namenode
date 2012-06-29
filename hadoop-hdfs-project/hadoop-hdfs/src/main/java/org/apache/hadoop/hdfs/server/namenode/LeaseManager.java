@@ -171,7 +171,21 @@ public class LeaseManager {
 
       }
     }
-    return addLease(newHolder, src);
+    
+    Lease newLease = getLease(newHolder);
+    if (newLease == null) {
+      int holderID = DFSUtil.getRandom().nextInt();
+      newLease = new Lease(newHolder, holderID, now());
+      em.add(newLease);
+    } else {
+      renewLease(newLease);
+    }
+    // update lease-paths' holder
+    LeasePath lPath = new LeasePath(src, newLease.getHolderID());
+    newLease.addPath(lPath);
+    em.update(lPath);
+
+    return newLease;    
   }
 
   /**

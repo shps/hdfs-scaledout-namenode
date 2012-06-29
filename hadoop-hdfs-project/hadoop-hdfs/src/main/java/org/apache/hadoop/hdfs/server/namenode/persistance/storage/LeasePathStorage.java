@@ -20,7 +20,7 @@ public abstract class LeasePathStorage implements Storage<LeasePath> {
   public static final String PATH = "path";
   protected Map<Integer, TreeSet<LeasePath>> holderLeasePaths = new HashMap<Integer, TreeSet<LeasePath>>();
   protected Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
-  protected Map<LeasePath, LeasePath> newLPaths = new HashMap<LeasePath, LeasePath>();
+  protected Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
   protected Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
   protected Map<String, LeasePath> pathToLeasePath = new HashMap<String, LeasePath>();
   protected boolean allLeasePathsRead = false;
@@ -29,7 +29,7 @@ public abstract class LeasePathStorage implements Storage<LeasePath> {
   public void clear() {
     holderLeasePaths.clear();
     leasePaths.clear();
-    newLPaths.clear();
+    modifiedLPaths.clear();
     removedLPaths.clear();
     pathToLeasePath.clear();
     allLeasePathsRead = false;
@@ -42,7 +42,7 @@ public abstract class LeasePathStorage implements Storage<LeasePath> {
     }
 
     pathToLeasePath.remove(lPath.getPath());
-    newLPaths.remove(lPath);
+    modifiedLPaths.remove(lPath);
     if (holderLeasePaths.containsKey(lPath.getHolderId())) {
       Set<LeasePath> lSet = holderLeasePaths.get(lPath.getHolderId());
       lSet.remove(lPath);
@@ -114,16 +114,11 @@ public abstract class LeasePathStorage implements Storage<LeasePath> {
 
   @Override
   public void update(LeasePath lPath) throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void add(LeasePath lPath) throws TransactionContextException {
     if (removedLPaths.containsKey(lPath)) {
       throw new TransactionContextException("Removed lease-path passed to be persisted");
     }
 
-    newLPaths.put(lPath, lPath);
+    modifiedLPaths.put(lPath, lPath);
     leasePaths.put(lPath, lPath);
     pathToLeasePath.put(lPath.getPath(), lPath);
     if (allLeasePathsRead) {
@@ -135,6 +130,11 @@ public abstract class LeasePathStorage implements Storage<LeasePath> {
         holderLeasePaths.put(lPath.getHolderId(), lSet);
       }
     }
+  }
+
+  @Override
+  public void add(LeasePath lPath) throws TransactionContextException {
+    update(lPath);
   }
 
   protected abstract TreeSet<LeasePath> findByHolderId(int holderId);

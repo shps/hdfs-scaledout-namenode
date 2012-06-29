@@ -1293,6 +1293,8 @@ public class MiniDFSCluster {
         nameNode.join();
         nameNode = null;
       }
+      StorageConnector connector = StorageFactory.getConnector();
+      connector.stopStorage();
     }
     
     final Set<Entry<Integer, NameNodeInfo[]>> entrySet = readingNameNodes.entrySet();

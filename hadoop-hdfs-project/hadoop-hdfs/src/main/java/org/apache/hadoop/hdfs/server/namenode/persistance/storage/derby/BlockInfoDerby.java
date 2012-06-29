@@ -18,6 +18,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoStorage;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaStorage;
+import org.hsqldb.Types;
 
 /**
  *
@@ -101,6 +102,9 @@ public class BlockInfoDerby extends BlockInfoStorage {
           BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) block;
           insrt.setInt(8, ucBlock.getPrimaryNodeIndex());
           insrt.setLong(9, ucBlock.getBlockRecoveryId());
+        } else {
+          insrt.setNull(8, Types.INTEGER);
+          insrt.setNull(9, Types.BIGINT);
         }
         insrt.addBatch();
       }
@@ -118,6 +122,9 @@ public class BlockInfoDerby extends BlockInfoStorage {
           BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) block;
           updt.setInt(7, ucBlock.getPrimaryNodeIndex());
           updt.setLong(8, ucBlock.getBlockRecoveryId());
+        } else {
+          updt.setNull(7, Types.INTEGER);
+          updt.setNull(8, Types.BIGINT);
         }
         updt.addBatch();
       }

@@ -359,15 +359,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (rootInode == null) {
       this.dir.rootDir.setId(0);
       this.dir.rootDir.setParentId(-1);
+      boolean done = false;
       try {
         connector.beginTransaction();
         em.add(this.dir.rootDir);
         connector.commit();
+        done = true;
       }catch (StorageException e) {
         LOG.error(e);
         connector.rollback();
       } finally {
-        connector.rollback();
+        if (!done)
+          connector.rollback();
       }
     } else
         this.dir.rootDir = (INodeDirectoryWithQuota) rootInode;
@@ -2305,15 +2308,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (dir.renameTo(src, dst)) {
             unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
             connector.commit();
-            isDone = true;
             isRenameDone = true;
           } else {
             isRenameDone = false;
           }
+          isDone = true;
         } catch (StorageException ex) {
+          tries--;
           if (!isDone) {
             connector.rollback();
-            tries--;
             FSNamesystem.LOG.error("renameToInternal() :: failed to rename " + src + " to " + dst + ". Exception: " + ex.getMessage(), ex);
           }
         }

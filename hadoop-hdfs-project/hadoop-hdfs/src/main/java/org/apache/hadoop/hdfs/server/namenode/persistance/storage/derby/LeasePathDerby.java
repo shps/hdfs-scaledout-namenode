@@ -4,10 +4,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStorage;
 
 /**
@@ -17,7 +20,8 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathStora
 public class LeasePathDerby extends LeasePathStorage {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
-
+  protected Map<LeasePath, LeasePath> newLPaths = new HashMap<LeasePath, LeasePath>();
+  
   @Override
   protected TreeSet<LeasePath> findByHolderId(int holderId) {
     String query = String.format("select * from %s where %s=?", TABLE_NAME, HOLDER_ID);
@@ -27,6 +31,7 @@ public class LeasePathDerby extends LeasePathStorage {
       s.setLong(1, holderId);
       ResultSet rSet = s.executeQuery();
       TreeSet<LeasePath> lpSet = syncLeasePathInstances(rSet, false);
+      return lpSet;
     } catch (SQLException ex) {
       Logger.getLogger(LeasePathDerby.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -86,8 +91,9 @@ public class LeasePathDerby extends LeasePathStorage {
 
   @Override
   public void commit() {
-    String insert = String.format("insert into %s values(?,?)", TABLE_NAME);
-    String delete = String.format("delete from %s where %s=?", TABLE_NAME, HOLDER_ID);
+    String insert = String.format("insert into %s(%s,%s) values(?,?)", TABLE_NAME,
+            HOLDER_ID, PATH);
+    String delete = String.format("delete from %s where %s=?", TABLE_NAME, PATH);
 
     Connection conn = connector.obtainSession();
     try {
@@ -106,7 +112,9 @@ public class LeasePathDerby extends LeasePathStorage {
       }
       dlt.executeBatch();
     } catch (SQLException ex) {
-      Logger.getLogger(LeasePathDerby.class.getName()).log(Level.SEVERE, null, ex);
+      SQLException next;
+      while ((next = ex.getNextException()) != null)
+        Logger.getLogger(LeasePathDerby.class.getName()).log(Level.SEVERE, null, next);
     }
   }
 
@@ -137,4 +145,38 @@ public class LeasePathDerby extends LeasePathStorage {
 
     return finalList;
   }
+
+  @Override
+  public void add(LeasePath lPath) throws TransactionContextException {
+    if (removedLPaths.containsKey(lPath)) {
+      throw new TransactionContextException("Removed lease-path passed to be persisted");
+    }
+
+    newLPaths.put(lPath, lPath);
+    leasePaths.put(lPath, lPath);
+    pathToLeasePath.put(lPath.getPath(), lPath);
+    if (allLeasePathsRead) {
+      if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+        holderLeasePaths.get(lPath.getHolderId()).add(lPath);
+      } else {
+        TreeSet<LeasePath> lSet = new TreeSet<LeasePath>();
+        lSet.add(lPath);
+        holderLeasePaths.put(lPath.getHolderId(), lSet);
+      }
+    }
+  }
+
+  @Override
+  public void clear() {
+    super.clear();
+    newLPaths.clear();
+  }
+
+  @Override
+  public void remove(LeasePath lPath) throws TransactionContextException {
+    super.remove(lPath);
+    newLPaths.remove(lPath);
+  }
+  
+  
 }

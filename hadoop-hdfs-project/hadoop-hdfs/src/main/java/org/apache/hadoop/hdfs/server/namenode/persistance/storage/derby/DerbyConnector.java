@@ -30,15 +30,22 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   /* the default framework is embedded*/
   private String framework = "embedded";
   private String driver = "org.apache.derby.jdbc.EmbeddedDriver";
-  private String protocol = "jdbc:derby:memory:";
+  private String protocol = "jdbc:derby://localhost:1527/memory:";
   private String dbName = "derbyDB"; // the name of the database
   private ThreadLocal<Connection> connectionPool = new ThreadLocal<Connection>();
   private ThreadLocal<Boolean> activeTransactions = new ThreadLocal<Boolean>();
+  private boolean dbStarted = false;
+
+  private DerbyConnector() {
+    loadDriver();
+  }
 
   @Override
-  public void setConfiguration(Configuration conf) {
-    stopDatabase();
-    startDatabase();
+  public synchronized void setConfiguration(Configuration conf) {
+    if (!dbStarted) {
+      startDatabase();
+    }
+
   }
 
   @Override
@@ -102,9 +109,51 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public boolean formatStorage() {
-    this.stopDatabase(); //since it's in memory DB.
-    this.startDatabase();
+    startDatabase();
     return true;
+//    Connection conn = null;
+//    Statement s = null;
+//    try {
+//      conn = DriverManager.getConnection(protocol + dbName
+//              + ";create=false");
+//
+//      conn.setAutoCommit(false);
+//
+//      s = conn.createStatement();
+//      s.execute(String.format("delete from %s", BlockInfoStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", INodeStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", LeaseStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", LeasePathStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", PendingBlockStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", IndexedReplicaStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", InvalidatedBlockStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", ExcessReplicaStorage.TABLE_NAME));
+//      s.execute(String.format("delete from %s", ReplicaUnderConstructionStorage.TABLE_NAME));
+//
+//      //commit changes
+//      conn.commit();
+//      return true;
+//    } catch (SQLException ex) {
+//      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+//      return false;
+//    } finally {
+//      try {
+//        if (s != null && !s.isClosed()) {
+//          s.close();
+//          s = null;
+//        }
+//      } catch (SQLException ex) {
+//        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+//      }
+//      try {
+//        if (conn != null && !conn.isClosed()) {
+//          conn.close();
+//          conn = null;
+//        }
+//      } catch (SQLException ex) {
+//        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+//      }
+//    }
   }
 
   @Override
@@ -113,12 +162,11 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   }
 
   private void startDatabase() {
-
+    dropTables();
     System.out.println("Database is starting in " + framework + " mode");
 
     /* load the desired JDBC driver */
-    loadDriver();
-
+    
     Connection conn = null;
     Statement s = null;
     try {
@@ -146,8 +194,10 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
       //commit changes
       conn.commit();
+      dbStarted = true;
     } catch (SQLException ex) {
       Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      dbStarted = false;
     } finally {
       try {
         if (s != null && !s.isClosed()) {
@@ -168,30 +218,35 @@ public enum DerbyConnector implements StorageConnector<Connection> {
     }
   }
 
-  private void stopDatabase() {
-    if (framework.equals("embedded")) {
-      try {
-        // the shutdown=true attribute shuts down Derby
-        DriverManager.getConnection("jdbc:derby:memory:" + dbName + ";drop=true");
-
-        // To shut down a specific database only, but keep the
-        // engine running (for example for connecting to other
-        // databases), specify a database in the connection URL:
-        //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
-      } catch (SQLException se) {
-        if (((se.getErrorCode() == 50000)
-                && ("XJ015".equals(se.getSQLState())))) {
-          // we got the expected exception
-          System.out.println("Derby shut down normally");
-          // Note that for single database shutdown, the expected
-          // SQL state is "08006", and the error code is 45000.
-        } else {
-          // if the error code or SQLState is different, we have
-          // an unexpected exception (shutdown failed)
-          System.err.println("Derby did not shut down normally");
-        }
-      }
-    }
+  @Override
+  public synchronized void stopStorage() {
+    dbStarted = false;
+//    if (this.dbStarted) {
+//      if (framework.equals("embedded")) {
+//        try {
+//          // the shutdown=true attribute shuts down Derby
+//          DriverManager.getConnection(protocol + dbName + ";drop=true");
+//          this.dbStarted = false;
+//
+//          // To shut down a specific database only, but keep the
+//          // engine running (for example for connecting to other
+//          // databases), specify a database in the connection URL:
+//          //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
+//        } catch (SQLException se) {
+//          if (((se.getErrorCode() == 50000)
+//                  && ("XJ015".equals(se.getSQLState())))) {
+//            // we got the expected exception
+//            System.out.println("Derby shut down normally");
+//            // Note that for single database shutdown, the expected
+//            // SQL state is "08006", and the error code is 45000.
+//          } else {
+//            // if the error code or SQLState is different, we have
+//            // an unexpected exception (shutdown failed)
+//            System.err.println("Derby did not shut down normally");
+//          }
+//        }
+//      }
+//    }
   }
 
   /* Loads the appropriate JDBC driver for this environment/framework. For
@@ -213,7 +268,8 @@ public enum DerbyConnector implements StorageConnector<Connection> {
      *  must be set before loading the driver to take effect.
      */
     try {
-      Class.forName(driver).newInstance();
+      String driver2 = "org.apache.derby.jdbc.ClientDriver";
+      Class.forName(driver2).newInstance();
       System.out.println("Loaded the appropriate driver");
     } catch (ClassNotFoundException cnfe) {
       System.err.println("\nUnable to load the JDBC driver " + driver);
@@ -263,19 +319,19 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "%s BIGINT NOT NULL,   "
             + "%s varchar(128) DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
-            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s CHAR (1) FOR BIT DATA DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
-            + "%s VARCHAR (128) DEFAULT NULL,   "
+            + "%s VARCHAR (128) FOR BIT DATA DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
-            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s CHAR (1) FOR BIT DATA DEFAULT NULL,   "
             + "%s varchar(45) DEFAULT NULL,   "
             + "%s varchar(45) DEFAULT NULL,   "
             + "%s varchar(45) DEFAULT NULL,   "
-            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s CHAR (1) FOR BIT DATA DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
-            + "%s CHAR (1) DEFAULT NULL,   "
+            + "%s CHAR (1) FOR BIT DATA DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s varchar(8000) DEFAULT NULL,  "
@@ -346,5 +402,46 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             IndexedReplicaStorage.REPLICA_INDEX, IndexedReplicaStorage.BLOCK_ID,
             IndexedReplicaStorage.STORAGE_ID));
     System.out.println("Table tripletes is created.");
+  }
+  
+  private void dropTables()
+  {
+  Connection conn = null;
+    Statement s = null;
+    try {
+      conn = DriverManager.getConnection(protocol + dbName
+              + ";create=true");
+
+      s = conn.createStatement();
+      s.execute(String.format("drop table %s", BlockInfoStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", INodeStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", LeaseStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", LeasePathStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", PendingBlockStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", IndexedReplicaStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", InvalidatedBlockStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", ExcessReplicaStorage.TABLE_NAME));
+      s.execute(String.format("drop table %s", ReplicaUnderConstructionStorage.TABLE_NAME));
+    } catch (SQLException ex) {
+      Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING,
+              "There is no table to remvoe or cannot remove the tables.");
+    } finally {
+      try {
+        if (s != null && !s.isClosed()) {
+          s.close();
+          s = null;
+        }
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING, null, ex);
+      }
+      try {
+        if (conn != null && !conn.isClosed()) {
+          conn.close();
+          conn = null;
+        }
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING, null, ex);
+      }
+    }
   }
 }

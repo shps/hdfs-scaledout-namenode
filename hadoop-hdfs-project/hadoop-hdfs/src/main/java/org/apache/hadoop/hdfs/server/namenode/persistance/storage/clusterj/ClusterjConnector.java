@@ -147,4 +147,9 @@ public enum ClusterjConnector implements StorageConnector<Session> {
   public boolean isTransactionActive() {
     return obtainSession().currentTransaction().isActive();
   }
+
+  @Override
+  public void stopStorage() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }
