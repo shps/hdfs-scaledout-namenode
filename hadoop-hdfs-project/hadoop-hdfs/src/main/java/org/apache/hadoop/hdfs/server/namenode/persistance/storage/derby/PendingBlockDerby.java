@@ -102,7 +102,7 @@ public class PendingBlockDerby extends PendingBlockStorage {
       updt.executeBatch();
 
       PreparedStatement dlt = conn.prepareStatement(delete);
-      for (PendingBlockInfo p : modifiedPendings.values()) {
+      for (PendingBlockInfo p : removedPendings.values()) {
         dlt.setLong(1, p.getBlockId());
         dlt.addBatch();
       }

@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,11 +58,12 @@ public class INodeDerby extends INodeStorage {
   protected List<INode> findInodesByParentIdSortedByName(long parentId) {
     Connection conn = connector.obtainSession();
     String query = String.format("select * from %s where %s=?", TABLE_NAME, PARENT_ID);
+    List<INode> inodes = null;
     try {
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, parentId);
       ResultSet rSet = s.executeQuery();
-      return createInodeList(rSet);
+      inodes = createInodeList(rSet);
     } catch (IOException ex) {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
       return null;
@@ -69,6 +71,10 @@ public class INodeDerby extends INodeStorage {
       Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
       return null;
     }
+    
+    List<INode> syncInodes = syncInodeInstances(inodes);
+    Collections.sort(syncInodes, INode.Order.ByName);
+    return syncInodes;
   }
 
   @Override
@@ -96,6 +102,7 @@ public class INodeDerby extends INodeStorage {
   @Override
   protected List<INode> findInodesByIds(List<Long> ids) {
     Connection conn = connector.obtainSession();
+    List<INode> inodes = null;
     if (ids.size() > 0) {
       StringBuilder query = new StringBuilder("select * from ").append(TABLE_NAME).
               append(" where ").append(ID).append("=").append(ids.get(0));
@@ -104,7 +111,7 @@ public class INodeDerby extends INodeStorage {
       }
       try {
         ResultSet rSet = conn.prepareStatement(query.toString()).executeQuery();
-        return createInodeList(rSet);
+        inodes = createInodeList(rSet);
       } catch (IOException ex) {
         Logger.getLogger(INodeDerby.class.getName()).log(Level.SEVERE, null, ex);
         return null;
@@ -113,7 +120,8 @@ public class INodeDerby extends INodeStorage {
         return null;
       }
     }
-    return null;
+    List<INode> syncInodes = syncInodeInstances(inodes);
+    return syncInodes;
   }
 
   @Override
@@ -319,5 +327,24 @@ public class INodeDerby extends INodeStorage {
       inodes.add(createInode(rSet));
     }
     return inodes;
+  }
+  
+  private List<INode> syncInodeInstances(List<INode> newInodes) {
+    List<INode> finalList = new ArrayList<INode>();
+
+    for (INode inode : newInodes) {
+      if (removedInodes.containsKey(inode.getId())) {
+        continue;
+      }
+      if (inodesIdIndex.containsKey(inode.getId())) {
+        finalList.add(inodesIdIndex.get(inode.getId()));
+      } else {
+        inodesIdIndex.put(inode.getId(), inode);
+        inodesNameParentIndex.put(inode.nameParentKey(), inode);
+        finalList.add(inode);
+      }
+    }
+
+    return finalList;
   }
 }

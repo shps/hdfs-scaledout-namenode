@@ -107,7 +107,7 @@ public class LeasePathDerby extends LeasePathStorage {
       }
       insrt.executeBatch();
 
-      PreparedStatement updt = conn.prepareStatement(insert);
+      PreparedStatement updt = conn.prepareStatement(update);
       for (LeasePath l : modifiedLPaths.values()) {
         updt.setLong(1, l.getHolderId());
         updt.setString(2, l.getPath());

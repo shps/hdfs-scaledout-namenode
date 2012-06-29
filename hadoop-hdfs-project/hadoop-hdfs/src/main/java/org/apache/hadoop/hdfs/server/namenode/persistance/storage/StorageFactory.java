@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.ReplicaU
 public class StorageFactory {
 
   private static final StorageConnector defaultStorage = DerbyConnector.INSTANCE;
+//  private static final StorageConnector defaultStorage = ClusterjConnector.INSTANCE;
 
   public static StorageConnector getConnector() {
     return defaultStorage;

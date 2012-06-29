@@ -150,6 +150,6 @@ public enum ClusterjConnector implements StorageConnector<Session> {
 
   @Override
   public void stopStorage() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    
   }
 }
