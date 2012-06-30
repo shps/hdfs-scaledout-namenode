@@ -42,9 +42,9 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public synchronized void setConfiguration(Configuration conf) {
-    if (!dbStarted) {
-      startDatabase();
-    }
+//    if (!dbStarted) {
+//      startDatabase();
+//    }
 
   }
 
@@ -220,7 +220,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public synchronized void stopStorage() {
-    dbStarted = false;
+//    dbStarted = false;
 //    if (this.dbStarted) {
 //      if (framework.equals("embedded")) {
 //        try {
