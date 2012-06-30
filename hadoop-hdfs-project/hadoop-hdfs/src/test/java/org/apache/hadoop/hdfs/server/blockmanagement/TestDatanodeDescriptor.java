@@ -26,8 +26,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.*;
 
 /**
  * This class tests that methods in DatanodeDescriptor

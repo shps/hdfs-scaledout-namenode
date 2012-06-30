@@ -42,9 +42,9 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public synchronized void setConfiguration(Configuration conf) {
-//    if (!dbStarted) {
-//      startDatabase();
-//    }
+    if (!dbStarted) {
+      startDatabase();
+    }
 
   }
 
@@ -109,51 +109,51 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public boolean formatStorage() {
-    startDatabase();
-    return true;
-//    Connection conn = null;
-//    Statement s = null;
-//    try {
-//      conn = DriverManager.getConnection(protocol + dbName
-//              + ";create=false");
-//
-//      conn.setAutoCommit(false);
-//
-//      s = conn.createStatement();
-//      s.execute(String.format("delete from %s", BlockInfoStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", INodeStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", LeaseStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", LeasePathStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", PendingBlockStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", IndexedReplicaStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", InvalidatedBlockStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", ExcessReplicaStorage.TABLE_NAME));
-//      s.execute(String.format("delete from %s", ReplicaUnderConstructionStorage.TABLE_NAME));
-//
-//      //commit changes
-//      conn.commit();
-//      return true;
-//    } catch (SQLException ex) {
-//      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
-//      return false;
-//    } finally {
-//      try {
-//        if (s != null && !s.isClosed()) {
-//          s.close();
-//          s = null;
-//        }
-//      } catch (SQLException ex) {
-//        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
-//      }
-//      try {
-//        if (conn != null && !conn.isClosed()) {
-//          conn.close();
-//          conn = null;
-//        }
-//      } catch (SQLException ex) {
-//        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
-//      }
-//    }
+//    startDatabase();
+//    return true;
+    Connection conn = null;
+    Statement s = null;
+    try {
+      conn = DriverManager.getConnection(protocol + dbName
+              + ";create=false");
+
+      conn.setAutoCommit(false);
+
+      s = conn.createStatement();
+      s.execute(String.format("delete from %s", BlockInfoStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", INodeStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", LeaseStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", LeasePathStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", PendingBlockStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", IndexedReplicaStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", InvalidatedBlockStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", ExcessReplicaStorage.TABLE_NAME));
+      s.execute(String.format("delete from %s", ReplicaUnderConstructionStorage.TABLE_NAME));
+
+      //commit changes
+      conn.commit();
+      return true;
+    } catch (SQLException ex) {
+      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      return false;
+    } finally {
+      try {
+        if (s != null && !s.isClosed()) {
+          s.close();
+          s = null;
+        }
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      }
+      try {
+        if (conn != null && !conn.isClosed()) {
+          conn.close();
+          conn = null;
+        }
+      } catch (SQLException ex) {
+        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
   }
 
   @Override

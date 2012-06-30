@@ -78,6 +78,7 @@ public class LeasePathDerby extends LeasePathStorage {
     Connection conn = connector.obtainSession();
     try {
       PreparedStatement s = conn.prepareStatement(query);
+      s.setString(1, path);
       ResultSet rSet = s.executeQuery();
       if (rSet.next()) {
         result = new LeasePath(rSet.getString(PATH), rSet.getInt(HOLDER_ID));
