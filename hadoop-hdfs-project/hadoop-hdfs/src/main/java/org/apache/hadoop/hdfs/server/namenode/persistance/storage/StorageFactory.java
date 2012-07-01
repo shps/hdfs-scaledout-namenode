@@ -2,6 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
@@ -43,8 +45,16 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.ReplicaU
  */
 public class StorageFactory {
 
-  private static final StorageConnector defaultStorage = DerbyConnector.INSTANCE;
+  private static StorageConnector defaultStorage;
 //  private static final StorageConnector defaultStorage = ClusterjConnector.INSTANCE;
+  static {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    String storageType = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
+    if (storageType.equals("derby"))
+      defaultStorage = DerbyConnector.INSTANCE;
+    else if (storageType.equals("clusterj"))
+      defaultStorage = ClusterjConnector.INSTANCE;
+  }
 
   public static StorageConnector getConnector() {
     return defaultStorage;
