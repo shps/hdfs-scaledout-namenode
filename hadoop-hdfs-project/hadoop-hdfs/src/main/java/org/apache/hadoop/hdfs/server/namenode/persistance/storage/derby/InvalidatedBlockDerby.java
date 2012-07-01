@@ -105,7 +105,7 @@ public class InvalidatedBlockDerby extends InvalidatedBlockStorage {
   public void commit() {
     String insert = String.format("insert into %s values(?,?,?,?)",
             TABLE_NAME, BLOCK_ID, STORAGE_ID, GENERATION_STAMP, NUM_BYTES);
-    String update = String.format("update %s set %s=?, set=? where %s=? and %s=?", 
+    String update = String.format("update %s set %s=?, %s=? where %s=? and %s=?", 
             TABLE_NAME, GENERATION_STAMP, NUM_BYTES, STORAGE_ID, BLOCK_ID);
     String delete = String.format("delete from %s where %s=? and %s=?",
             TABLE_NAME, BLOCK_ID, STORAGE_ID);
@@ -115,7 +115,7 @@ public class InvalidatedBlockDerby extends InvalidatedBlockStorage {
       PreparedStatement insrt = conn.prepareStatement(insert);
       PreparedStatement updt = conn.prepareStatement(update);
       for (InvalidatedBlock newBlock : newInvBlocks.values()) {
-        if (existings.contains(newBlock))
+        if (!existings.contains(newBlock))
         {
           insrt.setLong(1, newBlock.getBlockId());
           insrt.setString(2, newBlock.getStorageId());
@@ -152,13 +152,13 @@ public class InvalidatedBlockDerby extends InvalidatedBlockStorage {
       Iterator<InvalidatedBlock> iterator = invBlocks.iterator();
       InvalidatedBlock next = iterator.next();
       StringBuilder query = new StringBuilder("select * from ").append(TABLE_NAME).
-              append(" where (").append(STORAGE_ID).append(" = ").
-              append(next.getStorageId()).append(" and ").append(BLOCK_ID).append("=").
+              append(" where (").append(STORAGE_ID).append("='").
+              append(next.getStorageId()).append("' and ").append(BLOCK_ID).append("=").
               append(next.getBlockId()).append(")");
       while (iterator.hasNext()) {
         next = iterator.next();
-        query.append(" or (").append(STORAGE_ID).append(" = ").
-                append(next.getStorageId()).append(" and ").append(BLOCK_ID).append("=").
+        query.append(" or (").append(STORAGE_ID).append("='").
+                append(next.getStorageId()).append("' and ").append(BLOCK_ID).append("=").
                 append(next.getBlockId()).append(")");
       }
       Connection conn = connector.obtainSession();

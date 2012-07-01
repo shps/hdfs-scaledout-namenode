@@ -186,6 +186,10 @@ public class INodeDerby extends INodeStorage {
       throw new TransactionContextException("Removed  inode passed to be persisted");
     }
 
+    if (inodesIdIndex.containsKey(inode.getId()))
+    {
+      throw new TransactionContextException("Existing  inode passed to be added");
+    }
     inodesIdIndex.put(inode.getId(), inode);
     inodesNameParentIndex.put(inode.nameParentKey(), inode);
     newInodes.put(inode.getId(), inode);
