@@ -5,8 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
@@ -101,19 +105,35 @@ public class InvalidatedBlockDerby extends InvalidatedBlockStorage {
   public void commit() {
     String insert = String.format("insert into %s values(?,?,?,?)",
             TABLE_NAME, BLOCK_ID, STORAGE_ID, GENERATION_STAMP, NUM_BYTES);
+    String update = String.format("update %s set %s=?, set=? where %s=? and %s=?", 
+            TABLE_NAME, GENERATION_STAMP, NUM_BYTES, STORAGE_ID, BLOCK_ID);
     String delete = String.format("delete from %s where %s=? and %s=?",
             TABLE_NAME, BLOCK_ID, STORAGE_ID);
     Connection conn = connector.obtainSession();
     try {
+      HashSet<InvalidatedBlock> existings = findBlocksByPkeys(newInvBlocks.values());
       PreparedStatement insrt = conn.prepareStatement(insert);
-      for (InvalidatedBlock invBlock : newInvBlocks.values()) {
-        insrt.setLong(1, invBlock.getBlockId());
-        insrt.setString(2, invBlock.getStorageId());
-        insrt.setLong(3, invBlock.getGenerationStamp());
-        insrt.setLong(4, invBlock.getNumBytes());
-        insrt.addBatch();
+      PreparedStatement updt = conn.prepareStatement(update);
+      for (InvalidatedBlock newBlock : newInvBlocks.values()) {
+        if (existings.contains(newBlock))
+        {
+          insrt.setLong(1, newBlock.getBlockId());
+          insrt.setString(2, newBlock.getStorageId());
+          insrt.setLong(3, newBlock.getGenerationStamp());
+          insrt.setLong(4, newBlock.getNumBytes());
+          insrt.addBatch();
+        }
+        else
+        {
+          updt.setLong(4, newBlock.getBlockId());
+          updt.setString(3, newBlock.getStorageId());
+          updt.setLong(1, newBlock.getGenerationStamp());
+          updt.setLong(2, newBlock.getNumBytes());
+          updt.addBatch();
+        }
       }
       insrt.executeBatch();
+      updt.executeBatch();
 
       PreparedStatement dlt = conn.prepareStatement(delete);
       for (InvalidatedBlock invBlock : removedInvBlocks.values()) {
@@ -127,24 +147,55 @@ public class InvalidatedBlockDerby extends InvalidatedBlockStorage {
     }
   }
 
-  private void syncInvalidatedBlockInstances(ResultSet rSet) throws SQLException {
+  private HashSet<InvalidatedBlock> findBlocksByPkeys(Collection<InvalidatedBlock> invBlocks) {
+    if (invBlocks.size() > 0) {
+      Iterator<InvalidatedBlock> iterator = invBlocks.iterator();
+      InvalidatedBlock next = iterator.next();
+      StringBuilder query = new StringBuilder("select * from ").append(TABLE_NAME).
+              append(" where (").append(STORAGE_ID).append(" = ").
+              append(next.getStorageId()).append(" and ").append(BLOCK_ID).append("=").
+              append(next.getBlockId()).append(")");
+      while (iterator.hasNext()) {
+        next = iterator.next();
+        query.append(" or (").append(STORAGE_ID).append(" = ").
+                append(next.getStorageId()).append(" and ").append(BLOCK_ID).append("=").
+                append(next.getBlockId()).append(")");
+      }
+      Connection conn = connector.obtainSession();
+      try {
+        ResultSet rs = conn.createStatement().executeQuery(query.toString());
+        return syncInvalidatedBlockInstances(rs);
+      } catch (SQLException ex) {
+        Logger.getLogger(InvalidatedBlockDerby.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    }
+
+    return new HashSet<InvalidatedBlock>();
+  }
+
+  private HashSet<InvalidatedBlock> syncInvalidatedBlockInstances(ResultSet rSet) throws SQLException {
+    HashSet<InvalidatedBlock> result = new HashSet<InvalidatedBlock>();
     while (rSet.next()) {
-      InvalidatedBlock invBlock = new InvalidatedBlock(
+      InvalidatedBlock next = new InvalidatedBlock(
               rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID),
               rSet.getLong(GENERATION_STAMP), rSet.getLong(NUM_BYTES));
-      if (!removedInvBlocks.containsKey(invBlock)) {
-        if (invBlocks.containsKey(invBlock)) {
+      if (!removedInvBlocks.containsKey(next)) {
+        if (invBlocks.containsKey(next)) {
+          result.add(invBlocks.get(next));
         } else {
-          invBlocks.put(invBlock, invBlock);
+          invBlocks.put(next, next);
+          result.add(next);
         }
-        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
-          storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
+        if (storageIdToInvBlocks.containsKey(next.getStorageId())) {
+          storageIdToInvBlocks.get(next.getStorageId()).add(next);
         } else {
           HashSet<InvalidatedBlock> invBlockList = new HashSet<InvalidatedBlock>();
-          invBlockList.add(invBlock);
-          storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
+          invBlockList.add(next);
+          storageIdToInvBlocks.put(next.getStorageId(), invBlockList);
         }
       }
     }
+
+    return result;
   }
 }
