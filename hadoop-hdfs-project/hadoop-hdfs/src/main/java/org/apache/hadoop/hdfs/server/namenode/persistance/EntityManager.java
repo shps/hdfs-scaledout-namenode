@@ -53,7 +53,7 @@ public class EntityManager {
   }
 
   public void rollback() {
-    context().rollback();
+    context().reset();
   }
 
   public <T> void remove(T obj) {

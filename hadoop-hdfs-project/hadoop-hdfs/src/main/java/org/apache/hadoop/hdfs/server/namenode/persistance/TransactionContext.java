@@ -53,7 +53,7 @@ public class TransactionContext {
     externallyMngedTx = true;
   }
 
-  void rollback() {
+  void reset() {
     resetContext();
 
     logger.debug("\n}Tx rollback");

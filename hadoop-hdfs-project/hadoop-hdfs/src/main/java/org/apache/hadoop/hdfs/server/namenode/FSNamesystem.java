@@ -2315,16 +2315,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           isDone = true;
         } catch (StorageException ex) {
           tries--;
-          if (!isDone) {
-            connector.rollback();
-            FSNamesystem.LOG.error("renameToInternal() :: failed to rename " + src + " to " + dst + ". Exception: " + ex.getMessage(), ex);
-          }
+          connector.rollback();
+          FSNamesystem.LOG.error("renameToInternal() :: failed to rename " + src + " to " + dst + ". Exception: " + ex.getMessage(), ex);
         }
       }
     } finally {
-      if (!isDone) {
-        connector.rollback();
-      }
+      connector.rollback();
     }
     return isRenameDone;
   }
