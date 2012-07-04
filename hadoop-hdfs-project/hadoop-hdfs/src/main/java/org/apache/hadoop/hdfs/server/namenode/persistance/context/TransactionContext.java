@@ -5,7 +5,7 @@ import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.EntityContext;
 import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

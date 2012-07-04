@@ -17,8 +17,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.BlockInfoContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.IndexedReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.BlockInfoContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.IndexedReplicaContext;
 import org.hsqldb.Types;
 
 /**

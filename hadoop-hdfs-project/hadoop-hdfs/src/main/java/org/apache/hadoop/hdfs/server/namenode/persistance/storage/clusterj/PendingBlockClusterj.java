@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.PendingBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.PendingBlockContext;
 
 @PersistenceCapable(table = PendingBlockContext.TABLE_NAME)
 interface PendingBlockTable {

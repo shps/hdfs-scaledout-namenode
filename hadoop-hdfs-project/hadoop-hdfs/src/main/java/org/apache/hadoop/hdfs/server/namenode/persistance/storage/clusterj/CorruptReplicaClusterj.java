@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.CorruptReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.CorruptReplicaContext;
 
 @PersistenceCapable(table = "corrupt_replicas")
 interface CorruptReplicaTable {

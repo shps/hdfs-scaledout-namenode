@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.context;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
  *

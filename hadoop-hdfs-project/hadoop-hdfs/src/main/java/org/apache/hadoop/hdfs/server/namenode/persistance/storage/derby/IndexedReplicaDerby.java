@@ -12,7 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.IndexedReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.IndexedReplicaContext;
 
 /**
  *

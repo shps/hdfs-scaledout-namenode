@@ -5,7 +5,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionCon
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import java.util.Collection;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.EntityContext;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;

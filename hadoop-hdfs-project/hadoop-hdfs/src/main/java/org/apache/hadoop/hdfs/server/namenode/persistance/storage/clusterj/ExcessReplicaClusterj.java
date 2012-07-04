@@ -12,7 +12,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.ExcessReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ExcessReplicaContext;
 
 @PersistenceCapable(table = ExcessReplicaContext.TABLE_NAME)
 interface ExcessReplicaTable {

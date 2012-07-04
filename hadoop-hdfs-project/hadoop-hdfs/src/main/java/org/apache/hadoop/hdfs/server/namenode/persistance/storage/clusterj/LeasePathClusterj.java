@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeasePathContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.LeasePathContext;
 
 @PersistenceCapable(table = LeasePathContext.TABLE_NAME)
 interface LeasePathsTable {

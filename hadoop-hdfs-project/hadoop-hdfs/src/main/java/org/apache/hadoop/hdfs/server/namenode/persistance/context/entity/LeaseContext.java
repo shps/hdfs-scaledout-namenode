@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.context;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
  *

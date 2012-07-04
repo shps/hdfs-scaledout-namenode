@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.InvalidatedBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.InvalidatedBlockContext;
 
 /**
  *

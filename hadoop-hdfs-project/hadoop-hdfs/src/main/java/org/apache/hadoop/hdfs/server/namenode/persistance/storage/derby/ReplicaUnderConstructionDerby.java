@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.ReplicaUnderConstructionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ReplicaUnderConstructionContext;
 
 /**
  *

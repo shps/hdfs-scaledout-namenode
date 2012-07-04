@@ -17,7 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeaseContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.LeaseContext;
 
 @PersistenceCapable(table = LeaseContext.TABLE_NAME)
 interface LeaseTable {

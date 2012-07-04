@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeasePathContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.LeasePathContext;
 
 /**
  *

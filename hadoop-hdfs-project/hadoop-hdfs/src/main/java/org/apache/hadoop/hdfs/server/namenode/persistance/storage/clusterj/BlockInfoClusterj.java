@@ -19,7 +19,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.BlockInfoContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.BlockInfoContext;
 
 @PersistenceCapable(table = BlockInfoContext.TABLE_NAME)
 interface BlockInfoTable {

@@ -1,10 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.context;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.EntityContext;
 import java.util.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
  *

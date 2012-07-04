@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.ExcessReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ExcessReplicaContext;
 
 /**
  *
