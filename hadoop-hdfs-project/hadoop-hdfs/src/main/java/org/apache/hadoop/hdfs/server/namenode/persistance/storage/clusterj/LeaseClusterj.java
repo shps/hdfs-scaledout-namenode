@@ -15,9 +15,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeaseContext;
 
 @PersistenceCapable(table = LeaseContext.TABLE_NAME)
 interface LeaseTable {
@@ -48,7 +48,7 @@ public class LeaseClusterj extends LeaseContext {
   private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
-  public int count(Counter<Lease> counter, Object... params) {
+  public int count(CounterType<Lease> counter, Object... params) {
     Lease.Counter lCounter = (Lease.Counter) counter;
     switch (lCounter) {
       case All:

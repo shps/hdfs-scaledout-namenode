@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 

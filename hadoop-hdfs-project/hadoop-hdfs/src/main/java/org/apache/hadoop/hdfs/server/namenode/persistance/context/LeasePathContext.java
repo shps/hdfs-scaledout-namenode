@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -6,9 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -55,7 +54,7 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
   }
 
   @Override
-  public Collection<LeasePath> findList(Finder<LeasePath> finder, Object... params) {
+  public Collection<LeasePath> findList(FinderType<LeasePath> finder, Object... params) {
     LeasePath.Finder lFinder = (LeasePath.Finder) finder;
     TreeSet<LeasePath> result = null;
 
@@ -86,7 +85,7 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
   }
 
   @Override
-  public LeasePath find(Finder<LeasePath> finder, Object... params) {
+  public LeasePath find(FinderType<LeasePath> finder, Object... params) {
     LeasePath.Finder lFinder = (LeasePath.Finder) finder;
     LeasePath result = null;
 
@@ -109,7 +108,7 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
   }
 
   @Override
-  public int count(Counter counter, Object... params) {
+  public int count(CounterType counter, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

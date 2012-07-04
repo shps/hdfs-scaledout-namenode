@@ -8,9 +8,9 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.ExcessReplicaContext;
 
 /**
  *
@@ -58,7 +58,7 @@ public class ExcessReplicaDerby extends ExcessReplicaContext {
   }
 
   @Override
-  public int count(Counter<ExcessReplica> counter, Object... params) {
+  public int count(CounterType<ExcessReplica> counter, Object... params) {
     ExcessReplica.Counter eCounter = (ExcessReplica.Counter) counter;
     switch (eCounter) {
       case All:

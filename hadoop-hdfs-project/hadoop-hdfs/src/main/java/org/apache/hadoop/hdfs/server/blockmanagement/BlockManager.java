@@ -67,7 +67,7 @@ import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster. This

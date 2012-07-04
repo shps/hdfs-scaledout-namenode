@@ -12,7 +12,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  */
 public class PendingBlockInfo {
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<PendingBlockInfo> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<PendingBlockInfo> {
 
     ByPKey, All, ByTimeLimit;
 

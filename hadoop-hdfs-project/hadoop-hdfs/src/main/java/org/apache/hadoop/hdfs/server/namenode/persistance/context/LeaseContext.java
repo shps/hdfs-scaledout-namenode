@@ -1,12 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -63,7 +62,7 @@ public abstract class LeaseContext implements EntityContext<Lease> {
   }
 
   @Override
-  public Collection<Lease> findList(Finder<Lease> finder, Object... params) {
+  public Collection<Lease> findList(FinderType<Lease> finder, Object... params) {
     Lease.Finder lFinder = (Lease.Finder) finder;
     Collection<Lease> result = null;
     switch (lFinder) {
@@ -84,7 +83,7 @@ public abstract class LeaseContext implements EntityContext<Lease> {
   }
 
   @Override
-  public Lease find(Finder<Lease> finder, Object... params) {
+  public Lease find(FinderType<Lease> finder, Object... params) {
     Lease.Finder lFinder = (Lease.Finder) finder;
     Lease result = null;
     switch (lFinder) {

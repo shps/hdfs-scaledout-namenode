@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -37,7 +36,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<INode> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<INode> {
 
     ByPKey, ByParentId, ByNameAndParentId, ByIds;
 

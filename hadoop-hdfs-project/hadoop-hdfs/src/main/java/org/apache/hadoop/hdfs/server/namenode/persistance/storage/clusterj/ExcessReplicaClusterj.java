@@ -10,9 +10,9 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.List;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.ExcessReplicaContext;
 
 @PersistenceCapable(table = ExcessReplicaContext.TABLE_NAME)
 interface ExcessReplicaTable {
@@ -39,7 +39,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaContext {
   private Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
-  public int count(Counter<ExcessReplica> counter, Object... params) {
+  public int count(CounterType<ExcessReplica> counter, Object... params) {
     ExcessReplica.Counter eCounter = (ExcessReplica.Counter) counter;
     switch (eCounter) {
       case All:

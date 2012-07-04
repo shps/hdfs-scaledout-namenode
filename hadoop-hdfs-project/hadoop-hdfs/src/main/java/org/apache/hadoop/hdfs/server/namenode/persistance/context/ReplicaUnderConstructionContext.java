@@ -1,12 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -40,7 +39,7 @@ public abstract class ReplicaUnderConstructionContext implements EntityContext<R
   }
 
   @Override
-  public List<ReplicaUnderConstruction> findList(Finder<ReplicaUnderConstruction> finder, Object... params) {
+  public List<ReplicaUnderConstruction> findList(FinderType<ReplicaUnderConstruction> finder, Object... params) {
 
     ReplicaUnderConstruction.Finder rFinder = (ReplicaUnderConstruction.Finder) finder;
     List<ReplicaUnderConstruction> result = null;
@@ -60,12 +59,12 @@ public abstract class ReplicaUnderConstructionContext implements EntityContext<R
   }
 
   @Override
-  public ReplicaUnderConstruction find(Finder<ReplicaUnderConstruction> finder, Object... params) {
+  public ReplicaUnderConstruction find(FinderType<ReplicaUnderConstruction> finder, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
-  public int count(Counter counter, Object... params) {
+  public int count(CounterType counter, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

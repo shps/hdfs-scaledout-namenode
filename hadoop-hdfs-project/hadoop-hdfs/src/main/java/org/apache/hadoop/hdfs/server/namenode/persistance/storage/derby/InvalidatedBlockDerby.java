@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.InvalidatedBlockContext;
 
 /**
  *
@@ -85,7 +85,7 @@ public class InvalidatedBlockDerby extends InvalidatedBlockContext {
   }
 
   @Override
-  public int count(Counter<InvalidatedBlock> counter, Object... params) {
+  public int count(CounterType<InvalidatedBlock> counter, Object... params) {
     InvalidatedBlock.Counter iCounter = (InvalidatedBlock.Counter) counter;
     switch (iCounter) {
       case All:

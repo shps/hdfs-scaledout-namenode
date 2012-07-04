@@ -15,10 +15,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.BlockInfoContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.IndexedReplicaContext;
 import org.hsqldb.Types;
 
 /**
@@ -43,7 +43,7 @@ public class BlockInfoDerby extends BlockInfoContext {
   }
 
   @Override
-  public int count(Counter<BlockInfo> counter, Object... params) {
+  public int count(CounterType<BlockInfo> counter, Object... params) {
     BlockInfo.Counter bCounter = (BlockInfo.Counter) counter;
     switch (bCounter) {
       case All:

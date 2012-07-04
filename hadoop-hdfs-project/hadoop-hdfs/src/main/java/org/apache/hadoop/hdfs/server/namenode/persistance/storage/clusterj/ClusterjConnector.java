@@ -19,7 +19,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
-import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 public enum ClusterjConnector implements StorageConnector<Session> {

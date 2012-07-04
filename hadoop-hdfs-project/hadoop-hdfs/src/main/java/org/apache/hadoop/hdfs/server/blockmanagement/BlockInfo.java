@@ -25,14 +25,14 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  * Internal class for block metadata.
  */
 public class BlockInfo extends Block {
 
-  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<BlockInfo> {
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.CounterType<BlockInfo> {
 
     All;
 
@@ -42,7 +42,7 @@ public class BlockInfo extends Block {
     }
   }
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<BlockInfo> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<BlockInfo> {
 
     ById, ByInodeId, All, ByStorageId;
 

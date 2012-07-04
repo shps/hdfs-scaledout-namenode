@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hdfs.DFSConfigKeys;

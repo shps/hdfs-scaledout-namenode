@@ -7,16 +7,16 @@ import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.BlockInfoContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ExcessReplicaContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.INodeContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.IndexedReplicaContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeasePathContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.LeaseContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.BlockInfoContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.ExcessReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.INodeContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.IndexedReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.InvalidatedBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeasePathContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.LeaseContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.PendingBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.ReplicaUnderConstructionContext;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
 /**

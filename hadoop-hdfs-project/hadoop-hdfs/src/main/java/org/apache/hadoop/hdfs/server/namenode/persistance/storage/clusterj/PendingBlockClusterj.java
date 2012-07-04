@@ -12,8 +12,8 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.PendingBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.PendingBlockContext;
 
 @PersistenceCapable(table = PendingBlockContext.TABLE_NAME)
 interface PendingBlockTable {

@@ -14,7 +14,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
  */
 public class ReplicaUnderConstruction extends IndexedReplica {
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<ReplicaUnderConstruction> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<ReplicaUnderConstruction> {
 
     ByBlockId;
 

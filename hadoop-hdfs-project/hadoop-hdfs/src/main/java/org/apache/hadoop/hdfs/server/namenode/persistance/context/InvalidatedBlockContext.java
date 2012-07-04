@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,8 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -78,7 +77,7 @@ public abstract class InvalidatedBlockContext implements EntityContext<Invalidat
   }
 
   @Override
-  public List<InvalidatedBlock> findList(Finder<InvalidatedBlock> finder, Object... params) {
+  public List<InvalidatedBlock> findList(FinderType<InvalidatedBlock> finder, Object... params) {
     InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
     List<InvalidatedBlock> result = null;
 
@@ -105,7 +104,7 @@ public abstract class InvalidatedBlockContext implements EntityContext<Invalidat
   }
 
   @Override
-  public InvalidatedBlock find(Finder<InvalidatedBlock> finder, Object... params) {
+  public InvalidatedBlock find(FinderType<InvalidatedBlock> finder, Object... params) {
     InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
     InvalidatedBlock result = null;
 

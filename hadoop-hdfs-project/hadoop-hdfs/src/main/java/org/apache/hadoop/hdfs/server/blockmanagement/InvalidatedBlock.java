@@ -6,7 +6,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  */
 public class InvalidatedBlock extends Replica {
 
-  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<InvalidatedBlock> {
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.CounterType<InvalidatedBlock> {
 
     All;
 
@@ -17,7 +17,7 @@ public class InvalidatedBlock extends Replica {
     
   }
   
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<InvalidatedBlock> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<InvalidatedBlock> {
 
     ByStorageId, ByPrimaryKey, All;
 

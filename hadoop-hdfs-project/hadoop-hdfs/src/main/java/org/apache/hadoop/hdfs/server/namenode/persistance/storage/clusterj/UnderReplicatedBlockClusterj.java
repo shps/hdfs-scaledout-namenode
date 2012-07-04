@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.UnderReplicatedBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.UnderReplicatedBlockContext;
 
 @PersistenceCapable(table = "under_replicated_blocks")
 interface UnderReplicatedBlocksTable {

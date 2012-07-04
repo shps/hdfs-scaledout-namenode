@@ -1,12 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -65,7 +64,7 @@ public abstract class INodeContext implements EntityContext<INode> {
   }
 
   @Override
-  public Collection<INode> findList(Finder<INode> finder, Object... params) {
+  public Collection<INode> findList(FinderType<INode> finder, Object... params) {
     INode.Finder iFinder = (INode.Finder) finder;
     List<INode> result = null;
     switch (iFinder) {
@@ -88,7 +87,7 @@ public abstract class INodeContext implements EntityContext<INode> {
   }
 
   @Override
-  public INode find(Finder<INode> finder, Object... params) {
+  public INode find(FinderType<INode> finder, Object... params) {
     INode.Finder iFinder = (INode.Finder) finder;
     INode result = null;
     switch (iFinder) {

@@ -11,8 +11,8 @@ import com.mysql.clusterj.query.QueryDomainType;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.CorruptReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.CorruptReplicaContext;
 
 @PersistenceCapable(table = "corrupt_replicas")
 interface CorruptReplicaTable {

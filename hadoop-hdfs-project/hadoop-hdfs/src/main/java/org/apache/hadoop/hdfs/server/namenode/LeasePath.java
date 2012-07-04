@@ -6,7 +6,7 @@ package org.apache.hadoop.hdfs.server.namenode;
  */
 public class LeasePath implements Comparable<LeasePath> {
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<LeasePath> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<LeasePath> {
 
     ByHolderId, ByPKey, ByPrefix, All;
 

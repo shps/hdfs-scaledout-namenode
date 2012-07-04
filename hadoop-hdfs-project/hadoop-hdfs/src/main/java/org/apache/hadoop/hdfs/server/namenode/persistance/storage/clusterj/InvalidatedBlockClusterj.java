@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.InvalidatedBlockContext;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.InvalidatedBlockContext;
 
 @PersistenceCapable(table = InvalidatedBlockContext.TABLE_NAME)
 interface InvalidateBlocksTable {
@@ -60,7 +60,7 @@ public class InvalidatedBlockClusterj extends InvalidatedBlockContext {
   }
 
   @Override
-  public int count(Counter<InvalidatedBlock> counter, Object... params) {
+  public int count(CounterType<InvalidatedBlock> counter, Object... params) {
     InvalidatedBlock.Counter iCounter = (InvalidatedBlock.Counter) counter;
     switch (iCounter) {
       case All:

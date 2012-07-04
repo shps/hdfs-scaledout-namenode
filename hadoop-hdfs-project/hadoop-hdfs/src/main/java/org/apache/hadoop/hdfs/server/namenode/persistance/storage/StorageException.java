@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance;
+package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 /**
  *

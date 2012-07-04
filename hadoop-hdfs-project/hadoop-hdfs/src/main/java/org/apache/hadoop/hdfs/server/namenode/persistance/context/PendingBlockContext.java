@@ -1,13 +1,12 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -42,7 +41,7 @@ public abstract class PendingBlockContext implements EntityContext<PendingBlockI
   }
 
   @Override
-  public List<PendingBlockInfo> findList(Finder<PendingBlockInfo> finder, Object... params) {
+  public List<PendingBlockInfo> findList(FinderType<PendingBlockInfo> finder, Object... params) {
     PendingBlockInfo.Finder pFinder = (PendingBlockInfo.Finder) finder;
     List<PendingBlockInfo> result = null;
     switch (pFinder) {
@@ -64,7 +63,7 @@ public abstract class PendingBlockContext implements EntityContext<PendingBlockI
   }
 
   @Override
-  public PendingBlockInfo find(Finder<PendingBlockInfo> finder, Object... params) {
+  public PendingBlockInfo find(FinderType<PendingBlockInfo> finder, Object... params) {
     PendingBlockInfo.Finder pFinder = (PendingBlockInfo.Finder) finder;
     PendingBlockInfo result = null;
     switch (pFinder) {
@@ -85,7 +84,7 @@ public abstract class PendingBlockContext implements EntityContext<PendingBlockI
   }
 
   @Override
-  public int count(Counter counter, Object... params) {
+  public int count(CounterType counter, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

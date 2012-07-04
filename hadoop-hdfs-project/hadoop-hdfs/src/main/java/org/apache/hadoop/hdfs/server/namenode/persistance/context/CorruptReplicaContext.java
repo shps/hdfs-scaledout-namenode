@@ -1,10 +1,9 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -31,7 +30,7 @@ public abstract class CorruptReplicaContext implements EntityContext<CorruptRepl
   }
 
   @Override
-  public Collection<CorruptReplica> findList(Finder<CorruptReplica> finder, Object... params) {
+  public Collection<CorruptReplica> findList(FinderType<CorruptReplica> finder, Object... params) {
     CorruptReplica.Finder cFinder = (CorruptReplica.Finder) finder;
 
     switch (cFinder) {
@@ -58,7 +57,7 @@ public abstract class CorruptReplicaContext implements EntityContext<CorruptRepl
   }
 
   @Override
-  public CorruptReplica find(Finder<CorruptReplica> finder, Object... params) {
+  public CorruptReplica find(FinderType<CorruptReplica> finder, Object... params) {
     CorruptReplica.Finder cFinder = (CorruptReplica.Finder) finder;
 
     switch (cFinder) {
@@ -75,7 +74,7 @@ public abstract class CorruptReplicaContext implements EntityContext<CorruptRepl
   }
 
   @Override
-  public int count(Counter<CorruptReplica> counter, Object... params) {
+  public int count(CounterType<CorruptReplica> counter, Object... params) {
     CorruptReplica.Counter cCounter = (CorruptReplica.Counter) counter;
 
     switch (cCounter) {

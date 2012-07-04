@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.ReplicaUnderConstructionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.ReplicaUnderConstructionContext;
 
 @PersistenceCapable(table = ReplicaUnderConstructionContext.TABLE_NAME)
 interface ReplicaUcTable {

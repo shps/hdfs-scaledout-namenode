@@ -5,7 +5,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  * @author jude
  */
 public class CorruptReplica extends Replica {
-  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<CorruptReplica> {
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.CounterType<CorruptReplica> {
 
     All;
 
@@ -16,7 +16,7 @@ public class CorruptReplica extends Replica {
     
   }
   
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<CorruptReplica> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<CorruptReplica> {
 
     All, ByBlockId, ByPk;
 

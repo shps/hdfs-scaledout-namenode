@@ -1,6 +1,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  * This class holds the information of one replica of a block in one datanode.
@@ -9,7 +9,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
  */
 public class IndexedReplica extends Replica {
 
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<IndexedReplica> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<IndexedReplica> {
 
     ByBlockId;
 

@@ -1,12 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -41,7 +40,7 @@ public abstract class ExcessReplicaContext implements EntityContext<ExcessReplic
   }
 
   @Override
-  public Collection<ExcessReplica> findList(Finder<ExcessReplica> finder, Object... params) {
+  public Collection<ExcessReplica> findList(FinderType<ExcessReplica> finder, Object... params) {
     ExcessReplica.Finder eFinder = (ExcessReplica.Finder) finder;
     TreeSet<ExcessReplica> result = null;
 
@@ -60,7 +59,7 @@ public abstract class ExcessReplicaContext implements EntityContext<ExcessReplic
   }
 
   @Override
-  public ExcessReplica find(Finder<ExcessReplica> finder,
+  public ExcessReplica find(FinderType<ExcessReplica> finder,
           Object... params) {
     ExcessReplica.Finder eFinder = (ExcessReplica.Finder) finder;
     ExcessReplica result = null;

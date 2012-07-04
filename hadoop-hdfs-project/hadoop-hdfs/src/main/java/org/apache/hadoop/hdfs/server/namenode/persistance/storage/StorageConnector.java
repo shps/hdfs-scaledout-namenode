@@ -2,7 +2,6 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
 
 /**
  *

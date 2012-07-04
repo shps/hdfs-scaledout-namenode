@@ -3,7 +3,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
 
 /**
  * **********************************************************
@@ -15,7 +14,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
  */
 public class Lease implements Comparable<Lease> {
 
-  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<Lease> {
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.CounterType<Lease> {
 
     All;
 
@@ -25,7 +24,7 @@ public class Lease implements Comparable<Lease> {
     }
   }
   
-  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<Lease> {
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<Lease> {
 
     ByPKey, ByHolderId, All, ByTimeLimit;
 

@@ -1,8 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.EntityContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
 import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +37,7 @@ public class TransactionContext {
     }
   }
 
-  void begin() {
+  public void begin() {
     activeTxExpected = true;
     connector.beginTransaction();
     logger.debug("\nTX begin{");
@@ -60,7 +63,7 @@ public class TransactionContext {
     }
   }
 
-  void rollback() {
+  public void rollback() {
     resetContext();
     connector.rollback();
     logger.debug("\n}Tx rollback");
@@ -115,7 +118,7 @@ public class TransactionContext {
     }
   }
 
-  public <T> T find(Finder<T> finder, Object... params) throws TransactionContextException {
+  public <T> T find(FinderType<T> finder, Object... params) throws TransactionContextException {
     beforeTxCheck();
     try {
       if (entityContexts.containsKey(finder.getType())) {
@@ -128,7 +131,7 @@ public class TransactionContext {
     }
   }
 
-  public <T> Collection<T> findList(Finder<T> finder, Object... params) throws TransactionContextException {
+  public <T> Collection<T> findList(FinderType<T> finder, Object... params) throws TransactionContextException {
     beforeTxCheck();
     try {
       if (entityContexts.containsKey(finder.getType())) {
@@ -141,7 +144,7 @@ public class TransactionContext {
     }
   }
 
-  public int count(Counter counter, Object... params) throws TransactionContextException {
+  public int count(CounterType counter, Object... params) throws TransactionContextException {
     beforeTxCheck();
     try {
       if (entityContexts.containsKey(counter.getType())) {

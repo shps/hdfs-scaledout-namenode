@@ -1,12 +1,11 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -46,7 +45,7 @@ public abstract class BlockInfoContext implements EntityContext<BlockInfo> {
   }
 
   @Override
-  public List<BlockInfo> findList(Finder<BlockInfo> finder, Object... params) {
+  public List<BlockInfo> findList(FinderType<BlockInfo> finder, Object... params) {
     BlockInfo.Finder bFinder = (BlockInfo.Finder) finder;
     List<BlockInfo> result = null;
     switch (bFinder) {
@@ -78,7 +77,7 @@ public abstract class BlockInfoContext implements EntityContext<BlockInfo> {
   }
 
   @Override
-  public BlockInfo find(Finder<BlockInfo> finder, Object... params) {
+  public BlockInfo find(FinderType<BlockInfo> finder, Object... params) {
     BlockInfo.Finder bFinder = (BlockInfo.Finder) finder;
     BlockInfo result = null;
     switch (bFinder) {

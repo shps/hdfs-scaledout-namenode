@@ -1,13 +1,12 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -41,7 +40,7 @@ public abstract class IndexedReplicaContext implements EntityContext<IndexedRepl
   }
 
   @Override
-  public List<IndexedReplica> findList(Finder<IndexedReplica> finder, Object... params) {
+  public List<IndexedReplica> findList(FinderType<IndexedReplica> finder, Object... params) {
     IndexedReplica.Finder iFinder = (IndexedReplica.Finder) finder;
     List<IndexedReplica> result = null;
 
@@ -64,12 +63,12 @@ public abstract class IndexedReplicaContext implements EntityContext<IndexedRepl
   }
 
   @Override
-  public IndexedReplica find(Finder<IndexedReplica> finder, Object... params) {
+  public IndexedReplica find(FinderType<IndexedReplica> finder, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
-  public int count(Counter counter, Object... params) {
+  public int count(CounterType counter, Object... params) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

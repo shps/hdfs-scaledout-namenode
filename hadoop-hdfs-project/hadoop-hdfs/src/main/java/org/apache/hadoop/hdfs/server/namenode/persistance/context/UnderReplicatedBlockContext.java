@@ -1,10 +1,10 @@
-package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
+package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
 import java.util.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Counter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 
 /**
  *
@@ -37,7 +37,7 @@ public abstract class UnderReplicatedBlockContext implements EntityContext<Under
   }
 
   @Override
-  public Collection<UnderReplicatedBlock> findList(Finder<UnderReplicatedBlock> finder, Object... params) {
+  public Collection<UnderReplicatedBlock> findList(FinderType<UnderReplicatedBlock> finder, Object... params) {
     UnderReplicatedBlock.Finder urFinder = (UnderReplicatedBlock.Finder) finder;
     List<UnderReplicatedBlock> finalList = null;
     switch (urFinder) {
@@ -70,7 +70,7 @@ public abstract class UnderReplicatedBlockContext implements EntityContext<Under
   }
 
   @Override
-  public UnderReplicatedBlock find(Finder<UnderReplicatedBlock> finder, Object... params) {
+  public UnderReplicatedBlock find(FinderType<UnderReplicatedBlock> finder, Object... params) {
     UnderReplicatedBlock.Finder urFinder = (UnderReplicatedBlock.Finder) finder;
     UnderReplicatedBlock result = null;
     switch (urFinder) {
@@ -90,7 +90,7 @@ public abstract class UnderReplicatedBlockContext implements EntityContext<Under
   }
 
   @Override
-  public int count(Counter counter, Object... params) {
+  public int count(CounterType counter, Object... params) {
     UnderReplicatedBlock.Counter urCounter = (UnderReplicatedBlock.Counter) counter;
 
     switch (urCounter) {

@@ -1,7 +1,11 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
+import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import java.util.Collection;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.EntityContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.EntityContext;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,7 +63,7 @@ public class EntityManager {
     }
   }
 
-  public static <T> Collection<T> findList(Finder<T> finder, Object... params) {
+  public static <T> Collection<T> findList(FinderType<T> finder, Object... params) {
     try {
       return context().findList(finder, params);
     } catch (TransactionContextException ex) {
@@ -69,7 +73,7 @@ public class EntityManager {
     return null;
   }
 
-  public static <T> T find(Finder<T> finder, Object... params) {
+  public static <T> T find(FinderType<T> finder, Object... params) {
     try {
       return context().find(finder, params);
     } catch (TransactionContextException ex) {
@@ -79,7 +83,7 @@ public class EntityManager {
     return null;
   }
 
-  public static int count(Counter counter, Object... params) {
+  public static int count(CounterType counter, Object... params) {
     try {
       return context().count(counter, params);
     } catch (TransactionContextException ex) {
