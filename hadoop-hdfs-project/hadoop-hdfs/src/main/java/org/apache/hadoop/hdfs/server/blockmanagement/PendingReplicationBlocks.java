@@ -1,25 +1,21 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.PrintWriter;
@@ -30,21 +26,20 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
-/***************************************************
- * PendingReplicationBlocks does the bookkeeping of all
- * blocks that are getting replicated.
+/**
+ * *************************************************
+ * PendingReplicationBlocks does the bookkeeping of all blocks that are getting
+ * replicated.
  *
- * It does the following:
- * 1)  record blocks that are getting replicated at this instant.
- * 2)  a coarse grain timer to track age of replication request
- * 3)  a thread that periodically identifies replication-requests
- *     that never made it.
+ * It does the following: 1) record blocks that are getting replicated at this
+ * instant. 2) a coarse grain timer to track age of replication request 3) a
+ * thread that periodically identifies replication-requests that never made it.
  *
- ***************************************************/
+ **************************************************
+ */
 class PendingReplicationBlocks {
 
   private static final Log LOG = BlockManager.LOG;
-  private EntityManager em = EntityManager.getInstance();
   //
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
@@ -62,33 +57,32 @@ class PendingReplicationBlocks {
    * Add a block to the list of pending Replications
    */
   void add(Block block, int numReplicas) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found == null) {
       found = new PendingBlockInfo(block.getBlockId(), now(), numReplicas);
+      EntityManager.add(found);
     } else {
       found.incrementReplicas(numReplicas);
       found.setTimeStamp(now());
+      EntityManager.update(found);
     }
-
-    em.persist(found);
   }
 
   /**
-   * One replication request for this block has finished.
-   * Decrement the number of pending replication requests
-   * for this block.
+   * One replication request for this block has finished. Decrement the number
+   * of pending replication requests for this block.
    */
   void remove(Block block) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Removing pending replication for " + block);
       }
       found.decrementReplicas();
       if (found.getNumReplicas() <= 0) {
-        em.remove(found);
+        EntityManager.remove(found);
       } else {
-        em.persist(found);
+        EntityManager.update(found);
       }
     }
   }
@@ -97,7 +91,7 @@ class PendingReplicationBlocks {
    * The total number of blocks that are undergoing replication
    */
   int size() {
-    List<PendingBlockInfo> pendingBlocks = em.findAllPendingBlocks(); //TODO[H]: This can be improved.
+    List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.All); //TODO[H]: This can be improved.
     if (pendingBlocks != null) {
       int count = 0;
       for (PendingBlockInfo p : pendingBlocks) {
@@ -122,7 +116,7 @@ class PendingReplicationBlocks {
    * How many copies of this block is pending replication?
    */
   int getNumReplicas(Block block) {
-    PendingBlockInfo found = em.findPendingBlockByPK(block.getBlockId());
+    PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       return found.getNumReplicas();
     }
@@ -130,16 +124,15 @@ class PendingReplicationBlocks {
   }
 
   /**
-   * Returns a list of blocks that have timed out their 
-   * replication requests. Returns null if no blocks have
-   * timed out.
+   * Returns a list of blocks that have timed out their replication requests.
+   * Returns null if no blocks have timed out.
    */
   List<PendingBlockInfo> getTimedOutBlocks() {
     long timeLimit = now() - timeout;
-    List<PendingBlockInfo> timedoutPendings = em.findTimedoutPendingBlocks(timeLimit);
+    List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
     if (timedoutPendings == null || timedoutPendings.size() <= 0) {
       return null;
-    }    
+    }
 
     return timedoutPendings;
   }
@@ -148,18 +141,18 @@ class PendingReplicationBlocks {
    * Iterate through all items and print them.
    */
   void metaSave(PrintWriter out) {
-    List<PendingBlockInfo> pendingBlocks = em.findAllPendingBlocks();
+    List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.All);
     if (pendingBlocks != null) {
       out.println("Metasave: Blocks being replicated: "
               + pendingBlocks.size());
       for (PendingBlockInfo pendingBlock : pendingBlocks) {
-          if (!isTimedout(pendingBlock)) {
-            BlockInfo bInfo = em.findBlockById(pendingBlock.getBlockId());
-            out.println(bInfo
-                    + " StartTime: " + new Time(pendingBlock.getTimeStamp())
-                    + " NumReplicaInProgress: "
-                    + pendingBlock.getNumReplicas());
-          }
+        if (!isTimedout(pendingBlock)) {
+          BlockInfo bInfo = EntityManager.find(BlockInfo.Finder.ById, pendingBlock.getBlockId());
+          out.println(bInfo
+                  + " StartTime: " + new Time(pendingBlock.getTimeStamp())
+                  + " NumReplicaInProgress: "
+                  + pendingBlock.getNumReplicas());
+        }
       }
     }
   }

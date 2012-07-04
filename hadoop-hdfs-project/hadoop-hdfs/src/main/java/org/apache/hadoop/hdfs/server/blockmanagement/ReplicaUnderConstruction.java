@@ -13,7 +13,16 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
  * @author Kamal Hakimzadeh <kamal@sics.se>
  */
 public class ReplicaUnderConstruction extends IndexedReplica {
-  
+
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<ReplicaUnderConstruction> {
+
+    ByBlockId;
+
+    @Override
+    public Class getType() {
+      return ReplicaUnderConstruction.class;
+    }
+  }
 
   public static enum Order implements Comparator<ReplicaUnderConstruction> {
 
@@ -29,7 +38,6 @@ public class ReplicaUnderConstruction extends IndexedReplica {
       }
     };
   }
-  
   HdfsServerConstants.ReplicaState state;
 
   public ReplicaUnderConstruction(ReplicaState state, String storageId, long blockId, int index) {

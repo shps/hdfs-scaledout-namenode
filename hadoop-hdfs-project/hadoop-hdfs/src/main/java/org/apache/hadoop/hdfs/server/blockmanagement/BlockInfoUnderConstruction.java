@@ -111,16 +111,18 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    */
   public List<ReplicaUnderConstruction> getExpectedReplicas() {
     if (expectedReplicas == null) {
-      expectedReplicas = EntityManager.getInstance().findReplicaUCByBlockId(getBlockId());
+      expectedReplicas =
+              (List<ReplicaUnderConstruction>) EntityManager.findList(ReplicaUnderConstruction.Finder.ByBlockId, getBlockId());
     }
     Collections.sort(expectedReplicas, ReplicaUnderConstruction.Order.ByIndex);
     return expectedReplicas;
   }
 
   public ReplicaUnderConstruction addExpectedReplica(String storageId, ReplicaState rState) {
-    if (hasExpectedReplicaIn(storageId))
+    if (hasExpectedReplicaIn(storageId)) {
       return null;
-    
+    }
+
     ReplicaUnderConstruction replica = new ReplicaUnderConstruction(rState, storageId, getBlockId(), getExpectedReplicas().size());
     getExpectedReplicas().add(replica);
     return replica;

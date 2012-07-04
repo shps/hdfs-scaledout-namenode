@@ -1,23 +1,21 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.mysql.clusterj.ClusterJUserException;
 import java.io.IOException;
 import java.util.*;
 
@@ -30,21 +28,19 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 
 /**
- * This test makes sure that 
- *   CorruptReplicasMap::numBlocksWithCorruptReplicas and
- *   CorruptReplicasMap::getCorruptReplicaBlockIds
- *   return the correct values
+ * This test makes sure that CorruptReplicasMap::numBlocksWithCorruptReplicas
+ * and CorruptReplicasMap::getCorruptReplicaBlockIds return the correct values
  */
 public class TestCorruptReplicaInfo extends TestCase {
 
   private static final Log LOG =
-                           LogFactory.getLog(TestCorruptReplicaInfo.class);
+          LogFactory.getLog(TestCorruptReplicaInfo.class);
   private Map<Long, Block> block_map =
-                           new HashMap<Long, Block>();
+          new HashMap<Long, Block>();
 
   // Allow easy block creation by block id
   // Return existing block if one with same block id already exists
@@ -61,17 +57,16 @@ public class TestCorruptReplicaInfo extends TestCase {
   }
 
   public void testCorruptReplicaInfo() throws IOException,
-                                              InterruptedException {
+          InterruptedException {
 
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      EntityManager em = EntityManager.getInstance();
-      DBConnector.beginTransaction();
+      EntityManager.begin();
       // Since we are persisting CorruptReplicasMap, we need to add begin and end transaction clause
 
       // Make sure initial values are returned correctly
-      assertEquals("Number of corrupt blocks must initially be 0", 0, em.countAllCorruptedReplicas());
+      assertEquals("Number of corrupt blocks must initially be 0", 0, EntityManager.count(CorruptReplica.Counter.All));
 //      assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIds(-1, null));
 //      assertNull("Param n cannot be greater than 100", crm.getCorruptReplicaBlockIds(101, null));
 //      long[] l = crm.getCorruptReplicaBlockIds(0, null);
@@ -89,47 +84,47 @@ public class TestCorruptReplicaInfo extends TestCase {
       List<DataNode> datanodes = cluster.getDataNodes();
       DatanodeDescriptor dn1 = new DatanodeDescriptor(datanodes.get(0).getDatanodeId());
       DatanodeDescriptor dn2 = new DatanodeDescriptor(datanodes.get(1).getDatanodeId());
-      
+
       CorruptReplica corruptReplica = new CorruptReplica(getBlock(0).getBlockId(), dn1.getStorageID());
-      em.persist(corruptReplica);
-      assertEquals("Number of corrupt blocks not returning correctly", 1, em.countAllCorruptedReplicas());
+      EntityManager.add(corruptReplica);
+      assertEquals("Number of corrupt blocks not returning correctly", 1, EntityManager.count(CorruptReplica.Counter.All));
       corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn1.getStorageID());
-      em.persist(corruptReplica);
+      EntityManager.add(corruptReplica);
       assertEquals("Number of corrupt blocks not returning correctly",
-                   2, em.countAllCorruptedReplicas());
-      
+              2, EntityManager.count(CorruptReplica.Counter.All));
+
       corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn2.getStorageID());
-      em.persist(corruptReplica);
-      assertEquals("Number of corrupt blocks not returning correctly", 3, em.countAllCorruptedReplicas());
+      EntityManager.add(corruptReplica);
+      assertEquals("Number of corrupt blocks not returning correctly", 3, EntityManager.count(CorruptReplica.Counter.All));
 
-      DBConnector.commit();
-      DBConnector.beginTransaction();
-      
-      Collection<CorruptReplica> crs = em.findCorruptReplicaByBlockId(getBlock(1).getBlockId());
+      EntityManager.commit();
+      EntityManager.begin();
+
+      Collection<CorruptReplica> crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(1).getBlockId());
       for (CorruptReplica r : crs) {
-        em.remove(r);
+        EntityManager.remove(r);
       }
       assertEquals("Number of corrupt blocks not returning correctly",
-                   1, em.countAllCorruptedReplicas());
+              1, EntityManager.count(CorruptReplica.Counter.All));
 
-      crs = em.findCorruptReplicaByBlockId(getBlock(0).getBlockId());
+      crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(0).getBlockId());
       for (CorruptReplica r : crs) {
-        em.remove(r);
+        EntityManager.remove(r);
       }
       assertEquals("Number of corrupt blocks not returning correctly",
-                   0, em.countAllCorruptedReplicas());
+              0, EntityManager.count(CorruptReplica.Counter.All));
 
-      DBConnector.commit();
-      DBConnector.beginTransaction();
+      EntityManager.commit();
+      EntityManager.begin();
 
-      
+
       for (Long block_id : block_ids) {
-        em.persist(new CorruptReplica(block_id, dn1.getStorageID()));
+        EntityManager.add(new CorruptReplica(block_id, dn1.getStorageID()));
       }
 
-      assertEquals("Number of corrupt blocks not returning correctly", NUM_BLOCK_IDS, em.countAllCorruptedReplicas());
+      assertEquals("Number of corrupt blocks not returning correctly", NUM_BLOCK_IDS, EntityManager.count(CorruptReplica.Counter.All));
 //      DBConnector.commit();
-//      DBConnector.beginTransaction();
+//      DBConnector.begin();
 
 //      assertTrue("First five block ids not returned correctly ",
 //                 Arrays.equals(new long[]{0, 1, 2, 3, 4},
@@ -144,11 +139,10 @@ public class TestCorruptReplicaInfo extends TestCase {
 
 //      DBConnector.commit();
     } // end try
-    catch (ClusterJUserException ex) {
+    catch (TransactionContextException ex) {
       assertFalse("Exception in database operations. Exception: " + ex.getMessage(), true);
-      DBConnector.safeRollback();
-    }
-    finally {
+      EntityManager.rollback();
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

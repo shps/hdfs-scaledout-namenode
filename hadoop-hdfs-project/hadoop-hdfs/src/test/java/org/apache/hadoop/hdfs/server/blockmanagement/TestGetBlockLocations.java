@@ -16,20 +16,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
  * Test to validate the getBlockLocations functionality in the readerNN
- * 
- * Tests the following functionality:
- * 1. Start a writerNN with datanodes
- * 2. Start a readerNN without datanodes
- * 3. Write a file (with blocks) on the writerNN and the datanodes
- * 4. Read that file from the readerNN (with tokens disabled)
- * 5. Read that file from the readerNN (with tokens enabled)
- * 
+ *
+ * Tests the following functionality: 1. Start a writerNN with datanodes 2.
+ * Start a readerNN without datanodes 3. Write a file (with blocks) on the
+ * writerNN and the datanodes 4. Read that file from the readerNN (with tokens
+ * disabled) 5. Read that file from the readerNN (with tokens enabled)
+ *
  * @author wmalik
  */
 public class TestGetBlockLocations {
@@ -72,7 +70,7 @@ public class TestGetBlockLocations {
     byte[] toRead = new byte[FILE_SIZE];
     try {
       assertEquals("Cannot read file", toRead.length, in.read(0, toRead, 0,
-          toRead.length));
+              toRead.length));
     } catch (IOException e) {
       return false;
     }
@@ -91,7 +89,6 @@ public class TestGetBlockLocations {
     return true;
   }
 
-
   // get a conf for testing
   /**
    * @param numDataNodes
@@ -101,8 +98,9 @@ public class TestGetBlockLocations {
    */
   private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
     Configuration conf = new Configuration();
-    if(tokens)
+    if (tokens) {
       conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    }
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -117,16 +115,15 @@ public class TestGetBlockLocations {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
-    DBConnector.setConfiguration(conf);
+    StorageFactory.getConnector().setConfiguration(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numRNameNodes(1).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());
     return cluster;
   }
 
-
   @Test
-  public void testReadNnWithoutTokens() throws Exception{
+  public void testReadNnWithoutTokens() throws Exception {
 
     MiniDFSCluster cluster = null;
     try {
@@ -150,7 +147,7 @@ public class TestGetBlockLocations {
       Path fileTxt = new Path("/file.txt");
       createFile(writeFs, fileTxt);
       FSDataInputStream in1 = writeFs.open(fileTxt);
-      assertTrue(checkFile1(in1)); 
+      assertTrue(checkFile1(in1));
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = readFs.open(fileTxt);
@@ -168,7 +165,7 @@ public class TestGetBlockLocations {
   }
 
   @Test
-  public void testReadNnWithTokens() throws Exception{
+  public void testReadNnWithTokens() throws Exception {
 
     MiniDFSCluster cluster = null;
     try {
@@ -192,7 +189,7 @@ public class TestGetBlockLocations {
       Path fileTxt = new Path("/file.txt");
       createFile(writeFs, fileTxt);
       FSDataInputStream in1 = writeFs.open(fileTxt);
-      assertTrue(checkFile1(in1)); 
+      assertTrue(checkFile1(in1));
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = readFs.open(fileTxt);
@@ -206,5 +203,4 @@ public class TestGetBlockLocations {
 
 
   }
-
 }

@@ -168,8 +168,8 @@ public class TestFsLimits {
       fs.verifyFsLimits(inodes, 1, child);
       INode addedChild = rootInode.addChild(child, false, false, false);
       if (addedChild != null) {
-        EntityManager.getInstance().persist(rootInode);
-        EntityManager.getInstance().persist(child);
+        EntityManager.update(rootInode);
+        EntityManager.add(child);
       }
     } catch (QuotaExceededException e) {
       generated = e.getClass();

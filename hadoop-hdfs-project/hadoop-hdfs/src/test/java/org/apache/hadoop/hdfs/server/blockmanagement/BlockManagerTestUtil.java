@@ -18,15 +18,15 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -80,7 +80,7 @@ public class BlockManagerTestUtil {
   private static int getNumberOfRacks(final BlockManager blockManager,
       final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
-    DBConnector.beginTransaction();
+    EntityManager.begin();
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
@@ -92,7 +92,12 @@ public class BlockManagerTestUtil {
         }
       }
     }
-    DBConnector.commit();
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
     return rackSet.size();
   }
 

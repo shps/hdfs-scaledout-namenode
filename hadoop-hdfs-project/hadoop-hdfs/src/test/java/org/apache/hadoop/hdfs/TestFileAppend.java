@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.junit.Ignore;
 
 /**
  * This class tests the building blocks that are needed to

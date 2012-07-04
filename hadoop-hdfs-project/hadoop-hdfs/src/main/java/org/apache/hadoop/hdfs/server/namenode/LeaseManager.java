@@ -1,31 +1,28 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.AbstractMap.SimpleEntry;
-import com.mysql.clusterj.ClusterJException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,30 +33,27 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 /**
- * LeaseManager does the lease housekeeping for writing on files.   
- * This class also provides useful static methods for lease recovery.
- * 
- * Lease Recovery Algorithm
- * 1) Namenode retrieves lease information
- * 2) For each file f in the lease, consider the last block b of f
- * 2.1) Get the datanodes which contains b
- * 2.2) Assign one of the datanodes as the primary datanode p
-
- * 2.3) p obtains a new generation stamp from the namenode
- * 2.4) p gets the block info from each datanode
- * 2.5) p computes the minimum block length
- * 2.6) p updates the datanodes, which have a valid generation stamp,
- *      with the new generation stamp and the minimum block length 
- * 2.7) p acknowledges the namenode the update results
-
- * 2.8) Namenode updates the BlockInfo
- * 2.9) Namenode removes f from the lease
- *      and removes the lease once all files have been removed
- * 2.10) Namenode commit changes to edit log
+ * LeaseManager does the lease housekeeping for writing on files. This class
+ * also provides useful static methods for lease recovery.
+ *
+ * Lease Recovery Algorithm 1) Namenode retrieves lease information 2) For each
+ * file f in the lease, consider the last block b of f 2.1) Get the datanodes
+ * which contains b 2.2) Assign one of the datanodes as the primary datanode p
+ *
+ * 2.3) p obtains a new generation stamp from the namenode 2.4) p gets the block
+ * info from each datanode 2.5) p computes the minimum block length 2.6) p
+ * updates the datanodes, which have a valid generation stamp, with the new
+ * generation stamp and the minimum block length 2.7) p acknowledges the
+ * namenode the update results
+ *
+ * 2.8) Namenode updates the BlockInfo 2.9) Namenode removes f from the lease
+ * and removes the lease once all files have been removed 2.10) Namenode commit
+ * changes to edit log
  */
 @InterfaceAudience.Private
 public class LeaseManager {
@@ -68,42 +62,48 @@ public class LeaseManager {
   private final FSNamesystem fsnamesystem;
   private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
   private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
-  private EntityManager em = EntityManager.getInstance();
 
   LeaseManager(FSNamesystem fsnamesystem) {
     this.fsnamesystem = fsnamesystem;
   }
 
   Lease getLease(String holder) {
-    return em.findLeaseByHolder(holder);
+    return EntityManager.find(Lease.Finder.ByPKey, holder);
   }
 
-  SortedSet<Lease> getSortedLeases() {
-    return em.findAllLeases();
+  Collection<Lease> getSortedLeases() {
+    return EntityManager.findList(Lease.Finder.All);
   }
 
-  /** @return the lease containing src */
+  /**
+   * @return the lease containing src
+   */
   public Lease getLeaseByPath(String src) {
-    LeasePath leasePath = em.findLeasePathByPath(src);
+    LeasePath leasePath = EntityManager.find(LeasePath.Finder.ByPKey, src);
     if (leasePath != null) {
       int holderID = leasePath.getHolderId();
-      Lease lease = em.findLeaseByHolderId(holderID);
+      Lease lease = EntityManager.find(Lease.Finder.ByHolderId, holderID);
       return lease;
     } else {
       return null;
     }
   }
 
-  /** @return the number of leases currently in the system */
+  /**
+   * @return the number of leases currently in the system
+   */
   public synchronized int countLease() {
-    return em.findAllLeases().size();
+    return EntityManager.findList(Lease.Finder.All).size();
   }
 
-  /** This method is never called in the stateless implementation 
-   * @return the number of paths contained in all leases 
-   * */
+  /**
+   * This method is never called in the stateless implementation
+   *
+   * @return the number of paths contained in all leases
+   *
+   */
   synchronized int countPath() {
-    return em.findAllLeases().size();
+    return EntityManager.count(Lease.Counter.All);
   }
 
   /**
@@ -114,14 +114,14 @@ public class LeaseManager {
     if (lease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
       lease = new Lease(holder, holderID, now());
-      em.persist(lease);
+      EntityManager.add(lease);
     } else {
       renewLease(lease);
     }
 
     LeasePath lPath = new LeasePath(src, lease.getHolderID());
     lease.addPath(lPath);
-    em.persist(lPath);
+    EntityManager.add(lPath);
 
     return lease;
   }
@@ -131,13 +131,13 @@ public class LeaseManager {
    */
   synchronized void removeLease(Lease lease, LeasePath src) {
     if (lease.removePath(src)) {
-      em.remove(src);
+      EntityManager.remove(src);
     } else {
       LOG.error(src + " not found in lease.paths (=" + lease.getPaths() + ")");
     }
 
     if (!lease.hasPath()) {
-      em.remove(lease);
+      EntityManager.remove(lease);
 
     }
   }
@@ -162,13 +162,27 @@ public class LeaseManager {
       if (!lease.removePath(new LeasePath(src, lease.getHolderID()))) {
         LOG.error(src + " not found in lease.paths (=" + lease.getPaths() + ")");
       }
-      
+
       if (!lease.hasPath() && !lease.getHolder().equals(newHolder)) {
-        em.remove(lease);
+        EntityManager.remove(lease);
 
       }
     }
-    return addLease(newHolder, src);
+
+    Lease newLease = getLease(newHolder);
+    if (newLease == null) {
+      int holderID = DFSUtil.getRandom().nextInt();
+      newLease = new Lease(newHolder, holderID, now());
+      EntityManager.add(newLease);
+    } else {
+      renewLease(newLease);
+    }
+    // update lease-paths' holder
+    LeasePath lPath = new LeasePath(src, newLease.getHolderID());
+    newLease.addPath(lPath);
+    EntityManager.update(lPath);
+
+    return newLease;
   }
 
   /**
@@ -208,7 +222,7 @@ public class LeaseManager {
   synchronized void renewLease(Lease lease) {
     if (lease != null) {
       lease.setLastUpdate(now());
-      em.persist(lease);
+      EntityManager.update(lease);
     }
   }
 
@@ -232,8 +246,8 @@ public class LeaseManager {
         LOG.debug("changeLease: replacing " + oldPath + " with " + newPath);
       }
       lease.replacePath(oldPath, newPath);
-      em.remove(oldPath);
-      em.persist(newPath);
+      EntityManager.remove(oldPath);
+      EntityManager.add(newPath);
     }
   }
 
@@ -253,7 +267,7 @@ public class LeaseManager {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
 
-    TreeSet<LeasePath> leasePathSet = em.findLeasePathsByPrefix(prefix);
+    Collection<LeasePath> leasePathSet = EntityManager.findList(LeasePath.Finder.ByPrefix, prefix);
     List<Map.Entry<LeasePath, Lease>> entries = new ArrayList<Map.Entry<LeasePath, Lease>>();
     final int srclen = prefix.length();
 
@@ -264,7 +278,7 @@ public class LeaseManager {
         return entries;
       }
       if (lPath.getPath().length() == srclen || lPath.getPath().charAt(srclen) == Path.SEPARATOR_CHAR) {
-        Lease lease = em.findLeaseByHolderId(lPath.getHolderId());
+        Lease lease = EntityManager.find(Lease.Finder.ByHolderId, lPath.getHolderId());
         entries.add(new SimpleEntry<LeasePath, Lease>(lPath, lease));
       }
     }
@@ -276,15 +290,18 @@ public class LeaseManager {
     this.hardLimit = hardLimit;
   }
 
-  /******************************************************
-   * Monitor checks for leases that have expired,
-   * and disposes of them.
-   ******************************************************/
+  /**
+   * ****************************************************
+   * Monitor checks for leases that have expired, and disposes of them.
+   * ****************************************************
+   */
   class Monitor implements Runnable {
 
     final String name = getClass().getSimpleName();
 
-    /** Check leases periodically. */
+    /**
+     * Check leases periodically.
+     */
     @Override
     public void run() {
       for (; fsnamesystem.isRunning();) {
@@ -292,18 +309,18 @@ public class LeaseManager {
         try {
           if (!fsnamesystem.isInSafeMode()) {
             boolean isDone = false;
-            int tries = DBConnector.RETRY_COUNT;
+            int tries = EntityManager.RETRY_COUNT;
 
             try {
               while (!isDone && tries > 0) {
                 try {
-                  DBConnector.beginTransaction();
+                  EntityManager.begin();
                   checkLeases();
-                  DBConnector.commit();
+                  EntityManager.commit();
                   isDone = true;
-                } catch (ClusterJException ex) {
+                } catch (TransactionContextException ex) {
                   if (!isDone) {
-                    DBConnector.safeRollback();
+                    EntityManager.rollback();
                     tries--;
                     FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
                   }
@@ -311,7 +328,7 @@ public class LeaseManager {
               }
             } finally {
               if (!isDone) {
-                DBConnector.safeRollback();
+                EntityManager.rollback();
               }
             }
 
@@ -332,11 +349,13 @@ public class LeaseManager {
     }
   }
 
-  /** Check the leases beginning from the oldest. */
+  /**
+   * Check the leases beginning from the oldest.
+   */
   private synchronized void checkLeases() {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
-    SortedSet<Lease> sortedLeases = em.findAllExpiredLeases(expiredTime);
+    SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
     if (sortedLeases == null) {
       return;
     }
@@ -379,7 +398,9 @@ public class LeaseManager {
       }
 
       for (LeasePath lPath : removing) {
-        removeLease(oldest, lPath);
+        if (oldest.getPaths().contains(lPath)) {
+          removeLease(oldest, lPath);
+        }
       }
 
       if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed

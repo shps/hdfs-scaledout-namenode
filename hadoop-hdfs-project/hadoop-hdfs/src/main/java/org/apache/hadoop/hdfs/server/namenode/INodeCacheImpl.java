@@ -99,7 +99,8 @@ public class INodeCacheImpl implements INodeCache {
 
 		if(entries != null) {
       List<Long> ids = toIds(entries);
-      List<INode> inodes = EntityManager.getInstance().findInodesByIds(ids);
+      List<INode> inodes = (List<INode>) EntityManager.findList(INode.Finder.ByIds, 
+              ids);
       if (inodes.size() < ids.size()) //means the cache is old, so invalidate
         return null;
       List<INode> sortedList = sortINodesByPath(inodes);

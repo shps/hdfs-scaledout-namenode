@@ -1,47 +1,48 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * This class tests the internals of PendingReplicationBlocks.java
  */
 public class TestPendingReplication extends TestCase {
-  public static final Log LOG = LogFactory.getLog(TestPendingReplication.class);  
+
+  public static final Log LOG = LogFactory.getLog(TestPendingReplication.class);
   final static int TIMEOUT = 3;     // 3 seconds
 
   public void testPendingReplication() {
     PendingReplicationBlocks pendingReplications;
     pendingReplications = new PendingReplicationBlocks(TIMEOUT * 1000);
-    
-    DBConnector.setConfiguration(new HdfsConfiguration());
-    DBConnector.formatDB();
-    DBConnector.beginTransaction();
-    EntityManager em = EntityManager.getInstance();
+    StorageFactory.getConnector().setConfiguration(new HdfsConfiguration());
+    StorageFactory.getConnector().formatStorage();
+    EntityManager.begin();
     //
     // Add 10 blocks to pendingReplications.
     //
@@ -49,29 +50,38 @@ public class TestPendingReplication extends TestCase {
       Block block = new Block(i, i, 0);
       pendingReplications.add(block, i);
     }
-    
+
     assertEquals("Size of pendingReplications ",
-                 10, pendingReplications.size());
-    
-    DBConnector.commit(); //FIXME[H]: An improved transaction context is required to handle add and remove in the same transactions.
-    DBConnector.beginTransaction();
+            10, pendingReplications.size());
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
+    EntityManager.begin();
     //
     // remove one item and reinsert it
     //
     Block blk = new Block(8, 8, 0);
     pendingReplications.remove(blk);             // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
-                 7, pendingReplications.getNumReplicas(blk));
+            7, pendingReplications.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
       pendingReplications.remove(blk);           // removes all replicas
     }
-    
+
     assertTrue(pendingReplications.size() == 9);
-    
-    DBConnector.commit(); 
-    
-    DBConnector.beginTransaction(); //again wants to add the totally removed block
+
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
+
+    EntityManager.begin(); //again wants to add the totally removed block
     pendingReplications.add(blk, 8);
     assertTrue(pendingReplications.size() == 10);
 
@@ -115,23 +125,33 @@ public class TestPendingReplication extends TestCase {
       }
       loop++;
     }
-    LOG.info("Had to wait for " + loop +
-                       " seconds for the lot to timeout");
+    LOG.info("Had to wait for " + loop
+            + " seconds for the lot to timeout");
 
-    DBConnector.commit();
-    
-    DBConnector.beginTransaction();
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
+
+    EntityManager.begin();
     //
     // Verify that everything has timed out.
     //
     assertEquals("Size of pendingReplications ",
-                 0, pendingReplications.size());
+            0, pendingReplications.size());
     List<PendingBlockInfo> timedOut = pendingReplications.getTimedOutBlocks();
     assertTrue(timedOut != null && timedOut.size() == 15);
     for (int i = 0; i < timedOut.size(); i++) {
       assertTrue(timedOut.get(i).getBlockId() < 15);
     }
-    
-    DBConnector.commit();
+
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
   }
 }

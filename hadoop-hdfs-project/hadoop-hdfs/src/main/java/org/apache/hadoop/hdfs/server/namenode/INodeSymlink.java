@@ -66,7 +66,7 @@ public class INodeSymlink extends INode {
   
   @Override
   public int collectSubtreeBlocksAndClear(List<Block> v) {
-    EntityManager.getInstance().remove(this);
+    EntityManager.remove(this);
     return 1;
   }
 

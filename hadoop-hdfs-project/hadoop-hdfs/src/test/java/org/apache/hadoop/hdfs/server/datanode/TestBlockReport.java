@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -50,7 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.junit.Ignore;
 
 /**
@@ -374,7 +376,7 @@ public class TestBlockReport {
     cluster.getNameNodeRpc().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
-    DBConnector.beginTransaction();
+    EntityManager.begin();
     assertEquals("Wrong number of Corrupted blocks",
       1, cluster.getNamesystem().getCorruptReplicaBlocks() +
 // the following might have to be added into the equation if 
@@ -382,7 +384,12 @@ public class TestBlockReport {
 // and then the expected number of has to be changed to '2'        
 //        cluster.getNamesystem().getPendingReplicationBlocks() +
         cluster.getNamesystem().getPendingDeletionBlocks());
-    DBConnector.commit();
+    try {
+      EntityManager.commit();
+    } catch (TransactionContextException ex) {
+      Logger.getLogger(TestBlockReport.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
 
     // Get another block and screw its length to be less than original
     if (randIndex == 0)
@@ -617,7 +624,7 @@ public class TestBlockReport {
     
     BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
     if(LOG.isDebugEnabled()) {
-      DBConnector.beginTransaction();
+      EntityManager.begin();
       LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());
       LOG.debug("Corrupted " + cluster.getNamesystem().getCorruptReplicaBlocks());
       LOG.debug("Under-replicated " + cluster.getNamesystem().
@@ -628,7 +635,12 @@ public class TestBlockReport {
           getPendingReplicationBlocks());
       LOG.debug("Excess " + cluster.getNamesystem().getExcessBlocks());
       LOG.debug("Total " + cluster.getNamesystem().getBlocksTotal());
-      DBConnector.commit();
+      try {
+        EntityManager.commit();
+      } catch (TransactionContextException ex) {
+        Logger.getLogger(TestBlockReport.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        assert false : ex.getMessage();
+      }
     }
   }
 

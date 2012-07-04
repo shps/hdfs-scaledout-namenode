@@ -3,21 +3,41 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
 
-/************************************************************
- * A Lease governs all the locks held by a single client.
- * For each client there's a corresponding lease, whose
- * timestamp is updated when the client periodically
- * checks in.  If the client dies and allows its lease to
- * expire, all the corresponding locks can be released.
- *************************************************************/
+/**
+ * **********************************************************
+ * A Lease governs all the locks held by a single client. For each client
+ * there's a corresponding lease, whose timestamp is updated when the client
+ * periodically checks in. If the client dies and allows its lease to expire,
+ * all the corresponding locks can be released.
+ * ***********************************************************
+ */
 public class Lease implements Comparable<Lease> {
 
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<Lease> {
+
+    All;
+
+    @Override
+    public Class getType() {
+      return Lease.class;
+    }
+  }
+  
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<Lease> {
+
+    ByPKey, ByHolderId, All, ByTimeLimit;
+
+    @Override
+    public Class getType() {
+      return Lease.class;
+    }
+  }
   private final String holder;
   private long lastUpdate;
   private Collection<LeasePath> paths = new TreeSet<LeasePath>();
   private int holderID; // KTHFS
-  private EntityManager em = EntityManager.getInstance();
 
   public Lease(String holder, int holderID, long lastUpd) {
     this.holder = holder;
@@ -53,19 +73,25 @@ public class Lease implements Comparable<Lease> {
     getPaths().add(lPath);
   }
 
-  /** Does this lease contain any path? */
+  /**
+   * Does this lease contain any path?
+   */
   boolean hasPath() {
     return !this.getPaths().isEmpty();
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public String toString() {
     return "[Lease.  Holder: " + holder
             + ", pendingcreates: " + paths.size() + "]";
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int compareTo(Lease o) {
     Lease l1 = this;
@@ -81,7 +107,9 @@ public class Lease implements Comparable<Lease> {
     }
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof Lease)) {
@@ -95,7 +123,9 @@ public class Lease implements Comparable<Lease> {
     return false;
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int hashCode() {
     return holder.hashCode();
@@ -103,7 +133,7 @@ public class Lease implements Comparable<Lease> {
 
   public Collection<LeasePath> getPaths() {
     if (paths.isEmpty()) {
-      paths = em.findLeasePathsByHolder(holderID);
+      paths = EntityManager.findList(LeasePath.Finder.ByHolderId, holderID);
     }
 
     return paths;

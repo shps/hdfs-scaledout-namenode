@@ -25,12 +25,32 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import se.sics.clusterj.BlockInfoTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
 
 /**
  * Internal class for block metadata.
  */
 public class BlockInfo extends Block {
+
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<BlockInfo> {
+
+    All;
+
+    @Override
+    public Class getType() {
+      return BlockInfo.class;
+    }
+  }
+
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<BlockInfo> {
+
+    ById, ByInodeId, All, ByStorageId;
+
+    @Override
+    public Class getType() {
+      return BlockInfo.class;
+    }
+  }
 
   public static enum Order implements Comparator<BlockInfo> {
 
@@ -75,20 +95,19 @@ public class BlockInfo extends Block {
    */
   private int blockIndex = -1; //added for KTHFS
   private long timestamp = 1;
-  
   protected long inodeId = -1;
-  
+
   public BlockInfo(Block blk) {
     super(blk);
     if (blk instanceof BlockInfo) {
       this.inode = ((BlockInfo) blk).inode;
     }
-    
+
   }
 
   public INodeFile getINode() {
     if (inode == null) {
-      inode = (INodeFile) EntityManager.getInstance().findInodeById(inodeId);
+      inode = (INodeFile) EntityManager.find(INodeFile.Finder.ByPKey, inodeId);
     }
 
     return inode;
@@ -97,14 +116,14 @@ public class BlockInfo extends Block {
   public void setINodeId(long id) {
     this.inodeId = id;
   }
-  
+
   public void setINode(INodeFile inode) {
     this.inode = inode;
   }
 
   public List<IndexedReplica> getReplicas() {
     if (replicas == null) {
-      replicas = EntityManager.getInstance().findReplicasByBlockId(getBlockId());
+      replicas = (List<IndexedReplica>) EntityManager.findList(IndexedReplica.Finder.ByBlockId, getBlockId());
     }
 
     return replicas;
@@ -133,25 +152,25 @@ public class BlockInfo extends Block {
   public IndexedReplica removeReplica(DatanodeDescriptor dn) {
     IndexedReplica replica = null;
     int index = -1;
-    
+
     for (int i = 0; i < getReplicas().size(); i++) {
       if (replicas.get(i).getStorageId().equals(dn.getStorageID())) {
         index = i;
         break;
       }
     }
-    
+
     if (index >= 0) {
       replica = replicas.remove(index);
       dn.decrementBlocks();
-      
+
       for (int i = index; i < replicas.size(); i++) {
         IndexedReplica r1 = replicas.get(i);
         r1.setIndex(i);
-        EntityManager.getInstance().persist(r1);
+        EntityManager.update(r1);
       }
     }
-    
+
     return replica;
 
   }
@@ -223,8 +242,5 @@ public class BlockInfo extends Block {
 
   public void setTimestamp(long ts) {
     this.timestamp = ts;
-  }
-
-  public void toPersistable(BlockInfoTable persistable) {
   }
 }

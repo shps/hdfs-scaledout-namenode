@@ -1,31 +1,30 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.mysql.clusterj.ClusterJException;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 
 /**
  * Manage node decommissioning.
@@ -33,23 +32,31 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class DecommissionManager {
-  static final Log LOG = LogFactory.getLog(DecommissionManager.class);
 
+  static final Log LOG = LogFactory.getLog(DecommissionManager.class);
   private final FSNamesystem fsnamesystem;
 
   DecommissionManager(final FSNamesystem namesystem) {
     this.fsnamesystem = namesystem;
   }
 
-  /** Periodically check decommission status. */
+  /**
+   * Periodically check decommission status.
+   */
   class Monitor implements Runnable {
-    /** recheckInterval is how often namenode checks
-     *  if a node has finished decommission
+
+    /**
+     * recheckInterval is how often namenode checks if a node has finished
+     * decommission
      */
     private final long recheckInterval;
-    /** The number of decommission nodes to check for each interval */
+    /**
+     * The number of decommission nodes to check for each interval
+     */
     private final int numNodesPerCheck;
-    /** firstkey can be initialized to anything. */
+    /**
+     * firstkey can be initialized to anything.
+     */
     private String firstkey = "";
 
     Monitor(int recheckIntervalInSecond, int numNodesPerCheck) {
@@ -58,8 +65,8 @@ class DecommissionManager {
     }
 
     /**
-     * Check decommission status of numNodesPerCheck nodes
-     * for every recheckInterval milliseconds.
+     * Check decommission status of numNodesPerCheck nodes for every
+     * recheckInterval milliseconds.
      */
     @Override
     public void run() {
@@ -67,18 +74,17 @@ class DecommissionManager {
         fsnamesystem.writeLock();
         try {
           boolean isDone = false;
-          int tries = DBConnector.RETRY_COUNT;
+          int tries = EntityManager.RETRY_COUNT;
           try {
             while (!isDone && tries > 0) {
               try {
-                DBConnector.beginTransaction();
+                EntityManager.begin();
                 check(true);
-                DBConnector.commit();
+                EntityManager.commit();
                 isDone = true;
-              }
-              catch (ClusterJException ex) {
+              } catch (TransactionContextException ex) {
                 if (!isDone) {
-                  DBConnector.safeRollback();
+                  EntityManager.rollback();
                   tries--;
                   LOG.error("check() :: failed to check for decomissioned datanodes. Exception: " + ex.getMessage(), ex);
                 }
@@ -87,36 +93,33 @@ class DecommissionManager {
           } // end try-finally
           finally {
             if (!isDone) {
-              DBConnector.safeRollback();
+              EntityManager.rollback();
             }
           }
 
-        }
-        finally {
+        } finally {
           fsnamesystem.writeUnlock();
         }
 
         try {
           Thread.sleep(recheckInterval);
-        }
-        catch (InterruptedException ie) {
+        } catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
         }
       }
     }
-  
+
     private void check(boolean isTransactional) {
       final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
       int count = 0;
-      for(Map.Entry<String, DatanodeDescriptor> entry
-          : dm.getDatanodeCyclicIteration(firstkey)) {
+      for (Map.Entry<String, DatanodeDescriptor> entry : dm.getDatanodeCyclicIteration(firstkey)) {
         final DatanodeDescriptor d = entry.getValue();
         firstkey = entry.getKey();
 
         if (d.isDecommissionInProgress()) {
           try {
             dm.checkDecommissionState(d);
-          } catch(Exception e) {
+          } catch (Exception e) {
             LOG.warn("entry=" + entry, e);
           }
           if (++count == numNodesPerCheck) {

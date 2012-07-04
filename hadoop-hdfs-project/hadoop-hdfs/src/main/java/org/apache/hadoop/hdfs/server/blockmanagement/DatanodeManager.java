@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.mysql.clusterj.ClusterJException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.IOException;
@@ -49,10 +48,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionContextException;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -84,8 +83,6 @@ public class DatanodeManager {
 
   private final HeartbeatManager heartbeatManager;
   
-  private static EntityManager em = EntityManager.getInstance();
-
   /**
    * Stores the datanode -> block map.  
    * <p>
@@ -273,20 +270,20 @@ public class DatanodeManager {
    */
   public void removeDatanode(final DatanodeID node) throws UnregisteredNodeException, IOException {
     namesystem.writeLock();
-    int tries = DBConnector.RETRY_COUNT;
+    int tries = EntityManager.RETRY_COUNT;
     boolean done = false;
     try {
       final DatanodeDescriptor descriptor = getDatanode(node);
       if (descriptor != null) {
         while (!done && tries > 0) {
           try {
-            DBConnector.beginTransaction();
+            EntityManager.begin();
             removeDatanode(descriptor);
-            DBConnector.commit();
+            EntityManager.commit();
             done = true;
-          } catch (ClusterJException e) {
+          } catch (TransactionContextException e) {
             tries--;
-            DBConnector.safeRollback();
+            EntityManager.rollback();
             LOG.error(e.getMessage(), e);
           }
         }
@@ -295,7 +292,7 @@ public class DatanodeManager {
                 + node.getName() + " does not exist");
       }
     } finally {
-      DBConnector.safeRollback();
+      EntityManager.rollback();
       namesystem.writeUnlock();
     }
   }
@@ -671,32 +668,22 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
-      boolean isDone = false;
-      int tries = DBConnector.RETRY_COUNT;
-      try {
-        while (!isDone && tries > 0) {
-          try {
-            DBConnector.beginTransaction();
-            refreshDatanodes();
-            DBConnector.commit();
-            isDone = true;
-          }
-          catch (ClusterJException ex) {
-            if (!isDone) {
-              DBConnector.safeRollback();
-              tries--;
-              LOG.error("refreshNodes() :: failed to refresh Nodes. Exception: " + ex.getMessage(), ex);
-            }
-          } // end catch
-        } // end while
-      } // end try-finally
-      finally {
-        if (!isDone) {
-          DBConnector.safeRollback();
+      int tries = EntityManager.RETRY_COUNT;
+      boolean done = false;
+      while (!done && tries > 0) {
+        try {
+          EntityManager.begin();
+          refreshDatanodes();
+          EntityManager.commit();
+          done = true;
+        } catch (TransactionContextException e) {
+          tries--;
+          EntityManager.rollback();
+          LOG.error(e.getMessage(), e);
         }
       }
-    }
-    finally {
+    } finally {
+      EntityManager.rollback();
       namesystem.writeUnlock();
     }
   }

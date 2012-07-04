@@ -32,6 +32,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final boolean DFS_INODE_CACHE_ENABLED = System.getenv("KTHFS_INODE_CACHE") == null ? false : System.getenv("KTHFS_INODE_CACHE").equals("false") ? false : true;
   
+  public static final String DFS_STORAGE_TYPE_KEY = "dfs.storage.type";
+  public static final String DFS_STORAGE_TYPE_DEFAULT = "derby";
   public static final String DFS_DB_CONNECTOR_STRING_KEY = "dfs.dbconnector.string";
   public static final String DFS_DB_CONNECTOR_STRING_DEFAULT =System.getenv("KTHFS_CONN_STR");
   public static final String DFS_DB_DATABASE_KEY = "dfs.dbconnector.database";

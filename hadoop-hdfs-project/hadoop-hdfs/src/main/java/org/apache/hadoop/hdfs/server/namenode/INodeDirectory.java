@@ -41,26 +41,25 @@ public class INodeDirectory extends INode {
   protected long nsCount;
   protected long diskspace;
 
-
-	public INodeDirectory(String name, PermissionStatus permissions) {
-		super(name, permissions);
+  public INodeDirectory(String name, PermissionStatus permissions) {
+    super(name, permissions);
     this.nsCount = 1;
     this.diskspace = 0;
   }
 
-	public INodeDirectory(PermissionStatus permissions, long mTime) {
-		super(permissions, mTime, 0);
-                this.nsCount = 1;
-                this.diskspace = 0;
-	}
+  public INodeDirectory(PermissionStatus permissions, long mTime) {
+    super(permissions, mTime, 0);
+    this.nsCount = 1;
+    this.diskspace = 0;
+  }
 
-	/** constructor */
-	INodeDirectory(byte[] localName, PermissionStatus permissions, long mTime) {
-		this(permissions, mTime);
-		this.name = localName;
-	}
+  /** constructor */
+  INodeDirectory(byte[] localName, PermissionStatus permissions, long mTime) {
+    this(permissions, mTime);
+    this.name = localName;
+  }
 
-	/** copy constructor
+  /** copy constructor
    *
    * @param other
    */
@@ -95,7 +94,7 @@ public class INodeDirectory extends INode {
     if (children != null && getChildren().contains(node)) {
       getChildren().remove(node);
       return node;
-    } 
+    }
     return node;
   }
 
@@ -120,7 +119,8 @@ public class INodeDirectory extends INode {
 
   private INode getChildINode(byte[] name) {
     if (children == null) {
-      return EntityManager.getInstance().findInodeByNameAndParentId(DFSUtil.bytes2String(name), getId());
+      return EntityManager.find(INode.Finder.ByNameAndParentId,
+              DFSUtil.bytes2String(name), getId());
     } else {
       int low = Collections.binarySearch(children, name);
       if (low >= 0) {
@@ -293,18 +293,20 @@ public class INodeDirectory extends INode {
       }
       node.setPermission(p);
     }
-    
+
     if (children != null) {
       int low = Collections.binarySearch(getChildren(), node.name);
       if (low >= 0) {
         return null;
       }
     } else {
-      INode inode = EntityManager.getInstance().findInodeByNameAndParentId(node.getName(), getId());
-      if (inode != null)
+      INode inode = EntityManager.find(INode.Finder.ByNameAndParentId,
+              node.getName(), getId());
+      if (inode != null) {
         return null;
+      }
     }
-    
+
     node.parent = this;
     node.parentId = this.id;
     //Update its parent's modification time
@@ -318,14 +320,14 @@ public class INodeDirectory extends INode {
     if (!reuseID) {
       node.setId(DFSUtil.getRandom().nextLong()); //added for simple
     }
-    
+
     if (children != null) {
       int low = Collections.binarySearch(getChildren(), node.name);
-      low ++;
+      low++;
       low *= -1;
       children.add(low, node);
     }
-    
+
     return node;
   }
 
@@ -483,7 +485,8 @@ public class INodeDirectory extends INode {
 
   public List<INode> getChildren() {
     if (children == null) {
-      children = EntityManager.getInstance().findInodesByParentIdSortedByName(getId());
+      children = (List<INode>) 
+              EntityManager.findList(INode.Finder.ByParentId, getId());
     }
     return children;
   }

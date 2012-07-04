@@ -1,12 +1,6 @@
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj;
 
 import com.mysql.clusterj.ClusterJException;
-import se.sics.clusterj.BlockInfoTable;
-import se.sics.clusterj.INodeTableSimple;
-import se.sics.clusterj.LeasePathsTable;
-import se.sics.clusterj.LeaseTable;
-import se.sics.clusterj.ReplicaUcTable;
-import se.sics.clusterj.TripletsTable;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -17,7 +11,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
-import com.mysql.clusterj.ClusterJUserException;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
@@ -26,35 +19,19 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import se.sics.clusterj.CorruptReplicasTable;
-import se.sics.clusterj.UnderReplicaBlocksTable;
-import se.sics.clusterj.ExcessReplicaTable;
-import se.sics.clusterj.InvalidateBlocksTable;
-import se.sics.clusterj.PendingReplicationBlockTable;
+import org.apache.hadoop.hdfs.server.namenode.persistance.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 
+public enum ClusterjConnector implements StorageConnector<Session> {
 
-/*
- * This singleton class serves sessions to the Inode/Block helper classes to
- * talk to the DB.
- *
- * Three design decisions here: 1) Serve one ClusterJ Session per Namenode
- * worker thread, because Sessions are not thread safe. 2) Have a pool of
- * ClusterJ SessionFactory instances to serve the Sessions. This will help work
- * around contention at the ClusterJ internal buffers. 3) Set the connection
- * pool size to be as many as the number of SessionFactory instances. This will
- * allow multiple simultaneous connections to exist, and the read/write locks in
- * FSNamesystem and FSDirectory will make sure this stays safe. *
- */
-public class DBConnector { //TODO: [W] the methods and variables in this class should not be static
-
-  private static int NUM_SESSION_FACTORIES;
+  INSTANCE;
+  private int NUM_SESSION_FACTORIES;
   static SessionFactory[] sessionFactory;
   static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
-  static final Log LOG = LogFactory.getLog(DBConnector.class);
-  public static final int RETRY_COUNT = 3;
+  static final Log LOG = LogFactory.getLog(ClusterjConnector.class);
 
-  public static void setConfiguration(Configuration conf) {
+  @Override
+  public void setConfiguration(Configuration conf) {
     if (sessionFactory != null) {
       LOG.warn("SessionFactory is already initialized");
       return; //[W] workaround to prevent recreation of SessionFactory for the time being
@@ -70,10 +47,15 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
       p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
       sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
     }
-
   }
 
-  public synchronized static Session obtainSession() {
+  /*
+   * Return a session from a random session factory in our pool.
+   *
+   * NOTE: Do not close the session returned by this call or you will die.
+   */
+  @Override
+  public synchronized Session obtainSession() {
     long threadId = Thread.currentThread().getId();
 
     if (sessionPool.containsKey(threadId)) {
@@ -91,24 +73,24 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
   /**
    * begin a transaction.
    */
-  public static void beginTransaction() {
+  @Override
+  public void beginTransaction() {
     Session session = obtainSession();
 //            session.setLockMode(LockMode.SHARED);
     session.currentTransaction().begin();
-    EntityManager.getInstance().begin();
   }
 
   /**
    * Commit a transaction.
    */
-  public static void commit() throws ClusterJUserException {
+  @Override
+  public void commit() throws StorageException {
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
     if (!tx.isActive()) {
-      throw new ClusterJUserException("The transaction is not began!");
+      throw new StorageException("The transaction is not began!");
     }
 
-    EntityManager.getInstance().commit();
     tx.commit();
     session.flush();
   }
@@ -116,35 +98,35 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
   /**
    * It rolls back only when the transaction is active.
    */
-  public static void safeRollback() throws ClusterJUserException {
+  @Override
+  public void rollback() {
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
     if (tx.isActive()) {
       tx.rollback();
     }
-
-    EntityManager.getInstance().rollback();
   }
 
   /**
    * This is called only when MiniDFSCluster wants to format the Namenode.
    */
-  public static boolean formatDB() {
+  @Override
+  public boolean formatStorage() {
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
     try {
       tx.begin();
-      session.deletePersistentAll(INodeTableSimple.class);
+      session.deletePersistentAll(INodeTable.class);
       session.deletePersistentAll(BlockInfoTable.class);
       session.deletePersistentAll(LeaseTable.class);
       session.deletePersistentAll(LeasePathsTable.class);
-      session.deletePersistentAll(TripletsTable.class);
+      session.deletePersistentAll(IndexedReplicaTable.class);
       session.deletePersistentAll(ReplicaUcTable.class);
       session.deletePersistentAll(InvalidateBlocksTable.class);
       session.deletePersistentAll(ExcessReplicaTable.class);
-      session.deletePersistentAll(PendingReplicationBlockTable.class);
-      session.deletePersistentAll(CorruptReplicasTable.class);
-      session.deletePersistentAll(UnderReplicaBlocksTable.class);
+      session.deletePersistentAll(PendingBlockTable.class);
+      session.deletePersistentAll(CorruptReplicaTable.class);
+      session.deletePersistentAll(UnderReplicatedBlocksTable.class);
       tx.commit();
       session.flush();
       return true;
@@ -156,19 +138,12 @@ public class DBConnector { //TODO: [W] the methods and variables in this class s
     return false;
   }
 
-  public static boolean checkTransactionState(boolean isTransactional) {
-    Session session = DBConnector.obtainSession();
-    boolean isActive = session.currentTransaction().isActive();
-    boolean isValid = isActive == isTransactional;
-    assert isValid :
-            "Current transaction's isActive value is " + isActive
-            + " but isTransactional's value is " + isTransactional;
-    //TODO[Hooman]: An exception should bubble up from here..
-    if (!isValid) {
-      LOG.error("Current transaction's isActive value is " + isActive
-              + " but isTransactional's value is " + isTransactional);
-    }
+  @Override
+  public boolean isTransactionActive() {
+    return obtainSession().currentTransaction().isActive();
+  }
 
-    return isValid;
+  @Override
+  public void stopStorage() {
   }
 }

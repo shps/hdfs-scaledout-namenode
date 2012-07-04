@@ -6,6 +6,26 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  */
 public class ExcessReplica extends Replica {
 
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<ExcessReplica> {
+
+    All;
+
+    @Override
+    public Class getType() {
+      return ExcessReplica.class;
+    }
+  }
+
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<ExcessReplica> {
+
+    ByStorageId, ByPKey;
+
+    @Override
+    public Class getType() {
+      return ExcessReplica.class;
+    }
+  }
+
   public ExcessReplica(String storageId, long blockId) {
     super(storageId, blockId);
   }

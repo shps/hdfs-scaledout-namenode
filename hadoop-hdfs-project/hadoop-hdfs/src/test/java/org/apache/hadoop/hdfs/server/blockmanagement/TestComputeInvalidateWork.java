@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
@@ -51,8 +50,7 @@ public class TestComputeInvalidateWork extends TestCase {
       
       namesystem.writeLock();
       try {
-        DBConnector.beginTransaction();
-        EntityManager em = EntityManager.getInstance();
+        EntityManager.begin();
         for (int i=0; i<nodes.length; i++) {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
@@ -75,9 +73,9 @@ public class TestComputeInvalidateWork extends TestCase {
           assertEquals(2, bm.computeInvalidateWork(2));
         }
         
-//        DBConnector.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
+//        EntityManager.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
       } finally {
-        DBConnector.safeRollback();
+        EntityManager.rollback();
         namesystem.writeUnlock();
       }
     } finally {

@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.Finder;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -36,6 +36,16 @@ import org.apache.hadoop.util.StringUtils;
  * base INode class containing common fields for file and directory inodes.
  */
 public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
+
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<INode> {
+
+    ByPKey, ByParentId, ByNameAndParentId, ByIds;
+
+    @Override
+    public Class getType() {
+      return INode.class;
+    }
+  }
 
   public static enum Order implements Comparator<INode> {
 
@@ -351,7 +361,8 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    */
   public INodeDirectory getParent() {
     if (parent == null) {
-      parent = (INodeDirectory) EntityManager.getInstance().findInodeById(getParentId());
+      parent = (INodeDirectory) EntityManager.find(INode.Finder.ByPKey,
+              getParentId());
     }
     return parent;
   }

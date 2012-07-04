@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.fs.permission.FsAction;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -107,7 +108,7 @@ public class INodeFile extends INode {
    */
   public List<BlockInfo> getBlocks() {
     if (blocks == null) {
-      blocks = EntityManager.getInstance().findBlocksByInodeId(id);
+      blocks = (List<BlockInfo>) EntityManager.findList(BlockInfo.Finder.ByInodeId, id);
     }
 
     Collections.sort(blocks, BlockInfo.Order.ByBlockIndex);
@@ -133,7 +134,7 @@ public class INodeFile extends INode {
     if (index != blks.size()) {
       for (int i = index; i < blocks.size(); i++) {
         blocks.get(i).setBlockIndex(i);
-        EntityManager.getInstance().persist(blocks.get(i));
+        EntityManager.update(blocks.get(i));
       }
     }
   }
@@ -147,7 +148,7 @@ public class INodeFile extends INode {
     if (index < blks.size() - 1) {
       for (int i = index + 1; i < blks.size(); i++) {
         blks.get(i).setBlockIndex(i);
-        EntityManager.getInstance().persist(blks.get(i));
+        EntityManager.update(blks.get(i));
       }
     }
 
@@ -165,7 +166,7 @@ public class INodeFile extends INode {
   @Override
   public int collectSubtreeBlocksAndClear(List<Block> blocks) {
     collectSubtreeBlocksAndClearNoDelete(blocks);
-    EntityManager.getInstance().remove(this);
+    EntityManager.remove(this);
     return 1;
   }
 
@@ -176,7 +177,7 @@ public class INodeFile extends INode {
     for (BlockInfo blk : tempList) {
       v.add(blk);
       blk.setINode(null);
-      EntityManager.getInstance().remove(blk);
+      EntityManager.remove(blk);
     }
     blocks.clear();
 

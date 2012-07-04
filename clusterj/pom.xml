@@ -88,11 +88,5 @@
             <name>SICS Release Repository</name>
             <url>http://kompics.sics.se/maven/repository</url>
         </repository>
-        <repository>
-            <url>http://ftp.ing.umu.se/mirror/eclipse/rt/eclipselink/maven.repo</url>
-            <id>eclipselink</id>
-            <layout>default</layout>
-            <name>Repository for library Library[eclipselink]</name>
-        </repository>
     </repositories>
 </project>

@@ -5,14 +5,22 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  * @author Hooman <hooman@sics.se>
  */
 /**
- * An object that contains information about a block that 
- * is being replicated. It records the timestamp when the 
- * system started replicating the most recent copy of this
- * block. It also records the number of replication
- * requests that are in progress.
+ * An object that contains information about a block that is being replicated.
+ * It records the timestamp when the system started replicating the most recent
+ * copy of this block. It also records the number of replication requests that
+ * are in progress.
  */
 public class PendingBlockInfo {
 
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<PendingBlockInfo> {
+
+    ByPKey, All, ByTimeLimit;
+
+    @Override
+    public Class getType() {
+      return PendingBlockInfo.class;
+    }
+  }
   private long blockId;
   private long timeStamp;
   private int numReplicasInProgress;

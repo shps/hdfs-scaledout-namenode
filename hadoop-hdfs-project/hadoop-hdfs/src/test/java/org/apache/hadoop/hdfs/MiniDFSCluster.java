@@ -55,6 +55,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.*;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -71,7 +73,6 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.hdfs.server.namenode.DBConnector;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -580,8 +581,9 @@ public class MiniDFSCluster {
       /*[thesis] For testing*/
       if (format)
       {
-          DBConnector.setConfiguration(conf);
-          assert(DBConnector.formatDB());
+        StorageConnector connector = StorageFactory.getConnector();
+          connector.setConfiguration(conf);
+          assert(connector.formatStorage());
       }
       //conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, "test");
       //conf.set(name, value);
@@ -1291,6 +1293,8 @@ public class MiniDFSCluster {
         nameNode.join();
         nameNode = null;
       }
+      StorageConnector connector = StorageFactory.getConnector();
+      connector.stopStorage();
     }
     
     final Set<Entry<Integer, NameNodeInfo[]>> entrySet = readingNameNodes.entrySet();

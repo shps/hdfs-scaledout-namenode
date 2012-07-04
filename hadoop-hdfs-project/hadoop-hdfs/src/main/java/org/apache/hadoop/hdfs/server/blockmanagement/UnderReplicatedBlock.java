@@ -4,6 +4,26 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class UnderReplicatedBlock {
+  public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.persistance.Counter<UnderReplicatedBlock> {
+    All, ByLevel, LessThanLevel;
+
+    @Override
+    public Class getType() {
+      return UnderReplicatedBlock.class;
+    }
+    
+  }
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.persistance.Finder<UnderReplicatedBlock> {
+
+    ByBlockId, AllSortedByLevel, ByLevel;
+
+    @Override
+    public Class getType() {
+      return UnderReplicatedBlock.class;
+    }
+    
+  }
+  
   public static enum Order implements Comparator<UnderReplicatedBlock> {
 
     ByLevel() {
