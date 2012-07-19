@@ -3,33 +3,59 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
-import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.LeasePath;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeasePathDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public abstract class LeasePathContext implements EntityContext<LeasePath> {
+public class LeasePathContext implements EntityContext<LeasePath> {
 
-  public static final String TABLE_NAME = "lease_paths";
-  public static final String HOLDER_ID = "holder_id";
-  public static final String PATH = "path";
-  protected Map<Integer, TreeSet<LeasePath>> holderLeasePaths = new HashMap<Integer, TreeSet<LeasePath>>();
-  protected Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
-  protected Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
-  protected Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
-  protected Map<String, LeasePath> pathToLeasePath = new HashMap<String, LeasePath>();
-  protected boolean allLeasePathsRead = false;
+  private Map<Integer, Collection<LeasePath>> holderLeasePaths = new HashMap<Integer, Collection<LeasePath>>();
+  private Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> newLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> modifiedLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<LeasePath, LeasePath> removedLPaths = new HashMap<LeasePath, LeasePath>();
+  private Map<String, LeasePath> pathToLeasePath = new HashMap<String, LeasePath>();
+  private boolean allLeasePathsRead = false;
+  private LeasePathDataAccess dataAccess;
+
+  public LeasePathContext(LeasePathDataAccess dataAccess) {
+    this.dataAccess = dataAccess;
+  }
+
+  @Override
+  public void add(LeasePath lPath) throws PersistanceException {
+    if (removedLPaths.containsKey(lPath)) {
+      throw new TransactionContextException("Removed lease-path passed to be persisted");
+    }
+
+    newLPaths.put(lPath, lPath);
+    leasePaths.put(lPath, lPath);
+    pathToLeasePath.put(lPath.getPath(), lPath);
+    if (allLeasePathsRead) {
+      if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+        holderLeasePaths.get(lPath.getHolderId()).add(lPath);
+      } else {
+        TreeSet<LeasePath> lSet = new TreeSet<LeasePath>();
+        lSet.add(lPath);
+        holderLeasePaths.put(lPath.getHolderId(), lSet);
+      }
+    }
+  }
 
   @Override
   public void clear() {
     holderLeasePaths.clear();
     leasePaths.clear();
+    newLPaths.clear();
     modifiedLPaths.clear();
     removedLPaths.clear();
     pathToLeasePath.clear();
@@ -37,56 +63,12 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
   }
 
   @Override
-  public void remove(LeasePath lPath) throws TransactionContextException {
-    if (leasePaths.remove(lPath) == null) {
-      throw new TransactionContextException("Unattached lease-path passed to be removed");
-    }
-
-    pathToLeasePath.remove(lPath.getPath());
-    modifiedLPaths.remove(lPath);
-    if (holderLeasePaths.containsKey(lPath.getHolderId())) {
-      Set<LeasePath> lSet = holderLeasePaths.get(lPath.getHolderId());
-      lSet.remove(lPath);
-      if (lSet.isEmpty()) {
-        holderLeasePaths.remove(lPath.getHolderId());
-      }
-    }
-    removedLPaths.put(lPath, lPath);
+  public int count(CounterType counter, Object... params) throws PersistanceException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
   }
 
   @Override
-  public Collection<LeasePath> findList(FinderType<LeasePath> finder, Object... params) {
-    LeasePath.Finder lFinder = (LeasePath.Finder) finder;
-    TreeSet<LeasePath> result = null;
-
-    switch (lFinder) {
-      case ByHolderId:
-        int holderId = (Integer) params[0];
-        if (holderLeasePaths.containsKey(holderId)) {
-          result = holderLeasePaths.get(holderId);
-        } else {
-          result = findByHolderId(holderId);
-          holderLeasePaths.put(holderId, result);
-        }
-        break;
-      case ByPrefix:
-        String prefix = (String) params[0];
-        result = findByPrefix(prefix);
-        break;
-      case All:
-        if (allLeasePathsRead) {
-          result = new TreeSet<LeasePath>(leasePaths.values());
-        } else {
-          result = findAll();
-          allLeasePathsRead = true;
-        }
-        break;
-    }
-    return result;
-  }
-
-  @Override
-  public LeasePath find(FinderType<LeasePath> finder, Object... params) {
+  public LeasePath find(FinderType<LeasePath> finder, Object... params) throws PersistanceException {
     LeasePath.Finder lFinder = (LeasePath.Finder) finder;
     LeasePath result = null;
 
@@ -96,25 +78,79 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
         if (pathToLeasePath.containsKey(path)) {
           result = pathToLeasePath.get(path);
         } else {
-          result = findByPKey(path);
+          result = dataAccess.findByPKey(path);
           if (result != null) {
             leasePaths.put(result, result);
             pathToLeasePath.put(result.getPath(), result);
           }
         }
-        break;
+        return result;
     }
 
-    return result;
+    throw new RuntimeException(UNSUPPORTED_FINDER);
   }
 
   @Override
-  public int count(CounterType counter, Object... params) {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public Collection<LeasePath> findList(FinderType<LeasePath> finder, Object... params) throws PersistanceException {
+    LeasePath.Finder lFinder = (LeasePath.Finder) finder;
+    Collection<LeasePath> result = null;
+
+    switch (lFinder) {
+      case ByHolderId:
+        int holderId = (Integer) params[0];
+        if (holderLeasePaths.containsKey(holderId)) {
+          result = holderLeasePaths.get(holderId);
+        } else {
+          result = syncLeasePathInstances(dataAccess.findByHolderId(holderId), false);
+          holderLeasePaths.put(holderId, result);
+        }
+        return result;
+      case ByPrefix:
+        String prefix = (String) params[0];
+        return syncLeasePathInstances(dataAccess.findByPrefix(prefix), false);
+      case All:
+        if (allLeasePathsRead) {
+          result = new TreeSet<LeasePath>(leasePaths.values());
+        } else {
+          result = syncLeasePathInstances(dataAccess.findAll(), true);
+          allLeasePathsRead = true;
+        }
+        return result;
+    }
+    throw new RuntimeException(UNSUPPORTED_FINDER);
   }
 
   @Override
-  public void update(LeasePath lPath) throws TransactionContextException {
+  public void prepare() throws StorageException {
+    dataAccess.prepare(removedLPaths.values(), newLPaths.values(), modifiedLPaths.values());
+  }
+
+  @Override
+  public void remove(LeasePath lPath) throws PersistanceException {
+    if (leasePaths.remove(lPath) == null) {
+      throw new TransactionContextException("Unattached lease-path passed to be removed");
+    }
+
+    pathToLeasePath.remove(lPath.getPath());
+    newLPaths.remove(lPath);
+    modifiedLPaths.remove(lPath);
+    if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+      Collection<LeasePath> lSet = holderLeasePaths.get(lPath.getHolderId());
+      lSet.remove(lPath);
+      if (lSet.isEmpty()) {
+        holderLeasePaths.remove(lPath.getHolderId());
+      }
+    }
+    removedLPaths.put(lPath, lPath);
+  }
+
+  @Override
+  public void removeAll() throws PersistanceException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
+  }
+
+  @Override
+  public void update(LeasePath lPath) throws PersistanceException {
     if (removedLPaths.containsKey(lPath)) {
       throw new TransactionContextException("Removed lease-path passed to be persisted");
     }
@@ -133,16 +169,30 @@ public abstract class LeasePathContext implements EntityContext<LeasePath> {
     }
   }
 
-  @Override
-  public void add(LeasePath lPath) throws TransactionContextException {
-    update(lPath);
+  private TreeSet<LeasePath> syncLeasePathInstances(Collection<LeasePath> list, boolean allRead) {
+    TreeSet<LeasePath> finalList = new TreeSet<LeasePath>();
+
+    for (LeasePath lPath : list) {
+      if (!removedLPaths.containsKey(lPath)) {
+        if (this.leasePaths.containsKey(lPath)) {
+          lPath = this.leasePaths.get(lPath);
+        } else {
+          this.leasePaths.put(lPath, lPath);
+          this.pathToLeasePath.put(lPath.getPath(), lPath);
+        }
+        finalList.add(lPath);
+        if (allRead) {
+          if (holderLeasePaths.containsKey(lPath.getHolderId())) {
+            holderLeasePaths.get(lPath.getHolderId()).add(lPath);
+          } else {
+            TreeSet<LeasePath> lSet = new TreeSet<LeasePath>();
+            lSet.add(lPath);
+            holderLeasePaths.put(lPath.getHolderId(), lSet);
+          }
+        }
+      }
+    }
+
+    return finalList;
   }
-
-  protected abstract TreeSet<LeasePath> findByHolderId(int holderId);
-
-  protected abstract TreeSet<LeasePath> findByPrefix(String prefix);
-
-  protected abstract TreeSet<LeasePath> findAll();
-
-  protected abstract LeasePath findByPKey(String path);
 }

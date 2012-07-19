@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -514,7 +515,7 @@ public class NameNode {
   /**
    * Is the cluster currently in safe mode?
    */
-  public boolean isInSafeMode() {
+  public boolean isInSafeMode() throws PersistanceException {
     return namesystem.isInSafeMode();
   }
 

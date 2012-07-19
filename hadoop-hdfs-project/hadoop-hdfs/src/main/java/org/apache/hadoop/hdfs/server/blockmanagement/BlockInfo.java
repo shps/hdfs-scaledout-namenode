@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Internal class for block metadata.
@@ -105,7 +106,7 @@ public class BlockInfo extends Block {
 
   }
 
-  public INodeFile getINode() {
+  public INodeFile getINode() throws PersistanceException {
     if (inode == null) {
       inode = (INodeFile) EntityManager.find(INodeFile.Finder.ByPKey, inodeId);
     }
@@ -113,6 +114,10 @@ public class BlockInfo extends Block {
     return inode;
   }
 
+  public long getInodeId() {
+    return inodeId;
+  }
+  
   public void setINodeId(long id) {
     this.inodeId = id;
   }
@@ -121,7 +126,7 @@ public class BlockInfo extends Block {
     this.inode = inode;
   }
 
-  public List<IndexedReplica> getReplicas() {
+  public List<IndexedReplica> getReplicas() throws PersistanceException {
     if (replicas == null) {
       replicas = (List<IndexedReplica>) EntityManager.findList(IndexedReplica.Finder.ByBlockId, getBlockId());
     }
@@ -132,7 +137,7 @@ public class BlockInfo extends Block {
   /**
    * Adds new replica for this block.
    */
-  public IndexedReplica addReplica(DatanodeDescriptor dn) {
+  public IndexedReplica addReplica(DatanodeDescriptor dn) throws PersistanceException {
     if (hasReplicaIn(dn.getStorageID())) {
       return null;
     }
@@ -149,7 +154,7 @@ public class BlockInfo extends Block {
    * @param storageId
    * @return
    */
-  public IndexedReplica removeReplica(DatanodeDescriptor dn) {
+  public IndexedReplica removeReplica(DatanodeDescriptor dn) throws PersistanceException {
     IndexedReplica replica = null;
     int index = -1;
 
@@ -175,7 +180,7 @@ public class BlockInfo extends Block {
 
   }
 
-  boolean hasReplicaIn(String storageId) {
+  boolean hasReplicaIn(String storageId) throws PersistanceException {
     for (IndexedReplica replica : getReplicas()) {
       if (replica.getStorageId().equals(storageId)) {
         return true;

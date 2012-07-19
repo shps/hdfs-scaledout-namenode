@@ -1,48 +1,33 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InvalidateBlockDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public abstract class InvalidatedBlockContext implements EntityContext<InvalidatedBlock> {
-  
-  public static final String TABLE_NAME = "invalidated_blocks";
-  public static final String BLOCK_ID = "block_id";
-  public static final String STORAGE_ID = "storage_id";
-  public static final String GENERATION_STAMP = "generation_stamp";
-  public static final String NUM_BYTES = "num_bytes";
+public class InvalidatedBlockContext implements EntityContext<InvalidatedBlock> {
 
-  protected Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
-  protected Map<String, HashSet<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, HashSet<InvalidatedBlock>>();
-  protected Map<InvalidatedBlock, InvalidatedBlock> newInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
-  protected Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
-  protected boolean allInvBlocksRead = false;
+  private Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private Map<String, HashSet<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, HashSet<InvalidatedBlock>>();
+  private Map<InvalidatedBlock, InvalidatedBlock> newInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
+  private boolean allInvBlocksRead = false;
+  private InvalidateBlockDataAccess dataAccess;
 
-  @Override
-  public void clear() {
-    invBlocks.clear();
-    storageIdToInvBlocks.clear();
-    newInvBlocks.clear();
-    removedInvBlocks.clear();
-    allInvBlocksRead = false;
+  public InvalidatedBlockContext(InvalidateBlockDataAccess dataAccess) {
+    this.dataAccess = dataAccess;
   }
 
   @Override
-  public void update(InvalidatedBlock entity) throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void add(InvalidatedBlock invBlock) throws TransactionContextException {
+  public void add(InvalidatedBlock invBlock) throws PersistanceException {
     if (removedInvBlocks.containsKey(invBlock)) {
       throw new TransactionContextException("Removed invalidated-block passed to be persisted");
     }
@@ -57,6 +42,79 @@ public abstract class InvalidatedBlockContext implements EntityContext<Invalidat
 
     invBlocks.put(invBlock, invBlock);
     newInvBlocks.put(invBlock, invBlock);
+  }
+
+  @Override
+  public void clear() {
+    invBlocks.clear();
+    storageIdToInvBlocks.clear();
+    newInvBlocks.clear();
+    removedInvBlocks.clear();
+    allInvBlocksRead = false;
+  }
+
+  @Override
+  public int count(CounterType<InvalidatedBlock> counter, Object... params) throws PersistanceException {
+    InvalidatedBlock.Counter iCounter = (InvalidatedBlock.Counter) counter;
+    switch (iCounter) {
+      case All:
+        return dataAccess.countAll();
+    }
+
+    throw new RuntimeException(UNSUPPORTED_COUNTER);
+  }
+
+  @Override
+  public InvalidatedBlock find(FinderType<InvalidatedBlock> finder, Object... params) throws PersistanceException {
+    InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
+
+    switch (iFinder) {
+      case ByPrimaryKey:
+        long blockId = (Long) params[0];
+        String storageId = (String) params[1];
+        InvalidatedBlock searchInstance = new InvalidatedBlock(storageId, blockId);
+        if (invBlocks.containsKey(searchInstance)) {
+          return invBlocks.get(searchInstance);
+        } else if (removedInvBlocks.containsKey(searchInstance)) {
+          return null;
+        } else {
+          InvalidatedBlock result = dataAccess.findInvBlockByPkey(params);
+          this.invBlocks.put(result, result);
+          return result;
+        }
+    }
+
+    throw new RuntimeException(UNSUPPORTED_FINDER);
+  }
+
+  @Override
+  public List<InvalidatedBlock> findList(FinderType<InvalidatedBlock> finder, Object... params) throws PersistanceException {
+    InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
+
+    switch (iFinder) {
+      case ByStorageId:
+        String storageId = (String) params[0];
+        if (storageIdToInvBlocks.containsKey(storageId)) {
+          return new ArrayList<InvalidatedBlock>(this.storageIdToInvBlocks.get(storageId)); //clone the list reference
+        } else {
+          return syncInstances(dataAccess.findInvalidatedBlockByStorageId(storageId));
+        }
+      case All:
+        if (!allInvBlocksRead) {
+          List<InvalidatedBlock> result = syncInstances(dataAccess.findAllInvalidatedBlocks());
+          allInvBlocksRead = true;
+          return result;
+        } else {
+          return new ArrayList<InvalidatedBlock>(invBlocks.values());
+        }
+    }
+
+    throw new RuntimeException(UNSUPPORTED_FINDER);
+  }
+
+  @Override
+  public void prepare() throws StorageException {
+    dataAccess.prepare(removedInvBlocks.values(), newInvBlocks.values(), null);
   }
 
   @Override
@@ -78,58 +136,35 @@ public abstract class InvalidatedBlockContext implements EntityContext<Invalidat
   }
 
   @Override
-  public List<InvalidatedBlock> findList(FinderType<InvalidatedBlock> finder, Object... params) {
-    InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
-    List<InvalidatedBlock> result = null;
-
-    switch (iFinder) {
-      case ByStorageId:
-        String storageId = (String) params[0];
-        if (storageIdToInvBlocks.containsKey(storageId)) {
-          result = new ArrayList<InvalidatedBlock>(this.storageIdToInvBlocks.get(storageId)); //clone the list reference
-        } else {
-          result = findInvalidatedBlockByStorageId(storageId);
-        }
-        break;
-      case All:
-        if (!allInvBlocksRead) {
-          result = findAllInvalidatedBlocks();
-          allInvBlocksRead = true;
-        } else {
-          result = new ArrayList<InvalidatedBlock>(invBlocks.values());
-        }
-        break;
-    }
-
-    return result;
+  public void removeAll() throws PersistanceException {
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
-  public InvalidatedBlock find(FinderType<InvalidatedBlock> finder, Object... params) {
-    InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
-    InvalidatedBlock result = null;
-
-    switch (iFinder) {
-      case ByPrimaryKey:
-        long blockId = (Long) params[0];
-        String storageId = (String) params[1];
-        InvalidatedBlock searchInstance = new InvalidatedBlock(storageId, blockId);
-        if (invBlocks.containsKey(searchInstance)) {
-          result = invBlocks.get(searchInstance);
-        } else if (removedInvBlocks.containsKey(searchInstance)) {
-          result = null;
-        } else {
-          result = findInvBlockByPkey(params);
-          this.invBlocks.put(result, result);
-        }
-        break;
-    }
-    return result;
+  public void update(InvalidatedBlock entity) throws TransactionContextException {
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 
-  protected abstract List<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId);
+  private List<InvalidatedBlock> syncInstances(Collection<InvalidatedBlock> list) {
+    List<InvalidatedBlock> finalList = new ArrayList<InvalidatedBlock>();
+    for (InvalidatedBlock invBlock : list) {
+      if (!removedInvBlocks.containsKey(invBlock)) {
+        if (invBlocks.containsKey(invBlock)) {
+          finalList.add(invBlocks.get(invBlock));
+        } else {
+          invBlocks.put(invBlock, invBlock);
+          finalList.add(invBlock);
+        }
+        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+          storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
+        } else {
+          HashSet<InvalidatedBlock> invBlockList = new HashSet<InvalidatedBlock>();
+          invBlockList.add(invBlock);
+          storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
+        }
+      }
+    }
 
-  protected abstract List<InvalidatedBlock> findAllInvalidatedBlocks();
-
-  protected abstract InvalidatedBlock findInvBlockByPkey(Object[] params);
+    return finalList;
+  }
 }

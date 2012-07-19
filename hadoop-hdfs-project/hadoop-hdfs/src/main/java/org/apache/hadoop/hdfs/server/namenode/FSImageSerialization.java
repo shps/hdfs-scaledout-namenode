@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -135,7 +136,7 @@ public class FSImageSerialization {
   static void writeINodeUnderConstruction(DataOutputStream out,
                                            INodeFile cons,
                                            String path) 
-                                           throws IOException {
+                                           throws IOException, PersistanceException {
     assert cons.isUnderConstruction();
     writeString(path, out);
     out.writeShort(cons.getReplication());
@@ -157,7 +158,7 @@ public class FSImageSerialization {
    * Save one inode's attributes to the image.
    */
   static void saveINode2Image(INode node,
-                              DataOutputStream out) throws IOException {
+                              DataOutputStream out) throws IOException, PersistanceException {
     byte[] name = node.getNameBytes();
     out.writeShort(name.length);
     out.write(name);

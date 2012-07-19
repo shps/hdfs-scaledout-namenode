@@ -9,6 +9,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /** This class manages the local cache of INodes
  * @author wmalik
@@ -94,7 +95,7 @@ public class INodeCacheImpl implements INodeCache {
 	}
 	
 	@Override
-	public INode getNode(String path) {
+	public INode getNode(String path) throws PersistanceException{
 		INodeEntry[] entries = get(path);
 
 		if(entries != null) {

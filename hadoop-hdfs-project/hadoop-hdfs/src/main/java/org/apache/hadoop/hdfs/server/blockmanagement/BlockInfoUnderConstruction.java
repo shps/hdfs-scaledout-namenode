@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Represents a block that is currently being constructed.<br> This is usually
@@ -109,7 +112,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    *
    * @throws IOException
    */
-  public List<ReplicaUnderConstruction> getExpectedReplicas() {
+  public List<ReplicaUnderConstruction> getExpectedReplicas() throws PersistanceException {
     if (expectedReplicas == null) {
       expectedReplicas =
               (List<ReplicaUnderConstruction>) EntityManager.findList(ReplicaUnderConstruction.Finder.ByBlockId, getBlockId());
@@ -118,7 +121,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return expectedReplicas;
   }
 
-  public ReplicaUnderConstruction addExpectedReplica(String storageId, ReplicaState rState) {
+  public ReplicaUnderConstruction addExpectedReplica(String storageId, ReplicaState rState) throws PersistanceException {
     if (hasExpectedReplicaIn(storageId)) {
       return null;
     }
@@ -128,7 +131,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return replica;
   }
 
-  private boolean hasExpectedReplicaIn(String storageId) {
+  private boolean hasExpectedReplicaIn(String storageId) throws PersistanceException {
     for (IndexedReplica replica : getExpectedReplicas()) {
       if (replica.getStorageId().equals(storageId)) {
         return true;
@@ -175,7 +178,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    *
    * @throws IOException
    */
-  public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr) throws IOException {
+  public void initializeBlockRecovery(long recoveryId, DatanodeManager datanodeMgr) throws IOException, PersistanceException {
 
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
 
@@ -210,7 +213,12 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(super.toString());
-    b.append("{blockUCState=").append(blockUCState).append(", primaryNodeIndex=").append(primaryNodeIndex).append(", replicas=").append(getExpectedReplicas().toArray()).append("}");
+    try {
+      b.append("{blockUCState=").append(blockUCState).append(", primaryNodeIndex=").append(primaryNodeIndex).append(", replicas=").append(getExpectedReplicas().toArray()).append("}");
+    } catch (PersistanceException ex) {
+      Logger.getLogger(BlockInfoUnderConstruction.class.getName()).log(Level.SEVERE, null, ex);
+      return null;
+    }
     return b.toString();
   }
 }

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -23,8 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * Manage node decommissioning.
@@ -71,62 +72,39 @@ class DecommissionManager {
     @Override
     public void run() {
       for (; fsnamesystem.isRunning();) {
-        fsnamesystem.writeLock();
         try {
-          boolean isDone = false;
-          int tries = EntityManager.RETRY_COUNT;
-          try {
-            while (!isDone && tries > 0) {
-              try {
-                EntityManager.begin();
-                check(true);
-                EntityManager.commit();
-                isDone = true;
-              } catch (TransactionContextException ex) {
-                if (!isDone) {
-                  EntityManager.rollback();
-                  tries--;
-                  LOG.error("check() :: failed to check for decomissioned datanodes. Exception: " + ex.getMessage(), ex);
-                }
-              } // end catch
-            } // end while
-          } // end try-finally
-          finally {
-            if (!isDone) {
-              EntityManager.rollback();
-            }
-          }
-
-        } finally {
-          fsnamesystem.writeUnlock();
-        }
-
-        try {
+          decommisionHandler.handleWithWriteLock(fsnamesystem);
           Thread.sleep(recheckInterval);
+        } catch (IOException ex) {
+          //This shouldn't occure
         } catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
         }
       }
     }
+    TransactionalRequestHandler decommisionHandler = new TransactionalRequestHandler() {
 
-    private void check(boolean isTransactional) {
-      final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
-      int count = 0;
-      for (Map.Entry<String, DatanodeDescriptor> entry : dm.getDatanodeCyclicIteration(firstkey)) {
-        final DatanodeDescriptor d = entry.getValue();
-        firstkey = entry.getKey();
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
+        int count = 0;
+        for (Map.Entry<String, DatanodeDescriptor> entry : dm.getDatanodeCyclicIteration(firstkey)) {
+          final DatanodeDescriptor d = entry.getValue();
+          firstkey = entry.getKey();
 
-        if (d.isDecommissionInProgress()) {
-          try {
-            dm.checkDecommissionState(d);
-          } catch (Exception e) {
-            LOG.warn("entry=" + entry, e);
-          }
-          if (++count == numNodesPerCheck) {
-            return;
+          if (d.isDecommissionInProgress()) {
+            try {
+              dm.checkDecommissionState(d);
+            } catch (Exception e) {
+              LOG.warn("entry=" + entry, e);
+            }
+            if (++count == numNodesPerCheck) {
+              return null;
+            }
           }
         }
+        return null;
       }
-    }
+    };
   }
 }

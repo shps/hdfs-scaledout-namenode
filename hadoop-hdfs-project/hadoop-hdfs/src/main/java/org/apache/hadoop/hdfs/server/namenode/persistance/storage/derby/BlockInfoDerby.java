@@ -1,82 +1,46 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.CounterType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.BlockInfoContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.IndexedReplicaContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ReplicaDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.hsqldb.Types;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public class BlockInfoDerby extends BlockInfoContext {
+public class BlockInfoDerby implements BlockInfoDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
-  protected Map<Long, BlockInfo> newBlocks = new HashMap<Long, BlockInfo>();
 
   @Override
-  public void clear() {
-    super.clear();
-    newBlocks.clear();
-  }
+  public int countAll() throws StorageException {
+    try {
+      Connection conn = connector.obtainSession();
+      String query = String.format("select count(*) from %s", TABLE_NAME);
+      PreparedStatement s;
+      s = conn.prepareStatement(query);
 
-  @Override
-  public void remove(BlockInfo block) throws TransactionContextException {
-    super.remove(block);
-    newBlocks.remove(block.getBlockId());
-  }
-
-  @Override
-  public int count(CounterType<BlockInfo> counter, Object... params) {
-    BlockInfo.Counter bCounter = (BlockInfo.Counter) counter;
-    switch (bCounter) {
-      case All:
-
-        try {
-          Connection conn = connector.obtainSession();
-          String query = String.format("select count(*) from %s", TABLE_NAME);
-          PreparedStatement s;
-          s = conn.prepareStatement(query);
-
-          ResultSet result = s.executeQuery();
-          if (result.next()) {
-            return result.getInt(1);
-          }
-        } catch (SQLException ex) {
-          Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
-        }
+      ResultSet result = s.executeQuery();
+      return result.getInt(1);
+    } catch (Exception e) {
+      throw new StorageException(e);
     }
-    return -1;
-
   }
 
   @Override
-  public void add(BlockInfo block) throws TransactionContextException {
-    if (removedBlocks.containsKey(block.getBlockId())) {
-      throw new TransactionContextException("Removed block passed to be persisted");
-    }
-    blocks.put(block.getBlockId(), block);
-    newBlocks.put(block.getBlockId(), block);
-  }
-
-  @Override
-  public void prepare() {
+  public void prepare(Collection<BlockInfo> removed, Collection<BlockInfo> news, Collection<BlockInfo> modified) throws StorageException {
     String insertQuery = String.format("insert into %s values(?,?,?,?,?,?,?,?,?)",
             TABLE_NAME);
     String deleteQuery = String.format("delete from %s where %s = ?",
@@ -90,13 +54,13 @@ public class BlockInfoDerby extends BlockInfoContext {
       Connection conn = connector.obtainSession();
 
       PreparedStatement dlt = conn.prepareStatement(deleteQuery);
-      for (BlockInfo block : removedBlocks.values()) {
+      for (BlockInfo block : removed) {
         dlt.setLong(1, block.getBlockId());
         dlt.addBatch();
       }
 
       PreparedStatement insrt = conn.prepareStatement(insertQuery);
-      for (BlockInfo block : newBlocks.values()) {
+      for (BlockInfo block : news) {
         insrt.setLong(1, block.getBlockId());
         insrt.setInt(2, block.getBlockIndex());
         insrt.setLong(3, block.getINode().getId());
@@ -116,7 +80,7 @@ public class BlockInfoDerby extends BlockInfoContext {
       }
 
       PreparedStatement updt = conn.prepareStatement(updateQuery);
-      for (BlockInfo block : modifiedBlocks.values()) {
+      for (BlockInfo block : modified) {
         updt.setLong(9, block.getBlockId());
         updt.setInt(1, block.getBlockIndex());
         updt.setLong(2, block.getINode().getId());
@@ -138,14 +102,13 @@ public class BlockInfoDerby extends BlockInfoContext {
       dlt.executeBatch();
       insrt.executeBatch();
       updt.executeBatch();
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
   }
 
   @Override
-  protected List<BlockInfo> findByInodeId(long id) {
-    List<BlockInfo> syncedList = null;
+  public List<BlockInfo> findByInodeId(long id) throws StorageException {
     try {
       Connection conn = connector.obtainSession();
       String query = String.format("select * from %s where %s = ?",
@@ -154,60 +117,46 @@ public class BlockInfoDerby extends BlockInfoContext {
       s = conn.prepareStatement(query);
       s.setLong(1, id);
       ResultSet result = s.executeQuery();
-      syncedList = syncBlockInfoInstances(result);
-    } catch (IOException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+      return createList(result);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
-
-    return syncedList;
   }
 
   @Override
-  protected List<BlockInfo> findByStorageId(String storageId) {
-    List<BlockInfo> syncedList = null;
+  public List<BlockInfo> findByStorageId(String storageId) throws StorageException {
     try {
       Connection conn = connector.obtainSession();
       String query = String.format("select * from %s where %s in (select %s from %s where %s=?)",
-              TABLE_NAME, BLOCK_ID, IndexedReplicaContext.BLOCK_ID,
-              IndexedReplicaContext.TABLE_NAME, IndexedReplicaContext.STORAGE_ID);
+              TABLE_NAME, BLOCK_ID, BLOCK_ID,
+              ReplicaDataAccess.TABLE_NAME, ReplicaDataAccess.STORAGE_ID);
       PreparedStatement s;
       s = conn.prepareStatement(query);
       s.setString(1, storageId);
       ResultSet result = s.executeQuery();
-      syncedList = syncBlockInfoInstances(result);
-    } catch (IOException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+      return createList(result);
+    } catch (Exception e) {
+      throw new StorageException(e);
     }
 
-    return syncedList;
   }
 
   @Override
-  protected List<BlockInfo> findAllBlocks() {
-    List<BlockInfo> syncedList = null;
+  public List<BlockInfo> findAllBlocks() throws StorageException {
     try {
       Connection conn = connector.obtainSession();
       String query = String.format("select * from %s", TABLE_NAME);
       PreparedStatement s;
       s = conn.prepareStatement(query);
       ResultSet result = s.executeQuery();
-      syncedList = syncBlockInfoInstances(result);
-    } catch (IOException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+      return createList(result);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
-
-    return syncedList;
   }
 
   @Override
-  protected BlockInfo findById(long id) {
-    BlockInfo blockInfo = null;
+  public BlockInfo findById(long id) throws StorageException {
     try {
       Connection conn = connector.obtainSession();
       String query = String.format("select * from %s where %s=?",
@@ -216,32 +165,29 @@ public class BlockInfoDerby extends BlockInfoContext {
       s.setLong(1, id);
       ResultSet resultSet = s.executeQuery();
       if (resultSet.next()) {
-        blockInfo = createBlockInfo(resultSet);
+        return createBlockInfo(resultSet);
+      } else {
+        return null;
       }
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
-
-    return blockInfo;
   }
 
-  private List<BlockInfo> syncBlockInfoInstances(ResultSet resultSet) throws IOException, SQLException {
+  private List<BlockInfo> createList(ResultSet resultSet) throws StorageException {
     List<BlockInfo> finalList = new ArrayList<BlockInfo>();
-
-    while (resultSet.next()) {
-      BlockInfo blockInfo = createBlockInfo(resultSet);
-      if (blocks.containsKey(blockInfo.getBlockId()) && !removedBlocks.containsKey(blockInfo.getBlockId())) {
-        finalList.add(blocks.get(blockInfo.getBlockId()));
-      } else {
-        blocks.put(blockInfo.getBlockId(), blockInfo);
+    try {
+      while (resultSet.next()) {
+        BlockInfo blockInfo = createBlockInfo(resultSet);
         finalList.add(blockInfo);
       }
+    } catch (SQLException ex) {
+      throw new StorageException(ex);
     }
-
     return finalList;
   }
 
-  private BlockInfo createBlockInfo(ResultSet rs) {
+  private BlockInfo createBlockInfo(ResultSet rs) throws StorageException {
     BlockInfo blockInfo = null;
     try {
       Block b = new Block(rs.getLong(BLOCK_ID), rs.getLong(NUM_BYTES), rs.getLong(GENERATION_STAMP));
@@ -259,15 +205,10 @@ public class BlockInfoDerby extends BlockInfoContext {
       blockInfo.setTimestamp(rs.getLong(TIME_STAMP));
       blockInfo.setBlockIndex(rs.getInt(BLOCK_INDEX));
 
-    } catch (SQLException ex) {
-      Logger.getLogger(BlockInfoDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
 
     return blockInfo;
-  }
-
-  @Override
-  public void removeAll() throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
   }
 }

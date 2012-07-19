@@ -33,9 +33,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files. This class
@@ -67,18 +68,18 @@ public class LeaseManager {
     this.fsnamesystem = fsnamesystem;
   }
 
-  Lease getLease(String holder) {
+  Lease getLease(String holder) throws PersistanceException {
     return EntityManager.find(Lease.Finder.ByPKey, holder);
   }
 
-  Collection<Lease> getSortedLeases() {
+  Collection<Lease> getSortedLeases() throws PersistanceException {
     return EntityManager.findList(Lease.Finder.All);
   }
 
   /**
    * @return the lease containing src
    */
-  public Lease getLeaseByPath(String src) {
+  public Lease getLeaseByPath(String src) throws PersistanceException {
     LeasePath leasePath = EntityManager.find(LeasePath.Finder.ByPKey, src);
     if (leasePath != null) {
       int holderID = leasePath.getHolderId();
@@ -92,7 +93,7 @@ public class LeaseManager {
   /**
    * @return the number of leases currently in the system
    */
-  public synchronized int countLease() {
+  public synchronized int countLease() throws PersistanceException {
     return EntityManager.findList(Lease.Finder.All).size();
   }
 
@@ -102,14 +103,14 @@ public class LeaseManager {
    * @return the number of paths contained in all leases
    *
    */
-  synchronized int countPath() {
+  synchronized int countPath() throws PersistanceException {
     return EntityManager.count(Lease.Counter.All);
   }
 
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
-  synchronized Lease addLease(String holder, String src) {
+  synchronized Lease addLease(String holder, String src) throws PersistanceException {
     Lease lease = getLease(holder);
     if (lease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
@@ -129,7 +130,7 @@ public class LeaseManager {
   /**
    * Remove the specified lease and src
    */
-  synchronized void removeLease(Lease lease, LeasePath src) {
+  synchronized void removeLease(Lease lease, LeasePath src) throws PersistanceException {
     if (lease.removePath(src)) {
       EntityManager.remove(src);
     } else {
@@ -145,7 +146,7 @@ public class LeaseManager {
   /**
    * Remove the lease for the specified holder and src
    */
-  synchronized void removeLease(String holder, String src) {
+  synchronized void removeLease(String holder, String src) throws PersistanceException {
     Lease lease = getLease(holder);
     if (lease != null) {
       removeLease(lease, new LeasePath(src, lease.getHolderID()));
@@ -155,7 +156,7 @@ public class LeaseManager {
   /**
    * Reassign lease for file src to the new holder.
    */
-  synchronized Lease reassignLease(Lease lease, String src, String newHolder) {
+  synchronized Lease reassignLease(Lease lease, String src, String newHolder) throws PersistanceException {
     assert newHolder != null : "new lease holder is null";
     if (lease != null) {
       // Removing lease-path souldn't be persisted in entity-manager since we want to add it to another lease.
@@ -189,7 +190,7 @@ public class LeaseManager {
    * Finds the pathname for the specified pendingFile
    */
   public synchronized String findPath(INodeFile pendingFile)
-          throws IOException {
+          throws IOException, PersistanceException {
     assert pendingFile.isUnderConstruction();
     Lease lease = getLease(pendingFile.getClientName());
     if (lease != null) {
@@ -215,11 +216,11 @@ public class LeaseManager {
   /**
    * Renew the lease(s) held by the given client
    */
-  synchronized void renewLease(String holder) {
+  synchronized void renewLease(String holder) throws PersistanceException {
     renewLease(getLease(holder));
   }
 
-  synchronized void renewLease(Lease lease) {
+  synchronized void renewLease(Lease lease) throws PersistanceException {
     if (lease != null) {
       lease.setLastUpdate(now());
       EntityManager.update(lease);
@@ -227,7 +228,7 @@ public class LeaseManager {
   }
 
   synchronized void changeLease(String src, String dst,
-          String overwrite, String replaceBy) {
+          String overwrite, String replaceBy) throws PersistanceException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".changelease: "
               + " src=" + src + ", dest=" + dst
@@ -251,7 +252,7 @@ public class LeaseManager {
     }
   }
 
-  synchronized void removeLeaseWithPrefixPath(String prefix) {
+  synchronized void removeLeaseWithPrefixPath(String prefix) throws PersistanceException {
     for (Map.Entry<LeasePath, Lease> entry : findLeaseWithPrefixPath(prefix)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
@@ -262,7 +263,7 @@ public class LeaseManager {
   }
 
   private List<Map.Entry<LeasePath, Lease>> findLeaseWithPrefixPath(
-          String prefix) {
+          String prefix) throws PersistanceException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
@@ -305,36 +306,10 @@ public class LeaseManager {
     @Override
     public void run() {
       for (; fsnamesystem.isRunning();) {
-        fsnamesystem.writeLock();
         try {
-          if (!fsnamesystem.isInSafeMode()) {
-            boolean isDone = false;
-            int tries = EntityManager.RETRY_COUNT;
-
-            try {
-              while (!isDone && tries > 0) {
-                try {
-                  EntityManager.begin();
-                  checkLeases();
-                  EntityManager.commit();
-                  isDone = true;
-                } catch (TransactionContextException ex) {
-                  if (!isDone) {
-                    EntityManager.rollback();
-                    tries--;
-                    FSNamesystem.LOG.error("checkLease :: failed " + ex.getMessage(), ex);
-                  }
-                }
-              }
-            } finally {
-              if (!isDone) {
-                EntityManager.rollback();
-              }
-            }
-
-          }
-        } finally {
-          fsnamesystem.writeUnlock();
+          handler.handleWithWriteLock(fsnamesystem);
+        } catch (IOException ex) {
+          LOG.error(ex);
         }
 
 
@@ -347,12 +322,22 @@ public class LeaseManager {
         }
       }
     }
+    TransactionalRequestHandler handler = new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        if (!fsnamesystem.isInSafeMode()) {
+          checkLeases();
+        }
+        return null;
+      }
+    };
   }
 
   /**
    * Check the leases beginning from the oldest.
    */
-  private synchronized void checkLeases() {
+  private synchronized void checkLeases() throws PersistanceException {
     assert fsnamesystem.hasWriteLock();
     long expiredTime = now() - hardLimit;
     SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);

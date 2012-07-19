@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Directory INode class that has a quota restriction
@@ -37,7 +38,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param other The other inode from which all other properties are copied
    */
   INodeDirectoryWithQuota(long nsQuota, long dsQuota, INodeDirectory other)
-          throws QuotaExceededException {
+          throws QuotaExceededException, PersistanceException {
     super(other);
     setQuota(nsQuota, dsQuota);
   }

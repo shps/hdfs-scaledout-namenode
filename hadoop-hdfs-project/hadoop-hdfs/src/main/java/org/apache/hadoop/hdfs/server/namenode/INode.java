@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
@@ -28,6 +30,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -155,7 +158,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    *
    * @param other Other node to be copied
    */
-  public INode(INode other) {
+  public INode(INode other) throws PersistanceException {
     setName(other.getName());
     this.id = other.getId();
     this.parent = other.getParent();
@@ -260,12 +263,12 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * number of files in the sub tree. Also clears references since this INode is
    * deleted.
    */
-  abstract int collectSubtreeBlocksAndClear(List<Block> blocks);
+  abstract int collectSubtreeBlocksAndClear(List<Block> blocks) throws PersistanceException;
 
   /**
    * Compute {@link ContentSummary}.
    */
-  public final ContentSummary computeContentSummary() {
+  public final ContentSummary computeContentSummary() throws PersistanceException{
     long[] a = computeContentSummary(new long[]{0, 0, 0, 0});
     return new ContentSummary(a[0], a[1], a[2], getNsQuota(), a[3],
             getDsQuota());
@@ -275,7 +278,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * @return an array of three longs. 0: length, 1: file count, 2: directory
    * count 3: disk space
    */
-  abstract long[] computeContentSummary(long[] summary);
+  abstract long[] computeContentSummary(long[] summary) throws PersistanceException;
 
   /**
    * Get the quota set for this inode
@@ -298,7 +301,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * Adds total number of names and total disk space taken under this tree to
    * counts. Returns updated counts object.
    */
-  public abstract DirCounts spaceConsumedInTree(DirCounts counts);
+  public abstract DirCounts spaceConsumedInTree(DirCounts counts) throws PersistanceException;
 
   /**
    * Get local file name
@@ -309,7 +312,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     return DFSUtil.bytes2String(name);
   }
 
-  public String getLocalParentDir() {
+  public String getLocalParentDir() throws PersistanceException {
     INode inode = isRoot() ? this : getParent();
     return (inode != null) ? inode.getFullPathName() : "";
   }
@@ -340,7 +343,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   /**
    * {@inheritDoc}
    */
-  public String getFullPathName() {
+  public String getFullPathName() throws PersistanceException {
     return FSDirectory.getFullPathName(this);
   }
 
@@ -348,9 +351,14 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * {@inheritDoc}
    */
   public String toString() {
-    return "\"" + getFullPathName() + "\":" + getUserName() + ":"
-            + getGroupName() + ":" + (isDirectory() ? "d" : "-")
-            + getFsPermission();
+    try {
+      return "\"" + getFullPathName() + "\":" + getUserName() + ":"
+              + getGroupName() + ":" + (isDirectory() ? "d" : "-")
+              + getFsPermission();
+    } catch (PersistanceException ex) {
+      Logger.getLogger(INode.class.getName()).log(Level.SEVERE, null, ex);
+      return null;
+    }
   }
 
   /**
@@ -358,7 +366,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    *
    * @return parent INode
    */
-  public INodeDirectory getParent() {
+  public INodeDirectory getParent() throws PersistanceException {
     if (parent == null) {
       parent = (INodeDirectory) EntityManager.find(INode.Finder.ByPKey,
               getParentId());

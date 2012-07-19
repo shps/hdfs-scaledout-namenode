@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /** 
  * This interface is used used the pluggable block placement policy
@@ -32,7 +33,7 @@ public interface FSInodeInfo {
    * @return the full pathname (from root) that this inode represents
    */
 
-  public String getFullPathName() ;
+  public String getFullPathName()  throws PersistanceException;
 }
     
     

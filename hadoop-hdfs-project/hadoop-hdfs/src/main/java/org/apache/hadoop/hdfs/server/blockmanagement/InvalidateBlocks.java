@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Keeps a Collection for every named machine containing blocks that have
@@ -44,14 +45,14 @@ class InvalidateBlocks {
   /**
    * @return the number of blocks to be invalidated .
    */
-  synchronized long numBlocks() {
+  synchronized long numBlocks() throws PersistanceException {
     return EntityManager.count(InvalidatedBlock.Counter.All);
   }
 
   /**
    * Does this contain the block which is associated with the storage?
    */
-  synchronized boolean contains(final String storageID, final Block block) {
+  synchronized boolean contains(final String storageID, final Block block) throws PersistanceException {
     return EntityManager.find(InvalidatedBlock.Finder.ByPrimaryKey, block.getBlockId(), storageID) != null;
   }
 
@@ -60,7 +61,7 @@ class InvalidateBlocks {
    * specified datanode.
    */
   synchronized void add(final Block block, final DatanodeInfo datanode,
-          final boolean log) {
+          final boolean log) throws PersistanceException {
 
     EntityManager.add(new InvalidatedBlock(datanode.getStorageID(), block.getBlockId(),
             block.getGenerationStamp(), block.getNumBytes()));
@@ -74,7 +75,7 @@ class InvalidateBlocks {
   /**
    * Remove a storage from the invalidatesSet
    */
-  synchronized void remove(final String storageID) {
+  synchronized void remove(final String storageID) throws PersistanceException {
     //[H] ClusterJ limitation: no delete op using where clause
     List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageID);
     if (invBlocks != null) {
@@ -89,7 +90,7 @@ class InvalidateBlocks {
   /**
    * Remove the block from the specified storage.
    */
-  synchronized void remove(final String storageID, final Block block) {
+  synchronized void remove(final String storageID, final Block block) throws PersistanceException {
     EntityManager.remove(new InvalidatedBlock(storageID, block.getBlockId(),
             block.getGenerationStamp(), block.getNumBytes()));
   }
@@ -97,7 +98,7 @@ class InvalidateBlocks {
   /**
    * Print the contents to out.
    */
-  synchronized void dump(final PrintWriter out) {
+  synchronized void dump(final PrintWriter out) throws PersistanceException {
     List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.All);
     HashSet<String> storageIds = new HashSet<String>();
     for (InvalidatedBlock ib : invBlocks) {
@@ -128,7 +129,7 @@ class InvalidateBlocks {
   /**
    * @return a list of the storage IDs.
    */
-  synchronized List<String> getStorageIDs() {
+  synchronized List<String> getStorageIDs() throws PersistanceException {
     List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.All);
     HashSet<String> storageIds = new HashSet<String>();
     for (InvalidatedBlock ib : invBlocks) {
@@ -145,7 +146,7 @@ class InvalidateBlocks {
   /**
    * Invalidate work for the storage.
    */
-  int invalidateWork(final String storageId) {
+  int invalidateWork(final String storageId) throws PersistanceException {
     final DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(storageId);
     if (dn == null) {
       List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageId);
@@ -170,7 +171,7 @@ class InvalidateBlocks {
   }
 
   private synchronized List<Block> invalidateWork(
-          final String storageId, final DatanodeDescriptor dn) {
+          final String storageId, final DatanodeDescriptor dn) throws PersistanceException {
     final List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageId);
     if (invBlocks == null || invBlocks.isEmpty()) {
       return null;

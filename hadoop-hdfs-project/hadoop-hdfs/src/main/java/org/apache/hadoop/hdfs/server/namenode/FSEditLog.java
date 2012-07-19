@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -32,13 +31,11 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -55,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -502,7 +500,7 @@ public class FSEditLog  {
    * Records the block locations of the last block.
    * @throws IOException 
    */
-  public void logOpenFile(String path, INodeFile newNode) throws IOException {
+  public void logOpenFile(String path, INodeFile newNode) throws IOException, PersistanceException {
     assert newNode.isUnderConstruction();
     AddOp op = AddOp.getInstance()
       .setPath(path)
@@ -522,7 +520,7 @@ public class FSEditLog  {
    * Add close lease record to edit log.
    * @throws IOException 
    */
-  public void logCloseFile(String path, INodeFile newNode) throws IOException {
+  public void logCloseFile(String path, INodeFile newNode) throws IOException, PersistanceException {
     CloseOp op = CloseOp.getInstance()
       .setPath(path)
       .setReplication(newNode.getReplication())

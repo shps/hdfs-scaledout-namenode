@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * I-node for closed file.
@@ -53,26 +54,26 @@ public class INodeFile extends INode {
     this.replication = replication;
     this.preferredBlockSize = preferredBlockSize;
   }
-  
+
   public INodeFile(boolean undercConstruction, PermissionStatus permissions, short replication,
-                                 long preferredBlockSize, long modTime, String clientName, 
-                                 String clientMachine, DatanodeID clientNode) {
+          long preferredBlockSize, long modTime, String clientName,
+          String clientMachine, DatanodeID clientNode) {
     this(undercConstruction, permissions.applyUMask(UMASK), replication, modTime, modTime, preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
-  
+
   public INodeFile(boolean underConstruction, byte[] name,
-                             short blockReplication,
-                             long modificationTime,
-                             long preferredBlockSize,
-                             PermissionStatus perm,
-                             String clientName,
-                             String clientMachine,
-                             DatanodeID clientNode) {
+          short blockReplication,
+          long modificationTime,
+          long preferredBlockSize,
+          PermissionStatus perm,
+          String clientName,
+          String clientMachine,
+          DatanodeID clientNode) {
     this(underConstruction, perm, blockReplication, modificationTime, modificationTime,
-          preferredBlockSize);
+            preferredBlockSize);
     this.name = name;
     this.clientName = clientName;
     this.clientMachine = clientMachine;
@@ -106,7 +107,7 @@ public class INodeFile extends INode {
    * @return file blocks
    * @throws IOException
    */
-  public List<BlockInfo> getBlocks() {
+  public List<BlockInfo> getBlocks() throws PersistanceException {
     if (blocks == null) {
       blocks = (List<BlockInfo>) EntityManager.findList(BlockInfo.Finder.ByInodeId, id);
     }
@@ -119,13 +120,13 @@ public class INodeFile extends INode {
     this.blocks = blocks;
   }
 
-  public void addBlock(BlockInfo block) {
+  public void addBlock(BlockInfo block) throws PersistanceException {
     List<BlockInfo> blks = getBlocks();
     block.setBlockIndex(blks.size());
     blks.add(block);
   }
 
-  public void removeBlock(BlockInfo block) {
+  public void removeBlock(BlockInfo block) throws PersistanceException {
     List<BlockInfo> blks = getBlocks();
     int index = block.getBlockIndex();
 
@@ -139,7 +140,7 @@ public class INodeFile extends INode {
     }
   }
 
-  public void setBlock(int index, BlockInfo block) {
+  public void setBlock(int index, BlockInfo block) throws PersistanceException {
     List<BlockInfo> blks = getBlocks();
 
     block.setBlockIndex(index);
@@ -164,13 +165,13 @@ public class INodeFile extends INode {
   }
 
   @Override
-  public int collectSubtreeBlocksAndClear(List<Block> blocks) {
+  public int collectSubtreeBlocksAndClear(List<Block> blocks) throws PersistanceException {
     collectSubtreeBlocksAndClearNoDelete(blocks);
     EntityManager.remove(this);
     return 1;
   }
 
-  public int collectSubtreeBlocksAndClearNoDelete(List<Block> v) {
+  public int collectSubtreeBlocksAndClearNoDelete(List<Block> v) throws PersistanceException {
 
     parent = null;
     List<BlockInfo> tempList = new ArrayList<BlockInfo>(getBlocks());
@@ -187,7 +188,8 @@ public class INodeFile extends INode {
   /**
    * {@inheritDoc}
    */
-  public long[] computeContentSummary(long[] summary) {
+  @Override
+  public long[] computeContentSummary(long[] summary) throws PersistanceException {
     summary[0] += computeFileSize(true);
     summary[1]++;
     summary[3] += diskspaceConsumed();
@@ -197,7 +199,7 @@ public class INodeFile extends INode {
   /**
    * Compute file size. May or may not include BlockInfoUnderConstruction.
    */
-  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction) throws PersistanceException {
     List<BlockInfo> blks = getBlocks();
     if (blks.isEmpty()) {
       return 0;
@@ -216,13 +218,13 @@ public class INodeFile extends INode {
   }
 
   @Override
-  public DirCounts spaceConsumedInTree(DirCounts counts) {
+  public DirCounts spaceConsumedInTree(DirCounts counts) throws PersistanceException {
     counts.nsCount += 1;
     counts.dsCount += diskspaceConsumed();
     return counts;
   }
 
-  public long diskspaceConsumed() {
+  public long diskspaceConsumed() throws PersistanceException {
     List<BlockInfo> list = getBlocks();
     Block[] array = list.toArray(new Block[list.size()]);
     return diskspaceConsumed(array);
@@ -255,7 +257,7 @@ public class INodeFile extends INode {
    *
    * @throws IOException
    */
-  public BlockInfo getPenultimateBlock() throws IOException {
+  public BlockInfo getPenultimateBlock() throws IOException, PersistanceException {
     if (getBlocks().size() <= 1) {
       return null;
     }
@@ -265,7 +267,7 @@ public class INodeFile extends INode {
   /**
    * Get the last block of the file. Make sure it has the right type.
    */
-  public BlockInfo getLastBlock() throws IOException {
+  public BlockInfo getLastBlock() throws IOException, PersistanceException {
 
     if (getBlocks().isEmpty()) {
       return null;
@@ -296,24 +298,24 @@ public class INodeFile extends INode {
   public boolean isUnderConstruction() {
     return underConstruction;
   }
-  
+
   public void convertToCompleteInode() {
     this.underConstruction = false;
   }
-  
+
   public void convertToUnderConstruction(String clientName, String clientMachine, DatanodeID clientNode) {
     this.underConstruction = true;
     this.clientName = clientName;
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
-  
+
   /**
    * Convert the last block of the file to an under-construction block. Set its
    * locations.
    */
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock)
-          throws IOException {
+          throws IOException, PersistanceException {
     if (getBlocks().isEmpty()) {
       throw new IOException("Trying to update non-existant block. "
               + "File is empty.");

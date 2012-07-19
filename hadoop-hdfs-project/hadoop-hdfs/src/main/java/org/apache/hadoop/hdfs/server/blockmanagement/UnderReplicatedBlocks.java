@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Keep track of under replication blocks. Blocks have replication priority,
@@ -33,35 +34,35 @@ class UnderReplicatedBlocks {
   /**
    * Empty the queues.
    */
-  void clear() {
+  void clear() throws PersistanceException {
     EntityManager.removeAll(UnderReplicatedBlock.class);
   }
 
   /**
    * Return the total number of under replication blocks
    */
-  synchronized int size() {
+  synchronized int size() throws PersistanceException {
     return EntityManager.count(UnderReplicatedBlock.Counter.All);
   }
 
   /**
    * Return the number of under replication blocks excluding corrupt blocks
    */
-  synchronized int getUnderReplicatedBlockCount() {
+  synchronized int getUnderReplicatedBlockCount() throws PersistanceException {
     return EntityManager.count(UnderReplicatedBlock.Counter.LessThanLevel, QUEUE_WITH_CORRUPT_BLOCKS);
   }
 
   /**
    * Return the number of corrupt blocks
    */
-  synchronized int getCorruptBlockSize() {
+  synchronized int getCorruptBlockSize() throws PersistanceException {
     return EntityManager.count(UnderReplicatedBlock.Counter.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
   }
 
   /**
    * Check if a block is in the neededReplication queue
    */
-  synchronized boolean contains(Block block) {
+  synchronized boolean contains(Block block) throws PersistanceException {
     return EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId()) != null;
   }
 
@@ -104,7 +105,7 @@ class UnderReplicatedBlocks {
           Block block,
           int curReplicas,
           int decomissionedReplicas,
-          int expectedReplicas) {
+          int expectedReplicas) throws PersistanceException {
     assert curReplicas >= 0 : "Negative replicas!";
     int priLevel = getPriority(curReplicas, decomissionedReplicas,
             expectedReplicas);
@@ -131,7 +132,7 @@ class UnderReplicatedBlocks {
   synchronized boolean remove(Block block,
           int oldReplicas,
           int decommissionedReplicas,
-          int oldExpectedReplicas) {
+          int oldExpectedReplicas) throws PersistanceException {
     int priLevel = getPriority(oldReplicas,
             decommissionedReplicas,
             oldExpectedReplicas);
@@ -145,7 +146,7 @@ class UnderReplicatedBlocks {
   /**
    * remove a block from a under replication queue given a priority
    */
-  boolean remove(Block block, int priLevel) {
+  boolean remove(Block block, int priLevel) throws PersistanceException {
     UnderReplicatedBlock urblock = EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId());
     if (urblock == null) {
       return false;
@@ -183,7 +184,7 @@ class UnderReplicatedBlocks {
   synchronized void update(Block block, int curReplicas,
           int decommissionedReplicas,
           int curExpectedReplicas,
-          int curReplicasDelta, int expectedReplicasDelta) {
+          int curReplicasDelta, int expectedReplicasDelta) throws PersistanceException {
     int oldReplicas = curReplicas - curReplicasDelta;
     int oldExpectedReplicas = curExpectedReplicas - expectedReplicasDelta;
     int curPri = getPriority(curReplicas, decommissionedReplicas, curExpectedReplicas);

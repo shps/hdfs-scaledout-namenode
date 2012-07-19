@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * *************************************************
@@ -56,7 +57,7 @@ class PendingReplicationBlocks {
   /**
    * Add a block to the list of pending Replications
    */
-  void add(Block block, int numReplicas) {
+  void add(Block block, int numReplicas) throws PersistanceException {
     PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found == null) {
       found = new PendingBlockInfo(block.getBlockId(), now(), numReplicas);
@@ -72,7 +73,7 @@ class PendingReplicationBlocks {
    * One replication request for this block has finished. Decrement the number
    * of pending replication requests for this block.
    */
-  void remove(Block block) {
+  void remove(Block block) throws PersistanceException {
     PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       if (LOG.isDebugEnabled()) {
@@ -90,7 +91,7 @@ class PendingReplicationBlocks {
   /**
    * The total number of blocks that are undergoing replication
    */
-  int size() {
+  int size() throws PersistanceException {
     List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.All); //TODO[H]: This can be improved.
     if (pendingBlocks != null) {
       int count = 0;
@@ -115,7 +116,7 @@ class PendingReplicationBlocks {
   /**
    * How many copies of this block is pending replication?
    */
-  int getNumReplicas(Block block) {
+  int getNumReplicas(Block block) throws PersistanceException {
     PendingBlockInfo found = EntityManager.find(PendingBlockInfo.Finder.ByPKey, block.getBlockId());
     if (found != null && !isTimedout(found)) {
       return found.getNumReplicas();
@@ -127,7 +128,7 @@ class PendingReplicationBlocks {
    * Returns a list of blocks that have timed out their replication requests.
    * Returns null if no blocks have timed out.
    */
-  List<PendingBlockInfo> getTimedOutBlocks() {
+  List<PendingBlockInfo> getTimedOutBlocks() throws PersistanceException {
     long timeLimit = now() - timeout;
     List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
     if (timedoutPendings == null || timedoutPendings.size() <= 0) {
@@ -140,7 +141,7 @@ class PendingReplicationBlocks {
   /**
    * Iterate through all items and print them.
    */
-  void metaSave(PrintWriter out) {
+  void metaSave(PrintWriter out) throws PersistanceException {
     List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.All);
     if (pendingBlocks != null) {
       out.println("Metasave: Blocks being replicated: "

@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,40 +13,40 @@ import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ReplicaUnderConstructionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ReplicaUnderConstruntionDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaUnderConstructionDerby extends ReplicaUnderConstructionContext {
+public class ReplicaUnderConstructionDerby implements ReplicaUnderConstruntionDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
   @Override
-  protected List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) {
-    String query = String.format("select * from %s where %s=?", TABLE_NAME, BLOCK_ID);
-    Connection conn = connector.obtainSession();
+  public List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) throws StorageException {
     try {
+      String query = String.format("select * from %s where %s=?", TABLE_NAME, BLOCK_ID);
+      Connection conn = connector.obtainSession();
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, blockId);
       ResultSet rSet = s.executeQuery();
       return createReplicaList(rSet);
-    } catch (SQLException ex) {
-      Logger.getLogger(ReplicaUnderConstructionDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
-
-    return new ArrayList<ReplicaUnderConstruction>();
   }
 
   @Override
-  public void prepare() {
-    String insert = String.format("insert into %s values(?,?,?,?)", TABLE_NAME);
-    String delete = String.format("delete from %s where %s=? and %s=?",
-            TABLE_NAME, BLOCK_ID, STORAGE_ID);
-    Connection conn = connector.obtainSession();
+  public void prepare(Collection<ReplicaUnderConstruction> removed, Collection<ReplicaUnderConstruction> newed, Collection<ReplicaUnderConstruction> modified) throws StorageException {
     try {
+      String insert = String.format("insert into %s values(?,?,?,?)", TABLE_NAME);
+      String delete = String.format("delete from %s where %s=? and %s=?",
+              TABLE_NAME, BLOCK_ID, STORAGE_ID);
+      Connection conn = connector.obtainSession();
       PreparedStatement insrt = conn.prepareStatement(insert);
-      for (ReplicaUnderConstruction r : newReplicasUc.values()) {
+      for (ReplicaUnderConstruction r : newed) {
         insrt.setLong(1, r.getBlockId());
         insrt.setString(2, r.getStorageId());
         insrt.setInt(3, r.getState().ordinal());
@@ -55,14 +56,14 @@ public class ReplicaUnderConstructionDerby extends ReplicaUnderConstructionConte
       insrt.executeBatch();
 
       PreparedStatement dlt = conn.prepareStatement(delete);
-      for (ReplicaUnderConstruction r : removedReplicasUc.values()) {
+      for (ReplicaUnderConstruction r : removed) {
         dlt.setLong(1, r.getBlockId());
         dlt.setString(2, r.getStorageId());
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (SQLException ex) {
-      Logger.getLogger(ReplicaUnderConstructionDerby.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (Exception ex) {
+      throw new StorageException(ex);
     }
   }
 
@@ -73,10 +74,5 @@ public class ReplicaUnderConstructionDerby extends ReplicaUnderConstructionConte
               rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID), rSet.getInt(REPLICA_INDEX)));
     }
     return replicas;
-  }
-
-  @Override
-  public void removeAll() throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
   }
 }

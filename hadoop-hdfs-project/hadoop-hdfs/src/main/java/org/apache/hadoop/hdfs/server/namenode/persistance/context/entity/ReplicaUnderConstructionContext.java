@@ -1,30 +1,42 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ReplicaUnderConstruntionDataAccess;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public abstract class ReplicaUnderConstructionContext implements EntityContext<ReplicaUnderConstruction> {
+public class ReplicaUnderConstructionContext implements EntityContext<ReplicaUnderConstruction> {
 
-  public static final String TABLE_NAME = "replica_under_constructions";
-  public static final String BLOCK_ID = "block_id";
-  public static final String STORAGE_ID = "storage_id";
-  public static final String STATE = "state";
-  public static final String REPLICA_INDEX = "replica_index";
   /**
    * Mappings
    */
-  protected Map<String, ReplicaUnderConstruction> newReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
-  protected Map<String, ReplicaUnderConstruction> removedReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
-  protected Map<Long, List<ReplicaUnderConstruction>> blockReplicasUc = new HashMap<Long, List<ReplicaUnderConstruction>>();
+  private Map<String, ReplicaUnderConstruction> newReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
+  private Map<String, ReplicaUnderConstruction> removedReplicasUc = new HashMap<String, ReplicaUnderConstruction>();
+  private Map<Long, List<ReplicaUnderConstruction>> blockReplicasUc = new HashMap<Long, List<ReplicaUnderConstruction>>();
+  private ReplicaUnderConstruntionDataAccess dataAccess;
+
+  public ReplicaUnderConstructionContext(ReplicaUnderConstruntionDataAccess dataAccess) {
+    this.dataAccess = dataAccess;
+  }
+
+  @Override
+  public void add(ReplicaUnderConstruction replica) throws PersistanceException {
+    if (removedReplicasUc.containsKey(replica.cacheKey())) {
+      throw new TransactionContextException("Removed  under constructionreplica passed to be persisted");
+    }
+
+    newReplicasUc.put(replica.cacheKey(), replica);
+  }
 
   @Override
   public void clear() {
@@ -34,13 +46,12 @@ public abstract class ReplicaUnderConstructionContext implements EntityContext<R
   }
 
   @Override
-  public void remove(ReplicaUnderConstruction replica) throws TransactionContextException {
-    newReplicasUc.remove(replica.cacheKey());
-    removedReplicasUc.put(replica.cacheKey(), replica);
+  public int count(CounterType counter, Object... params) throws PersistanceException {
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
-  public List<ReplicaUnderConstruction> findList(FinderType<ReplicaUnderConstruction> finder, Object... params) {
+  public List<ReplicaUnderConstruction> findList(FinderType<ReplicaUnderConstruction> finder, Object... params) throws PersistanceException {
 
     ReplicaUnderConstruction.Finder rFinder = (ReplicaUnderConstruction.Finder) finder;
     List<ReplicaUnderConstruction> result = null;
@@ -50,7 +61,7 @@ public abstract class ReplicaUnderConstructionContext implements EntityContext<R
         if (blockReplicasUc.containsKey(blockId)) {
           result = blockReplicasUc.get(blockId);
         } else {
-          result = findReplicaUnderConstructionByBlockId(blockId);
+          result = dataAccess.findReplicaUnderConstructionByBlockId(blockId);
           blockReplicasUc.put(blockId, result);
         }
         break;
@@ -60,28 +71,28 @@ public abstract class ReplicaUnderConstructionContext implements EntityContext<R
   }
 
   @Override
-  public ReplicaUnderConstruction find(FinderType<ReplicaUnderConstruction> finder, Object... params) {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public ReplicaUnderConstruction find(FinderType<ReplicaUnderConstruction> finder, Object... params) throws PersistanceException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
   }
 
   @Override
-  public int count(CounterType counter, Object... params) {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public void prepare() throws StorageException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
   }
 
   @Override
-  public void update(ReplicaUnderConstruction replica) throws TransactionContextException {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public void remove(ReplicaUnderConstruction replica) throws PersistanceException {
+    newReplicasUc.remove(replica.cacheKey());
+    removedReplicasUc.put(replica.cacheKey(), replica);
   }
 
   @Override
-  public void add(ReplicaUnderConstruction replica) throws TransactionContextException {
-    if (removedReplicasUc.containsKey(replica.cacheKey())) {
-      throw new TransactionContextException("Removed  under constructionreplica passed to be persisted");
-    }
-
-    newReplicasUc.put(replica.cacheKey(), replica);
+  public void removeAll() throws PersistanceException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
   }
 
-  protected abstract List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId);
+  @Override
+  public void update(ReplicaUnderConstruction replica) throws PersistanceException {
+    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
+  }
 }

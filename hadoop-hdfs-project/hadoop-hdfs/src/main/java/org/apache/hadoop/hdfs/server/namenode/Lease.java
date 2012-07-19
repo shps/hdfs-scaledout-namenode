@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collection;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * **********************************************************
@@ -23,7 +24,7 @@ public class Lease implements Comparable<Lease> {
       return Lease.class;
     }
   }
-  
+
   public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<Lease> {
 
     ByPKey, ByHolderId, All, ByTimeLimit;
@@ -64,18 +65,18 @@ public class Lease implements Comparable<Lease> {
     return this.holderID;
   }
 
-  public boolean removePath(LeasePath lPath) {
+  public boolean removePath(LeasePath lPath) throws PersistanceException {
     return getPaths().remove(lPath);
   }
 
-  public void addPath(LeasePath lPath) {
+  public void addPath(LeasePath lPath) throws PersistanceException {
     getPaths().add(lPath);
   }
 
   /**
    * Does this lease contain any path?
    */
-  boolean hasPath() {
+  boolean hasPath() throws PersistanceException {
     return !this.getPaths().isEmpty();
   }
 
@@ -130,7 +131,7 @@ public class Lease implements Comparable<Lease> {
     return holder.hashCode();
   }
 
-  public Collection<LeasePath> getPaths() {
+  public Collection<LeasePath> getPaths() throws PersistanceException {
     if (paths.isEmpty()) {
       paths = EntityManager.findList(LeasePath.Finder.ByHolderId, holderID);
     }
@@ -142,7 +143,7 @@ public class Lease implements Comparable<Lease> {
     return holder;
   }
 
-  void replacePath(LeasePath oldpath, LeasePath newpath) {
+  void replacePath(LeasePath oldpath, LeasePath newpath) throws PersistanceException {
     getPaths().remove(oldpath);
     getPaths().add(newpath);
   }

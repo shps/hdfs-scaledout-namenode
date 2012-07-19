@@ -7,17 +7,9 @@ import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.BlockInfoContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ExcessReplicaContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.INodeContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.IndexedReplicaContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.InvalidatedBlockContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.LeasePathContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.LeaseContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.PendingBlockContext;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ReplicaUnderConstructionContext;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
  *
@@ -116,15 +108,15 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       conn.setAutoCommit(false);
 
       s = conn.createStatement();
-      s.execute(String.format("delete from %s", BlockInfoContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", INodeContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", LeaseContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", LeasePathContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", PendingBlockContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", IndexedReplicaContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", InvalidatedBlockContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", ExcessReplicaContext.TABLE_NAME));
-      s.execute(String.format("delete from %s", ReplicaUnderConstructionContext.TABLE_NAME));
+      s.execute(String.format("delete from %s", BlockInfoDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", InodeDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", LeaseDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", LeasePathDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", PendingBlockDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", ReplicaDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", InvalidateBlockDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", ExcessReplicaDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
 
       //commit changes
       conn.commit();
@@ -295,20 +287,20 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "%s BIGINT DEFAULT NULL,"
             + "%s INTEGER DEFAULT NULL,"
             + "%s BIGINT DEFAULT NULL,"
-            + "PRIMARY KEY (%s))", BlockInfoContext.TABLE_NAME,
-            BlockInfoContext.BLOCK_ID, BlockInfoContext.BLOCK_INDEX,
-            BlockInfoContext.INODE_ID, BlockInfoContext.NUM_BYTES,
-            BlockInfoContext.GENERATION_STAMP, BlockInfoContext.BLOCK_UNDER_CONSTRUCTION_STATE,
-            BlockInfoContext.TIME_STAMP, BlockInfoContext.PRIMARY_NODE_INDEX,
-            BlockInfoContext.BLOCK_RECOVERY_ID, BlockInfoContext.BLOCK_ID));
+            + "PRIMARY KEY (%s))", BlockInfoDataAccess.TABLE_NAME,
+            BlockInfoDataAccess.BLOCK_ID, BlockInfoDataAccess.BLOCK_INDEX,
+            BlockInfoDataAccess.INODE_ID, BlockInfoDataAccess.NUM_BYTES,
+            BlockInfoDataAccess.GENERATION_STAMP, BlockInfoDataAccess.BLOCK_UNDER_CONSTRUCTION_STATE,
+            BlockInfoDataAccess.TIME_STAMP, BlockInfoDataAccess.PRIMARY_NODE_INDEX,
+            BlockInfoDataAccess.BLOCK_RECOVERY_ID, BlockInfoDataAccess.BLOCK_ID));
     System.out.println("Table block_info is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,"
             + "%s VARCHAR(128) NOT NULL,"
-            + "PRIMARY KEY (%s,%s))", ExcessReplicaContext.TABLE_NAME,
-            ExcessReplicaContext.BLOCK_ID, ExcessReplicaContext.STORAGE_ID,
-            ExcessReplicaContext.BLOCK_ID, ExcessReplicaContext.STORAGE_ID));
+            + "PRIMARY KEY (%s,%s))", ExcessReplicaDataAccess.TABLE_NAME,
+            ExcessReplicaDataAccess.BLOCK_ID, ExcessReplicaDataAccess.STORAGE_ID,
+            ExcessReplicaDataAccess.BLOCK_ID, ExcessReplicaDataAccess.STORAGE_ID));
     System.out.println("Table ExcessReplica is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
@@ -331,16 +323,16 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "%s BIGINT DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s varchar(8000) DEFAULT NULL,  "
-            + "PRIMARY KEY (%s) )", INodeContext.TABLE_NAME,
-            INodeContext.ID, INodeContext.NAME, INodeContext.PARENT_ID,
-            INodeContext.IS_DIR, INodeContext.MODIFICATION_TIME,
-            INodeContext.ACCESS_TIME, INodeContext.PERMISSION, INodeContext.NSQUOTA,
-            INodeContext.DSQUOTA, INodeContext.IS_UNDER_CONSTRUCTION,
-            INodeContext.CLIENT_NAME, INodeContext.CLIENT_MACHINE,
-            INodeContext.CLIENT_NODE, INodeContext.IS_CLOSED_FILE,
-            INodeContext.HEADER, INodeContext.IS_DIR_WITH_QUOTA,
-            INodeContext.NSCOUNT, INodeContext.DSCOUNT, INodeContext.SYMLINK,
-            INodeContext.ID));
+            + "PRIMARY KEY (%s) )", InodeDataAccess.TABLE_NAME,
+            InodeDataAccess.ID, InodeDataAccess.NAME, InodeDataAccess.PARENT_ID,
+            InodeDataAccess.IS_DIR, InodeDataAccess.MODIFICATION_TIME,
+            InodeDataAccess.ACCESS_TIME, InodeDataAccess.PERMISSION, InodeDataAccess.NSQUOTA,
+            InodeDataAccess.DSQUOTA, InodeDataAccess.IS_UNDER_CONSTRUCTION,
+            InodeDataAccess.CLIENT_NAME, InodeDataAccess.CLIENT_MACHINE,
+            InodeDataAccess.CLIENT_NODE, InodeDataAccess.IS_CLOSED_FILE,
+            InodeDataAccess.HEADER, InodeDataAccess.IS_DIR_WITH_QUOTA,
+            InodeDataAccess.NSCOUNT, InodeDataAccess.DSCOUNT, InodeDataAccess.SYMLINK,
+            InodeDataAccess.ID));
     System.out.println("Table inode is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
@@ -348,34 +340,34 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "%s varchar(128) NOT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
-            + "PRIMARY KEY (%s,%s) )", InvalidatedBlockContext.TABLE_NAME,
-            InvalidatedBlockContext.BLOCK_ID, InvalidatedBlockContext.STORAGE_ID,
-            InvalidatedBlockContext.GENERATION_STAMP, InvalidatedBlockContext.NUM_BYTES,
-            InvalidatedBlockContext.BLOCK_ID, InvalidatedBlockContext.STORAGE_ID));
+            + "PRIMARY KEY (%s,%s) )", InvalidateBlockDataAccess.TABLE_NAME,
+            InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID,
+            InvalidateBlockDataAccess.GENERATION_STAMP, InvalidateBlockDataAccess.NUM_BYTES,
+            InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID));
     System.out.println("Table invalidated_block is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s varchar(255) NOT NULL,   "
             + "%s BIGINT DEFAULT NULL,   "
             + "%s INTEGER DEFAULT NULL,   "
-            + "PRIMARY KEY (%s) )", LeaseContext.TABLE_NAME,
-            LeaseContext.HOLDER, LeaseContext.LAST_UPDATE, LeaseContext.HOLDER_ID,
-            LeaseContext.HOLDER));
+            + "PRIMARY KEY (%s) )", LeaseDataAccess.TABLE_NAME,
+            LeaseDataAccess.HOLDER, LeaseDataAccess.LAST_UPDATE, LeaseDataAccess.HOLDER_ID,
+            LeaseDataAccess.HOLDER));
     System.out.println("Table lease is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s INTEGER NOT NULL,   "
             + "%s varchar(255) NOT NULL,   "
-            + "PRIMARY KEY (%s) )", LeasePathContext.TABLE_NAME,
-            LeasePathContext.HOLDER_ID, LeasePathContext.PATH, LeasePathContext.PATH));
+            + "PRIMARY KEY (%s) )", LeasePathDataAccess.TABLE_NAME,
+            LeasePathDataAccess.HOLDER_ID, LeasePathDataAccess.PATH, LeasePathDataAccess.PATH));
     System.out.println("Table lease_path is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s BIGINT NOT NULL, %s BIGINT NOT NULL,"
             + "%s INTEGER NOT NULL,   "
-            + "PRIMARY KEY (%s) )", PendingBlockContext.TABLE_NAME,
-            PendingBlockContext.BLOCK_ID, PendingBlockContext.TIME_STAMP,
-            PendingBlockContext.NUM_REPLICAS_IN_PROGRESS, PendingBlockContext.BLOCK_ID));
+            + "PRIMARY KEY (%s) )", PendingBlockDataAccess.TABLE_NAME,
+            PendingBlockDataAccess.BLOCK_ID, PendingBlockDataAccess.TIME_STAMP,
+            PendingBlockDataAccess.NUM_REPLICAS_IN_PROGRESS, PendingBlockDataAccess.BLOCK_ID));
     System.out.println("Table pending_block is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
@@ -383,20 +375,20 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "%s varchar(128) NOT NULL,   "
             + "%s INTEGER DEFAULT NULL,   "
             + "%s INTEGER NOT NULL,   "
-            + "PRIMARY KEY (%s,%s) )", ReplicaUnderConstructionContext.TABLE_NAME,
-            ReplicaUnderConstructionContext.BLOCK_ID, ReplicaUnderConstructionContext.STORAGE_ID,
-            ReplicaUnderConstructionContext.STATE, ReplicaUnderConstructionContext.REPLICA_INDEX,
-            ReplicaUnderConstructionContext.BLOCK_ID, ReplicaUnderConstructionContext.STORAGE_ID));
+            + "PRIMARY KEY (%s,%s) )", ReplicaUnderConstruntionDataAccess.TABLE_NAME,
+            ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID,
+            ReplicaUnderConstruntionDataAccess.STATE, ReplicaUnderConstruntionDataAccess.REPLICA_INDEX,
+            ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID));
     System.out.println("Table replica_uc is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
             + "%s varchar(128) NOT NULL,   "
             + "%s INTEGER NOT NULL,   "
-            + "PRIMARY KEY (%s,%s) )", IndexedReplicaContext.TABLE_NAME,
-            IndexedReplicaContext.BLOCK_ID, IndexedReplicaContext.STORAGE_ID,
-            IndexedReplicaContext.REPLICA_INDEX, IndexedReplicaContext.BLOCK_ID,
-            IndexedReplicaContext.STORAGE_ID));
+            + "PRIMARY KEY (%s,%s) )", ReplicaDataAccess.TABLE_NAME,
+            ReplicaDataAccess.BLOCK_ID, ReplicaDataAccess.STORAGE_ID,
+            ReplicaDataAccess.REPLICA_INDEX, ReplicaDataAccess.BLOCK_ID,
+            ReplicaDataAccess.STORAGE_ID));
     System.out.println("Table tripletes is created.");
   }
   
@@ -409,15 +401,15 @@ public enum DerbyConnector implements StorageConnector<Connection> {
               + ";create=true");
 
       s = conn.createStatement();
-      s.execute(String.format("drop table %s", BlockInfoContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", INodeContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", LeaseContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", LeasePathContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", PendingBlockContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", IndexedReplicaContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", InvalidatedBlockContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", ExcessReplicaContext.TABLE_NAME));
-      s.execute(String.format("drop table %s", ReplicaUnderConstructionContext.TABLE_NAME));
+      s.execute(String.format("drop table %s", BlockInfoDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", InodeDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", LeaseDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", LeasePathDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", PendingBlockDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", ReplicaDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", InvalidateBlockDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", ExcessReplicaDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
     } catch (SQLException ex) {
       Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING,
               "There is no table to remvoe or cannot remove the tables.");

@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
@@ -26,18 +25,23 @@ import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
+
   public static void setNodeReplicationLimit(final BlockManager blockManager,
-      final int limit) {
+          final int limit) {
     blockManager.maxReplicationStreams = limit;
   }
 
-  /** @return the datanode descriptor for the given the given storageID. */
+  /**
+   * @return the datanode descriptor for the given the given storageID.
+   */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
-      final String storageID) {
+          final String storageID) {
     ns.readLock();
     try {
       return ns.getBlockManager().getDatanodeManager().getDatanodeByStorageId(storageID);
@@ -45,7 +49,6 @@ public class BlockManagerTestUtil {
       ns.readUnlock();
     }
   }
-
 
   /**
    * Refresh block queue counts on the name-node.
@@ -55,17 +58,17 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @return a tuple of the replica state (number racks, number live
-   * replicas, and number needed replicas) for the given block.
-   * @throws IOException 
+   * @return a tuple of the replica state (number racks, number live replicas,
+   * and number needed replicas) for the given block.
+   * @throws IOException
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) throws IOException {
     final BlockManager bm = namesystem.getBlockManager();
     namesystem.readLock();
     try {
       return new int[]{getNumberOfRacks(bm, b),
-          bm.countNodes(b).liveReplicas(),
-          bm.neededReplications.contains(b) ? 1 : 0};
+                bm.countNodes(b).liveReplicas(),
+                bm.neededReplications.contains(b) ? 1 : 0};
     } finally {
       namesystem.readUnlock();
     }
@@ -73,30 +76,40 @@ public class BlockManagerTestUtil {
 
   /**
    * @return the number of racks over which a given block is replicated
-   * decommissioning/decommissioned nodes are not counted. corrupt replicas 
-   * are also ignored
-   * @throws IOException 
+   * decommissioning/decommissioned nodes are not counted. corrupt replicas are
+   * also ignored
+   * @throws IOException
    */
   private static int getNumberOfRacks(final BlockManager blockManager,
-      final Block b) throws IOException {
+          final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
-    EntityManager.begin();
-    BlockInfo storedBlock = blockManager.getStoredBlock(b);
-    for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
-      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
-          String rackName = cur.getNetworkLocation();
-          if (!rackSet.contains(rackName)) {
-            rackSet.add(rackName);
+    EntityManager.aboutToStart();
+    while (EntityManager.shouldRetry()) {
+      try {
+        EntityManager.begin();
+        BlockInfo storedBlock = blockManager.getStoredBlock(b);
+        for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
+          if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
+            if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
+              String rackName = cur.getNetworkLocation();
+              if (!rackSet.contains(rackName)) {
+                rackSet.add(rackName);
+              }
+            }
           }
         }
+        EntityManager.commit();
+      } catch (StorageException ex) {
+        EntityManager.setRollbackAndRetry();
+        Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, "", ex);
+      } catch (PersistanceException ex) {
+        EntityManager.setRollbackOnly();
+        Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, "", ex);
+      } finally {
+        if (EntityManager.shouldRollback()) {
+          EntityManager.rollback();
+        }
       }
-    }
-    try {
-      EntityManager.commit();
-    } catch (TransactionContextException ex) {
-      Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
-      assert false : ex.getMessage();
     }
     return rackSet.size();
   }
@@ -105,20 +118,17 @@ public class BlockManagerTestUtil {
    * @param blockManager
    * @return replication monitor thread instance from block manager.
    */
-  public static Daemon getReplicationThread(final BlockManager blockManager)
-  {
+  public static Daemon getReplicationThread(final BlockManager blockManager) {
     return blockManager.replicationThread;
   }
-  
+
   /**
    * @param blockManager
    * @return computed block replication and block invalidation work that can be
-   *         scheduled on data-nodes.
+   * scheduled on data-nodes.
    * @throws IOException
    */
-  public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException
-  {
+  public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException {
     return blockManager.computeDatanodeWork();
   }
-  
 }

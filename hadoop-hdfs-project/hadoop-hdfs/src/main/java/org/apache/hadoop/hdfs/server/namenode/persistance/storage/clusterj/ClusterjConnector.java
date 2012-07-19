@@ -116,17 +116,17 @@ public enum ClusterjConnector implements StorageConnector<Session> {
     Transaction tx = session.currentTransaction();
     try {
       tx.begin();
-      session.deletePersistentAll(INodeTable.class);
-      session.deletePersistentAll(BlockInfoTable.class);
-      session.deletePersistentAll(LeaseTable.class);
-      session.deletePersistentAll(LeasePathsTable.class);
-      session.deletePersistentAll(IndexedReplicaTable.class);
-      session.deletePersistentAll(ReplicaUcTable.class);
-      session.deletePersistentAll(InvalidateBlocksTable.class);
-      session.deletePersistentAll(ExcessReplicaTable.class);
-      session.deletePersistentAll(PendingBlockTable.class);
-      session.deletePersistentAll(CorruptReplicaTable.class);
-      session.deletePersistentAll(UnderReplicatedBlocksTable.class);
+      session.deletePersistentAll(InodeClusterj.InodeDTO.class);
+      session.deletePersistentAll(BlockInfoClusterj.BlockInfoDTO.class);
+      session.deletePersistentAll(LeaseClusterj.LeaseDTO.class);
+      session.deletePersistentAll(LeasePathClusterj.LeasePathsDTO.class);
+      session.deletePersistentAll(ReplicaClusterj.ReplicaDTO.class);
+      session.deletePersistentAll(ReplicaUnderConstructionClusterj.ReplicaUcDTO.class);
+      session.deletePersistentAll(InvalidatedBlockClusterj.InvalidateBlocksDTO.class);
+      session.deletePersistentAll(ExcessReplicaClusterj.ExcessReplicaDTO.class);
+      session.deletePersistentAll(PendingBlockClusterj.PendingBlockDTO.class);
+      session.deletePersistentAll(CorruptReplicaClusterj.CorruptReplicaDTO.class);
+      session.deletePersistentAll(UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO.class);
       tx.commit();
       session.flush();
       return true;

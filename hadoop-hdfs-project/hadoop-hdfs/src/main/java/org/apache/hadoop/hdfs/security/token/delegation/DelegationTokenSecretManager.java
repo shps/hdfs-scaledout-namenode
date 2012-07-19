@@ -276,6 +276,6 @@ public class DelegationTokenSecretManager
   @Override //AbstractDelegationTokenManager
   protected void logUpdateMasterKey(DelegationKey key)
       throws IOException {
-    namesystem.logUpdateMasterKey(key);
+//    namesystem.logUpdateMasterKey(key);
   }
 }

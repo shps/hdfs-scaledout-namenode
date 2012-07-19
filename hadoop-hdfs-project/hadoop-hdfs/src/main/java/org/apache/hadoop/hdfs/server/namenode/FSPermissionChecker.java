@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -110,7 +111,7 @@ class FSPermissionChecker {
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
       FsAction subAccess) 
-      throws AccessControlException, UnresolvedLinkException {
+      throws AccessControlException, UnresolvedLinkException, PersistanceException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ACCESS CHECK: " + this
           + ", doCheckOwner=" + doCheckOwner
@@ -163,7 +164,7 @@ class FSPermissionChecker {
   }
 
   private void checkSubAccess(INode inode, FsAction access
-      ) throws AccessControlException {
+      ) throws AccessControlException, PersistanceException {
     if (inode == null || !inode.isDirectory()) {
       return;
     }

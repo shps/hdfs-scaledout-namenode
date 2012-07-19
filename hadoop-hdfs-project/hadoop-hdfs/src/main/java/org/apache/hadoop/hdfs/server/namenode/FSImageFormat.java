@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 
@@ -216,7 +217,7 @@ class FSImageFormat {
    * @throws IOException
    */  
    private void loadLocalNameINodes(long numFiles, DataInputStream in) 
-   throws IOException {
+   throws IOException, PersistanceException {
      assert LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
          getLayoutVersion());
      assert numFiles > 0;
@@ -246,7 +247,7 @@ class FSImageFormat {
     * @return number of child inodes read
     * @throws IOException
     */
-   private int loadDirectory(DataInputStream in) throws IOException {
+   private int loadDirectory(DataInputStream in) throws IOException, PersistanceException {
 	   //FIXME: [KTHFS] Change this function to read files from MySQL Cluster
      String parentPath = FSImageSerialization.readString(in); 
 
@@ -278,7 +279,7 @@ class FSImageFormat {
    * @throws IOException if any error occurs
    */
   private void loadFullNameINodes(long numFiles,
-      DataInputStream in) throws IOException {
+      DataInputStream in) throws IOException, PersistanceException {
     byte[][] pathComponents;
     byte[][] parentPath = {{}};      
     FSDirectory fsDir = namesystem.dir;
@@ -592,7 +593,7 @@ class FSImageFormat {
      */
     private static void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
-                                  DataOutputStream out) throws IOException {
+                                  DataOutputStream out) throws IOException, PersistanceException {
       List<INode> children = current.getChildren();
       if (children == null || children.isEmpty())
         return;

@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -617,7 +618,7 @@ public class FSImage implements Closeable {
    * Load the specified list of edit files into the image.
    * @return the number of transactions loaded
    */
-  protected long loadEdits(Iterable<EditLogInputStream> editStreams) throws IOException {
+  protected long loadEdits(Iterable<EditLogInputStream> editStreams) throws IOException, PersistanceException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
 
     long startingTxId = getLastAppliedTxId() + 1;

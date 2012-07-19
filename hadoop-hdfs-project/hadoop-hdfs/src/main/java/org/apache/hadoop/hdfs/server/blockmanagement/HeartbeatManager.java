@@ -1,27 +1,24 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,41 +28,42 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.util.Daemon;
 
 /**
- * Manage the heartbeats received from datanodes.
- * The datanode list and statistics are synchronized
- * by the heartbeat manager lock.
+ * Manage the heartbeats received from datanodes. The datanode list and
+ * statistics are synchronized by the heartbeat manager lock.
  */
 class HeartbeatManager implements DatanodeStatistics {
-  static final Log LOG = LogFactory.getLog(HeartbeatManager.class);
 
+  static final Log LOG = LogFactory.getLog(HeartbeatManager.class);
   /**
-   * Stores a subset of the datanodeMap in DatanodeManager,
-   * containing nodes that are considered alive.
-   * The HeartbeatMonitor periodically checks for out-dated entries,
-   * and removes them from the list.
-   * It is synchronized by the heartbeat manager lock.
+   * Stores a subset of the datanodeMap in DatanodeManager, containing nodes
+   * that are considered alive. The HeartbeatMonitor periodically checks for
+   * out-dated entries, and removes them from the list. It is synchronized by
+   * the heartbeat manager lock.
    */
   private final List<DatanodeDescriptor> datanodes = new ArrayList<DatanodeDescriptor>();
-
-  /** Statistics, which are synchronized by the heartbeat manager lock. */
+  /**
+   * Statistics, which are synchronized by the heartbeat manager lock.
+   */
   private final Stats stats = new Stats();
-
-  /** The time period to check for expired datanodes */
+  /**
+   * The time period to check for expired datanodes
+   */
   private final long heartbeatRecheckInterval;
-  /** Heartbeat monitor thread */
+  /**
+   * Heartbeat monitor thread
+   */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
-
   final FSNamesystem namesystem;
 
   HeartbeatManager(final FSNamesystem namesystem, final Configuration conf) {
     this.heartbeatRecheckInterval = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
+            DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
 
     this.namesystem = namesystem;
   }
@@ -77,7 +75,7 @@ class HeartbeatManager implements DatanodeStatistics {
   void close() {
     heartbeatThread.interrupt();
   }
-  
+
   synchronized int getLiveDatanodeCount() {
     return datanodes.size();
   }
@@ -105,7 +103,7 @@ class HeartbeatManager implements DatanodeStatistics {
   @Override
   public synchronized float getCapacityRemainingPercent() {
     return DFSUtil.getPercentRemaining(
-        stats.capacityRemaining, stats.capacityTotal);
+            stats.capacityRemaining, stats.capacityTotal);
   }
 
   @Override
@@ -121,8 +119,8 @@ class HeartbeatManager implements DatanodeStatistics {
   @Override
   public synchronized long getCapacityUsedNonDFS() {
     final long nonDFSUsed = stats.capacityTotal
-        - stats.capacityRemaining - stats.capacityUsed;
-    return nonDFSUsed < 0L? 0L : nonDFSUsed;
+            - stats.capacityRemaining - stats.capacityUsed;
+    return nonDFSUsed < 0L ? 0L : nonDFSUsed;
   }
 
   @Override
@@ -132,13 +130,13 @@ class HeartbeatManager implements DatanodeStatistics {
 
   @Override
   public synchronized long[] getStats() {
-    return new long[] {getCapacityTotal(),
-                       getCapacityUsed(),
-                       getCapacityRemaining(),
-                       -1L,
-                       -1L,
-                       -1L,
-                       getBlockPoolUsed()};
+    return new long[]{getCapacityTotal(),
+              getCapacityUsed(),
+              getCapacityRemaining(),
+              -1L,
+              -1L,
+              -1L,
+              getBlockPoolUsed()};
   }
 
   synchronized void register(final DatanodeDescriptor d) {
@@ -168,11 +166,11 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void updateHeartbeat(final DatanodeDescriptor node,
-      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xceiverCount, int failedVolumes) {
+          long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+          int xceiverCount, int failedVolumes) {
     stats.subtract(node);
     node.updateHeartbeat(capacity, dfsUsed, remaining, blockPoolUsed,
-        xceiverCount, failedVolumes);
+            xceiverCount, failedVolumes);
     stats.add(node);
   }
 
@@ -187,15 +185,14 @@ class HeartbeatManager implements DatanodeStatistics {
     node.stopDecommission();
     stats.add(node);
   }
-  
+
   /**
-   * Check if there are any expired heartbeats, and if so,
-   * whether any blocks have to be re-replicated.
-   * While removing dead datanodes, make sure that only one datanode is marked
-   * dead at a time within the synchronized section. Otherwise, a cascading
-   * effect causes more datanodes to be declared dead.
+   * Check if there are any expired heartbeats, and if so, whether any blocks
+   * have to be re-replicated. While removing dead datanodes, make sure that
+   * only one datanode is marked dead at a time within the synchronized section.
+   * Otherwise, a cascading effect causes more datanodes to be declared dead.
    */
-  void heartbeatCheck() {
+  void heartbeatCheck() throws IOException, PersistanceException {
     final DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
     // It's OK to check safe mode w/o taking the lock here, we re-check
     // for safe mode after taking the lock before removing a datanode.
@@ -206,7 +203,7 @@ class HeartbeatManager implements DatanodeStatistics {
     while (!allAlive) {
       // locate the first dead node.
       DatanodeID dead = null;
-      synchronized(this) {
+      synchronized (this) {
         for (DatanodeDescriptor d : datanodes) {
           if (dm.isDatanodeDead(d)) {
             namesystem.incrExpiredHeartbeats();
@@ -219,20 +216,14 @@ class HeartbeatManager implements DatanodeStatistics {
       allAlive = dead == null;
       if (!allAlive) {
         // acquire the fsnamesystem lock, and then remove the dead node.
-        namesystem.writeLock();
         if (namesystem.isInSafeMode()) {
           return;
         }
         try {
-          synchronized(this) {
-            EntityManager.begin();
+          namesystem.writeLock();
+          synchronized (this) {
             dm.removeDeadDatanode(dead);
-            EntityManager.commit();
           }
-        } catch (TransactionContextException ex) {
-          Logger.getLogger(HeartbeatManager.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException e) {
-          e.printStackTrace();
         } finally {
           namesystem.writeUnlock();
         }
@@ -240,26 +231,28 @@ class HeartbeatManager implements DatanodeStatistics {
     }
   }
 
-
-  /** Periodically check heartbeat and update block key */
+  /**
+   * Periodically check heartbeat and update block key
+   */
   private class Monitor implements Runnable {
+
     private long lastHeartbeatCheck;
     private long lastBlockKeyUpdate;
 
     @Override
     public void run() {
-      while(namesystem.isRunning()) {
+      while (namesystem.isRunning()) {
         try {
           final long now = Util.now();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
             // Will not be part of an outer db transaction (lock)
-                  heartbeatCheck();
+            handler.handle();
             lastHeartbeatCheck = now;
           }
           if (namesystem.getBlockManager().shouldUpdateBlockKey(
-              now - lastBlockKeyUpdate)) {
-            synchronized(HeartbeatManager.this) {
-              for(DatanodeDescriptor d : datanodes) {
+                  now - lastBlockKeyUpdate)) {
+            synchronized (HeartbeatManager.this) {
+              for (DatanodeDescriptor d : datanodes) {
                 d.needKeyUpdate = true;
               }
             }
@@ -274,12 +267,22 @@ class HeartbeatManager implements DatanodeStatistics {
         }
       }
     }
+    TransactionalRequestHandler handler = new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        heartbeatCheck();
+        return null;
+      }
+    };
   }
 
-  /** Datanode statistics.
-   * For decommissioning/decommissioned nodes, only used capacity is counted.
+  /**
+   * Datanode statistics. For decommissioning/decommissioned nodes, only used
+   * capacity is counted.
    */
   private static class Stats {
+
     private long capacityTotal = 0L;
     private long capacityUsed = 0L;
     private long capacityRemaining = 0L;

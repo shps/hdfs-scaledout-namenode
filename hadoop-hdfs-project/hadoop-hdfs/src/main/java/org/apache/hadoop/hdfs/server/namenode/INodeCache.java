@@ -3,6 +3,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+
 /** This interface provides methods for managing a local inode cache
  * @author wmalik
  *
@@ -25,7 +27,7 @@ public interface INodeCache {
 	 * @param path
 	 * @return
 	 */
-	public INode getNode(String path);
+	public INode getNode(String path) throws PersistanceException;
 	
 	/** Initialize the rootNode in the cache (should be done at namenode startup)
 	 * @param root

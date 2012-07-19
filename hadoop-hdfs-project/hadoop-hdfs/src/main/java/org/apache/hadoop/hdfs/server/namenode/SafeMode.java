@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /** SafeMode related operations. */
 @InterfaceAudience.Private
@@ -31,28 +32,28 @@ public interface SafeMode {
    * trigger the system to enter/leave safe mode.
    * @throws IOException 
    */
-  public void checkSafeMode() throws IOException;
+  public void checkSafeMode() throws IOException, PersistanceException;
 
   /** Is the system in safe mode? */
-  public boolean isInSafeMode();
+  public boolean isInSafeMode() throws PersistanceException;
 
   /**
    * Is the system in startup safe mode, i.e. the system is starting up with
    * safe mode turned on automatically?
    */
-  public boolean isInStartupSafeMode();
+  public boolean isInStartupSafeMode() throws PersistanceException;
 
   /** Check whether replication queues are being populated. */
-  public boolean isPopulatingReplQueues();
+  public boolean isPopulatingReplQueues() throws PersistanceException;
     
   /**
    * Increment number of blocks that reached minimal replication.
    * @param replication current replication 
    * @throws IOException 
    */
-  public void incrementSafeBlockCount(int replication) throws IOException;
+  public void incrementSafeBlockCount(int replication) throws IOException, PersistanceException;
 
   /** Decrement number of blocks that reached minimal replication. 
    * @throws IOException */
-  public void decrementSafeBlockCount(Block b) throws IOException;
+  public void decrementSafeBlockCount(Block b) throws IOException, PersistanceException;
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * Directory INode class.
@@ -63,7 +64,7 @@ public class INodeDirectory extends INode {
    *
    * @param other
    */
-  public INodeDirectory(INodeDirectory other) {
+  public INodeDirectory(INodeDirectory other) throws PersistanceException {
     super(other);
     this.nsCount = other.getNsCount();
     this.diskspace = other.getDsCount();
@@ -89,7 +90,7 @@ public class INodeDirectory extends INode {
     return true;
   }
 
-  public INode removeChild(INode node) {
+  public INode removeChild(INode node) throws PersistanceException {
     //this does take care of in memory removals only
     if (children != null && getChildren().contains(node)) {
       getChildren().remove(node);
@@ -117,7 +118,7 @@ public class INodeDirectory extends INode {
     }
   }
 
-  private INode getChildINode(byte[] name) {
+  private INode getChildINode(byte[] name) throws PersistanceException {
     if (children == null) {
       return EntityManager.find(INode.Finder.ByNameAndParentId,
               DFSUtil.bytes2String(name), getId());
@@ -136,14 +137,14 @@ public class INodeDirectory extends INode {
    * component does not exist.
    */
   private INode getNode(byte[][] components, boolean resolveLink)
-          throws UnresolvedLinkException {
+          throws UnresolvedLinkException, PersistanceException {
     INode[] inode = new INode[1];
     getExistingPathINodes(components, inode, resolveLink);
     return inode[0];
   }
 
   INode getNode(String path, boolean resolveLink)
-          throws UnresolvedLinkException {
+          throws UnresolvedLinkException, PersistanceException {
     return getNode(getPathComponents(path), resolveLink);
   }
 
@@ -188,7 +189,7 @@ public class INodeDirectory extends INode {
    * @return number of existing INodes in the path
    */
   public int getExistingPathINodes(byte[][] components, INode[] existing,
-          boolean resolveLink) throws UnresolvedLinkException {
+          boolean resolveLink) throws UnresolvedLinkException, PersistanceException {
     assert compareBytes(this.name, components[0]) == 0 :
             "Incorrect name " + getName() + " expected "
             + DFSUtil.bytes2String(components[0]);
@@ -245,7 +246,7 @@ public class INodeDirectory extends INode {
    * @see #getExistingPathINodes(byte[][], INode[])
    */
   public INode[] getExistingPathINodes(String path, boolean resolveLink)
-          throws UnresolvedLinkException {
+          throws UnresolvedLinkException, PersistanceException {
     byte[][] components = getPathComponents(path);
     INode[] inodes = new INode[components.length];
 
@@ -283,7 +284,7 @@ public class INodeDirectory extends INode {
           boolean setModTime,
           boolean reuseID/*
            * [W] added to reuse the same ID for move operations
-           */) {
+           */) throws PersistanceException {
     if (inheritPermission) {
       FsPermission p = getFsPermission();
       //make sure the  permission has wx for the user
@@ -341,7 +342,7 @@ public class INodeDirectory extends INode {
    * @throws UnresolvedLinkException if any path component is a symbolic link is
    * not a directory.
    */
-  public <T extends INode> T addNode(String path, T newNode) throws FileNotFoundException, UnresolvedLinkException {
+  public <T extends INode> T addNode(String path, T newNode) throws FileNotFoundException, UnresolvedLinkException, PersistanceException {
     byte[][] pathComponents = getPathComponents(path);
 
     if (addToParent(pathComponents, newNode,
@@ -364,7 +365,8 @@ public class INodeDirectory extends INode {
           INodeDirectory parent,
           boolean inheritPermission,
           boolean propagateModTime) throws FileNotFoundException,
-          UnresolvedLinkException {
+          UnresolvedLinkException, 
+          PersistanceException {
     // insert into the parent children list
     newNode.name = localname;
 
@@ -375,7 +377,7 @@ public class INodeDirectory extends INode {
   }
 
   public INodeDirectory getParent(byte[][] pathComponents)
-          throws FileNotFoundException, UnresolvedLinkException {
+          throws FileNotFoundException, UnresolvedLinkException, PersistanceException {
     int pathLen = pathComponents.length;
     if (pathLen < 2) // add root
     {
@@ -407,7 +409,8 @@ public class INodeDirectory extends INode {
           INode newNode,
           boolean inheritPermission,
           boolean propagateModTime) throws FileNotFoundException,
-          UnresolvedLinkException {
+          UnresolvedLinkException, 
+          PersistanceException {
 
     int pathLen = pathComponents.length;
     if (pathLen < 2) // add root
@@ -455,7 +458,7 @@ public class INodeDirectory extends INode {
    * {@inheritDoc}
    */
   @Override
-  public long[] computeContentSummary(long[] summary) {
+  public long[] computeContentSummary(long[] summary) throws PersistanceException {
     // Walk through the children of this node, using a new summary array
     // for the (sub)tree rooted at this node
     assert 4 == summary.length;
@@ -483,7 +486,7 @@ public class INodeDirectory extends INode {
     return summary;
   }
 
-  public List<INode> getChildren() {
+  public List<INode> getChildren() throws PersistanceException {
     if (children == null) {
       children = (List<INode>) 
               EntityManager.findList(INode.Finder.ByParentId, getId());
@@ -492,7 +495,7 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  public int collectSubtreeBlocksAndClear(List<Block> v) {
+  public int collectSubtreeBlocksAndClear(List<Block> v) throws PersistanceException {
     int total = 1;
     List<INode> childrenTemp = getChildren();
 
