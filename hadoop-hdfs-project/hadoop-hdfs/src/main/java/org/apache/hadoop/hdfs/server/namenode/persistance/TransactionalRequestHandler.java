@@ -19,6 +19,9 @@ public abstract class TransactionalRequestHandler {
   Object param6;
   Object param7;  
   Object param8;
+
+  public TransactionalRequestHandler() {
+  }
   
   public Object getParam1() {
     return param1;

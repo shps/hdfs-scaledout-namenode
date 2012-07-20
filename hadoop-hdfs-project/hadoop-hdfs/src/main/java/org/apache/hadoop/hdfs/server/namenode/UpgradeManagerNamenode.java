@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -71,7 +72,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
   }
 
   synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command, boolean isTransactional
-                                                    ) throws IOException {
+                                                    ) throws IOException, PersistanceException {
     if(NameNode.LOG.isDebugEnabled()) {
       NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
           + getUpgradeVersion() + " to current LV " 
@@ -109,7 +110,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
   }
 
   @Override
-  public synchronized void completeUpgrade() throws IOException {
+  public synchronized void completeUpgrade() throws IOException, PersistanceException {
     // set and write new upgrade state into disk
     setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);
     namesystem.getFSImage().getStorage().writeAll();

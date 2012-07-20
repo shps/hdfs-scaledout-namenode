@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
@@ -81,7 +82,7 @@ public class NameNodeAdapter {
     namesystem.lmthread.interrupt();
   }
 
-  public static String getLeaseHolderForPath(NameNode namenode, String path) {
+  public static String getLeaseHolderForPath(NameNode namenode, String path) throws PersistanceException {
     return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
   }
 

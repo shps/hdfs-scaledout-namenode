@@ -22,6 +22,7 @@ import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -87,5 +88,5 @@ public abstract class UpgradeManager {
 
   public abstract HdfsServerConstants.NodeType getType();
   public abstract boolean startUpgrade() throws IOException;
-  public abstract void completeUpgrade() throws IOException;
+  public abstract void completeUpgrade() throws IOException, PersistanceException;
 }

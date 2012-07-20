@@ -80,8 +80,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -160,7 +158,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -610,16 +607,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Dump all metadata into specified file
    */
-  void metaSave(String filename) throws IOException, PersistanceException {
-    writeLock();
-    try {
+  void metaSave(String filename) throws IOException {
+    metasaveHandler.setParam1(filename).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler metasaveHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String filename = (String) getParam1();
       checkSuperuserPrivilege();
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
               true)));
 
-      long totalInodes = this.dir.totalInodes();
-      long totalBlocks = this.getBlocksTotal();
+      long totalInodes = dir.totalInodes();
+      long totalBlocks = getBlocksTotal();
       out.println(totalInodes + " files and directories, " + totalBlocks
               + " blocks = " + (totalInodes + totalBlocks) + " total");
 
@@ -632,10 +634,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       out.flush();
       out.close();
-    } finally {
-      writeUnlock();
+      return null;
     }
-  }
+  };
 
   long getDefaultBlockSize() {
     return serverDefaults.getBlockSize();
@@ -665,34 +666,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void setPermission(String src, FsPermission permission)
           throws AccessControlException, FileNotFoundException, SafeModeException,
-          UnresolvedLinkException, IOException, PersistanceException {
-    HdfsFileStatus resultingStat = null;
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot set permission for " + src, safeMode);
-    }
-
+          UnresolvedLinkException, IOException {
     setPermissionHanlder.setParam1(src).setParam2(permission).handleWithWriteLock(this);
-
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      resultingStat = dir.getFileInfo(src, false);
-    }
-
-    //getEditLog().logSync();
-    if (auditLog.isInfoEnabled()
-            && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "setPermission", src, null, resultingStat);
-    }
   }
   TransactionalRequestHandler setPermissionHanlder = new TransactionalRequestHandler() {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
+      HdfsFileStatus resultingStat = null;
       String src = (String) getParam1();
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot set permission for " + src, safeMode);
+      }
       FsPermission permission = (FsPermission) getParam2();
       checkOwner(src);
       dir.setPermission(src, permission);
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        resultingStat = dir.getFileInfo(src, false);
+      }
+
+      //getEditLog().logSync();
+      if (auditLog.isInfoEnabled()
+              && isExternalInvocation()) {
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "setPermission", src, null, resultingStat);
+      }
       return null;
     }
   };
@@ -704,19 +703,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void setOwner(String src, String username, String group)
           throws AccessControlException, FileNotFoundException, SafeModeException,
-          UnresolvedLinkException, IOException, PersistanceException {
-    HdfsFileStatus resultingStat = (HdfsFileStatus) setOwnerHandler.setParam1(src).setParam2(username).setParam3(group).handleWithWriteLock(this);
-
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      resultingStat = dir.getFileInfo(src, false);
-    }
-
-    //getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "setOwner", src, null, resultingStat);
-    }
+          UnresolvedLinkException, IOException {
+    setOwnerHandler.setParam1(src).setParam2(username).setParam3(group).handleWithWriteLock(this);
   }
   TransactionalRequestHandler setOwnerHandler = new TransactionalRequestHandler() {
 
@@ -742,8 +730,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       dir.setOwner(src, username, group);
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        resultingStat = dir.getFileInfo(src, false);
+      }
 
-      return resultingStat;
+      //getEditLog().logSync();
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "setOwner", src, null, resultingStat);
+      }
+      return null;
     }
   };
 
@@ -1167,21 +1164,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param replication new replication
    * @return true if successful; false if file does not exist or is a directory
    */
-  boolean setReplication(final String src, final short replication) throws IOException, PersistanceException {
+  boolean setReplication(final String src, final short replication) throws IOException {
     blockManager.verifyReplication(src, replication, null);
 
-    boolean isFile = (Boolean) setReplicationHandler.setParam1(src).setParam2(replication).handleWithWriteLock(this);
-
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot set replication for " + src, safeMode);
-    }
-    //getEditLog().logSync();
-    if (isFile && auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "setReplication", src, null, null);
-    }
-    return isFile;
+    return (Boolean) setReplicationHandler.setParam1(src).setParam2(replication).handleWithWriteLock(this);
   }
   TransactionalRequestHandler setReplicationHandler = new TransactionalRequestHandler() {
 
@@ -1199,6 +1185,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       isFile = blocks != null;
       if (isFile) {
         blockManager.setReplication(oldReplication[0], replication, src, blocks);
+      }
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot set replication for " + src, safeMode);
+      }
+      //getEditLog().logSync();
+      if (isFile && auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "setReplication", src, null, null);
       }
       return isFile;
     }
@@ -1248,23 +1243,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return isFile;
   }
 
-  //TODO: kamal, tx
   long getPreferredBlockSize(String filename)
-          throws IOException, UnresolvedLinkException, PersistanceException {
-    readLock();
-    try {
+          throws IOException, UnresolvedLinkException {
+    return (Long) getPreferredBlockSizeHandler.handleWithReadLock(this);
+  }
+  TransactionalRequestHandler getPreferredBlockSizeHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String filename = (String) getParam1();
       if (isPermissionEnabled) {
         checkTraverse(filename);
       }
       return dir.getPreferredBlockSize(filename);
-    } finally {
-      readUnlock();
     }
-  }
-
+  };
   /*
    * Verify that parent directory of src exists.
    */
+
   private void verifyParentDir(String src) throws FileNotFoundException,
           ParentNotDirectoryException, UnresolvedLinkException, PersistanceException {
     assert hasReadOrWriteLock();
@@ -1292,17 +1289,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
           short replication, long blockSize) throws AccessControlException,
           SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
-          FileNotFoundException, ParentNotDirectoryException, IOException, PersistanceException {
+          FileNotFoundException, ParentNotDirectoryException, IOException {
     startFileHanlder.setParam1(src).setParam2(permissions).setParam3(holder);
     startFileHanlder.setParam4(clientMachine).setParam5(flag).setParam6(createParent);
     startFileHanlder.setParam7(replication).setParam8(blockSize);
     startFileHanlder.handleWithWriteLock(this);
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src, false);
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "create", src, null, stat);
-    }
   }
   TransactionalRequestHandler startFileHanlder = new TransactionalRequestHandler() {
 
@@ -1318,6 +1309,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long blockSize = (Long) getParam8();
       startFileInternal(src, permissions, holder, clientMachine, flag,
               createParent, replication, blockSize);
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        final HdfsFileStatus stat = dir.getFileInfo(src, false);
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "create", src, null, stat);
+      }
       return null;
     }
   };
@@ -1786,15 +1783,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
           final DatanodeInfo[] existings, final HashMap<Node, Node> excludes,
-          final int numAdditionalNodes, final String clientName) throws IOException, PersistanceException {
-    //check if the feature is enabled
-    dtpReplaceDatanodeOnFailure.checkEnabled();
+          final int numAdditionalNodes, final String clientName) throws IOException {
+    getAdditionalDatanodeHandler.setParam1(src).setParam2(blk).setParam3(existings).setParam4(excludes).setParam5(numAdditionalNodes).setParam6(clientName);
+    return (LocatedBlock) getAdditionalDatanodeHandler.handleWithReadLock(this);
+  }
+  TransactionalRequestHandler getAdditionalDatanodeHandler = new TransactionalRequestHandler() {
 
-    final DatanodeDescriptor clientnode;
-    final long preferredblocksize;
-    final List<DatanodeDescriptor> chosen;
-    readLock();
-    try {
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String src = (String) getParam1();
+      ExtendedBlock blk = (ExtendedBlock) getParam2();
+      DatanodeInfo[] existings = (DatanodeInfo[]) getParam3();
+      HashMap<Node, Node> excludes = (HashMap<Node, Node>) getParam4();
+      int numAdditionalNodes = (Integer) getParam5();
+      String clientName = (String) getParam6();
+
+      //check if the feature is enabled
+      dtpReplaceDatanodeOnFailure.checkEnabled();
+
+      final DatanodeDescriptor clientnode;
+      final long preferredblocksize;
+      final List<DatanodeDescriptor> chosen;
       //check safe mode
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot add datanode; src=" + src
@@ -1815,17 +1824,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           chosen.add(descriptor);
         }
       }
-    } finally {
-      readUnlock();
-    }
 
-    // choose new datanodes.
-    final DatanodeInfo[] targets = blockManager.getBlockPlacementPolicy().chooseTarget(src, numAdditionalNodes, clientnode, chosen, true,
-            excludes, preferredblocksize);
-    final LocatedBlock lb = new LocatedBlock(blk, targets);
-    blockManager.setBlockToken(lb, AccessMode.COPY);
-    return lb;
-  }
+      // choose new datanodes.
+      final DatanodeInfo[] targets = blockManager.getBlockPlacementPolicy().chooseTarget(src, numAdditionalNodes, clientnode, chosen, true,
+              excludes, preferredblocksize);
+      final LocatedBlock lb = new LocatedBlock(blk, targets);
+      blockManager.setBlockToken(lb, AccessMode.COPY);
+      return lb;
+    }
+  };
 
   /**
    * The client would like to let go of the given block
@@ -2083,33 +2090,37 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   @Deprecated
   boolean renameTo(String src, String dst)
-          throws IOException, UnresolvedLinkException, ImproperUsageException, PersistanceException {
+          throws IOException, UnresolvedLinkException, ImproperUsageException {
     if (!isWritingNN()) {
       throw new ImproperUsageException();
     }
-    boolean status = false;
-    HdfsFileStatus resultingStat = null;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src
-              + " to " + dst);
-    }
-    writeLock();
-    try {
+    return (Boolean) renameToHandler.setParam1(src).setParam2(dst).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String src = (String) getParam1();
+      String dst = (String) getParam2();
+      boolean status = false;
+      HdfsFileStatus resultingStat = null;
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src
+                + " to " + dst);
+      }
       status = renameToInternal(src, dst);
       if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
         resultingStat = dir.getFileInfo(dst, false);
       }
-    } finally {
-      writeUnlock();
+      //getEditLog().logSync();
+      if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "rename", src, dst, resultingStat);
+      }
+      return status;
     }
-    //getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "rename", src, dst, resultingStat);
-    }
-    return status;
-  }
+  };
 
   /**
    * @deprecated See {@link #renameTo(String, String)}
@@ -2136,9 +2147,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
 
-    return (Boolean) renameToHandler.setParam1(src).setParam2(dst).setParam3(dinfo).handle();
+    return (Boolean) renameTo3Handler.setParam1(src).setParam2(dst).setParam3(dinfo).handle();
   }
-  TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renameTo3Handler = new TransactionalRequestHandler() {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2161,26 +2172,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Rename src to dst
    */
   void renameTo(String src, String dst, Options.Rename... options)
-          throws IOException, UnresolvedLinkException, PersistanceException {
-    HdfsFileStatus resultingStat = null;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
-              + src + " to " + dst);
-    }
+          throws IOException, UnresolvedLinkException {
     renameTo2Hanlder.setParam1(src).setParam2(dst).setParam3(options).handleWithWriteLock(this);
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      resultingStat = dir.getFileInfo(dst, false);
-    }
-
-    //getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      StringBuilder cmd = new StringBuilder("rename options=");
-      for (Rename option : options) {
-        cmd.append(option.value()).append(" ");
-      }
-      logAuditEvent(UserGroupInformation.getCurrentUser(), Server.getRemoteIp(),
-              cmd.toString(), src, dst, resultingStat);
-    }
   }
   TransactionalRequestHandler renameTo2Hanlder = new TransactionalRequestHandler() {
 
@@ -2189,7 +2182,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String src = (String) getParam1();
       String dst = (String) getParam2();
       Options.Rename[] options = (Options.Rename[]) getParam3();
+      HdfsFileStatus resultingStat = null;
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
+                + src + " to " + dst);
+      }
       renameToInternal(src, dst, options);
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        resultingStat = dir.getFileInfo(dst, false);
+      }
+
+      //getEditLog().logSync();
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        StringBuilder cmd = new StringBuilder("rename options=");
+        for (Rename option : options) {
+          cmd.append(option.value()).append(" ");
+        }
+        logAuditEvent(UserGroupInformation.getCurrentUser(), Server.getRemoteIp(),
+                cmd.toString(), src, dst, resultingStat);
+      }
       return null;
     }
   };
@@ -2359,10 +2370,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * not found
    */
   HdfsFileStatus getFileInfo(String src, boolean resolveLink)
-          throws AccessControlException, UnresolvedLinkException, PersistanceException {
-    readLock();
-    try {
+          throws AccessControlException, UnresolvedLinkException, IOException {
+    return (HdfsFileStatus) getFileInfoHandler.setParam1(src).setParam2(resolveLink).handleWithReadLock(this);
+  }
+  TransactionalRequestHandler getFileInfoHandler = new TransactionalRequestHandler() {
 
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String src = (String) getParam1();
+      boolean resolveLink = (Boolean) getParam2();
       if (!DFSUtil.isValidName(src)) {
         throw new InvalidPathException("Invalid file name: " + src);
       }
@@ -2371,30 +2387,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       return dir.getFileInfo(src, resolveLink);
-    } finally {
-      readUnlock();
     }
-  }
+  };
 
   /**
    * Create all the necessary directories
    */
   boolean mkdirs(String src, PermissionStatus permissions,
-          boolean createParent) throws IOException, UnresolvedLinkException, PersistanceException {
-    boolean status = false;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
-    }
-
-    status = (Boolean) mkdirsHanlder.setParam1(src).setParam2(permissions).handleWithWriteLock(this);
-    //getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src, false);
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "mkdirs", src, null, stat);
-    }
-    return status;
+          boolean createParent) throws IOException, UnresolvedLinkException {
+    return (Boolean) mkdirsHanlder.setParam1(src).setParam2(permissions).handleWithWriteLock(this);
   }
   TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler() {
 
@@ -2403,7 +2404,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String src = (String) getParam1();
       PermissionStatus permissions = (PermissionStatus) getParam2();
       Boolean createParent = (Boolean) getParam3();
-      return mkdirsInternal(src, permissions, createParent);
+      boolean status = false;
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
+      }
+      status = mkdirsInternal(src, permissions, createParent);
+      //getEditLog().logSync();
+      if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
+        final HdfsFileStatus stat = dir.getFileInfo(src, false);
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
+                Server.getRemoteIp(),
+                "mkdirs", src, null, stat);
+      }
+      return status;
     }
   };
 
@@ -2447,28 +2460,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   ContentSummary getContentSummary(String src) throws AccessControlException,
-          FileNotFoundException, UnresolvedLinkException, PersistanceException {
-    readLock();
-    try {
+          FileNotFoundException, UnresolvedLinkException, IOException {
+    return (ContentSummary) getContentSummaryHandler.setParam1(src).handleWithReadLock(this);
+  }
+  TransactionalRequestHandler getContentSummaryHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String src = (String) getParam1();
       if (isPermissionEnabled) {
         checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
       }
       return dir.getContentSummary(src);
-    } finally {
-      readUnlock();
     }
-  }
+  };
 
   /**
    * Set the namespace quota and diskspace quota for a directory. See {@link ClientProtocol#setQuota(String, long, long)}
    * for the contract.
    */
   void setQuota(String path, long nsQuota, long dsQuota)
-          throws IOException, UnresolvedLinkException, PersistanceException {
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot set quota on " + path, safeMode);
-    }
-
+          throws IOException, UnresolvedLinkException {
     setQuotaHanlder.setParam1(path).setParam2(nsQuota).setParam3(dsQuota).handleWithWriteLock(this);
   }
   TransactionalRequestHandler setQuotaHanlder = new TransactionalRequestHandler() {
@@ -2478,6 +2490,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String path = (String) getParam1();
       Long nsQuota = (Long) getParam2();
       Long dsQuota = (Long) getParam3();
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot set quota on " + path, safeMode);
+      }
       if (isPermissionEnabled) {
         checkSuperuserPrivilege();
       }
@@ -2494,22 +2509,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if path does not exist
    */
   void fsync(String src, String clientName)
-          throws IOException, UnresolvedLinkException, PersistanceException {
+          throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.info("BLOCK* NameSystem.fsync: file "
             + src + " for " + clientName);
-    writeLock();
-    try {
+    fsyncHandler.setParam1(src).setParam2(clientName).handleWithWriteLock(this);
+    //getEditLog().logSync();
+  }
+  TransactionalRequestHandler fsyncHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      String src = (String) getParam1();
+      String clientName = (String) getParam2();
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot fsync file " + src, safeMode);
       }
       INodeFile pendingFile = checkLease(src, clientName);
       assert pendingFile.isUnderConstruction();
       dir.persistBlocks(src, pendingFile);
-    } finally {
-      writeUnlock();
+      return null;
     }
-    //getEditLog().logSync();
-  }
+  };
 
   /**
    * Move a file that is being written to be immutable.
@@ -2973,10 +2993,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
           long capacity, long dfsUsed, long remaining, long blockPoolUsed,
           int xceiverCount, int xmitsInProgress, int failedVolumes)
-          throws IOException, PersistanceException {
-    readLock();
-    try {
-      final int maxTransfer = blockManager.getMaxReplicationStreams()
+          throws IOException {
+    heartbeatHandler.setParam1(nodeReg).setParam2(capacity).setParam3(dfsUsed).setParam4(remaining);
+    heartbeatHandler.setParam5(blockPoolUsed).setParam6(xceiverCount).setParam7(xmitsInProgress).setParam8(failedVolumes);
+    return (DatanodeCommand[]) heartbeatHandler.handleWithReadLock(this);
+  }
+  TransactionalRequestHandler heartbeatHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      DatanodeRegistration nodeReg = (DatanodeRegistration) getParam1();
+      long capacity = (Long) getParam2();
+      long dfsUsed = (Long) getParam3();
+      long remaining = (Long) getParam4();
+      long blockPoolUsed = (Long) getParam5();
+      int xceiverCount = (Integer) getParam6();
+      int xmitsInProgress = (Integer) getParam7();
+      int failedVolumes = (Integer) getParam8();
+      final int maxTransfer = (Integer) blockManager.getMaxReplicationStreams()
               - xmitsInProgress;
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
               nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
@@ -2991,10 +3025,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return new DatanodeCommand[]{cmd};
       }
       return null;
-    } finally {
-      readUnlock();
     }
-  }
+  };
 // TODO:kamal, resource monitor
 //  /**
 //   * Returns whether or not there were available resources at the last check of
@@ -3091,7 +3123,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * @see ClientProtocol#getStats()
    */
-  long[] getStats() throws PersistanceException {
+  long[] getStats() {
     final long[] stats = datanodeStatistics.getStats();
     stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
     stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
@@ -3178,9 +3210,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws AccessControlException if superuser privilege is violated.
    * @throws IOException if
    */
-  void saveNamespace() throws AccessControlException, IOException, PersistanceException {
-    readLock();
-    try {
+  void saveNamespace() throws AccessControlException, IOException {
+    saveNamespaceHandler.handleWithReadLock(this);
+  }
+  TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
       checkSuperuserPrivilege();
       if (!isInSafeMode()) {
         throw new IOException("Safe mode should be turned ON "
@@ -3188,10 +3224,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       getFSImage().saveNamespace();
       LOG.info("New namespace image has been created.");
-    } finally {
-      readUnlock();
+      return null;
     }
-  }
+  };
 
   /**
    * Enables/Disables/Checks restoring failed storage replicas if the storage
@@ -3747,7 +3782,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } else {
         // leave safe mode and stop the monitor
         try {
-          leaveSafeMode(true);
+          handler.handle();
         } catch (SafeModeException es) { // should never happen
           String msg = "SafeModeMonitor may not run during distributed upgrade.";
           assert false : msg;
@@ -3758,23 +3793,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       smmthread = null;
     }
+    TransactionalRequestHandler handler = new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        leaveSafeMode(true);
+        return null;
+      }
+    };
   }
 // @ClientProtocol
 
-  boolean setSafeMode(SafeModeAction action) throws IOException, PersistanceException {
-    if (action != SafeModeAction.SAFEMODE_GET) {
-      checkSuperuserPrivilege();
-      switch (action) {
-        case SAFEMODE_LEAVE: // leave safe mode
-          leaveSafeMode(false);
-          break;
-        case SAFEMODE_ENTER: // enter safe mode
-          enterSafeMode(false);
-          break;
-      }
-    }
-    return isInSafeMode();
+  boolean setSafeMode(SafeModeAction action) throws IOException {
+    return (Boolean) setSafemodeLeaveHandler.setParam1(action).handle();
   }
+  TransactionalRequestHandler setSafemodeLeaveHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      SafeModeAction action = (SafeModeAction) getParam1();
+      if (action != SafeModeAction.SAFEMODE_GET) {
+        checkSuperuserPrivilege();
+        switch (action) {
+          case SAFEMODE_LEAVE: // leave safe mode
+            leaveSafeMode(false);
+            break;
+          case SAFEMODE_ENTER: // enter safe mode
+            enterSafeMode(false);
+            break;
+        }
+      }
+      return isInSafeMode();
+    }
+  };
 
   @Override
   public void checkSafeMode() throws IOException, PersistanceException {
@@ -3946,26 +3997,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *
    * @throws IOException
    */
-  void leaveSafeMode(boolean checkForUpgrades) throws IOException {
-    leavemodeLeaveHandler.setParam1(checkForUpgrades).handleWithWriteLock(this);
-  }
-  TransactionalRequestHandler leavemodeLeaveHandler = new TransactionalRequestHandler() {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      boolean checkForUpgrades = (Boolean) getParam1();
+  void leaveSafeMode(boolean checkForUpgrades) throws IOException, PersistanceException {
+    writeLock();
+    try {
       if (!isInSafeMode()) {
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF.");
-        return null;
+        return;
       }
       if (upgradeManager.getUpgradeState()) {
         throw new SafeModeException("Distributed upgrade is in progress",
                 safeMode);
       }
       safeMode.leave(checkForUpgrades);
-      return null;
+    } finally {
+      writeUnlock();
     }
-  };
+  }
 
   String getSafeModeTip() throws PersistanceException {
     readLock();
@@ -4260,10 +4307,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if any error occurs
    */
   LocatedBlock updateBlockForPipeline(ExtendedBlock block,
-          String clientName) throws IOException, PersistanceException {
-    LocatedBlock locatedBlock;
-    writeLock();
-    try {
+          String clientName) throws IOException {
+    return (LocatedBlock) updateBlockForPipelineHandler.setParam1(block).setParam2(clientName).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler updateBlockForPipelineHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      ExtendedBlock block = (ExtendedBlock) getParam1();
+      String clientName = (String) getParam2();
+      LocatedBlock locatedBlock;
       // check vadility of parameters
       checkUCBlock(block, clientName);
 
@@ -4271,13 +4324,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       block.setGenerationStamp(nextGenerationStamp());
       locatedBlock = new LocatedBlock(block, new DatanodeInfo[0]);
       blockManager.setBlockToken(locatedBlock, AccessMode.WRITE);
-    } finally {
-      writeUnlock();
+      // Ensure we record the new generation stamp
+      //getEditLog().logSync();
+      return locatedBlock;
     }
-    // Ensure we record the new generation stamp
-    //getEditLog().logSync();
-    return locatedBlock;
-  }
+  };
 
   /**
    * Update a pipeline for a block under construction
@@ -4290,22 +4341,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void updatePipeline(String clientName, ExtendedBlock oldBlock,
           ExtendedBlock newBlock, DatanodeID[] newNodes)
-          throws IOException, ImproperUsageException, PersistanceException {
+          throws IOException, ImproperUsageException {
     if (!isWritingNN()) {
       throw new ImproperUsageException();
     }
-    if (isInSafeMode()) {
-      throw new SafeModeException("Pipeline not updated", safeMode);
-    }
-    assert newBlock.getBlockId() == oldBlock.getBlockId() : newBlock + " and "
-            + oldBlock + " has different block identifier";
-    LOG.info("updatePipeline(block=" + oldBlock
-            + ", newGenerationStamp=" + newBlock.getGenerationStamp()
-            + ", newLength=" + newBlock.getNumBytes()
-            + ", newNodes=" + Arrays.asList(newNodes)
-            + ", clientName=" + clientName
-            + ")");
-
     updatePipelineHanlder.setParam1(clientName).setParam2(oldBlock).setParam3(newBlock).setParam4(newNodes).handleWithWriteLock(this);
     if (supportAppends) {
       //getEditLog().logSync();
@@ -4320,6 +4359,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       ExtendedBlock oldBlock = (ExtendedBlock) getParam2();
       ExtendedBlock newBlock = (ExtendedBlock) getParam3();
       DatanodeID[] newNodes = (DatanodeID[]) getParam4();
+      if (isInSafeMode()) {
+        throw new SafeModeException("Pipeline not updated", safeMode);
+      }
+      assert newBlock.getBlockId() == oldBlock.getBlockId() : newBlock + " and "
+              + oldBlock + " has different block identifier";
+      LOG.info("updatePipeline(block=" + oldBlock
+              + ", newGenerationStamp=" + newBlock.getGenerationStamp()
+              + ", newLength=" + newBlock.getNumBytes()
+              + ", newNodes=" + Arrays.asList(newNodes)
+              + ", clientName=" + clientName
+              + ")");
+
       updatePipelineInternal(clientName, oldBlock, newBlock, newNodes);
       return null;
     }
@@ -4602,10 +4653,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
-          throws IOException, PersistanceException {
-    Token<DelegationTokenIdentifier> token;
-    writeLock();
-    try {
+          throws IOException {
+    return (Token<DelegationTokenIdentifier>) getDelegationTokenHandler.setParam1(renewer).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler getDelegationTokenHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      Text renewer = (Text) getParam1();
+      Token<DelegationTokenIdentifier> token;
+
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot issue delegation token", safeMode);
       }
@@ -4631,12 +4688,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               dtId, dtSecretManager);
       long expiryTime = dtSecretManager.getTokenExpiryTime(dtId);
       //getEditLog().logGetDelegationToken(dtId, expiryTime);
-    } finally {
-      writeUnlock();
+      //getEditLog().logSync();
+      return token;
     }
-    //getEditLog().logSync();
-    return token;
-  }
+  };
 
   /**
    *
@@ -4646,10 +4701,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-          throws InvalidToken, IOException, PersistanceException {
-    long expiryTime;
-    writeLock();
-    try {
+          throws InvalidToken, IOException {
+    return (Long) renewDelegationTokenHanlder.setParam1(token).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler renewDelegationTokenHanlder = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      Token<DelegationTokenIdentifier> token = (Token<DelegationTokenIdentifier>) getParam1();
+      long expiryTime;
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot renew delegation token", safeMode);
       }
@@ -4664,12 +4724,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DataInputStream in = new DataInputStream(buf);
       id.readFields(in);
       //getEditLog().logRenewDelegationToken(id, expiryTime);
-    } finally {
-      writeUnlock();
+      //getEditLog().logSync();
+      return expiryTime;
     }
-    //getEditLog().logSync();
-    return expiryTime;
-  }
+  };
 
   /**
    *
@@ -4677,20 +4735,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-          throws IOException, PersistanceException {
-    writeLock();
-    try {
+          throws IOException {
+    cancelDelegationTokenHandler.setParam1(token).handleWithWriteLock(this);
+  }
+  TransactionalRequestHandler cancelDelegationTokenHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      Token<DelegationTokenIdentifier> token = (Token<DelegationTokenIdentifier>) getParam1();
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot cancel delegation token", safeMode);
       }
       String canceller = UserGroupInformation.getCurrentUser().getUserName();
       DelegationTokenIdentifier id = dtSecretManager.cancelToken(token, canceller);
       //getEditLog().logCancelDelegationToken(id);
-    } finally {
-      writeUnlock();
+      //getEditLog().logSync();
+      return null;
     }
-    //getEditLog().logSync();
-  }
+  };
 
   /**
    * @param out save state of the secret manager
