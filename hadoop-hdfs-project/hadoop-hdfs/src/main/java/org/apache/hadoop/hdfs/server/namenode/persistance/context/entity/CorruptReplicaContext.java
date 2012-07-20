@@ -130,11 +130,12 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
 
   @Override
   public void update(CorruptReplica entity) throws PersistanceException {
-    if (removedCorruptReplicas.get(entity.persistanceKey()) != null) {
-      throw new TransactionContextException("Removed corrupt replica passed to be persisted");
-    }
-    corruptReplicas.put(entity.persistanceKey(), entity);
-    modifiedCorruptReplicas.put(entity.persistanceKey(), entity);
+//    if (removedCorruptReplicas.get(entity.persistanceKey()) != null) {
+//      throw new TransactionContextException("Removed corrupt replica passed to be persisted");
+//    }
+//    corruptReplicas.put(entity.persistanceKey(), entity);
+//    modifiedCorruptReplicas.put(entity.persistanceKey(), entity);
+    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   private List<CorruptReplica> syncCorruptReplicaInstances(List<CorruptReplica> crs) {

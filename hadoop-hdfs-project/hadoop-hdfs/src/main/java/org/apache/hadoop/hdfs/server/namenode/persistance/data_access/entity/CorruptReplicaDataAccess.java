@@ -15,7 +15,7 @@ public interface CorruptReplicaDataAccess {
   public static final String BLOCK_ID = "block_id";
   public static final String STORAGE_ID = "storage_id";
 
-  public abstract int countAll();
+  public abstract int countAll() throws StorageException;
   
   public abstract CorruptReplica findByPk(long blockId, String storageId) throws StorageException;
 

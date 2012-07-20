@@ -39,8 +39,15 @@ public class CorruptReplicaClusterj implements CorruptReplicaDataAccess {
   Session session = ClusterjConnector.INSTANCE.obtainSession();
 
   @Override
-  public int countAll() {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public int countAll() throws StorageException{
+    try {
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<CorruptReplicaDTO> dobj = qb.createQueryDefinition(CorruptReplicaDTO.class);
+      Query<CorruptReplicaDTO> query = session.createQuery(dobj);
+      return createCorruptReplicaList(query.getResultList()).size();
+    } catch (Exception e) {
+      throw new StorageException(e);
+    }
   }
 
   @Override
