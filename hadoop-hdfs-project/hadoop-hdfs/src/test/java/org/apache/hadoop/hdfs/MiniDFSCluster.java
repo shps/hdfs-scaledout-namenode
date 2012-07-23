@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -1584,7 +1585,7 @@ public class MiniDFSCluster {
       return false;
     }
   }
-  TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler(OperationType.IS_NAMENODE_UP) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {

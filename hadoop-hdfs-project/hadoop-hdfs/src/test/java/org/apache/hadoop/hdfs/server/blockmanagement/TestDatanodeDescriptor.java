@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.*;
 
 /**
@@ -63,7 +64,7 @@ public class TestDatanodeDescriptor extends TestCase {
     final DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
 
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.TEST_BLOCKS_COUNTER) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

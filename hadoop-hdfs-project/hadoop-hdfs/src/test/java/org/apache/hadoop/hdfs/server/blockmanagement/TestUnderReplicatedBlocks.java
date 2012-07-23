@@ -27,9 +27,9 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestUnderReplicatedBlocks extends TestCase {
 
@@ -47,7 +47,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
       // remove one replica from the blocksMap so block becomes under-replicated
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.SET_REPLICA_INCREAMENT) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster. This
@@ -907,7 +908,7 @@ public class BlockManager {
           final DatanodeInfo dn) throws IOException {
     findAndMarkBlockAsCorruptHandler.setParam1(blk).setParam2(dn).handleWithWriteLock(namesystem);
   }
-  TransactionalRequestHandler findAndMarkBlockAsCorruptHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler findAndMarkBlockAsCorruptHandler = new TransactionalRequestHandler(OperationType.FIND_AND_MARK_BLOCKS_AS_CORRUPT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1470,7 +1471,7 @@ public class BlockManager {
     processReportHandler.setParam1(nodeID).setParam2(poolId).setParam3(newReport);
     processReportHandler.handleWithWriteLock(namesystem);
   }
-  TransactionalRequestHandler processReportHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler processReportHandler = new TransactionalRequestHandler(OperationType.PROCESS_REPORT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2353,7 +2354,7 @@ public class BlockManager {
     blockReceivedAndDeletedHandler.setParam1(nodeID).setParam2(poolId).setParam3(receivedAndDeletedBlocks);
     blockReceivedAndDeletedHandler.handleWithWriteLock(namesystem);
   }
-  TransactionalRequestHandler blockReceivedAndDeletedHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler blockReceivedAndDeletedHandler = new TransactionalRequestHandler(OperationType.BLOCK_RECEIVED_AND_DELETED) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2880,7 +2881,7 @@ public class BlockManager {
         }
       }
     }
-    TransactionalRequestHandler requestHandler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler requestHandler = new TransactionalRequestHandler(OperationType.REPLICATION_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

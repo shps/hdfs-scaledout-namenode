@@ -25,9 +25,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -50,7 +50,7 @@ public class TestComputeInvalidateWork extends TestCase {
       final DatanodeDescriptor[] nodes = bm.getDatanodeManager().getHeartbeatManager().getDatanodes();
       assertEquals(nodes.length, NUM_OF_DATANODES);
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.COMP_INVALIDATE) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

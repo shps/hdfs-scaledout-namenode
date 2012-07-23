@@ -27,12 +27,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestNamenodePing extends junit.framework.TestCase {
 
   static int countLease(final MiniDFSCluster cluster) {
     try {
-      return (Integer) new TransactionalRequestHandler() {
+      return (Integer) new TransactionalRequestHandler(OperationType.COUNT_LEASE) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

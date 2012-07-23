@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * Manage node decommissioning.
@@ -82,7 +83,7 @@ class DecommissionManager {
         }
       }
     }
-    TransactionalRequestHandler decommisionHandler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler decommisionHandler = new TransactionalRequestHandler(OperationType.DECOMMISION_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

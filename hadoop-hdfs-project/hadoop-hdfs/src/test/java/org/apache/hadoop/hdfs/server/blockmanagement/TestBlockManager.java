@@ -45,6 +45,7 @@ import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestBlockManager {
 
@@ -94,7 +95,7 @@ public class TestBlockManager {
   }
 
   private void removeNode(DatanodeDescriptor deadNode) throws IOException {
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.REMOVE_NODE) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -318,7 +319,7 @@ public class TestBlockManager {
    */
   private void fulfillPipeline(final BlockInfo blockInfo,
           final DatanodeDescriptor[] pipeline) throws IOException {
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.FULFILL_PIPELINE) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -332,7 +333,7 @@ public class TestBlockManager {
 
   private BlockInfo blockOnNodes(final long blkId, final List<DatanodeDescriptor> nodes) {
     try {
-      return (BlockInfo) new TransactionalRequestHandler() {
+      return (BlockInfo) new TransactionalRequestHandler(OperationType.BLOCK_ON_NODES) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -376,7 +377,7 @@ public class TestBlockManager {
   }
 
   private DatanodeDescriptor[] scheduleSingleReplication(final Block block) throws IOException {
-    return (DatanodeDescriptor[])new TransactionalRequestHandler() {
+    return (DatanodeDescriptor[])new TransactionalRequestHandler(OperationType.SCHEDULE_SINGLE_REPLICATION) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

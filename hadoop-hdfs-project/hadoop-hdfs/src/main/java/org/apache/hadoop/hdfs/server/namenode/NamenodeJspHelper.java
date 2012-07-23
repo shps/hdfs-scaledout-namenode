@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -67,7 +68,7 @@ class NamenodeJspHelper {
   static String getSafeModeText(FSNamesystem fsn) throws IOException {
     return (String) getSafeModeTextHandler.setParam1(fsn).handle();
   }
-  static TransactionalRequestHandler getSafeModeTextHandler = new TransactionalRequestHandler() {
+  static TransactionalRequestHandler getSafeModeTextHandler = new TransactionalRequestHandler(OperationType.GET_SAFE_MODE_TEXT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -247,7 +248,7 @@ class NamenodeJspHelper {
             HttpServletRequest request) throws IOException {
       generateHealthReportHanlder.setParam1(out).setParam2(nn).setParam3(request).handle();
     }
-    TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler() {
+    TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler(OperationType.GENERATE_HEALTH_REPORT) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -747,7 +748,7 @@ class NamenodeJspHelper {
         this.block = new Block(blockId);
         INodeFile inodeFile;
         try {
-          inodeFile = (INodeFile) new TransactionalRequestHandler() {
+          inodeFile = (INodeFile) new TransactionalRequestHandler(OperationType.GET_INODE) {
 
             @Override
             public Object performTask() throws PersistanceException, IOException {
@@ -766,7 +767,7 @@ class NamenodeJspHelper {
     public void toXML(XMLOutputter doc) throws IOException {
       toXMLHandler.setParam1(doc).handle();
     }
-    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_BLOCK_INFO) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -888,7 +889,7 @@ class NamenodeJspHelper {
     public void toXML(XMLOutputter doc) throws IOException {
       toXMLHandler.setParam1(doc).handle();
     }
-    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_CORRUPT_BLOCK_INFO) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

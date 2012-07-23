@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -87,7 +88,7 @@ public class TestBlockUnderConstruction {
 
   private void verifyFileBlocks(final String file,
           final boolean isFileOpen) throws IOException {
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.VERIFY_FILE_BLOCKS) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

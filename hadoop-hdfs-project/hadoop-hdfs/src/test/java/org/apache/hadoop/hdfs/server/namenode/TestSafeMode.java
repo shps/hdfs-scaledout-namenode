@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +55,7 @@ public class TestSafeMode {
       cluster.waitActive();
       final DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
       dffs = fs;
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.TEST_DATANODE_THRESHOLD) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

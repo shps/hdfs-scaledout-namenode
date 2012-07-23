@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
@@ -198,7 +199,7 @@ public class TestNodeCount extends TestCase {
    */
   NumberReplicas countNodes(final Block block, final FSNamesystem namesystem) {
     try {
-      return (NumberReplicas) new TransactionalRequestHandler() {
+      return (NumberReplicas) new TransactionalRequestHandler(OperationType.COUNT_NODES) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

@@ -24,10 +24,9 @@ import java.util.logging.Logger;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -55,7 +54,7 @@ public class BlockManagerTestUtil {
    */
   public static void updateState(final BlockManager blockManager) {
     try {
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.UPDATE_STATE) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -75,7 +74,7 @@ public class BlockManagerTestUtil {
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) throws IOException {
     final BlockManager bm = namesystem.getBlockManager();
-    return (int[]) new TransactionalRequestHandler() {
+    return (int[]) new TransactionalRequestHandler(OperationType.GET_REPLICA_INFO) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -95,7 +94,7 @@ public class BlockManagerTestUtil {
   private static int getNumberOfRacks(final BlockManager blockManager,
           final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.GET_NUMBER_OF_RACKS) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -131,7 +130,7 @@ public class BlockManagerTestUtil {
    * @throws IOException
    */
   public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException {
-    return (Integer) new TransactionalRequestHandler() {
+    return (Integer) new TransactionalRequestHandler(OperationType.GET_COMPUTED_DATANODE_WORK) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

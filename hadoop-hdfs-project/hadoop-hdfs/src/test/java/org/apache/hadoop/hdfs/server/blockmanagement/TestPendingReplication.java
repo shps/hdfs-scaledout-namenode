@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -47,7 +48,7 @@ public class TestPendingReplication extends TestCase {
       StorageFactory.getConnector().setConfiguration(new HdfsConfiguration());
       StorageFactory.getConnector().formatStorage();
       try {
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
@@ -67,7 +68,7 @@ public class TestPendingReplication extends TestCase {
 
         final Block blk = new Block(8, 8, 0);
 
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION2) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
@@ -87,7 +88,7 @@ public class TestPendingReplication extends TestCase {
           }
         }.handle();
 
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION3) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
@@ -140,7 +141,7 @@ public class TestPendingReplication extends TestCase {
           }
         }.handle();
 
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION4) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {

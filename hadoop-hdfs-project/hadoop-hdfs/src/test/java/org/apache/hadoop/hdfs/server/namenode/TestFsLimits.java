@@ -39,6 +39,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,7 +71,7 @@ public class TestFsLimits {
     public <T extends INode> void verifyFsLimits(final INode[] pathComponents,
             final int pos, final T child) throws FSLimitException {
       try {
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.VERIFY_FS_LIMITS) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {

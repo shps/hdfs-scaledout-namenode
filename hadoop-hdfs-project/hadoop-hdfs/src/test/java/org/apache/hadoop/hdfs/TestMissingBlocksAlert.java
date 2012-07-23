@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -89,7 +90,7 @@ public class TestMissingBlocksAlert extends TestCase {
       assertTrue(dfs.getMissingBlocksCount() == 1);
       assertEquals(4, dfs.getUnderReplicatedBlocksCount());
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -119,7 +120,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       //FIXME: race condition happens in the following commented line, check it out
 //      assertEquals(2, dfs.getUnderReplicatedBlocksCount());
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS2) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

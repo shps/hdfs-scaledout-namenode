@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import org.mockito.Mockito;
 public class TestLease {
   static boolean hasLease(final MiniDFSCluster cluster, final Path src) {
     try {
-      return (Boolean) new TransactionalRequestHandler() {
+      return (Boolean) new TransactionalRequestHandler(OperationType.HAS_LEASE) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

@@ -137,6 +137,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -339,7 +340,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     this.safeMode = new SafeModeInfo(conf);
   }
-  TransactionalRequestHandler initHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler initHandler = new TransactionalRequestHandler(OperationType.INITIALIZE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -373,7 +374,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void activate(Configuration conf) throws IOException {
     activateHandler.setParam1(conf).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler activateHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler activateHandler = new TransactionalRequestHandler(OperationType.ACTIVATE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -610,7 +611,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void metaSave(String filename) throws IOException {
     metasaveHandler.setParam1(filename).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler metasaveHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler metasaveHandler = new TransactionalRequestHandler(OperationType.META_SAVE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -669,7 +670,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           UnresolvedLinkException, IOException {
     setPermissionHanlder.setParam1(src).setParam2(permission).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler setPermissionHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setPermissionHanlder = new TransactionalRequestHandler(OperationType.SET_PERMISSION) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -706,7 +707,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           UnresolvedLinkException, IOException {
     setOwnerHandler.setParam1(src).setParam2(username).setParam3(group).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler setOwnerHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setOwnerHandler = new TransactionalRequestHandler(OperationType.SET_OWNER) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -795,7 +796,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getBlockLocationsHandler.setParam1(src).setParam2(offset).setParam3(length).setParam4(doAccessTime).setParam5(needBlockToken);
     return (LocatedBlocks) getBlockLocationsHandler.handle();
   }
-  TransactionalRequestHandler getBlockLocationsHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getBlockLocationsHandler = new TransactionalRequestHandler(OperationType.GET_BLOCK_LOCATIONS) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -925,7 +926,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               "concat", Arrays.toString(srcs), target, resultingStat);
     }
   }
-  TransactionalRequestHandler concatHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler concatHandler = new TransactionalRequestHandler(OperationType.CONCAT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1058,7 +1059,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     setTimesHanlder.setParam1(src).setParam2(mtime).setParam3(atime).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler setTimesHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setTimesHanlder = new TransactionalRequestHandler(OperationType.SET_TIMES) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1102,7 +1103,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               "createSymlink", link, target, resultingStat);
     }
   }
-  TransactionalRequestHandler createSymLinkHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler createSymLinkHandler = new TransactionalRequestHandler(OperationType.CREATE_SYM_LINK) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1169,7 +1170,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     return (Boolean) setReplicationHandler.setParam1(src).setParam2(replication).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler setReplicationHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setReplicationHandler = new TransactionalRequestHandler(OperationType.SET_REPLICATION) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1247,7 +1248,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException, UnresolvedLinkException {
     return (Long) getPreferredBlockSizeHandler.handleWithReadLock(this);
   }
-  TransactionalRequestHandler getPreferredBlockSizeHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getPreferredBlockSizeHandler = new TransactionalRequestHandler(OperationType.GET_PREFERRED_BLOCK_SIZE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1295,7 +1296,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     startFileHanlder.setParam7(replication).setParam8(blockSize);
     startFileHanlder.handleWithWriteLock(this);
   }
-  TransactionalRequestHandler startFileHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler startFileHanlder = new TransactionalRequestHandler(OperationType.START_FILE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1466,7 +1467,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return (Boolean) recoverLeaseHandler.setParam1(src).setParam2(holder).setParam3(clientMachine).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler recoverLeaseHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler recoverLeaseHandler = new TransactionalRequestHandler(OperationType.RECOVER_LEASE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1611,7 +1612,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return lb;
   }
-  TransactionalRequestHandler appendFileHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler appendFileHandler = new TransactionalRequestHandler(OperationType.APPEND_FILE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1657,7 +1658,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     additionalBlockHanlder.setParam4(excludedNodes);
     return (LocatedBlock) additionalBlockHanlder.handleWithWriteLock(this);
   }
-  TransactionalRequestHandler additionalBlockHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler additionalBlockHanlder = new TransactionalRequestHandler(OperationType.GET_ADDITIONAL_BLOCK) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1787,7 +1788,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getAdditionalDatanodeHandler.setParam1(src).setParam2(blk).setParam3(existings).setParam4(excludes).setParam5(numAdditionalNodes).setParam6(clientName);
     return (LocatedBlock) getAdditionalDatanodeHandler.handleWithReadLock(this);
   }
-  TransactionalRequestHandler getAdditionalDatanodeHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getAdditionalDatanodeHandler = new TransactionalRequestHandler(OperationType.GET_ADDITIONAL_DATANODE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1843,7 +1844,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     abandonBlockHandler.setParam1(b).setParam2(src).setParam3(holder).handleWithWriteLock(this);
     return true;
   }
-  TransactionalRequestHandler abandonBlockHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler abandonBlockHandler = new TransactionalRequestHandler(OperationType.ABANDON_BLOCK) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -1950,7 +1951,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     completeFileHandler.setParam3(last);
     return (Boolean) completeFileHandler.handleWithWriteLock(this);
   }
-  TransactionalRequestHandler completeFileHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler completeFileHandler = new TransactionalRequestHandler(OperationType.COMPLETE_FILE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2096,7 +2097,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return (Boolean) renameToHandler.setParam1(src).setParam2(dst).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler(OperationType.RENAME_TO) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2149,7 +2150,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     return (Boolean) renameTo3Handler.setParam1(src).setParam2(dst).setParam3(dinfo).handle();
   }
-  TransactionalRequestHandler renameTo3Handler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renameTo3Handler = new TransactionalRequestHandler(OperationType.RENAME_TO3) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2175,7 +2176,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException, UnresolvedLinkException {
     renameTo2Hanlder.setParam1(src).setParam2(dst).setParam3(options).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler renameTo2Hanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renameTo2Hanlder = new TransactionalRequestHandler(OperationType.RENAME_TO2) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2238,7 +2239,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     deleteHandler.setParam2(recursive);
     return (Boolean) deleteHandler.handleWithWriteLock(this);
   }
-  TransactionalRequestHandler deleteHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler deleteHandler = new TransactionalRequestHandler(OperationType.DELETE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2373,7 +2374,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, UnresolvedLinkException, IOException {
     return (HdfsFileStatus) getFileInfoHandler.setParam1(src).setParam2(resolveLink).handleWithReadLock(this);
   }
-  TransactionalRequestHandler getFileInfoHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getFileInfoHandler = new TransactionalRequestHandler(OperationType.GET_FILE_INFO) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2397,7 +2398,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           boolean createParent) throws IOException, UnresolvedLinkException {
     return (Boolean) mkdirsHanlder.setParam1(src).setParam2(permissions).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler(OperationType.MKDIRS) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2463,7 +2464,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           FileNotFoundException, UnresolvedLinkException, IOException {
     return (ContentSummary) getContentSummaryHandler.setParam1(src).handleWithReadLock(this);
   }
-  TransactionalRequestHandler getContentSummaryHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getContentSummaryHandler = new TransactionalRequestHandler(OperationType.GET_CONTENT_SUMMARY) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2483,7 +2484,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException, UnresolvedLinkException {
     setQuotaHanlder.setParam1(path).setParam2(nsQuota).setParam3(dsQuota).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler setQuotaHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setQuotaHanlder = new TransactionalRequestHandler(OperationType.SET_QUOTA) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2515,7 +2516,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     fsyncHandler.setParam1(src).setParam2(clientName).handleWithWriteLock(this);
     //getEditLog().logSync();
   }
-  TransactionalRequestHandler fsyncHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler fsyncHandler = new TransactionalRequestHandler(OperationType.FSYNC) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2762,7 +2763,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
     }
   }
-  TransactionalRequestHandler commitBlockSyncHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler commitBlockSyncHanlder = new TransactionalRequestHandler(OperationType.COMMIT_BLOCK_SYNCHRONIZATION) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2877,7 +2878,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     renewLeaseHandler.setParam1(holder);
     renewLeaseHandler.handleWithWriteLock(this);
   }
-  TransactionalRequestHandler renewLeaseHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renewLeaseHandler = new TransactionalRequestHandler(OperationType.RENEW_LEASE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2907,7 +2908,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, UnresolvedLinkException, IOException {
     return (DirectoryListing) getListingHandler.setParam1(src).setParam2(startAfter).setParam3(needLocation).handleWithReadLock(this);
   }
-  TransactionalRequestHandler getListingHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getListingHandler = new TransactionalRequestHandler(OperationType.GET_LISTING) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2958,7 +2959,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void registerDatanode(DatanodeRegistration nodeReg) throws IOException {
     registerDatanodeHanlder.setParam1(nodeReg).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler registerDatanodeHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler registerDatanodeHanlder = new TransactionalRequestHandler(OperationType.REGISTER_DATANODE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -2998,7 +2999,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     heartbeatHandler.setParam5(blockPoolUsed).setParam6(xceiverCount).setParam7(xmitsInProgress).setParam8(failedVolumes);
     return (DatanodeCommand[]) heartbeatHandler.handleWithReadLock(this);
   }
-  TransactionalRequestHandler heartbeatHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler heartbeatHandler = new TransactionalRequestHandler(OperationType.HANDLE_HEARTBEAT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -3105,7 +3106,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return -1;
   }
-  TransactionalRequestHandler getMissingBlocksCountHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getMissingBlocksCountHanlder = new TransactionalRequestHandler(OperationType.GET_MISSING_BLOCKS_COUNT) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -3213,7 +3214,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void saveNamespace() throws AccessControlException, IOException {
     saveNamespaceHandler.handleWithReadLock(this);
   }
-  TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler(OperationType.SAVE_NAMESPACE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -3443,7 +3444,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           return;
         }
       }
-      // if not done yet, initialize replication queues
+      // if not done yet, INITIALIZE replication queues
       if (!isPopulatingReplQueues()) {
         initializeReplQueues();
       }
@@ -3528,7 +3529,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private void checkMode() throws IOException, PersistanceException {
       if (needEnter()) {
         enter();
-        // check if we are ready to initialize replication queues
+        // check if we are ready to INITIALIZE replication queues
         if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
           initializeReplQueues();
         }
@@ -3553,7 +3554,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       smmthread.start();
       reportStatus("STATE* Safe mode extension entered.", true);
 
-      // check if we are ready to initialize replication queues
+      // check if we are ready to INITIALIZE replication queues
       if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
         initializeReplQueues();
       }
@@ -3793,7 +3794,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       smmthread = null;
     }
-    TransactionalRequestHandler handler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.SAFE_MODE_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -3807,7 +3808,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean setSafeMode(SafeModeAction action) throws IOException {
     return (Boolean) setSafemodeLeaveHandler.setParam1(action).handle();
   }
-  TransactionalRequestHandler setSafemodeLeaveHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler setSafemodeLeaveHandler = new TransactionalRequestHandler(OperationType.SET_SAFE_MODE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -3914,7 +3915,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return -1;
   }
-  TransactionalRequestHandler getBlocksTotalHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getBlocksTotalHandler = new TransactionalRequestHandler(OperationType.GET_BLOCKS_TOTAL) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4043,7 +4044,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
     return (UpgradeCommand) upgradeHandler.setParam1(comm).handle();
   }
-  TransactionalRequestHandler upgradeHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler upgradeHandler = new TransactionalRequestHandler(OperationType.PROCESS_DISTRIBUTED_UPGRADE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4188,7 +4189,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return null;
   }
-  TransactionalRequestHandler getFSStateHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getFSStateHandler = new TransactionalRequestHandler(OperationType.GET_FS_STATE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4310,7 +4311,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           String clientName) throws IOException {
     return (LocatedBlock) updateBlockForPipelineHandler.setParam1(block).setParam2(clientName).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler updateBlockForPipelineHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler updateBlockForPipelineHandler = new TransactionalRequestHandler(OperationType.UPDATE_BLOCK_FOR_PIPELINE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4351,7 +4352,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
   }
-  TransactionalRequestHandler updatePipelineHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler updatePipelineHanlder = new TransactionalRequestHandler(OperationType.UPDATE_PIPELINE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4581,7 +4582,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     listCorruptFileBlocksHandler.setParam1(path).setParam2(startBlockAfter);
     return (Collection<CorruptFileBlockInfo>) listCorruptFileBlocksHandler.handleWithReadLock(this);
   }
-  TransactionalRequestHandler listCorruptFileBlocksHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler listCorruptFileBlocksHandler = new TransactionalRequestHandler(OperationType.LIST_CORRUPT_FILE_BLOCKS) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4656,7 +4657,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException {
     return (Token<DelegationTokenIdentifier>) getDelegationTokenHandler.setParam1(renewer).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler getDelegationTokenHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getDelegationTokenHandler = new TransactionalRequestHandler(OperationType.GET_DELEGATION_TOKEN) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4704,7 +4705,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws InvalidToken, IOException {
     return (Long) renewDelegationTokenHanlder.setParam1(token).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler renewDelegationTokenHanlder = new TransactionalRequestHandler() {
+  TransactionalRequestHandler renewDelegationTokenHanlder = new TransactionalRequestHandler(OperationType.RENEW_DELEGATION_TOKEN) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4738,7 +4739,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException {
     cancelDelegationTokenHandler.setParam1(token).handleWithWriteLock(this);
   }
-  TransactionalRequestHandler cancelDelegationTokenHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler cancelDelegationTokenHandler = new TransactionalRequestHandler(OperationType.CANCEL_DELEGATION_TOKEN) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4886,7 +4887,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return null;
   }
-  TransactionalRequestHandler getSafemodeHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler getSafemodeHandler = new TransactionalRequestHandler(OperationType.GET_SAFE_MODE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -4947,7 +4948,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return -1;
   }
-  TransactionalRequestHandler missingBlockCountHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler missingBlockCountHandler = new TransactionalRequestHandler(OperationType.GET_NUMBER_OF_MISSING_BLOCKS) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {

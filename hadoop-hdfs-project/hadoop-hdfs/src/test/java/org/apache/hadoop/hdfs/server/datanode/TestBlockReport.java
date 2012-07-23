@@ -54,6 +54,7 @@ import java.util.Random;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.junit.Ignore;
 
 /**
@@ -399,7 +400,7 @@ public class TestBlockReport {
     cluster.getNameNodeRpc().blockReport(dnR, poolId,
             new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.TEST_BLOCK_REPORT) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -431,7 +432,7 @@ public class TestBlockReport {
     printStats();
 
 
-    new TransactionalRequestHandler() {
+    new TransactionalRequestHandler(OperationType.TEST_BLOCK_REPORT2) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -660,7 +661,7 @@ public class TestBlockReport {
     BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
     if (LOG.isDebugEnabled()) {
       try {
-        new TransactionalRequestHandler() {
+        new TransactionalRequestHandler(OperationType.PRINT_STAT) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {

@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files. This class
@@ -322,7 +323,7 @@ public class LeaseManager {
         }
       }
     }
-    TransactionalRequestHandler handler = new TransactionalRequestHandler() {
+    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {

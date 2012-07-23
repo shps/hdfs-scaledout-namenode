@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * This test makes sure that CorruptReplicasMap::numBlocksWithCorruptReplicas
@@ -69,7 +70,7 @@ public class TestCorruptReplicaInfo extends TestCase {
       final DatanodeDescriptor dn2 = new DatanodeDescriptor(datanodes.get(1).getDatanodeId());
       final int NUM_BLOCK_IDS = 140;
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.TEST_CORRUPT_REPLICA_INFO) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -105,7 +106,7 @@ public class TestCorruptReplicaInfo extends TestCase {
         }
       }.handle();
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.TEST_CORRUPT_REPLICA_INFO2) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -127,7 +128,7 @@ public class TestCorruptReplicaInfo extends TestCase {
         }
       }.handle();
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.TEST_CORRUPT_REPLICA_INFO3) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

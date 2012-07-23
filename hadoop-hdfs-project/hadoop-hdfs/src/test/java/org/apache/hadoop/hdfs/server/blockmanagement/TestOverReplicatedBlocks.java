@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestOverReplicatedBlocks extends TestCase {
 
@@ -90,7 +91,7 @@ public class TestOverReplicatedBlocks extends TestCase {
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
 
-      new TransactionalRequestHandler() {
+      new TransactionalRequestHandler(OperationType.TEST_PROCESS_OVER_REPLICATED_BLOCKS) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {

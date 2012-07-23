@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
@@ -287,7 +288,7 @@ public class DatanodeManager {
               + node.getName() + " does not exist");
     }
   }
-  TransactionalRequestHandler removeDataNodeHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler removeDataNodeHandler = new TransactionalRequestHandler(OperationType.REMOVE_DATANODE) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
@@ -673,7 +674,7 @@ public class DatanodeManager {
     refreshHostsReader(conf);
     refreshNodesHandler.handleWithWriteLock(namesystem);
   }
-  TransactionalRequestHandler refreshNodesHandler = new TransactionalRequestHandler() {
+  TransactionalRequestHandler refreshNodesHandler = new TransactionalRequestHandler(OperationType.REFRESH_NODES) {
 
     @Override
     public Object performTask() throws PersistanceException, IOException {

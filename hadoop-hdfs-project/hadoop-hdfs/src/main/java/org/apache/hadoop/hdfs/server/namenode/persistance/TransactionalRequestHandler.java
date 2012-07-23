@@ -1,17 +1,86 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
+
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.log4j.NDC;
 
 /**
  *
  * @author kamal hakimzadeh<kamal@sics.se>
  */
 public abstract class TransactionalRequestHandler {
+  
+  public enum OperationType {
+    // NameNodeRpcServer
+    INITIALIZE, ACTIVATE, META_SAVE, SET_PERMISSION, SET_OWNER, 
+    GET_BLOCK_LOCATIONS, CONCAT, SET_TIMES, CREATE_SYM_LINK, GET_PREFERRED_BLOCK_SIZE,
+    SET_REPLICATION, START_FILE, RECOVER_LEASE, APPEND_FILE, GET_ADDITIONAL_BLOCK,
+    GET_ADDITIONAL_DATANODE, ABANDON_BLOCK, COMPLETE_FILE, RENAME_TO, RENAME_TO3,
+    RENAME_TO2, DELETE, GET_FILE_INFO, MKDIRS, GET_CONTENT_SUMMARY, SET_QUOTA,
+    FSYNC, COMMIT_BLOCK_SYNCHRONIZATION, RENEW_LEASE, GET_LISTING, REGISTER_DATANODE,
+    HANDLE_HEARTBEAT, GET_MISSING_BLOCKS_COUNT, SAVE_NAMESPACE, SAFE_MODE_MONITOR,
+    SET_SAFE_MODE, GET_BLOCKS_TOTAL, PROCESS_DISTRIBUTED_UPGRADE, GET_FS_STATE,
+    UPDATE_BLOCK_FOR_PIPELINE, UPDATE_PIPELINE, LIST_CORRUPT_FILE_BLOCKS,
+    GET_DELEGATION_TOKEN, RENEW_DELEGATION_TOKEN, CANCEL_DELEGATION_TOKEN,
+    GET_SAFE_MODE, GET_NUMBER_OF_MISSING_BLOCKS,
+    //BlockManager
+    FIND_AND_MARK_BLOCKS_AS_CORRUPT, PROCESS_REPORT, BLOCK_RECEIVED_AND_DELETED,
+    REPLICATION_MONITOR,
+    // DatanodeManager
+    REMOVE_DATANODE, REFRESH_NODES,
+    //DecommisionManager
+    DECOMMISION_MONITOR,
+    //HeartbeatManager
+    HEARTBEAT_MONITOR,
+    //LeaseManager
+    LEASE_MANAGER_MONITOR,
+    //NamenodeJspHElper
+    GET_SAFE_MODE_TEXT, GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
+    TO_XML_CORRUPT_BLOCK_INFO,
+    //MiniDfsCluster
+    IS_NAMENODE_UP,
+    // TestLease
+    HAS_LEASE,
+    // TestMissingBlocksAlert
+    GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS, GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS2,
+    // TestNamenodePing
+    COUNT_LEASE,
+    // BLockManagerTestUtil
+    UPDATE_STATE, GET_REPLICA_INFO, GET_NUMBER_OF_RACKS, GET_COMPUTED_DATANODE_WORK,
+    // TestBlockManager
+    REMOVE_NODE, FULFILL_PIPELINE, BLOCK_ON_NODES, SCHEDULE_SINGLE_REPLICATION,
+    // TestComputeInvalidatedWork
+    COMP_INVALIDATE,
+    // TestCorruptReplicaInfo
+    TEST_CORRUPT_REPLICA_INFO, TEST_CORRUPT_REPLICA_INFO2, TEST_CORRUPT_REPLICA_INFO3,
+    // TestDatanodeDescriptor
+    TEST_BLOCKS_COUNTER,
+    // TestNodeCount
+    COUNT_NODES,
+    // TestOverReplicatedBlocks
+    TEST_PROCESS_OVER_REPLICATED_BLOCKS,
+    // TestPendingReplication
+    TEST_PENDING_REPLICATION, TEST_PENDING_REPLICATION2 , TEST_PENDING_REPLICATION3,
+    TEST_PENDING_REPLICATION4,
+    // TestUnderReplicatedBlocks
+    SET_REPLICA_INCREAMENT,
+    // TestBlockReport
+    TEST_BLOCK_REPORT, TEST_BLOCK_REPORT2, PRINT_STAT,
+    // TestBlockUnderConstruction
+    VERIFY_FILE_BLOCKS,
+    // TestFsLimits
+    VERIFY_FS_LIMITS,
+    // TestSafeMode
+    TEST_DATANODE_THRESHOLD,
+    // TestDfsRename
+    COUNT_LEASE_DFS_RENAME,
+    ;
+  }
 
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private Object[] params = new Object[8];
@@ -20,8 +89,10 @@ public abstract class TransactionalRequestHandler {
   private boolean rollback = false;
   private int tryCount = 0;
   private IOException exception = null;
+  private OperationType opType;
 
-  public TransactionalRequestHandler() {
+  public TransactionalRequestHandler(OperationType opType) {
+    this.opType = opType;
   }
 
   public Object handle() throws IOException {
@@ -48,6 +119,7 @@ public abstract class TransactionalRequestHandler {
       tryCount++;
       exception = null;
       try {
+        NDC.push(opType.name()); // Defines a context for every operation to track them in the logs easily.
         if (writeLock) {
           namesystem.writeLock();
         }
@@ -93,7 +165,7 @@ public abstract class TransactionalRequestHandler {
             namesystem.readUnlock();
           }
         }
-
+        NDC.pop();
       }
     }
     return null;
