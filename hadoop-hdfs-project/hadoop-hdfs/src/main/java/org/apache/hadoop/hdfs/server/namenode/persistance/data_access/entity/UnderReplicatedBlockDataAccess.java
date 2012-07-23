@@ -9,21 +9,21 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh<kamal@sics.se>
  */
-public interface UnderReplicatedBlockDataAccess {
+public abstract class UnderReplicatedBlockDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "under_replicated_blocks";
   public static final String BLOCK_ID = "block_id";
   public static final String LEVEL = "level";
 
-  public UnderReplicatedBlock findByBlockId(long blockId) throws StorageException;
+  public abstract UnderReplicatedBlock findByBlockId(long blockId) throws StorageException;
 
-  public List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException;
+  public abstract List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException;
 
-  public List<UnderReplicatedBlock> findByLevel(int level) throws StorageException;
+  public abstract List<UnderReplicatedBlock> findByLevel(int level) throws StorageException;
 
-  public List<UnderReplicatedBlock> findAllLessThanLevel(int level) throws StorageException;
+  public abstract List<UnderReplicatedBlock> findAllLessThanLevel(int level) throws StorageException;
 
-  public void prepare(Collection<UnderReplicatedBlock> removed, Collection<UnderReplicatedBlock> newed, Collection<UnderReplicatedBlock> modified) throws StorageException;
+  public abstract void prepare(Collection<UnderReplicatedBlock> removed, Collection<UnderReplicatedBlock> newed, Collection<UnderReplicatedBlock> modified) throws StorageException;
 
-  public void removeAll() throws StorageException;
+  public abstract void removeAll() throws StorageException;
 }

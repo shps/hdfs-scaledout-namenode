@@ -8,7 +8,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh<kamal@sics.se>
  */
-public interface InvalidateBlockDataAccess {
+public abstract class InvalidateBlockDataAccess extends EntityDataAccess{
 
   public static final String TABLE_NAME = "invalidated_blocks";
   public static final String BLOCK_ID = "block_id";
@@ -16,13 +16,13 @@ public interface InvalidateBlockDataAccess {
   public static final String GENERATION_STAMP = "generation_stamp";
   public static final String NUM_BYTES = "num_bytes";
 
-  public int countAll() throws StorageException;
+  public abstract int countAll() throws StorageException;
 
-  public Collection<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId) throws StorageException;
+  public abstract Collection<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId) throws StorageException;
 
-  public Collection<InvalidatedBlock> findAllInvalidatedBlocks() throws StorageException;
+  public abstract Collection<InvalidatedBlock> findAllInvalidatedBlocks() throws StorageException;
 
-  public InvalidatedBlock findInvBlockByPkey(Object[] params) throws StorageException;
+  public abstract InvalidatedBlock findInvBlockByPkey(Object[] params) throws StorageException;
 
-  public void prepare(Collection<InvalidatedBlock> removed, Collection<InvalidatedBlock> newed, Collection<InvalidatedBlock> modified) throws StorageException;
+  public abstract void prepare(Collection<InvalidatedBlock> removed, Collection<InvalidatedBlock> newed, Collection<InvalidatedBlock> modified) throws StorageException;
 }

@@ -6,13 +6,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.ReplicaUnderConstructionContext;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ReplicaUnderConstruntionDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
@@ -20,7 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaUnderConstructionDerby implements ReplicaUnderConstruntionDataAccess {
+public class ReplicaUnderConstructionDerby extends ReplicaUnderConstruntionDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -33,8 +30,9 @@ public class ReplicaUnderConstructionDerby implements ReplicaUnderConstruntionDa
       s.setLong(1, blockId);
       ResultSet rSet = s.executeQuery();
       return createReplicaList(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -62,8 +60,8 @@ public class ReplicaUnderConstructionDerby implements ReplicaUnderConstruntionDa
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

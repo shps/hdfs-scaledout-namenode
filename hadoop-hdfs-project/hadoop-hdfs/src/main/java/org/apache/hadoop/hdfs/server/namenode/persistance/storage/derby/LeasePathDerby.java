@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeasePathDataAccess;
@@ -14,7 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeasePathDerby implements LeasePathDataAccess {
+public class LeasePathDerby extends LeasePathDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -26,8 +27,9 @@ public class LeasePathDerby implements LeasePathDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, holderId);
       return createList(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -40,8 +42,9 @@ public class LeasePathDerby implements LeasePathDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       s.setString(1, prefix + "%");
       return createList(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -52,8 +55,9 @@ public class LeasePathDerby implements LeasePathDataAccess {
       Connection conn = connector.obtainSession();
       PreparedStatement s = conn.prepareStatement(query);
       return createList(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -71,8 +75,9 @@ public class LeasePathDerby implements LeasePathDataAccess {
       } else {
         return null;
       }
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -108,8 +113,8 @@ public class LeasePathDerby implements LeasePathDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

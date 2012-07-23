@@ -9,7 +9,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh
  */
-public interface ReplicaUnderConstruntionDataAccess {
+public abstract class ReplicaUnderConstruntionDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "replica_under_constructions";
   public static final String BLOCK_ID = "block_id";
@@ -17,7 +17,7 @@ public interface ReplicaUnderConstruntionDataAccess {
   public static final String STATE = "state";
   public static final String REPLICA_INDEX = "replica_index";
 
-  public List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) throws StorageException;
+  public abstract List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) throws StorageException;
 
-  public void prepare(Collection<ReplicaUnderConstruction> removed, Collection<ReplicaUnderConstruction> newed, Collection<ReplicaUnderConstruction> modified) throws StorageException;
+  public abstract void prepare(Collection<ReplicaUnderConstruction> removed, Collection<ReplicaUnderConstruction> newed, Collection<ReplicaUnderConstruction> modified) throws StorageException;
 }

@@ -9,7 +9,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public interface BlockInfoDataAccess {
+public abstract class BlockInfoDataAccess extends EntityDataAccess {
 
   /**
    * block info table info
@@ -25,16 +25,16 @@ public interface BlockInfoDataAccess {
   public static final String PRIMARY_NODE_INDEX = "primary_node_index";
   public static final String BLOCK_RECOVERY_ID = "block_recovery_id";
 
-  public int countAll() throws StorageException;
+  public abstract int countAll() throws StorageException;
   
-  public BlockInfo findById(long blockId) throws StorageException;
+  public abstract BlockInfo findById(long blockId) throws StorageException;
 
-  public List<BlockInfo> findByInodeId(long id) throws StorageException;
+  public abstract List<BlockInfo> findByInodeId(long id) throws StorageException;
 
-  public List<BlockInfo> findAllBlocks() throws StorageException;
+  public abstract List<BlockInfo> findAllBlocks() throws StorageException;
 
-  public List<BlockInfo> findByStorageId(String storageId) throws StorageException;
+  public abstract List<BlockInfo> findByStorageId(String storageId) throws StorageException;
   
-  public void prepare(Collection<BlockInfo> removed, Collection<BlockInfo> newed, Collection<BlockInfo> modified) throws StorageException;
+  public abstract void prepare(Collection<BlockInfo> removed, Collection<BlockInfo> newed, Collection<BlockInfo> modified) throws StorageException;
 
 }

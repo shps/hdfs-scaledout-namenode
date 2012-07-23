@@ -9,18 +9,18 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public interface PendingBlockDataAccess {
+public abstract class PendingBlockDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "pending_blocks";
   public static final String BLOCK_ID = "block_id";
   public static final String TIME_STAMP = "time_stamp";
   public static final String NUM_REPLICAS_IN_PROGRESS = "num_replicas_in_progress";
 
-  public List<PendingBlockInfo> findByTimeLimit(long timeLimit) throws StorageException;
+  public abstract List<PendingBlockInfo> findByTimeLimit(long timeLimit) throws StorageException;
 
-  public List<PendingBlockInfo> findAll() throws StorageException;
+  public abstract List<PendingBlockInfo> findAll() throws StorageException;
 
-  public PendingBlockInfo findByPKey(long blockId) throws StorageException;
+  public abstract PendingBlockInfo findByPKey(long blockId) throws StorageException;
 
-  public void prepare(Collection<PendingBlockInfo> removed, Collection<PendingBlockInfo> newed, Collection<PendingBlockInfo> modified) throws StorageException;
+  public abstract void prepare(Collection<PendingBlockInfo> removed, Collection<PendingBlockInfo> newed, Collection<PendingBlockInfo> modified) throws StorageException;
 }

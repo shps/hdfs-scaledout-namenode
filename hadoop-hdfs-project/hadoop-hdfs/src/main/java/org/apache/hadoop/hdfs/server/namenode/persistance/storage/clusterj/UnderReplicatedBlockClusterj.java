@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public class UnderReplicatedBlockClusterj implements UnderReplicatedBlockDataAccess {
+public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface UnderReplicatedBlocksDTO {

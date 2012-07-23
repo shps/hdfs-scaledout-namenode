@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class BlockInfoClusterj implements BlockInfoDataAccess {
+public class BlockInfoClusterj extends BlockInfoDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface BlockInfoDTO {

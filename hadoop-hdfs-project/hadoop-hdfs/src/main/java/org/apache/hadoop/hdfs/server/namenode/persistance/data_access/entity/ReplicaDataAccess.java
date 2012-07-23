@@ -9,14 +9,14 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public interface ReplicaDataAccess {
+public abstract class ReplicaDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "replicas";
   public static final String BLOCK_ID = "block_id";
   public static final String STORAGE_ID = "storage_id";
   public static final String REPLICA_INDEX = "replica_index";
 
-  public List<IndexedReplica> findReplicasById(long id) throws StorageException;
+  public abstract List<IndexedReplica> findReplicasById(long id) throws StorageException;
 
-  public void prepare(Collection<IndexedReplica> removed, Collection<IndexedReplica> newed, Collection<IndexedReplica> modified) throws StorageException;
+  public abstract void prepare(Collection<IndexedReplica> removed, Collection<IndexedReplica> newed, Collection<IndexedReplica> modified) throws StorageException;
 }

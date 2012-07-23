@@ -9,7 +9,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public abstract class InodeDataAccess {
+public abstract class InodeDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "inodes";
   public static final String ID = "id";

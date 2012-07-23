@@ -94,7 +94,7 @@ public class PendingBlockContext implements EntityContext<PendingBlockInfo> {
 
   @Override
   public void prepare() throws StorageException {
-    throw new UnsupportedOperationException("Not supported yet.");
+    dataAccess.prepare(removedPendings.values(), newPendings.values(), modifiedPendings.values());
   }
 
   @Override

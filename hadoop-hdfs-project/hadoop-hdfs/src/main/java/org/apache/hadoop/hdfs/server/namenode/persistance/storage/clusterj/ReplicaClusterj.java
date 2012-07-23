@@ -19,7 +19,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaClusterj implements ReplicaDataAccess {
+public class ReplicaClusterj extends ReplicaDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface ReplicaDTO {

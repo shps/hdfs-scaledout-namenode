@@ -16,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess {
+public class UnderReplicatedBlockDerby extends UnderReplicatedBlockDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -34,8 +34,9 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
         result = createBlock(rSet);
       }
       return result;
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -49,8 +50,9 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
       List<UnderReplicatedBlock> result = createBlocks(rSet);
       Collections.sort(result, UnderReplicatedBlock.Order.ByLevel);
       return result;
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -59,8 +61,9 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
     try {
       String query = String.format("select * from %s where %s=?", TABLE_NAME, LEVEL);
       return execQueryByLevel(query, level);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -69,8 +72,9 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
     try {
       String query = String.format("select * from %s where %s < ?", TABLE_NAME, LEVEL);
       return execQueryByLevel(query, level);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -113,8 +117,8 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 
@@ -125,8 +129,8 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
       String deleteAll = String.format("delete from %s", TABLE_NAME);
       PreparedStatement s = conn.prepareStatement(deleteAll);
       s.executeUpdate();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

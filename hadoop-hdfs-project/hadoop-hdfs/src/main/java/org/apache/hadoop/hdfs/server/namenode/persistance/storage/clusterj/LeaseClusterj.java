@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeaseClusterj implements LeaseDataAccess {
+public class LeaseClusterj extends LeaseDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface LeaseDTO {

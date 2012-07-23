@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ReplicaDataAccess;
@@ -15,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaDerby implements ReplicaDataAccess {
+public class ReplicaDerby extends ReplicaDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -28,8 +29,9 @@ public class ReplicaDerby implements ReplicaDataAccess {
       s.setLong(1, id);
       ResultSet rSet = s.executeQuery();
       return createReplicaList(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -67,8 +69,8 @@ public class ReplicaDerby implements ReplicaDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

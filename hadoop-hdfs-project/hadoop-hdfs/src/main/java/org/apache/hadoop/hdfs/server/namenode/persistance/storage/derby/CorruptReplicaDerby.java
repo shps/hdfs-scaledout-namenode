@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
@@ -15,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
+public class CorruptReplicaDerby extends CorruptReplicaDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -29,8 +30,9 @@ public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
 
       ResultSet result = s.executeQuery();
       return result.getInt(1);
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
+      return 0;
     }
   }
 
@@ -48,8 +50,9 @@ public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
         result = createReplica(rSet);
       }
       return result;
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
+      return null;
     }
   }
 
@@ -62,7 +65,8 @@ public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
       ResultSet rSet = s.executeQuery();
       return createCorruptReplicaList(rSet);
     } catch (SQLException e) {
-      throw new StorageException(e);
+      handleSQLException(e);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -75,8 +79,9 @@ public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
       s.setLong(1, blockId);
       ResultSet rSet = s.executeQuery();
       return createCorruptReplicaList(rSet);
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -105,8 +110,8 @@ public class CorruptReplicaDerby implements CorruptReplicaDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
     }
   }
 

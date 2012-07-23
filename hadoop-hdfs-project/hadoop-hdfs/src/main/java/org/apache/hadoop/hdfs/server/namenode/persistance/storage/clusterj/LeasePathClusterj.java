@@ -20,7 +20,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeasePathClusterj implements LeasePathDataAccess {
+public class LeasePathClusterj extends LeasePathDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface LeasePathsDTO {

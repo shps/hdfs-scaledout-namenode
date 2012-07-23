@@ -19,7 +19,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public class CorruptReplicaClusterj implements CorruptReplicaDataAccess {
+public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface CorruptReplicaDTO {

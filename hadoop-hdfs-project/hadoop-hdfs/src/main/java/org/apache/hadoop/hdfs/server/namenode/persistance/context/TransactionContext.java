@@ -39,7 +39,7 @@ public class TransactionContext {
   public void begin() throws StorageException {
     activeTxExpected = true;
     connector.beginTransaction();
-    logger.debug("\nTX begin{");
+    logger.debug("TX begin");
   }
 
   public void commit() throws StorageException {
@@ -52,13 +52,13 @@ public class TransactionContext {
     resetContext();
 
     connector.commit();
-    logger.debug("\n}Tx commit");
+    logger.debug("Tx commit");
   }
 
   public void rollback() throws StorageException {
     resetContext();
     connector.rollback();
-    logger.debug("\n}Tx rollback");
+    logger.debug("Tx rollback");
   }
 
   public <T> void update(T obj) throws PersistanceException {

@@ -16,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
+public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -28,8 +28,9 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
       return rSet.getInt(1);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return 0;
     }
   }
 
@@ -43,8 +44,9 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
       s.setString(1, storageId);
       ResultSet rSet = s.executeQuery();
       return convert(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -56,8 +58,9 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
       return convert(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -77,8 +80,9 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
       return new InvalidatedBlock(
               rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID),
               rSet.getLong(GENERATION_STAMP), rSet.getLong(NUM_BYTES));
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -103,8 +107,9 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
       } else {
         return Collections.EMPTY_SET;
       }
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -146,8 +151,8 @@ public class InvalidatedBlockDerby implements InvalidateBlockDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

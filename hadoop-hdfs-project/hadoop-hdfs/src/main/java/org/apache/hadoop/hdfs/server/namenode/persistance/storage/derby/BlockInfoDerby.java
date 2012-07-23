@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -20,7 +21,7 @@ import org.hsqldb.Types;
  *
  * @author Hooman <hooman@sics.se>
  */
-public class BlockInfoDerby implements BlockInfoDataAccess {
+public class BlockInfoDerby extends BlockInfoDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -34,8 +35,9 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
 
       ResultSet result = s.executeQuery();
       return result.getInt(1);
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
+      return 0;
     }
   }
 
@@ -63,7 +65,7 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       for (BlockInfo block : news) {
         insrt.setLong(1, block.getBlockId());
         insrt.setInt(2, block.getBlockIndex());
-        insrt.setLong(3, block.getINode().getId());
+        insrt.setLong(3, block.getInodeId());
         insrt.setLong(4, block.getNumBytes());
         insrt.setLong(5, block.getGenerationStamp());
         insrt.setInt(6, block.getBlockUCState().ordinal());
@@ -83,7 +85,7 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       for (BlockInfo block : modified) {
         updt.setLong(9, block.getBlockId());
         updt.setInt(1, block.getBlockIndex());
-        updt.setLong(2, block.getINode().getId());
+        updt.setLong(2, block.getInodeId());
         updt.setLong(3, block.getNumBytes());
         updt.setLong(4, block.getGenerationStamp());
         updt.setInt(5, block.getBlockUCState().ordinal());
@@ -102,8 +104,8 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       dlt.executeBatch();
       insrt.executeBatch();
       updt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 
@@ -118,8 +120,9 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       s.setLong(1, id);
       ResultSet result = s.executeQuery();
       return createList(result);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -135,8 +138,9 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       s.setString(1, storageId);
       ResultSet result = s.executeQuery();
       return createList(result);
-    } catch (Exception e) {
-      throw new StorageException(e);
+    } catch (SQLException e) {
+      handleSQLException(e);
+      return Collections.EMPTY_LIST;
     }
 
   }
@@ -150,8 +154,8 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       s = conn.prepareStatement(query);
       ResultSet result = s.executeQuery();
       return createList(result);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -169,8 +173,9 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       } else {
         return null;
       }
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -182,7 +187,7 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
         finalList.add(blockInfo);
       }
     } catch (SQLException ex) {
-      throw new StorageException(ex);
+      handleSQLException(ex);
     }
     return finalList;
   }
@@ -205,8 +210,8 @@ public class BlockInfoDerby implements BlockInfoDataAccess {
       blockInfo.setTimestamp(rs.getLong(TIME_STAMP));
       blockInfo.setBlockIndex(rs.getInt(BLOCK_INDEX));
 
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
 
     return blockInfo;

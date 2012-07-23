@@ -18,7 +18,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class InvalidatedBlockClusterj implements InvalidateBlockDataAccess {
+public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface InvalidateBlocksDTO {

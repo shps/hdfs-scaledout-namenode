@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ExcessReplicaDataAccess;
@@ -15,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ExcessReplicaDerby implements ExcessReplicaDataAccess {
+public class ExcessReplicaDerby extends ExcessReplicaDataAccess {
 
   DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -26,8 +27,9 @@ public class ExcessReplicaDerby implements ExcessReplicaDataAccess {
       PreparedStatement s = connector.obtainSession().prepareStatement(query);
       ResultSet result = s.executeQuery();
       return result.getInt(1);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return 0;
     }
   }
 
@@ -40,8 +42,9 @@ public class ExcessReplicaDerby implements ExcessReplicaDataAccess {
       s.setString(1, sId);
       ResultSet rSet = s.executeQuery();
       return createList(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -57,8 +60,9 @@ public class ExcessReplicaDerby implements ExcessReplicaDataAccess {
       s.setString(2, storageId);
       ResultSet result = s.executeQuery();
       return createReplica(result);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -83,8 +87,8 @@ public class ExcessReplicaDerby implements ExcessReplicaDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,8 +34,11 @@ public class InodeDerby extends InodeDataAccess {
       s.setLong(1, inodeId);
       ResultSet rSet = s.executeQuery();
       return createInode(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -48,8 +52,11 @@ public class InodeDerby extends InodeDataAccess {
       s.setLong(1, parentId);
       ResultSet rSet = s.executeQuery();
       return createInodeList(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -64,8 +71,11 @@ public class InodeDerby extends InodeDataAccess {
       s.setLong(2, parentId);
       ResultSet rSet = s.executeQuery();
       return createInode(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -80,8 +90,11 @@ public class InodeDerby extends InodeDataAccess {
       }
       ResultSet rSet = conn.prepareStatement(query.toString()).executeQuery();
       return createInodeList(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (IOException ex) {
+      throw new RuntimeException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -127,8 +140,8 @@ public class InodeDerby extends InodeDataAccess {
       }
       dlt.executeBatch();
       dlt.close();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

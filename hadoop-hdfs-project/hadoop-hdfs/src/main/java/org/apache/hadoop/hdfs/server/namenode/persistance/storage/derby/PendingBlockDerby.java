@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.PendingBlockDataAccess;
@@ -15,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class PendingBlockDerby implements PendingBlockDataAccess {
+public class PendingBlockDerby extends PendingBlockDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -27,8 +28,9 @@ public class PendingBlockDerby implements PendingBlockDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, timeLimit);
       return createList(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -39,8 +41,9 @@ public class PendingBlockDerby implements PendingBlockDataAccess {
       Connection conn = connector.obtainSession();
       PreparedStatement s = conn.prepareStatement(query);
       return createList(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -59,8 +62,9 @@ public class PendingBlockDerby implements PendingBlockDataAccess {
                 rSet.getLong(TIME_STAMP), rSet.getInt(NUM_REPLICAS_IN_PROGRESS));
       }
       return null;
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -96,8 +100,8 @@ public class PendingBlockDerby implements PendingBlockDataAccess {
         dlt.addBatch();
       }
       dlt.executeBatch();
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
     }
   }
 

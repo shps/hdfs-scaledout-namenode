@@ -33,7 +33,7 @@ public class StorageFactory {
 //  private static final StorageConnector defaultStorage = ClusterjConnector.INSTANCE;
   static {
     HdfsConfiguration conf = new HdfsConfiguration();
-    String storageType = "derby";
+    String storageType = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
     if (storageType.equals("derby")) {
       defaultStorage = DerbyConnector.INSTANCE;
 

@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -17,7 +18,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeaseDerby implements LeaseDataAccess {
+public class LeaseDerby extends LeaseDataAccess {
 
   private DerbyConnector connector = DerbyConnector.INSTANCE;
 
@@ -31,8 +32,9 @@ public class LeaseDerby implements LeaseDataAccess {
 
       ResultSet result = s.executeQuery();
       return result.getInt(1);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return 0;
     }
   }
 
@@ -46,8 +48,9 @@ public class LeaseDerby implements LeaseDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, timeLimit);
       return convert(s.executeQuery());
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -59,8 +62,9 @@ public class LeaseDerby implements LeaseDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
       return convert(rSet);
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
     }
   }
 
@@ -79,8 +83,9 @@ public class LeaseDerby implements LeaseDataAccess {
       } else {
         return null;
       }
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -99,8 +104,9 @@ public class LeaseDerby implements LeaseDataAccess {
       } else {
         return null;
       }
-    } catch (Exception ex) {
-      throw new StorageException(ex);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return null;
     }
   }
 
@@ -138,7 +144,7 @@ public class LeaseDerby implements LeaseDataAccess {
       }
       dlt.executeBatch();
     } catch (SQLException ex) {
-      Logger.getLogger(LeaseDerby.class.getName()).log(Level.SEVERE, null, ex);
+      handleSQLException(ex);
     }
   }
 

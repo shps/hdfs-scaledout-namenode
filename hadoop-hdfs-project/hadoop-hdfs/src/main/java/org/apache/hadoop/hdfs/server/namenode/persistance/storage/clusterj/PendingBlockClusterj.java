@@ -20,7 +20,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class PendingBlockClusterj implements PendingBlockDataAccess {
+public class PendingBlockClusterj extends PendingBlockDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface PendingBlockDTO {

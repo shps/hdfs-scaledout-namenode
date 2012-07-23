@@ -8,19 +8,19 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh<kamal@sics.se>
  */
-public interface LeasePathDataAccess {
+public abstract class LeasePathDataAccess extends EntityDataAccess {
 
   public static final String TABLE_NAME = "lease_paths";
   public static final String HOLDER_ID = "holder_id";
   public static final String PATH = "path";
 
-  public Collection<LeasePath> findByHolderId(int holderId) throws StorageException;
+  public abstract Collection<LeasePath> findByHolderId(int holderId) throws StorageException;
 
-  public Collection<LeasePath> findByPrefix(String prefix) throws StorageException;
+  public abstract Collection<LeasePath> findByPrefix(String prefix) throws StorageException;
 
-  public Collection<LeasePath> findAll() throws StorageException;
+  public abstract Collection<LeasePath> findAll() throws StorageException;
 
-  public LeasePath findByPKey(String path) throws StorageException;
+  public abstract LeasePath findByPKey(String path) throws StorageException;
 
-  public void prepare(Collection<LeasePath> removed, Collection<LeasePath> newed, Collection<LeasePath> modified) throws StorageException;
+  public abstract void prepare(Collection<LeasePath> removed, Collection<LeasePath> newed, Collection<LeasePath> modified) throws StorageException;
 }
