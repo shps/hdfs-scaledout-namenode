@@ -4,8 +4,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
@@ -18,7 +18,10 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public enum DerbyConnector implements StorageConnector<Connection> {
 
   INSTANCE;
-  /* the default framework is embedded*/
+  private Log log;
+  /*
+   * the default framework is embedded
+   */
   private String framework = "embedded";
   private String driver = "org.apache.derby.jdbc.EmbeddedDriver";
   private String protocol = "jdbc:derby:memory:";
@@ -28,19 +31,24 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   private boolean dbStarted = false;
 
   private DerbyConnector() {
+    log = LogFactory.getLog(DerbyConnector.class);
     loadDriver();
   }
 
   @Override
   public synchronized void setConfiguration(Configuration conf) {
     if (!dbStarted) {
-      startDatabase();
+      try {
+        startDatabase();
+      } catch (StorageException ex) {
+        throw new RuntimeException(ex);
+      }
     }
 
   }
 
   @Override
-  public Connection obtainSession() {
+  public Connection obtainSession() throws StorageException {
     Connection conn = this.connectionPool.get();
     if (conn == null) {
       try {
@@ -49,7 +57,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
         conn.setAutoCommit(false);
         this.connectionPool.set(conn);
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       }
     }
 
@@ -57,7 +65,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   }
 
   @Override
-  public void beginTransaction() {
+  public void beginTransaction() throws StorageException {
     Connection conn = obtainSession(); //reserve a connection for this thread.
     activeTransactions.set(true);
   }
@@ -72,7 +80,6 @@ public enum DerbyConnector implements StorageConnector<Connection> {
     try {
       connection.commit();
     } catch (SQLException ex) {
-      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
       throw new StorageException(ex);
     } finally {
       this.activeTransactions.set(false);
@@ -80,23 +87,22 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   }
 
   @Override
-  public void rollback() {
+  public void rollback() throws StorageException {
 
     if (isTransactionActive()) {
       Connection connection = connectionPool.get();
       try {
         connection.rollback();
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       } finally {
         this.activeTransactions.set(false);
       }
     }
-
   }
 
   @Override
-  public boolean formatStorage() {
+  public boolean formatStorage() throws StorageException {
 //    startDatabase();
 //    return true;
     Connection conn = null;
@@ -109,6 +115,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
       s = conn.createStatement();
       s.execute(String.format("delete from %s", BlockInfoDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", CorruptReplicaDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", InodeDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", LeaseDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", LeasePathDataAccess.TABLE_NAME));
@@ -117,13 +124,13 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       s.execute(String.format("delete from %s", InvalidateBlockDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", ExcessReplicaDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", UnderReplicatedBlockDataAccess.TABLE_NAME));
 
       //commit changes
       conn.commit();
       return true;
     } catch (SQLException ex) {
-      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
-      return false;
+      throw new StorageException(ex);
     } finally {
       try {
         if (s != null && !s.isClosed()) {
@@ -131,7 +138,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           s = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       }
       try {
         if (conn != null && !conn.isClosed()) {
@@ -139,7 +146,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           conn = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       }
     }
   }
@@ -149,29 +156,31 @@ public enum DerbyConnector implements StorageConnector<Connection> {
     return this.activeTransactions.get();
   }
 
-  private void startDatabase() {
+  private void startDatabase() throws StorageException {
     dropTables();
-    System.out.println("Database is starting in " + framework + " mode");
+    log.info("Database is starting in " + framework + " mode");
 
-    /* load the desired JDBC driver */
-    
+    /*
+     * load the desired JDBC driver
+     */
+
     Connection conn = null;
     Statement s = null;
     try {
       /*
-       * This connection specifies create=true in the connection URL to
-       * cause the database to be created when connecting for the first
-       * time. To remove the database, remove the directory derbyDB (the
-       * same as the database name) and its contents.
+       * This connection specifies create=true in the connection URL to cause
+       * the database to be created when connecting for the first time. To
+       * remove the database, remove the directory derbyDB (the same as the
+       * database name) and its contents.
        *
-       * The directory derbyDB will be created under the directory that
-       * the system property derby.system.home points to, or the current
-       * directory (user.dir) if derby.system.home is not set.
+       * The directory derbyDB will be created under the directory that the
+       * system property derby.system.home points to, or the current directory
+       * (user.dir) if derby.system.home is not set.
        */
       conn = DriverManager.getConnection(protocol + dbName
               + ";create=true");
 
-      System.out.println("Connected to and created database " + dbName);
+      log.info("Connected to and created database " + dbName);
 
       // We want to control transactions manually. Autocommit is on by
       // default in JDBC.
@@ -184,8 +193,8 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       conn.commit();
       dbStarted = true;
     } catch (SQLException ex) {
-      Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
       dbStarted = false;
+      throw new StorageException(ex);
     } finally {
       try {
         if (s != null && !s.isClosed()) {
@@ -193,7 +202,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           s = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       }
       try {
         if (conn != null && !conn.isClosed()) {
@@ -201,7 +210,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           conn = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.SEVERE, null, ex);
+        throw new StorageException(ex);
       }
     }
   }
@@ -224,58 +233,53 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 //          if (((se.getErrorCode() == 50000)
 //                  && ("XJ015".equals(se.getSQLState())))) {
 //            // we got the expected exception
-//            System.out.println("Derby shut down normally");
+//            log.info("Derby shut down normally");
 //            // Note that for single database shutdown, the expected
 //            // SQL state is "08006", and the error code is 45000.
 //          } else {
 //            // if the error code or SQLState is different, we have
 //            // an unexpected exception (shutdown failed)
-//            System.err.println("Derby did not shut down normally");
+//            log.error("Derby did not shut down normally");
 //          }
 //        }
 //      }
 //    }
   }
 
-  /* Loads the appropriate JDBC driver for this environment/framework. For
-   * example, if we are in an embedded environment, we load Derby's
-   * embedded Driver, <code>org.apache.derby.jdbc.EmbeddedDriver</code>.
+  /*
+   * Loads the appropriate JDBC driver for this environment/framework. For
+   * example, if we are in an embedded environment, we load Derby's embedded
+   * Driver, <code>org.apache.derby.jdbc.EmbeddedDriver</code>.
    */
   private void loadDriver() {
     /*
-     *  The JDBC driver is loaded by loading its class.
-     *  If you are using JDBC 4.0 (Java SE 6) or newer, JDBC drivers may
-     *  be automatically loaded, making this code optional.
+     * The JDBC driver is loaded by loading its class. If you are using JDBC 4.0
+     * (Java SE 6) or newer, JDBC drivers may be automatically loaded, making
+     * this code optional.
      *
-     *  In an embedded environment, this will also start up the Derby
-     *  engine (though not any databases), since it is not already
-     *  running. In a client environment, the Derby engine is being run
-     *  by the network server framework.
+     * In an embedded environment, this will also start up the Derby engine
+     * (though not any databases), since it is not already running. In a client
+     * environment, the Derby engine is being run by the network server
+     * framework.
      *
-     *  In an embedded environment, any static Derby system properties
-     *  must be set before loading the driver to take effect.
+     * In an embedded environment, any static Derby system properties must be
+     * set before loading the driver to take effect.
      */
     try {
 //      String driver2 = "org.apache.derby.jdbc.ClientDriver";
       Class.forName(driver).newInstance();
-      System.out.println("Loaded the appropriate driver");
+      log.info("Loaded the appropriate driver");
     } catch (ClassNotFoundException cnfe) {
-      System.err.println("\nUnable to load the JDBC driver " + driver);
-      System.err.println("Please check your CLASSPATH.");
-      cnfe.printStackTrace(System.err);
+      log.error("\nUnable to load the JDBC driver " + driver, cnfe);
     } catch (InstantiationException ie) {
-      System.err.println(
-              "\nUnable to instantiate the JDBC driver " + driver);
-      ie.printStackTrace(System.err);
+      log.error("\nUnable to instantiate the JDBC driver " + driver, ie);
     } catch (IllegalAccessException iae) {
-      System.err.println(
-              "\nNot allowed to access the JDBC driver " + driver);
-      iae.printStackTrace(System.err);
+      log.error("\nNot allowed to access the JDBC driver " + driver, iae);
     }
   }
 
   private void createTables(Statement s) throws SQLException {
-    System.out.println("Creating tables...");
+    log.info("Creating tables...");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,"
@@ -293,7 +297,15 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             BlockInfoDataAccess.GENERATION_STAMP, BlockInfoDataAccess.BLOCK_UNDER_CONSTRUCTION_STATE,
             BlockInfoDataAccess.TIME_STAMP, BlockInfoDataAccess.PRIMARY_NODE_INDEX,
             BlockInfoDataAccess.BLOCK_RECOVERY_ID, BlockInfoDataAccess.BLOCK_ID));
-    System.out.println("Table block_info is created.");
+    log.info("Table block_info is created.");
+
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,"
+            + "%s VARCHAR(128) NOT NULL,"
+            + "PRIMARY KEY (%s,%s))", CorruptReplicaDataAccess.TABLE_NAME,
+            CorruptReplicaDataAccess.BLOCK_ID, CorruptReplicaDataAccess.STORAGE_ID,
+            CorruptReplicaDataAccess.BLOCK_ID, CorruptReplicaDataAccess.STORAGE_ID));
+    log.info("Table CorruptReplica is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,"
@@ -301,7 +313,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s,%s))", ExcessReplicaDataAccess.TABLE_NAME,
             ExcessReplicaDataAccess.BLOCK_ID, ExcessReplicaDataAccess.STORAGE_ID,
             ExcessReplicaDataAccess.BLOCK_ID, ExcessReplicaDataAccess.STORAGE_ID));
-    System.out.println("Table ExcessReplica is created.");
+    log.info("Table ExcessReplica is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
@@ -333,7 +345,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             InodeDataAccess.HEADER, InodeDataAccess.IS_DIR_WITH_QUOTA,
             InodeDataAccess.NSCOUNT, InodeDataAccess.DSCOUNT, InodeDataAccess.SYMLINK,
             InodeDataAccess.ID));
-    System.out.println("Table inode is created.");
+    log.info("Table inode is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
@@ -344,7 +356,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID,
             InvalidateBlockDataAccess.GENERATION_STAMP, InvalidateBlockDataAccess.NUM_BYTES,
             InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID));
-    System.out.println("Table invalidated_block is created.");
+    log.info("Table invalidated_block is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s varchar(255) NOT NULL,   "
@@ -353,14 +365,14 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s) )", LeaseDataAccess.TABLE_NAME,
             LeaseDataAccess.HOLDER, LeaseDataAccess.LAST_UPDATE, LeaseDataAccess.HOLDER_ID,
             LeaseDataAccess.HOLDER));
-    System.out.println("Table lease is created.");
+    log.info("Table lease is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s INTEGER NOT NULL,   "
             + "%s varchar(255) NOT NULL,   "
             + "PRIMARY KEY (%s) )", LeasePathDataAccess.TABLE_NAME,
             LeasePathDataAccess.HOLDER_ID, LeasePathDataAccess.PATH, LeasePathDataAccess.PATH));
-    System.out.println("Table lease_path is created.");
+    log.info("Table lease_path is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s BIGINT NOT NULL, %s BIGINT NOT NULL,"
@@ -368,7 +380,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s) )", PendingBlockDataAccess.TABLE_NAME,
             PendingBlockDataAccess.BLOCK_ID, PendingBlockDataAccess.TIME_STAMP,
             PendingBlockDataAccess.NUM_REPLICAS_IN_PROGRESS, PendingBlockDataAccess.BLOCK_ID));
-    System.out.println("Table pending_block is created.");
+    log.info("Table pending_block is created.");
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s BIGINT NOT NULL,   "
@@ -379,7 +391,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID,
             ReplicaUnderConstruntionDataAccess.STATE, ReplicaUnderConstruntionDataAccess.REPLICA_INDEX,
             ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID));
-    System.out.println("Table replica_uc is created.");
+    log.info("Table replica_uc is created.");
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
@@ -389,12 +401,20 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             ReplicaDataAccess.BLOCK_ID, ReplicaDataAccess.STORAGE_ID,
             ReplicaDataAccess.REPLICA_INDEX, ReplicaDataAccess.BLOCK_ID,
             ReplicaDataAccess.STORAGE_ID));
-    System.out.println("Table tripletes is created.");
+    log.info("Table tripletes is created.");
+
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,"
+            + "%s INTEGER DEFAULT NULL,"
+            + "PRIMARY KEY (%s))", UnderReplicatedBlockDataAccess.TABLE_NAME,
+            UnderReplicatedBlockDataAccess.BLOCK_ID, UnderReplicatedBlockDataAccess.LEVEL,
+            UnderReplicatedBlockDataAccess.BLOCK_ID));
+    log.info("Table UnderReplicatedBlock is created.");
+
   }
-  
-  private void dropTables()
-  {
-  Connection conn = null;
+
+  private void dropTables() throws StorageException {
+    Connection conn = null;
     Statement s = null;
     try {
       conn = DriverManager.getConnection(protocol + dbName
@@ -402,6 +422,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
       s = conn.createStatement();
       s.execute(String.format("drop table %s", BlockInfoDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", CorruptReplicaDataAccess.TABLE_NAME));
       s.execute(String.format("drop table %s", InodeDataAccess.TABLE_NAME));
       s.execute(String.format("drop table %s", LeaseDataAccess.TABLE_NAME));
       s.execute(String.format("drop table %s", LeasePathDataAccess.TABLE_NAME));
@@ -410,9 +431,9 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       s.execute(String.format("drop table %s", InvalidateBlockDataAccess.TABLE_NAME));
       s.execute(String.format("drop table %s", ExcessReplicaDataAccess.TABLE_NAME));
       s.execute(String.format("drop table %s", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
+      s.execute(String.format("drop table %s", UnderReplicatedBlockDataAccess.TABLE_NAME));
     } catch (SQLException ex) {
-      Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING,
-              "There is no table to remvoe or cannot remove the tables.");
+      log.warn("There is no table to remvoe or cannot remove the tables.");
     } finally {
       try {
         if (s != null && !s.isClosed()) {
@@ -420,7 +441,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           s = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING, null, ex);
+        throw new StorageException(ex);
       }
       try {
         if (conn != null && !conn.isClosed()) {
@@ -428,7 +449,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
           conn = null;
         }
       } catch (SQLException ex) {
-        Logger.getLogger(DerbyConnector.class.getName()).log(Level.WARNING, null, ex);
+        throw new StorageException(ex);
       }
     }
   }

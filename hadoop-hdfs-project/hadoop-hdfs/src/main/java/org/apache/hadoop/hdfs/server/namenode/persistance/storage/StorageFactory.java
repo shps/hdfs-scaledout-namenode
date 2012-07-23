@@ -33,12 +33,12 @@ public class StorageFactory {
 //  private static final StorageConnector defaultStorage = ClusterjConnector.INSTANCE;
   static {
     HdfsConfiguration conf = new HdfsConfiguration();
-    String storageType = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
+    String storageType = "derby";
     if (storageType.equals("derby")) {
       defaultStorage = DerbyConnector.INSTANCE;
 
       blockInfoDataAccess = new BlockInfoDerby();
-      corruptReplicaDataAccess = null;
+      corruptReplicaDataAccess = new CorruptReplicaDerby();
       excessReplicaDataAccess = new ExcessReplicaDerby();
       inodeDataAccess = new InodeDerby();
       invalidateBlockDataAccess = new InvalidatedBlockDerby();
@@ -47,7 +47,7 @@ public class StorageFactory {
       pendingBlockDataAccess = new PendingBlockDerby();
       replicaDataAccess = new ReplicaDerby();
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionDerby();
-      underReplicatedBlockDataAccess = null;
+      underReplicatedBlockDataAccess = new UnderReplicatedBlockDerby();
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
       blockInfoDataAccess = new BlockInfoClusterj();

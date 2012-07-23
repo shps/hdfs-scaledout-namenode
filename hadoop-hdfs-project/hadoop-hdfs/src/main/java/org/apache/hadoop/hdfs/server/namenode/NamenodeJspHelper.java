@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
@@ -29,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -49,7 +50,8 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -61,18 +63,29 @@ import org.apache.hadoop.util.VersionInfo;
 import org.znerd.xmlenc.XMLOutputter;
 
 class NamenodeJspHelper {
-  static String getSafeModeText(FSNamesystem fsn) {
-    if (!fsn.isInSafeMode())
-      return "";
-    return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
+
+  static String getSafeModeText(FSNamesystem fsn) throws IOException {
+    return (String) getSafeModeTextHandler.setParam1(fsn).handle();
   }
-  
+  static TransactionalRequestHandler getSafeModeTextHandler = new TransactionalRequestHandler() {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      FSNamesystem fsn = (FSNamesystem) getParam1();
+      if (!fsn.isInSafeMode()) {
+        return "";
+      }
+      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
+    }
+  };
+
   /**
    * returns security mode of the cluster (namenode)
+   *
    * @return "on" if security is on, and "off" otherwise
    */
-  static String getSecurityModeText() {  
-    if(UserGroupInformation.isSecurityEnabled()) {
+  static String getSecurityModeText() {
+    if (UserGroupInformation.isSecurityEnabled()) {
       return "Security is <em>ON</em> <br>";
     } else {
       return "Security is <em>OFF</em> <br>";
@@ -89,7 +102,7 @@ class NamenodeJspHelper {
     long totalMemory = heap.getUsed();
     long maxMemory = heap.getMax();
     long commitedMemory = heap.getCommitted();
-    
+
     MemoryUsage nonHeap = mem.getNonHeapMemoryUsage();
     long totalNonHeap = nonHeap.getUsed();
     long maxNonHeap = nonHeap.getMax();
@@ -99,56 +112,58 @@ class NamenodeJspHelper {
     long usedNonHeap = (totalNonHeap * 100) / commitedNonHeap;
 
     String str = inodes + " files and directories, " + blocks + " blocks = "
-        + (inodes + blocks) + " total";
+            + (inodes + blocks) + " total";
     if (maxobjects != 0) {
       long pct = ((inodes + blocks) * 100) / maxobjects;
       str += " / " + maxobjects + " (" + pct + "%)";
     }
     str += ".<br>";
     str += "Heap Memory used " + StringUtils.byteDesc(totalMemory) + " is "
-        + " " + used + "% of Commited Heap Memory " 
-        + StringUtils.byteDesc(commitedMemory)
-        + ". Max Heap Memory is " + StringUtils.byteDesc(maxMemory) +
-        ". <br>";
+            + " " + used + "% of Commited Heap Memory "
+            + StringUtils.byteDesc(commitedMemory)
+            + ". Max Heap Memory is " + StringUtils.byteDesc(maxMemory)
+            + ". <br>";
     str += "Non Heap Memory used " + StringUtils.byteDesc(totalNonHeap) + " is"
-        + " " + usedNonHeap + "% of " + " Commited Non Heap Memory "
-        + StringUtils.byteDesc(commitedNonHeap) + ". Max Non Heap Memory is "
-        + StringUtils.byteDesc(maxNonHeap) + ".<br>";
+            + " " + usedNonHeap + "% of " + " Commited Non Heap Memory "
+            + StringUtils.byteDesc(commitedNonHeap) + ". Max Non Heap Memory is "
+            + StringUtils.byteDesc(maxNonHeap) + ".<br>";
     return str;
   }
 
   static String getUpgradeStatusText(FSNamesystem fsn) {
     String statusText = "";
     try {
-      UpgradeStatusReport status = fsn
-          .distributedUpgradeProgress(UpgradeAction.GET_STATUS);
+      UpgradeStatusReport status = fsn.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
       statusText = (status == null ? "There are no upgrades in progress."
-          : status.getStatusText(false));
+              : status.getStatusText(false));
     } catch (IOException e) {
       statusText = "Upgrade status unknown.";
     }
     return statusText;
   }
 
-  /** Return a table containing version information. */
+  /**
+   * Return a table containing version information.
+   */
   static String getVersionTable(FSNamesystem fsn) {
     return "<div id='dfstable'><table>"
-        + "\n  <tr><td id='col1'>Started:</td><td>" + fsn.getStartTime()
-        + "</td></tr>\n" + "\n  <tr><td id='col1'>Version:</td><td>"
-        + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
-        + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate()
-        + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "\n  <tr><td id='col1'>Upgrades:</td><td>"
-        + getUpgradeStatusText(fsn) 
-        + "\n  <tr><td id='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
-        + "</td></tr>\n" 
-        + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
-        + "</td></tr>\n" 
-        + "\n</table></div>";
+            + "\n  <tr><td id='col1'>Started:</td><td>" + fsn.getStartTime()
+            + "</td></tr>\n" + "\n  <tr><td id='col1'>Version:</td><td>"
+            + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
+            + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate()
+            + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
+            + "\n  <tr><td id='col1'>Upgrades:</td><td>"
+            + getUpgradeStatusText(fsn)
+            + "\n  <tr><td id='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
+            + "</td></tr>\n"
+            + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
+            + "</td></tr>\n"
+            + "\n</table></div>";
   }
 
   /**
    * Generate warning text if there are corrupt files.
+   *
    * @return a warning if files are corrupt, otherwise return an empty string.
    */
   static String getCorruptFilesWarning(FSNamesystem fsn) {
@@ -159,7 +174,7 @@ class NamenodeJspHelper {
       // Warning class is typically displayed in RED
       result.append("<br/><a class=\"warning\" href=\"/corrupt_files.jsp\" title=\"List corrupt files\">\n");
       result.append("<b>WARNING : There are " + missingBlocks
-          + " missing blocks. Please check the logs or run fsck in order to identify the missing blocks.</b>");
+              + " missing blocks. Please check the logs or run fsck in order to identify the missing blocks.</b>");
       result.append("</a>");
 
       result.append("<br/><div class=\"small\">See the Hadoop FAQ for common causes and potential solutions.");
@@ -171,6 +186,7 @@ class NamenodeJspHelper {
   }
 
   static class HealthJsp {
+
     private int rowNum = 0;
     private int colNum = 0;
     private String sorterField = null;
@@ -179,7 +195,7 @@ class NamenodeJspHelper {
     private String rowTxt() {
       colNum = 0;
       return "<tr class=\"" + (((rowNum++) % 2 == 0) ? "rowNormal" : "rowAlt")
-          + "\"> ";
+              + "\"> ";
     }
 
     private String colTxt() {
@@ -196,11 +212,10 @@ class NamenodeJspHelper {
     }
 
     void generateConfReport(JspWriter out, NameNode nn,
-        HttpServletRequest request) throws IOException {
+            HttpServletRequest request) throws IOException {
       FSNamesystem fsn = nn.getNamesystem();
       FSImage fsImage = fsn.getFSImage();
-      List<Storage.StorageDirectory> removedStorageDirs 
-        = fsImage.getStorage().getRemovedStorageDirs();
+      List<Storage.StorageDirectory> removedStorageDirs = fsImage.getStorage().getRemovedStorageDirs();
 
       // FS Image storage configuration
       out.print("<h3> " + nn.getRole() + " Storage: </h3>");
@@ -208,13 +223,12 @@ class NamenodeJspHelper {
               + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
 
       StorageDirectory st = null;
-      for (Iterator<StorageDirectory> it 
-             = fsImage.getStorage().dirIterator(); it.hasNext();) {
+      for (Iterator<StorageDirectory> it = fsImage.getStorage().dirIterator(); it.hasNext();) {
         st = it.next();
         String dir = "" + st.getRoot();
         String type = "" + st.getStorageDirType();
         out.print("<tr><td>" + dir + "</td><td>" + type
-            + "</td><td>Active</td></tr>");
+                + "</td><td>Active</td></tr>");
       }
 
       long storageDirsSize = removedStorageDirs.size();
@@ -223,168 +237,181 @@ class NamenodeJspHelper {
         String dir = "" + st.getRoot();
         String type = "" + st.getStorageDirType();
         out.print("<tr><td>" + dir + "</td><td>" + type
-            + "</td><td><font color=red>Failed</font></td></tr>");
+                + "</td><td><font color=red>Failed</font></td></tr>");
       }
 
       out.print("</table></div><br>\n");
     }
 
     void generateHealthReport(JspWriter out, NameNode nn,
-        HttpServletRequest request) throws IOException {
-      FSNamesystem fsn = nn.getNamesystem();
-      final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
-      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      dm.fetchDatanodes(live, dead, true);
+            HttpServletRequest request) throws IOException {
+      generateHealthReportHanlder.setParam1(out).setParam2(nn).setParam3(request).handle();
+    }
+    TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler() {
 
-      int liveDecommissioned = 0;
-      for (DatanodeDescriptor d : live) {
-        liveDecommissioned += d.isDecommissioned() ? 1 : 0;
-      }
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        JspWriter out = (JspWriter) getParam1();
+        NameNode nn = (NameNode) getParam2();
+        HttpServletRequest request = (HttpServletRequest) getParam3();
+        FSNamesystem fsn = nn.getNamesystem();
+        final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+        final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+        final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+        dm.fetchDatanodes(live, dead, true);
 
-      int deadDecommissioned = 0;
-      for (DatanodeDescriptor d : dead) {
-        deadDecommissioned += d.isDecommissioned() ? 1 : 0;
-      }
-      
-      final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
-
-      sorterField = request.getParameter("sorter/field");
-      sorterOrder = request.getParameter("sorter/order");
-      if (sorterField == null)
-        sorterField = "name";
-      if (sorterOrder == null)
-        sorterOrder = "ASC";
-
-      // Find out common suffix. Should this be before or after the sort?
-      String port_suffix = null;
-      if (live.size() > 0) {
-        String name = live.get(0).getName();
-        int idx = name.indexOf(':');
-        if (idx > 0) {
-          port_suffix = name.substring(idx);
+        int liveDecommissioned = 0;
+        for (DatanodeDescriptor d : live) {
+          liveDecommissioned += d.isDecommissioned() ? 1 : 0;
         }
 
-        for (int i = 1; port_suffix != null && i < live.size(); i++) {
-          if (live.get(i).getName().endsWith(port_suffix) == false) {
-            port_suffix = null;
-            break;
+        int deadDecommissioned = 0;
+        for (DatanodeDescriptor d : dead) {
+          deadDecommissioned += d.isDecommissioned() ? 1 : 0;
+        }
+
+        final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
+
+        sorterField = request.getParameter("sorter/field");
+        sorterOrder = request.getParameter("sorter/order");
+        if (sorterField == null) {
+          sorterField = "name";
+        }
+        if (sorterOrder == null) {
+          sorterOrder = "ASC";
+        }
+
+        // Find out common suffix. Should this be before or after the sort?
+        String port_suffix = null;
+        if (live.size() > 0) {
+          String name = live.get(0).getName();
+          int idx = name.indexOf(':');
+          if (idx > 0) {
+            port_suffix = name.substring(idx);
+          }
+
+          for (int i = 1; port_suffix != null && i < live.size(); i++) {
+            if (live.get(i).getName().endsWith(port_suffix) == false) {
+              port_suffix = null;
+              break;
+            }
           }
         }
-      }
 
-      counterReset();
-      long[] fsnStats = fsn.getStats();
-      long total = fsnStats[0];
-      long remaining = fsnStats[2];
-      long used = fsnStats[1];
-      long nonDFS = total - remaining - used;
-      nonDFS = nonDFS < 0 ? 0 : nonDFS;
-      float percentUsed = DFSUtil.getPercentUsed(used, total);
-      float percentRemaining = DFSUtil.getPercentRemaining(remaining, total);
-      float median = 0;
-      float max = 0;
-      float min = 0;
-      float dev = 0;
-      
-      if (live.size() > 0) {
-        float totalDfsUsed = 0;
-        float[] usages = new float[live.size()];
-        int i = 0;
-        for (DatanodeDescriptor dn : live) {
-          usages[i++] = dn.getDfsUsedPercent();
-          totalDfsUsed += dn.getDfsUsedPercent();
+        counterReset();
+        long[] fsnStats = fsn.getStats();
+        long total = fsnStats[0];
+        long remaining = fsnStats[2];
+        long used = fsnStats[1];
+        long nonDFS = total - remaining - used;
+        nonDFS = nonDFS < 0 ? 0 : nonDFS;
+        float percentUsed = DFSUtil.getPercentUsed(used, total);
+        float percentRemaining = DFSUtil.getPercentRemaining(remaining, total);
+        float median = 0;
+        float max = 0;
+        float min = 0;
+        float dev = 0;
+
+        if (live.size() > 0) {
+          float totalDfsUsed = 0;
+          float[] usages = new float[live.size()];
+          int i = 0;
+          for (DatanodeDescriptor dn : live) {
+            usages[i++] = dn.getDfsUsedPercent();
+            totalDfsUsed += dn.getDfsUsedPercent();
+          }
+          totalDfsUsed /= live.size();
+          Arrays.sort(usages);
+          median = usages[usages.length / 2];
+          max = usages[usages.length - 1];
+          min = usages[0];
+
+          for (i = 0; i < usages.length; i++) {
+            dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+          }
+          dev = (float) Math.sqrt(dev / usages.length);
         }
-        totalDfsUsed /= live.size();
-        Arrays.sort(usages);
-        median = usages[usages.length/2];
-        max = usages[usages.length - 1];
-        min = usages[0];
-        
-        for (i = 0; i < usages.length; i++) {
-          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+
+        long bpUsed = fsnStats[6];
+        float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
+
+        out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
+                + "Configured Capacity" + colTxt() + ":" + colTxt()
+                + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
+                + colTxt() + ":" + colTxt() + StringUtils.byteDesc(used) + rowTxt()
+                + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt()
+                + StringUtils.byteDesc(nonDFS) + rowTxt() + colTxt()
+                + "DFS Remaining" + colTxt() + ":" + colTxt()
+                + StringUtils.byteDesc(remaining) + rowTxt() + colTxt() + "DFS Used%"
+                + colTxt() + ":" + colTxt()
+                + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
+                + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
+                + StringUtils.limitDecimalTo2(percentRemaining) + " %"
+                + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
+                + StringUtils.byteDesc(bpUsed) + rowTxt()
+                + colTxt() + "Block Pool Used%" + colTxt() + ":" + colTxt()
+                + StringUtils.limitDecimalTo2(percentBpUsed) + " %"
+                + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
+                + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
+                + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
+                + StringUtils.limitDecimalTo2(min) + " %"
+                + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
+                + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
+                + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
+                + rowTxt() + colTxt()
+                + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
+                + colTxt() + ":" + colTxt() + live.size()
+                + " (Decommissioned: " + liveDecommissioned + ")"
+                + rowTxt() + colTxt()
+                + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
+                + colTxt() + ":" + colTxt() + dead.size()
+                + " (Decommissioned: " + deadDecommissioned + ")"
+                + rowTxt() + colTxt()
+                + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
+                + "Decommissioning Nodes</a> "
+                + colTxt() + ":" + colTxt() + decommissioning.size()
+                + rowTxt() + colTxt("Excludes missing blocks.")
+                + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
+                + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()
+                + "</table></div><br>\n");
+
+        if (live.isEmpty() && dead.isEmpty()) {
+          out.print("There are no datanodes in the cluster");
         }
-        dev = (float) Math.sqrt(dev/usages.length);
+        return null;
       }
-
-      long bpUsed = fsnStats[6];
-      float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-      
-      out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
-          + "Configured Capacity" + colTxt() + ":" + colTxt()
-          + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
-          + colTxt() + ":" + colTxt() + StringUtils.byteDesc(used) + rowTxt()
-          + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt()
-          + StringUtils.byteDesc(nonDFS) + rowTxt() + colTxt()
-          + "DFS Remaining" + colTxt() + ":" + colTxt()
-          + StringUtils.byteDesc(remaining) + rowTxt() + colTxt() + "DFS Used%"
-          + colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
-          + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentRemaining) + " %"
-          + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
-          + StringUtils.byteDesc(bpUsed) + rowTxt()
-          + colTxt() + "Block Pool Used%"+ colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentBpUsed) + " %" 
-          + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
-          + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
-          + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
-          + StringUtils.limitDecimalTo2(min) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
-          + rowTxt() + colTxt()
-          + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
-          + colTxt() + ":" + colTxt() + live.size()
-          + " (Decommissioned: " + liveDecommissioned + ")"
-          + rowTxt() + colTxt()
-          + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
-          + colTxt() + ":" + colTxt() + dead.size() 
-          + " (Decommissioned: " + deadDecommissioned + ")"
-          + rowTxt() + colTxt()
-          + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
-          + "Decommissioning Nodes</a> "
-          + colTxt() + ":" + colTxt() + decommissioning.size() 
-          + rowTxt() + colTxt("Excludes missing blocks.")
-          + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-          + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()
-          + "</table></div><br>\n");
-
-      if (live.isEmpty() && dead.isEmpty()) {
-        out.print("There are no datanodes in the cluster");
-      }
-    }
+    };
   }
 
   static String getDelegationToken(final NamenodeProtocols nn,
-      HttpServletRequest request, Configuration conf,
-      final UserGroupInformation ugi) throws IOException, InterruptedException {
-    Token<DelegationTokenIdentifier> token = ugi
-        .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-          public Token<DelegationTokenIdentifier> run() throws IOException {
-            return nn.getDelegationToken(new Text(ugi.getUserName()));
-          }
-        });
+          HttpServletRequest request, Configuration conf,
+          final UserGroupInformation ugi) throws IOException, InterruptedException {
+    Token<DelegationTokenIdentifier> token = ugi.doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+
+      public Token<DelegationTokenIdentifier> run() throws IOException {
+        return nn.getDelegationToken(new Text(ugi.getUserName()));
+      }
+    });
     return token == null ? null : token.encodeToUrlString();
   }
 
-  /** @return a randomly chosen datanode. */
+  /**
+   * @return a randomly chosen datanode.
+   */
   static DatanodeDescriptor getRandomDatanode(final NameNode namenode) {
-    return (DatanodeDescriptor)namenode.getNamesystem().getBlockManager(
-        ).getDatanodeManager().getNetworkTopology().chooseRandom(
-        NodeBase.ROOT);
+    return (DatanodeDescriptor) namenode.getNamesystem().getBlockManager().getDatanodeManager().getNetworkTopology().chooseRandom(
+            NodeBase.ROOT);
   }
-  
+
   static void redirectToRandomDataNode(ServletContext context,
-      HttpServletRequest request, HttpServletResponse resp) throws IOException,
-      InterruptedException {
+          HttpServletRequest request, HttpServletResponse resp) throws IOException,
+          InterruptedException {
     final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-    final Configuration conf = (Configuration) context
-        .getAttribute(JspHelper.CURRENT_CONF);
+    final Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
     final DatanodeID datanode = getRandomDatanode(nn);
     UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     String tokenString = getDelegationToken(
-        nn.getRpcServer(), request, conf, ugi);
+            nn.getRpcServer(), request, conf, ugi);
     // if the user is defined, get a delegation token and stringify it
     final String redirectLocation;
     final String nodeToRedirect;
@@ -399,28 +426,26 @@ class NamenodeJspHelper {
     String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort
-        + "/browseDirectory.jsp?namenodeInfoPort="
-        + nn.getHttpAddress().getPort() + "&dir=/"
-        + (tokenString == null ? "" :
-           JspHelper.getDelegationTokenUrlParam(tokenString))
-        + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
+            + "/browseDirectory.jsp?namenodeInfoPort="
+            + nn.getHttpAddress().getPort() + "&dir=/"
+            + (tokenString == null ? ""
+            : JspHelper.getDelegationTokenUrlParam(tokenString))
+            + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
     resp.sendRedirect(redirectLocation);
   }
 
   static class NodeListJsp {
-    private int rowNum = 0;
 
+    private int rowNum = 0;
     private long diskBytes = 1024 * 1024 * 1024;
     private String diskByteStr = "GB";
-
     private String sorterField = null;
     private String sorterOrder = null;
-
     private String whatNodes = "LIVE";
 
     private String rowTxt() {
       return "<tr class=\"" + (((rowNum++) % 2 == 0) ? "rowNormal" : "rowAlt")
-          + "\"> ";
+              + "\"> ";
     }
 
     private void counterReset() {
@@ -432,41 +457,42 @@ class NamenodeJspHelper {
       String order = "ASC";
       if (name.equals(sorterField)) {
         ret += sorterOrder;
-        if (sorterOrder.equals("ASC"))
+        if (sorterOrder.equals("ASC")) {
           order = "DSC";
+        }
       }
       ret += " onClick=\"window.document.location="
-          + "'/dfsnodelist.jsp?whatNodes=" + whatNodes + "&sorter/field="
-          + name + "&sorter/order=" + order
-          + "'\" title=\"sort on this column\"";
+              + "'/dfsnodelist.jsp?whatNodes=" + whatNodes + "&sorter/field="
+              + name + "&sorter/order=" + order
+              + "'\" title=\"sort on this column\"";
 
       return ret;
     }
 
     private void generateNodeDataHeader(JspWriter out, DatanodeDescriptor d,
-        String suffix, boolean alive, int nnHttpPort, String nnaddr)
-        throws IOException {
+            String suffix, boolean alive, int nnHttpPort, String nnaddr)
+            throws IOException {
       // from nn_browsedfscontent.jsp:
       String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
-          + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
-          + URLEncoder.encode("/", "UTF-8")
-          + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);
+              + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
+              + URLEncoder.encode("/", "UTF-8")
+              + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);
 
       String name = d.getHostName() + ":" + d.getPort();
-      if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*"))
+      if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*")) {
         name = name.replaceAll("\\.[^.:]*", "");
-      int idx = (suffix != null && name.endsWith(suffix)) ? name
-          .indexOf(suffix) : -1;
+      }
+      int idx = (suffix != null && name.endsWith(suffix)) ? name.indexOf(suffix) : -1;
 
       out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getHost() + ":"
-          + d.getPort() + "\" href=\"" + url + "\">"
-          + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
-          + ((alive) ? "" : "\n"));
+              + d.getPort() + "\" href=\"" + url + "\">"
+              + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
+              + ((alive) ? "" : "\n"));
     }
 
     void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
-        String suffix, boolean alive, int nnHttpPort, String nnaddr)
-        throws IOException {
+            String suffix, boolean alive, int nnHttpPort, String nnaddr)
+            throws IOException {
       generateNodeDataHeader(out, d, suffix, alive, nnHttpPort, nnaddr);
       if (!alive) {
         return;
@@ -475,38 +501,38 @@ class NamenodeJspHelper {
       long decommRequestTime = d.decommissioningStatus.getStartTime();
       long timestamp = d.getLastUpdate();
       long currentTime = System.currentTimeMillis();
-      long hoursSinceDecommStarted = (currentTime - decommRequestTime)/3600000;
-      long remainderMinutes = ((currentTime - decommRequestTime)/60000) % 60;
+      long hoursSinceDecommStarted = (currentTime - decommRequestTime) / 3600000;
+      long remainderMinutes = ((currentTime - decommRequestTime) / 60000) % 60;
       out.print("<td class=\"lastcontact\"> "
-          + ((currentTime - timestamp) / 1000)
-          + "<td class=\"underreplicatedblocks\">"
-          + d.decommissioningStatus.getUnderReplicatedBlocks()
-          + "<td class=\"blockswithonlydecommissioningreplicas\">"
-          + d.decommissioningStatus.getDecommissionOnlyReplicas() 
-          + "<td class=\"underrepblocksinfilesunderconstruction\">"
-          + d.decommissioningStatus.getUnderReplicatedInOpenFiles()
-          + "<td class=\"timesincedecommissionrequest\">"
-          + hoursSinceDecommStarted + " hrs " + remainderMinutes + " mins"
-          + "\n");
+              + ((currentTime - timestamp) / 1000)
+              + "<td class=\"underreplicatedblocks\">"
+              + d.decommissioningStatus.getUnderReplicatedBlocks()
+              + "<td class=\"blockswithonlydecommissioningreplicas\">"
+              + d.decommissioningStatus.getDecommissionOnlyReplicas()
+              + "<td class=\"underrepblocksinfilesunderconstruction\">"
+              + d.decommissioningStatus.getUnderReplicatedInOpenFiles()
+              + "<td class=\"timesincedecommissionrequest\">"
+              + hoursSinceDecommStarted + " hrs " + remainderMinutes + " mins"
+              + "\n");
     }
-    
+
     void generateNodeData(JspWriter out, DatanodeDescriptor d, String suffix,
-        boolean alive, int nnHttpPort, String nnaddr) throws IOException {
+            boolean alive, int nnHttpPort, String nnaddr) throws IOException {
       /*
        * Say the datanode is dn1.hadoop.apache.org with ip 192.168.0.5 we use:
        * 1) d.getHostName():d.getPort() to display. Domain and port are stripped
-       *    if they are common across the nodes. i.e. "dn1"
-       * 2) d.getHost():d.Port() for "title". i.e. "192.168.0.5:50010"
-       * 3) d.getHostName():d.getInfoPort() for url.
-       *    i.e. "http://dn1.hadoop.apache.org:50075/..."
-       * Note that "d.getHost():d.getPort()" is what DFS clients use to
-       * interact with datanodes.
+       * if they are common across the nodes. i.e. "dn1" 2) d.getHost():d.Port()
+       * for "title". i.e. "192.168.0.5:50010" 3)
+       * d.getHostName():d.getInfoPort() for url. i.e.
+       * "http://dn1.hadoop.apache.org:50075/..." Note that
+       * "d.getHost():d.getPort()" is what DFS clients use to interact with
+       * datanodes.
        */
 
       generateNodeDataHeader(out, d, suffix, alive, nnHttpPort, nnaddr);
       if (!alive) {
-        out.print("<td class=\"decommissioned\"> " + 
-            d.isDecommissioned() + "\n");
+        out.print("<td class=\"decommissioned\"> "
+                + d.isDecommissioned() + "\n");
         return;
       }
 
@@ -515,49 +541,47 @@ class NamenodeJspHelper {
       long nu = d.getNonDfsUsed();
       long r = d.getRemaining();
       String percentUsed = StringUtils.limitDecimalTo2(d.getDfsUsedPercent());
-      String percentRemaining = StringUtils.limitDecimalTo2(d
-          .getRemainingPercent());
+      String percentRemaining = StringUtils.limitDecimalTo2(d.getRemainingPercent());
 
       String adminState = d.getAdminState().toString();
 
       long timestamp = d.getLastUpdate();
       long currentTime = System.currentTimeMillis();
-      
+
       long bpUsed = d.getBlockPoolUsed();
-      String percentBpUsed = StringUtils.limitDecimalTo2(d
-          .getBlockPoolUsedPercent());
+      String percentBpUsed = StringUtils.limitDecimalTo2(d.getBlockPoolUsedPercent());
 
       out.print("<td class=\"lastcontact\"> "
-          + ((currentTime - timestamp) / 1000)
-          + "<td class=\"adminstate\">"
-          + adminState
-          + "<td align=\"right\" class=\"capacity\">"
-          + StringUtils.limitDecimalTo2(c * 1.0 / diskBytes)
-          + "<td align=\"right\" class=\"used\">"
-          + StringUtils.limitDecimalTo2(u * 1.0 / diskBytes)
-          + "<td align=\"right\" class=\"nondfsused\">"
-          + StringUtils.limitDecimalTo2(nu * 1.0 / diskBytes)
-          + "<td align=\"right\" class=\"remaining\">"
-          + StringUtils.limitDecimalTo2(r * 1.0 / diskBytes)
-          + "<td align=\"right\" class=\"pcused\">"
-          + percentUsed
-          + "<td class=\"pcused\">"
-          + ServletUtil.percentageGraph((int) Double.parseDouble(percentUsed),
-              100) 
-          + "<td align=\"right\" class=\"pcremaining`\">"
-          + percentRemaining 
-          + "<td title=" + "\"blocks scheduled : "
-          + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks()+"\n"
-          + "<td align=\"right\" class=\"bpused\">"
-          + StringUtils.limitDecimalTo2(bpUsed * 1.0 / diskBytes)
-          + "<td align=\"right\" class=\"pcbpused\">"
-          + percentBpUsed
-          + "<td align=\"right\" class=\"volfails\">"
-          + d.getVolumeFailures() + "\n");
+              + ((currentTime - timestamp) / 1000)
+              + "<td class=\"adminstate\">"
+              + adminState
+              + "<td align=\"right\" class=\"capacity\">"
+              + StringUtils.limitDecimalTo2(c * 1.0 / diskBytes)
+              + "<td align=\"right\" class=\"used\">"
+              + StringUtils.limitDecimalTo2(u * 1.0 / diskBytes)
+              + "<td align=\"right\" class=\"nondfsused\">"
+              + StringUtils.limitDecimalTo2(nu * 1.0 / diskBytes)
+              + "<td align=\"right\" class=\"remaining\">"
+              + StringUtils.limitDecimalTo2(r * 1.0 / diskBytes)
+              + "<td align=\"right\" class=\"pcused\">"
+              + percentUsed
+              + "<td class=\"pcused\">"
+              + ServletUtil.percentageGraph((int) Double.parseDouble(percentUsed),
+              100)
+              + "<td align=\"right\" class=\"pcremaining`\">"
+              + percentRemaining
+              + "<td title=" + "\"blocks scheduled : "
+              + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks() + "\n"
+              + "<td align=\"right\" class=\"bpused\">"
+              + StringUtils.limitDecimalTo2(bpUsed * 1.0 / diskBytes)
+              + "<td align=\"right\" class=\"pcbpused\">"
+              + percentBpUsed
+              + "<td align=\"right\" class=\"volfails\">"
+              + d.getVolumeFailures() + "\n");
     }
 
     void generateNodesList(ServletContext context, JspWriter out,
-        HttpServletRequest request) throws IOException {
+            HttpServletRequest request) throws IOException {
       final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
       final FSNamesystem ns = nn.getNamesystem();
       final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
@@ -566,19 +590,20 @@ class NamenodeJspHelper {
       final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       dm.fetchDatanodes(live, dead, true);
 
-      InetSocketAddress nnSocketAddress = (InetSocketAddress) context
-          .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+      InetSocketAddress nnSocketAddress = (InetSocketAddress) context.getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
       String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
-          + nnSocketAddress.getPort();
+              + nnSocketAddress.getPort();
 
       whatNodes = request.getParameter("whatNodes"); // show only live or only
-                                                     // dead nodes
+      // dead nodes
       sorterField = request.getParameter("sorter/field");
       sorterOrder = request.getParameter("sorter/order");
-      if (sorterField == null)
+      if (sorterField == null) {
         sorterField = "name";
-      if (sorterOrder == null)
+      }
+      if (sorterOrder == null) {
         sorterOrder = "ASC";
+      }
 
       JspHelper.sortNodeList(live, sorterField, sorterOrder);
 
@@ -614,8 +639,8 @@ class NamenodeJspHelper {
         out.print("<div id=\"dfsnodetable\"> ");
         if (whatNodes.equals("LIVE")) {
           out.print("<a name=\"LiveNodes\" id=\"title\">" + "Live Datanodes : "
-              + live.size() + "</a>"
-              + "<br><br>\n<table border=1 cellspacing=0>\n");
+                  + live.size() + "</a>"
+                  + "<br><br>\n<table border=1 cellspacing=0>\n");
 
           counterReset();
 
@@ -626,48 +651,48 @@ class NamenodeJspHelper {
             }
 
             out.print("<tr class=\"headerRow\"> <th " + nodeHeaderStr("name")
-                + "> Node <th " + nodeHeaderStr("lastcontact")
-                + "> Last <br>Contact <th " + nodeHeaderStr("adminstate")
-                + "> Admin State <th " + nodeHeaderStr("capacity")
-                + "> Configured <br>Capacity (" + diskByteStr + ") <th "
-                + nodeHeaderStr("used") + "> Used <br>(" + diskByteStr
-                + ") <th " + nodeHeaderStr("nondfsused")
-                + "> Non DFS <br>Used (" + diskByteStr + ") <th "
-                + nodeHeaderStr("remaining") + "> Remaining <br>("
-                + diskByteStr + ") <th " + nodeHeaderStr("pcused")
-                + "> Used <br>(%) <th " + nodeHeaderStr("pcused")
-                + "> Used <br>(%) <th " + nodeHeaderStr("pcremaining")
-                + "> Remaining <br>(%) <th " + nodeHeaderStr("blocks")
-                + "> Blocks <th "
-                + nodeHeaderStr("bpused") + "> Block Pool<br>Used (" 
-                + diskByteStr + ") <th "
-                + nodeHeaderStr("pcbpused")
-                + "> Block Pool<br>Used (%)"
-                + "> Blocks <th " + nodeHeaderStr("volfails")
-                +"> Failed Volumes\n");
+                    + "> Node <th " + nodeHeaderStr("lastcontact")
+                    + "> Last <br>Contact <th " + nodeHeaderStr("adminstate")
+                    + "> Admin State <th " + nodeHeaderStr("capacity")
+                    + "> Configured <br>Capacity (" + diskByteStr + ") <th "
+                    + nodeHeaderStr("used") + "> Used <br>(" + diskByteStr
+                    + ") <th " + nodeHeaderStr("nondfsused")
+                    + "> Non DFS <br>Used (" + diskByteStr + ") <th "
+                    + nodeHeaderStr("remaining") + "> Remaining <br>("
+                    + diskByteStr + ") <th " + nodeHeaderStr("pcused")
+                    + "> Used <br>(%) <th " + nodeHeaderStr("pcused")
+                    + "> Used <br>(%) <th " + nodeHeaderStr("pcremaining")
+                    + "> Remaining <br>(%) <th " + nodeHeaderStr("blocks")
+                    + "> Blocks <th "
+                    + nodeHeaderStr("bpused") + "> Block Pool<br>Used ("
+                    + diskByteStr + ") <th "
+                    + nodeHeaderStr("pcbpused")
+                    + "> Block Pool<br>Used (%)"
+                    + "> Blocks <th " + nodeHeaderStr("volfails")
+                    + "> Failed Volumes\n");
 
             JspHelper.sortNodeList(live, sorterField, sorterOrder);
             for (int i = 0; i < live.size(); i++) {
               generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort,
-                  nnaddr);
+                      nnaddr);
             }
           }
           out.print("</table>\n");
         } else if (whatNodes.equals("DEAD")) {
 
           out.print("<br> <a name=\"DeadNodes\" id=\"title\"> "
-              + " Dead Datanodes : " + dead.size() + "</a><br><br>\n");
+                  + " Dead Datanodes : " + dead.size() + "</a><br><br>\n");
 
           if (dead.size() > 0) {
             out.print("<table border=1 cellspacing=0> <tr id=\"row1\"> "
-                + "<th " + nodeHeaderStr("node")
-                + "> Node <th " + nodeHeaderStr("decommissioned")
-                + "> Decommissioned\n");
+                    + "<th " + nodeHeaderStr("node")
+                    + "> Node <th " + nodeHeaderStr("decommissioned")
+                    + "> Decommissioned\n");
 
             JspHelper.sortNodeList(dead, sorterField, sorterOrder);
             for (int i = 0; i < dead.size(); i++) {
               generateNodeData(out, dead.get(i), port_suffix, false,
-                  nnHttpPort, nnaddr);
+                      nnHttpPort, nnaddr);
             }
 
             out.print("</table>\n");
@@ -676,27 +701,26 @@ class NamenodeJspHelper {
           // Decommissioning Nodes
           final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
           out.print("<br> <a name=\"DecommissioningNodes\" id=\"title\"> "
-              + " Decommissioning Datanodes : " + decommissioning.size()
-              + "</a><br><br>\n");
+                  + " Decommissioning Datanodes : " + decommissioning.size()
+                  + "</a><br><br>\n");
           if (decommissioning.size() > 0) {
             out.print("<table border=1 cellspacing=0> <tr class=\"headRow\"> "
-                + "<th " + nodeHeaderStr("name") 
-                + "> Node <th " + nodeHeaderStr("lastcontact")
-                + "> Last <br>Contact <th "
-                + nodeHeaderStr("underreplicatedblocks")
-                + "> Under Replicated Blocks <th "
-                + nodeHeaderStr("blockswithonlydecommissioningreplicas")
-                + "> Blocks With No <br> Live Replicas <th "
-                + nodeHeaderStr("underrepblocksinfilesunderconstruction")
-                + "> Under Replicated Blocks <br> In Files Under Construction" 
-                + " <th " + nodeHeaderStr("timesincedecommissionrequest")
-                + "> Time Since Decommissioning Started"
-                );
+                    + "<th " + nodeHeaderStr("name")
+                    + "> Node <th " + nodeHeaderStr("lastcontact")
+                    + "> Last <br>Contact <th "
+                    + nodeHeaderStr("underreplicatedblocks")
+                    + "> Under Replicated Blocks <th "
+                    + nodeHeaderStr("blockswithonlydecommissioningreplicas")
+                    + "> Blocks With No <br> Live Replicas <th "
+                    + nodeHeaderStr("underrepblocksinfilesunderconstruction")
+                    + "> Under Replicated Blocks <br> In Files Under Construction"
+                    + " <th " + nodeHeaderStr("timesincedecommissionrequest")
+                    + "> Time Since Decommissioning Started");
 
             JspHelper.sortNodeList(decommissioning, "name", "ASC");
             for (int i = 0; i < decommissioning.size(); i++) {
               generateDecommissioningNodeData(out, decommissioning.get(i),
-                  port_suffix, true, nnHttpPort, nnaddr);
+                      port_suffix, true, nnHttpPort, nnaddr);
             }
             out.print("</table>\n");
           }
@@ -705,13 +729,14 @@ class NamenodeJspHelper {
       }
     }
   }
-  
+
   // utility class used in block_info_xml.jsp
   static class XMLBlockInfo {
+
     final Block block;
     final INodeFile inode;
     final BlockManager blockManager;
-    
+
     XMLBlockInfo(FSNamesystem fsn, Long blockId) {
       this.blockManager = fsn.getBlockManager();
 
@@ -722,168 +747,192 @@ class NamenodeJspHelper {
         this.block = new Block(blockId);
         INodeFile inodeFile;
         try {
-          inodeFile = blockManager.getINode(block);
+          inodeFile = (INodeFile) new TransactionalRequestHandler() {
+
+            @Override
+            public Object performTask() throws PersistanceException, IOException {
+              return blockManager.getINode(block);
+            }
+          }.handle();
         } catch (IOException e) {
           e.printStackTrace();
           inodeFile = null;
         }
         this.inode = inodeFile;
-        
+
       }
     }
 
     public void toXML(XMLOutputter doc) throws IOException {
-      doc.startTag("block_info");
-      if (block == null) {
-        doc.startTag("error");
-        doc.pcdata("blockId must be a Long");
-        doc.endTag();
-      }else{
-        doc.startTag("block_id");
-        doc.pcdata(""+block.getBlockId());
-        doc.endTag();
-
-        doc.startTag("block_name");
-        doc.pcdata(block.getBlockName());
-        doc.endTag();
-
-        if (inode != null) {
-          doc.startTag("file");
-
-          doc.startTag("local_name");
-          doc.pcdata(inode.getName());
-          doc.endTag();
-
-          doc.startTag("local_directory");
-          doc.pcdata(inode.getLocalParentDir());
-          doc.endTag();
-
-          doc.startTag("user_name");
-          doc.pcdata(inode.getUserName());
-          doc.endTag();
-
-          doc.startTag("group_name");
-          doc.pcdata(inode.getGroupName());
-          doc.endTag();
-
-          doc.startTag("is_directory");
-          doc.pcdata(""+inode.isDirectory());
-          doc.endTag();
-
-          doc.startTag("access_time");
-          doc.pcdata(""+inode.getAccessTime());
-          doc.endTag();
-
-          doc.startTag("is_under_construction");
-          doc.pcdata(""+inode.isUnderConstruction());
-          doc.endTag();
-
-          doc.startTag("ds_quota");
-          doc.pcdata(""+inode.getDsQuota());
-          doc.endTag();
-
-          doc.startTag("permission_status");
-          doc.pcdata(inode.getPermissionStatus().toString());
-          doc.endTag();
-
-          doc.startTag("replication");
-          doc.pcdata(""+inode.getReplication());
-          doc.endTag();
-
-          doc.startTag("disk_space_consumed");
-          doc.pcdata(""+inode.diskspaceConsumed());
-          doc.endTag();
-
-          doc.startTag("preferred_block_size");
-          doc.pcdata(""+inode.getPreferredBlockSize());
-          doc.endTag();
-
-          doc.endTag(); // </file>
-        } 
-
-        doc.startTag("replicas");
-                List<DatanodeDescriptor> dataNodes = blockManager.getDatanodes(blockManager.getStoredBlock(block));
-        
-        for (DatanodeDescriptor dd : dataNodes) {
-
-          doc.startTag("replica");
-          doc.startTag("host_name");
-          doc.pcdata(dd.getHostName());
-          doc.endTag();
-
-          boolean isCorrupt = blockManager.getCorruptReplicaBlockIds(0,
-                                block.getBlockId()) != null;
-          
-          doc.startTag("is_corrupt");
-          doc.pcdata(""+isCorrupt);
-          doc.endTag();
-          
-          doc.endTag(); // </replica>
-        }
-        doc.endTag(); // </replicas>
-                
-      }
-      
-      doc.endTag(); // </block_info>
-      
+      toXMLHandler.setParam1(doc).handle();
     }
+    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        XMLOutputter doc = (XMLOutputter) getParam1();
+        doc.startTag("block_info");
+        if (block == null) {
+          doc.startTag("error");
+          doc.pcdata("blockId must be a Long");
+          doc.endTag();
+        } else {
+          doc.startTag("block_id");
+          doc.pcdata("" + block.getBlockId());
+          doc.endTag();
+
+          doc.startTag("block_name");
+          doc.pcdata(block.getBlockName());
+          doc.endTag();
+
+          if (inode != null) {
+            doc.startTag("file");
+
+            doc.startTag("local_name");
+            doc.pcdata(inode.getName());
+            doc.endTag();
+
+            doc.startTag("local_directory");
+            doc.pcdata(inode.getLocalParentDir());
+            doc.endTag();
+
+            doc.startTag("user_name");
+            doc.pcdata(inode.getUserName());
+            doc.endTag();
+
+            doc.startTag("group_name");
+            doc.pcdata(inode.getGroupName());
+            doc.endTag();
+
+            doc.startTag("is_directory");
+            doc.pcdata("" + inode.isDirectory());
+            doc.endTag();
+
+            doc.startTag("access_time");
+            doc.pcdata("" + inode.getAccessTime());
+            doc.endTag();
+
+            doc.startTag("is_under_construction");
+            doc.pcdata("" + inode.isUnderConstruction());
+            doc.endTag();
+
+            doc.startTag("ds_quota");
+            doc.pcdata("" + inode.getDsQuota());
+            doc.endTag();
+
+            doc.startTag("permission_status");
+            doc.pcdata(inode.getPermissionStatus().toString());
+            doc.endTag();
+
+            doc.startTag("replication");
+            doc.pcdata("" + inode.getReplication());
+            doc.endTag();
+
+            doc.startTag("disk_space_consumed");
+            doc.pcdata("" + inode.diskspaceConsumed());
+            doc.endTag();
+
+            doc.startTag("preferred_block_size");
+            doc.pcdata("" + inode.getPreferredBlockSize());
+            doc.endTag();
+
+            doc.endTag(); // </file>
+          }
+
+          doc.startTag("replicas");
+          List<DatanodeDescriptor> dataNodes = blockManager.getDatanodes(blockManager.getStoredBlock(block));
+
+          for (DatanodeDescriptor dd : dataNodes) {
+
+            doc.startTag("replica");
+            doc.startTag("host_name");
+            doc.pcdata(dd.getHostName());
+            doc.endTag();
+
+            boolean isCorrupt = blockManager.getCorruptReplicaBlockIds(0,
+                    block.getBlockId()) != null;
+
+            doc.startTag("is_corrupt");
+            doc.pcdata("" + isCorrupt);
+            doc.endTag();
+
+            doc.endTag(); // </replica>
+          }
+          doc.endTag(); // </replicas>
+
+        }
+
+        doc.endTag(); // </block_info>
+
+        return null;
+      }
+    };
   }
-  
+
   // utility class used in corrupt_replicas_xml.jsp
   static class XMLCorruptBlockInfo {
+
     final Configuration conf;
     final Long startingBlockId;
     final int numCorruptBlocks;
     final BlockManager blockManager;
-    
+
     XMLCorruptBlockInfo(FSNamesystem fsn, Configuration conf,
-                               int numCorruptBlocks, Long startingBlockId) {
+            int numCorruptBlocks, Long startingBlockId) {
       this.blockManager = fsn.getBlockManager();
       this.conf = conf;
       this.numCorruptBlocks = numCorruptBlocks;
       this.startingBlockId = startingBlockId;
     }
 
-
     public void toXML(XMLOutputter doc) throws IOException {
-      
-      doc.startTag("corrupt_block_info");
-      
-      if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
-        doc.startTag("error");
-        doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
-        doc.endTag();
-      }
-      
-      doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
-      doc.pcdata(""+conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
-                                DFSConfigKeys.DFS_REPLICATION_DEFAULT));
-      doc.endTag();
-      
-      doc.startTag("num_missing_blocks");
-      doc.pcdata(""+blockManager.getMissingBlocksCount());
-      doc.endTag();
-      
-      doc.startTag("num_corrupt_replica_blocks");
-      doc.pcdata(""+blockManager.getCorruptReplicaBlocksCount());
-      doc.endTag();
-     
-      doc.startTag("corrupt_replica_block_ids");
-      final Long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
-          numCorruptBlocks, startingBlockId);
-      if (corruptBlockIds != null) {
-        for (Long blockId: corruptBlockIds) {
-          doc.startTag("block_id");
-          doc.pcdata(""+blockId);
+      toXMLHandler.setParam1(doc).handle();
+    }
+    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        XMLOutputter doc = (XMLOutputter) getParam1();
+        doc.startTag("corrupt_block_info");
+
+        if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
+          doc.startTag("error");
+          doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
           doc.endTag();
         }
-      }
-      
-      doc.endTag(); // </corrupt_replica_block_ids>
 
-      doc.endTag(); // </corrupt_block_info>
-      
-      doc.getWriter().flush();
-    }
-  }    
+        doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
+        doc.pcdata("" + conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+                DFSConfigKeys.DFS_REPLICATION_DEFAULT));
+        doc.endTag();
+
+        doc.startTag("num_missing_blocks");
+        doc.pcdata("" + blockManager.getMissingBlocksCount());
+        doc.endTag();
+
+        doc.startTag("num_corrupt_replica_blocks");
+        doc.pcdata("" + blockManager.getCorruptReplicaBlocksCount());
+        doc.endTag();
+
+        doc.startTag("corrupt_replica_block_ids");
+        final Long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
+                numCorruptBlocks, startingBlockId);
+        if (corruptBlockIds != null) {
+          for (Long blockId : corruptBlockIds) {
+            doc.startTag("block_id");
+            doc.pcdata("" + blockId);
+            doc.endTag();
+          }
+        }
+
+        doc.endTag(); // </corrupt_replica_block_ids>
+
+        doc.endTag(); // </corrupt_block_info>
+
+        doc.getWriter().flush();
+
+        return null;
+      }
+    };
+  }
 }

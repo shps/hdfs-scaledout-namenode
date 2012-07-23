@@ -11,15 +11,15 @@ public interface StorageConnector<T> {
   
   public void setConfiguration(Configuration conf);
   
-  public <T> T obtainSession();
+  public <T> T obtainSession() throws StorageException;
   
-  public void beginTransaction();
+  public void beginTransaction() throws StorageException;
   
   public void commit() throws StorageException;
   
-  public void rollback();
+  public void rollback() throws StorageException;
   
-  public boolean formatStorage();
+  public boolean formatStorage() throws StorageException;
   
   public boolean isTransactionActive();
   

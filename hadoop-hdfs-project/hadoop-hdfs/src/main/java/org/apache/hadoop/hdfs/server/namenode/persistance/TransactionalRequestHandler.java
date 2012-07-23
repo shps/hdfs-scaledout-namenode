@@ -1,6 +1,8 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -11,90 +13,17 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  */
 public abstract class TransactionalRequestHandler {
 
-  Object param1;
-  Object param2;
-  Object param3;
-  Object param4;
-  Object param5;
-  Object param6;
-  Object param7;  
-  Object param8;
+  private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
+  private Object[] params = new Object[8];
+  public static final int RETRY_COUNT = 1;
+  private boolean retry = true;
+  private boolean rollback = false;
+  private int tryCount = 0;
+  private IOException exception = null;
 
   public TransactionalRequestHandler() {
   }
-  
-  public Object getParam1() {
-    return param1;
-  }
 
-  public TransactionalRequestHandler setParam1(Object param1) {
-    this.param1 = param1;
-    return this;
-  }
-  
-  public Object getParam2() {
-    return param2;
-  }
-
-  public TransactionalRequestHandler setParam2(Object param2) {
-    this.param2 = param2;
-    return this;
-  }
-  
-  public Object getParam3() {
-    return param3;
-  }
-
-  public TransactionalRequestHandler setParam3(Object param3) {
-    this.param3 = param3;
-    return this;
-  }
-  
-  public Object getParam4() {
-    return param4;
-  }
-
-  public TransactionalRequestHandler setParam4(Object param4) {
-    this.param4 = param4;
-    return this;
-  }
-
-  public Object getParam5() {
-    return param5;
-  }
-
-  public TransactionalRequestHandler setParam5(Object param5) {
-    this.param5 = param5;
-    return this;
-  }
-
-  public Object getParam6() {
-    return param6;
-  }
-
-  public TransactionalRequestHandler setParam7(Object param7) {
-    this.param7 = param7;
-    return this;
-  }
-
-  public Object getParam7() {
-    return param7;
-  }
-
-  public TransactionalRequestHandler setParam8(Object param8) {
-    this.param8 = param8;
-    return this;
-  }
-
-  public Object getParam8() {
-    return param8;
-  }
-
-  public TransactionalRequestHandler setParam6(Object param6) {
-    this.param6 = param6;
-    return this;
-  }
-  
   public Object handle() throws IOException {
     return run(false, false, null);
   }
@@ -108,8 +37,16 @@ public abstract class TransactionalRequestHandler {
   }
 
   private Object run(boolean writeLock, boolean readLock, Namesystem namesystem) throws IOException {
-    EntityManager.aboutToStart();
-    while (EntityManager.shouldRetry()) {
+    retry = true;
+    rollback = false;
+    tryCount = 0;
+    exception = null;
+
+    while (retry && tryCount < RETRY_COUNT) {
+      retry = true;
+      rollback = false;
+      tryCount++;
+      exception = null;
       try {
         if (writeLock) {
           namesystem.writeLock();
@@ -120,24 +57,34 @@ public abstract class TransactionalRequestHandler {
         EntityManager.begin();
         return performTask();
       } catch (TransactionContextException ex) {
-        EntityManager.setRollbackOnly();
+        log.error("Could not perfortm task", ex);
+        rollback = true;
+        retry = false;
       } catch (PersistanceException ex) {
-        EntityManager.setRollbackAndRetry();
+        log.error("Could not perfortm task", ex);
+        rollback = true;
+        retry = true;
       } catch (IOException ex) {
-        EntityManager.toBeThrown(ex);
+        this.exception = ex;
       } finally {
         try {
-          if (!EntityManager.shouldRollback()) {
+          if (!rollback) {
             EntityManager.commit();
           }
         } catch (StorageException ex) {
-          EntityManager.setRollbackAndRetry();
+          log.error("Could not commit transaction", ex);
+          rollback = true;
+          retry = true;
         } finally {
-          if (EntityManager.shouldRollback()) {
-            EntityManager.rollback();
+          if (rollback) {
+            try {
+              EntityManager.rollback();
+            } catch (StorageException ex) {
+              log.error("Could not rollback transaction", ex);
+            }
           }
-          if (!EntityManager.shouldRetry() && EntityManager.shouldThrow()) {
-            throw EntityManager.getException();
+          if (!retry && exception != null) {
+            throw exception;
           }
           if (writeLock) {
             namesystem.writeUnlock();
@@ -146,11 +93,83 @@ public abstract class TransactionalRequestHandler {
             namesystem.readUnlock();
           }
         }
-        
+
       }
     }
     return null;
   }
 
   public abstract Object performTask() throws PersistanceException, IOException;
+
+  public Object getParam1() {
+    return params[0];
+  }
+
+  public TransactionalRequestHandler setParam1(Object param1) {
+    this.params[0] = param1;
+    return this;
+  }
+
+  public Object getParam2() {
+    return params[1];
+  }
+
+  public TransactionalRequestHandler setParam2(Object param2) {
+    this.params[1] = param2;
+    return this;
+  }
+
+  public Object getParam3() {
+    return params[2];
+  }
+
+  public TransactionalRequestHandler setParam3(Object param3) {
+    this.params[2] = param3;
+    return this;
+  }
+
+  public Object getParam4() {
+    return params[3];
+  }
+
+  public TransactionalRequestHandler setParam4(Object param4) {
+    this.params[3] = param4;
+    return this;
+  }
+
+  public Object getParam5() {
+    return params[4];
+  }
+
+  public TransactionalRequestHandler setParam5(Object param5) {
+    this.params[4] = param5;
+    return this;
+  }
+
+  public Object getParam6() {
+    return params[5];
+  }
+
+  public TransactionalRequestHandler setParam6(Object param6) {
+    this.params[5] = param6;
+    return this;
+  }
+
+  public TransactionalRequestHandler setParam7(Object param7) {
+    this.params[6] = param7;
+    return this;
+  }
+
+  public Object getParam7() {
+    return params[6];
+  }
+
+  public TransactionalRequestHandler setParam8(Object param8) {
+    this.params[7] = param8;
+    return this;
+  }
+
+  public Object getParam8() {
+    return params[7];
+  }
 }

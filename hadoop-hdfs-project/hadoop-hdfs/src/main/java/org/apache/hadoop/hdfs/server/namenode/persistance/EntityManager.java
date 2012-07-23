@@ -1,6 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
@@ -16,18 +15,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory
  * @author kamal hakimzadeh <kamal@sics.se>
  */
 public class EntityManager {
-
-  public static void toBeThrown(IOException ex) {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
-  public static boolean shouldThrow() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
-  public static IOException getException() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
 
   private EntityManager() {
   }
@@ -45,27 +32,7 @@ public class EntityManager {
     return context;
   }
 
-  public static void aboutToStart() {
-    context().aboutToStart();
-  }
-
-  public static boolean shouldRetry() {
-    return context().shouldRetry();
-  }
-
-  public static void setRollbackOnly() {
-    context().setNotSuccessfull();
-  }
-
-  public static void setRollbackAndRetry() {
-    context().setShouldRetry();
-  }
-
-  public static boolean shouldRollback() {
-    return context().wasNotSuccessfull();
-  }
-
-  public static void begin() {
+  public static void begin() throws StorageException {
     context().begin();
   }
 
@@ -73,7 +40,7 @@ public class EntityManager {
     context().commit();
   }
 
-  public static void rollback() {
+  public static void rollback() throws StorageException {
     context().rollback();
   }
 

@@ -1,21 +1,19 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
-
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
@@ -25,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -37,40 +37,51 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestFsLimits {
+
   static Configuration conf;
   static INode[] inodes;
   static FSDirectory fs;
   static boolean fsIsReady;
-  
-  static PermissionStatus perms
-    = new PermissionStatus("admin", "admin", FsPermission.getDefault());
-
+  static PermissionStatus perms = new PermissionStatus("admin", "admin", FsPermission.getDefault());
   static INodeDirectoryWithQuota rootInode;
 
   static private FSNamesystem getMockNamesystem() {
     FSNamesystem fsn = mock(FSNamesystem.class);
     when(
-        fsn.createFsOwnerPermissions((FsPermission)anyObject())
-    ).thenReturn(
-         new PermissionStatus("root", "wheel", FsPermission.getDefault())
-    );
+            fsn.createFsOwnerPermissions((FsPermission) anyObject())).thenReturn(
+            new PermissionStatus("root", "wheel", FsPermission.getDefault()));
     return fsn;
   }
-  
+
   private static class TestFSDirectory extends FSDirectory {
+
     public TestFSDirectory() throws IOException {
       super(new FSImage(conf), getMockNamesystem(), conf);
       setReady(fsIsReady);
     }
-    
+
     @Override
-    public <T extends INode> void verifyFsLimits(INode[] pathComponents,
-        int pos, T child) throws FSLimitException {
-      super.verifyFsLimits(pathComponents, pos, child);
+    public <T extends INode> void verifyFsLimits(final INode[] pathComponents,
+            final int pos, final T child) throws FSLimitException {
+      try {
+        new TransactionalRequestHandler() {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            FSDirectory dir = (FSDirectory) getParam1();
+            dir.verifyFsLimits(pathComponents, pos, child);
+            return null;
+          }
+        }.setParam1(this).handle();
+      } catch (IOException ex) {
+        Logger.getLogger(TestFsLimits.class.getName()).log(Level.SEVERE, null, ex);
+      }
     }
   }
 
@@ -78,11 +89,11 @@ public class TestFsLimits {
   public void setUp() throws IOException {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-             fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
-                                "namenode")).toString());
+            fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
+            "namenode")).toString());
 
     rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME, perms, 0L, 0L);
-    inodes = new INode[]{ rootInode, null };
+    inodes = new INode[]{rootInode, null};
     fs = null;
     fsIsReady = true;
   }
@@ -90,16 +101,16 @@ public class TestFsLimits {
   @Test
   public void testDefaultMaxComponentLength() {
     int maxComponentLength = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
-        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
+            DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+            DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
     assertEquals(0, maxComponentLength);
   }
-  
+
   @Test
   public void testDefaultMaxDirItems() {
     int maxDirItems = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
+            DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+            DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
     assertEquals(0, maxDirItems);
   }
 
@@ -115,7 +126,7 @@ public class TestFsLimits {
   @Test
   public void testMaxComponentLength() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, 2);
-    
+
     addChildWithName("1", null);
     addChildWithName("22", null);
     addChildWithName("333", PathComponentTooLongException.class);
@@ -125,7 +136,7 @@ public class TestFsLimits {
   @Test
   public void testMaxDirItems() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 2);
-    
+
     addChildWithName("1", null);
     addChildWithName("22", null);
     addChildWithName("333", MaxDirectoryItemsExceededException.class);
@@ -136,7 +147,7 @@ public class TestFsLimits {
   public void testMaxComponentsAndMaxDirItems() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, 3);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 2);
-    
+
     addChildWithName("1", null);
     addChildWithName("22", null);
     addChildWithName("333", MaxDirectoryItemsExceededException.class);
@@ -148,7 +159,7 @@ public class TestFsLimits {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, 3);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 2);
     fsIsReady = false;
-    
+
     addChildWithName("1", null);
     addChildWithName("22", null);
     addChildWithName("333", null);
@@ -156,13 +167,15 @@ public class TestFsLimits {
   }
 
   private void addChildWithName(String name, Class<?> expected)
-  throws Exception {
+          throws Exception {
     // have to create after the caller has had a chance to set conf values
-    if (fs == null) fs = new TestFSDirectory();
+    if (fs == null) {
+      fs = new TestFSDirectory();
+    }
 
     INode child = new INodeDirectory(name, perms);
     child.setName(name);
-    
+
     Class<?> generated = null;
     try {
       fs.verifyFsLimits(inodes, 1, child);

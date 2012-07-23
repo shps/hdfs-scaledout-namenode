@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -25,6 +26,8 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.*;
 
 /**
@@ -57,46 +60,48 @@ public class TestDatanodeDescriptor extends TestCase {
     conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
     StorageFactory.getConnector().setConfiguration(conf);
 
-    DatanodeDescriptor dd = new DatanodeDescriptor();
+    final DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
-    EntityManager.begin();
 
-    BlockInfo blk = new BlockInfo(new Block(1L));
-    BlockInfo blk1 = new BlockInfo(new Block(2L));
-    EntityManager.add(blk);
-    EntityManager.add(blk1);
-    // add first block
-    IndexedReplica r1 = blk.addReplica(dd);
-    assertNotNull(r1);
-    EntityManager.add(r1);
+    new TransactionalRequestHandler() {
 
-    assertEquals(1, dd.numBlocks());
-    // remove a non-existent block
-    IndexedReplica removeReplica = blk1.removeReplica(dd);
-    assertNull(removeReplica);
-    assertEquals(1, dd.numBlocks());
-    // add an existent block
-    r1 = blk.addReplica(dd);
-    assertNull(r1);
-    assertEquals(1, dd.numBlocks());
-    // add second block
-    r1 = blk1.addReplica(dd);
-    assertNotNull(r1);
-    EntityManager.add(r1);
-    assertEquals(2, dd.numBlocks());
-    // remove first block
-    removeReplica = blk.removeReplica(dd);
-    assertNotNull(removeReplica);
-    EntityManager.remove(removeReplica);
-    assertEquals(1, dd.numBlocks());
-    // remove second block
-    removeReplica = blk1.removeReplica(dd);
-    assertNotNull(removeReplica);
-    EntityManager.remove(removeReplica);
-    assertEquals(0, dd.numBlocks());
-    //We rollbalck here because this generated data does not have the required 
-    //integrity to be persisted in database, for instance new block should be 
-    //blong to an inode.
-    EntityManager.rollback();
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        BlockInfo blk = new BlockInfo(new Block(1L));
+        BlockInfo blk1 = new BlockInfo(new Block(2L));
+        EntityManager.add(blk);
+        EntityManager.add(blk1);
+        // add first block
+        IndexedReplica r1 = blk.addReplica(dd);
+        assertNotNull(r1);
+        EntityManager.add(r1);
+
+        assertEquals(1, dd.numBlocks());
+        // remove a non-existent block
+        IndexedReplica removeReplica = blk1.removeReplica(dd);
+        assertNull(removeReplica);
+        assertEquals(1, dd.numBlocks());
+        // add an existent block
+        r1 = blk.addReplica(dd);
+        assertNull(r1);
+        assertEquals(1, dd.numBlocks());
+        // add second block
+        r1 = blk1.addReplica(dd);
+        assertNotNull(r1);
+        EntityManager.add(r1);
+        assertEquals(2, dd.numBlocks());
+        // remove first block
+        removeReplica = blk.removeReplica(dd);
+        assertNotNull(removeReplica);
+        EntityManager.remove(removeReplica);
+        assertEquals(1, dd.numBlocks());
+        // remove second block
+        removeReplica = blk1.removeReplica(dd);
+        assertNotNull(removeReplica);
+        EntityManager.remove(removeReplica);
+        assertEquals(0, dd.numBlocks());
+        return null;
+      }
+    }.handle();
   }
 }

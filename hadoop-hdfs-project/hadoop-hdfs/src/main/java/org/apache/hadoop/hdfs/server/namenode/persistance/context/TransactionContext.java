@@ -19,7 +19,6 @@ public class TransactionContext {
 
   private static Log logger = LogFactory.getLog(TransactionContext.class);
   private static String UNKNOWN_TYPE = "Unknown type:";
-  public static final int RETRY_COUNT = 3;
   private boolean activeTxExpected = false;
   private Map<Class, EntityContext> entityContexts;
   private StorageConnector connector;
@@ -36,37 +35,8 @@ public class TransactionContext {
       context.clear();
     }
   }
-  private Boolean success = null;
-  private boolean retry = true;
-  private int tryCount = 0;
 
-  public void aboutToStart() {
-    success = null;
-    retry = true;
-    tryCount = 0;
-  }
-
-  public boolean shouldRetry() {
-    return tryCount <= RETRY_COUNT && retry == Boolean.TRUE;
-  }
-
-  public void setNotSuccessfull() {
-    success = false;
-    retry = false;
-    tryCount++;
-  }
-
-  public void setShouldRetry() {
-    success = false;
-    retry = true;
-    tryCount++;
-  }
-
-  public boolean wasNotSuccessfull() {
-    return success == Boolean.FALSE;
-  }
-
-  public void begin() {
+  public void begin() throws StorageException {
     activeTxExpected = true;
     connector.beginTransaction();
     logger.debug("\nTX begin{");
@@ -82,9 +52,10 @@ public class TransactionContext {
     resetContext();
 
     connector.commit();
+    logger.debug("\n}Tx commit");
   }
 
-  public void rollback() {
+  public void rollback() throws StorageException {
     resetContext();
     connector.rollback();
     logger.debug("\n}Tx rollback");

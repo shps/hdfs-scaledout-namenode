@@ -29,7 +29,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * This test makes sure that CorruptReplicasMap::numBlocksWithCorruptReplicas
@@ -60,71 +61,83 @@ public class TestCorruptReplicaInfo extends TestCase {
           InterruptedException {
 
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      EntityManager.begin();
-      // Since we are persisting CorruptReplicasMap, we need to add begin and end transaction clause
+      final List<Long> block_ids = new LinkedList<Long>();
+      final List<DataNode> datanodes = cluster.getDataNodes();
+      final DatanodeDescriptor dn1 = new DatanodeDescriptor(datanodes.get(0).getDatanodeId());
+      final DatanodeDescriptor dn2 = new DatanodeDescriptor(datanodes.get(1).getDatanodeId());
+      final int NUM_BLOCK_IDS = 140;
 
-      // Make sure initial values are returned correctly
-      assertEquals("Number of corrupt blocks must initially be 0", 0, EntityManager.count(CorruptReplica.Counter.All));
+      new TransactionalRequestHandler() {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          // Since we are persisting CorruptReplicasMap, we need to add begin and end transaction clause
+
+          // Make sure initial values are returned correctly
+          assertEquals("Number of corrupt blocks must initially be 0", 0, EntityManager.count(CorruptReplica.Counter.All));
 //      assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIds(-1, null));
 //      assertNull("Param n cannot be greater than 100", crm.getCorruptReplicaBlockIds(101, null));
 //      long[] l = crm.getCorruptReplicaBlockIds(0, null);
 //      assertNotNull("n = 0 must return non-null", l);
 //      assertEquals("n = 0 must return an empty list", 0, l.length);
 
-      // create a list of block_ids. A list is used to allow easy validation of the
-      // output of getCorruptReplicaBlockIds
-      int NUM_BLOCK_IDS = 140;
-      List<Long> block_ids = new LinkedList<Long>();
-      for (int i = 0; i < NUM_BLOCK_IDS; i++) {
-        block_ids.add((long) i);
-      }
-
-      List<DataNode> datanodes = cluster.getDataNodes();
-      DatanodeDescriptor dn1 = new DatanodeDescriptor(datanodes.get(0).getDatanodeId());
-      DatanodeDescriptor dn2 = new DatanodeDescriptor(datanodes.get(1).getDatanodeId());
-
-      CorruptReplica corruptReplica = new CorruptReplica(getBlock(0).getBlockId(), dn1.getStorageID());
-      EntityManager.add(corruptReplica);
-      assertEquals("Number of corrupt blocks not returning correctly", 1, EntityManager.count(CorruptReplica.Counter.All));
-      corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn1.getStorageID());
-      EntityManager.add(corruptReplica);
-      assertEquals("Number of corrupt blocks not returning correctly",
-              2, EntityManager.count(CorruptReplica.Counter.All));
-
-      corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn2.getStorageID());
-      EntityManager.add(corruptReplica);
-      assertEquals("Number of corrupt blocks not returning correctly", 3, EntityManager.count(CorruptReplica.Counter.All));
-
-      EntityManager.commit();
-      EntityManager.begin();
-
-      Collection<CorruptReplica> crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(1).getBlockId());
-      for (CorruptReplica r : crs) {
-        EntityManager.remove(r);
-      }
-      assertEquals("Number of corrupt blocks not returning correctly",
-              1, EntityManager.count(CorruptReplica.Counter.All));
-
-      crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(0).getBlockId());
-      for (CorruptReplica r : crs) {
-        EntityManager.remove(r);
-      }
-      assertEquals("Number of corrupt blocks not returning correctly",
-              0, EntityManager.count(CorruptReplica.Counter.All));
-
-      EntityManager.commit();
-      EntityManager.begin();
+          // create a list of block_ids. A list is used to allow easy validation of the
+          // output of getCorruptReplicaBlockIds
+          for (int i = 0; i < NUM_BLOCK_IDS; i++) {
+            block_ids.add((long) i);
+          }
 
 
-      for (Long block_id : block_ids) {
-        EntityManager.add(new CorruptReplica(block_id, dn1.getStorageID()));
-      }
+          CorruptReplica corruptReplica = new CorruptReplica(getBlock(0).getBlockId(), dn1.getStorageID());
+          EntityManager.add(corruptReplica);
+          assertEquals("Number of corrupt blocks not returning correctly", 1, EntityManager.count(CorruptReplica.Counter.All));
+          corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn1.getStorageID());
+          EntityManager.add(corruptReplica);
+          assertEquals("Number of corrupt blocks not returning correctly",
+                  2, EntityManager.count(CorruptReplica.Counter.All));
 
-      assertEquals("Number of corrupt blocks not returning correctly", NUM_BLOCK_IDS, EntityManager.count(CorruptReplica.Counter.All));
-//      DBConnector.commit();
-//      DBConnector.begin();
+          corruptReplica = new CorruptReplica(getBlock(1).getBlockId(), dn2.getStorageID());
+          EntityManager.add(corruptReplica);
+          assertEquals("Number of corrupt blocks not returning correctly", 3, EntityManager.count(CorruptReplica.Counter.All));
+          return null;
+        }
+      }.handle();
+
+      new TransactionalRequestHandler() {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+
+          Collection<CorruptReplica> crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(1).getBlockId());
+          for (CorruptReplica r : crs) {
+            EntityManager.remove(r);
+          }
+          assertEquals("Number of corrupt blocks not returning correctly",
+                  1, EntityManager.count(CorruptReplica.Counter.All));
+
+          crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, getBlock(0).getBlockId());
+          for (CorruptReplica r : crs) {
+            EntityManager.remove(r);
+          }
+          assertEquals("Number of corrupt blocks not returning correctly",
+                  0, EntityManager.count(CorruptReplica.Counter.All));
+          return null;
+        }
+      }.handle();
+
+      new TransactionalRequestHandler() {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+
+
+          for (Long block_id : block_ids) {
+            EntityManager.add(new CorruptReplica(block_id, dn1.getStorageID()));
+          }
+
+          assertEquals("Number of corrupt blocks not returning correctly", NUM_BLOCK_IDS, EntityManager.count(CorruptReplica.Counter.All));
 
 //      assertTrue("First five block ids not returned correctly ",
 //                 Arrays.equals(new long[]{0, 1, 2, 3, 4},
@@ -136,12 +149,10 @@ public class TestCorruptReplicaInfo extends TestCase {
 //      assertTrue("10 blocks after 7 not returned correctly ",
 //                 Arrays.equals(new long[]{8, 9, 10, 11, 12, 13, 14, 15, 16, 17},
 //                               crm.getCorruptReplicaBlockIds(10, 7L)));
+          return null;
+        }
+      }.handle();
 
-//      DBConnector.commit();
-    } // end try
-    catch (TransactionContextException ex) {
-      assertFalse("Exception in database operations. Exception: " + ex.getMessage(), true);
-      EntityManager.rollback();
     } finally {
       if (cluster != null) {
         cluster.shutdown();

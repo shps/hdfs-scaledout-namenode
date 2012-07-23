@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.util.Daemon;
 
@@ -54,7 +54,18 @@ public class BlockManagerTestUtil {
    * Refresh block queue counts on the name-node.
    */
   public static void updateState(final BlockManager blockManager) {
-    blockManager.updateState();
+    try {
+      new TransactionalRequestHandler() {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          blockManager.updateState();
+          return null;
+        }
+      }.handle();
+    } catch (IOException ex) {
+      Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
 
   /**
@@ -64,14 +75,15 @@ public class BlockManagerTestUtil {
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) throws IOException {
     final BlockManager bm = namesystem.getBlockManager();
-    namesystem.readLock();
-    try {
-      return new int[]{getNumberOfRacks(bm, b),
-                bm.countNodes(b).liveReplicas(),
-                bm.neededReplications.contains(b) ? 1 : 0};
-    } finally {
-      namesystem.readUnlock();
-    }
+    return (int[]) new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return new int[]{getNumberOfRacks(bm, b),
+                  bm.countNodes(b).liveReplicas(),
+                  bm.neededReplications.contains(b) ? 1 : 0};
+      }
+    }.handleWithReadLock(namesystem);
   }
 
   /**
@@ -83,10 +95,10 @@ public class BlockManagerTestUtil {
   private static int getNumberOfRacks(final BlockManager blockManager,
           final Block b) throws IOException {
     final Set<String> rackSet = new HashSet<String>(0);
-    EntityManager.aboutToStart();
-    while (EntityManager.shouldRetry()) {
-      try {
-        EntityManager.begin();
+    new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
         BlockInfo storedBlock = blockManager.getStoredBlock(b);
         for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
           if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
@@ -98,19 +110,9 @@ public class BlockManagerTestUtil {
             }
           }
         }
-        EntityManager.commit();
-      } catch (StorageException ex) {
-        EntityManager.setRollbackAndRetry();
-        Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, "", ex);
-      } catch (PersistanceException ex) {
-        EntityManager.setRollbackOnly();
-        Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, "", ex);
-      } finally {
-        if (EntityManager.shouldRollback()) {
-          EntityManager.rollback();
-        }
+        return null;
       }
-    }
+    }.handle();
     return rackSet.size();
   }
 
@@ -129,6 +131,12 @@ public class BlockManagerTestUtil {
    * @throws IOException
    */
   public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException {
-    return blockManager.computeDatanodeWork();
+    return (Integer) new TransactionalRequestHandler() {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return blockManager.computeDatanodeWork();
+      }
+    }.handle();
   }
 }

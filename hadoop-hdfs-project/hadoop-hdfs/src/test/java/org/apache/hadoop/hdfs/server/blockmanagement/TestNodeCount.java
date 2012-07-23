@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
@@ -194,23 +196,20 @@ public class TestNodeCount extends TestCase {
   /*
    * threadsafe read of the replication counts for this block
    */
-  NumberReplicas countNodes(Block block, FSNamesystem namesystem) {
-    namesystem.readLock();
+  NumberReplicas countNodes(final Block block, final FSNamesystem namesystem) {
     try {
-      EntityManager.begin();
-      lastBlock = block;
-      lastNum = namesystem.getBlockManager().countNodes(block);
-      try {
-        EntityManager.commit();
-      } catch (TransactionContextException ex) {
-        Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
-        assert false : ex.getMessage();
-      }
-      return lastNum;
+      return (NumberReplicas) new TransactionalRequestHandler() {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+        lastBlock = block;
+        lastNum = namesystem.getBlockManager().countNodes(block);
+        return lastNum;
+        }
+      }.handleWithReadLock(namesystem);
     } catch (IOException ex) {
+      Logger.getLogger(TestNodeCount.class.getName()).log(Level.SEVERE, null, ex);
       return null;
-    } finally {
-      namesystem.readUnlock();
     }
   }
 }

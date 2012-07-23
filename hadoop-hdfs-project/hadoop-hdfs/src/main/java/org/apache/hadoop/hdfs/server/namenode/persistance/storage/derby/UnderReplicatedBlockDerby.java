@@ -18,13 +18,14 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  */
 public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess {
 
-  private Connection conn = DerbyConnector.INSTANCE.obtainSession();
+  private DerbyConnector connector = DerbyConnector.INSTANCE;
 
   @Override
   public UnderReplicatedBlock findByBlockId(long blockId) throws StorageException {
     try {
       String query = String.format("select * from %s where %s=?",
               TABLE_NAME, BLOCK_ID);
+      Connection conn = connector.obtainSession();
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, blockId);
       ResultSet rSet = s.executeQuery();
@@ -41,6 +42,7 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
   @Override
   public List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException {
     try {
+      Connection conn = connector.obtainSession();
       String query = String.format("select * from %s", TABLE_NAME);
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
@@ -72,7 +74,8 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
     }
   }
 
-  private List<UnderReplicatedBlock> execQueryByLevel(String query, int level) throws SQLException {
+  private List<UnderReplicatedBlock> execQueryByLevel(String query, int level) throws SQLException, StorageException {
+    Connection conn = connector.obtainSession();
     PreparedStatement s = conn.prepareStatement(query);
     s.setInt(1, level);
     ResultSet rSet = s.executeQuery();
@@ -89,6 +92,7 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
               TABLE_NAME, LEVEL, BLOCK_ID);
       String delete = String.format("delete from %s where %s=?",
               TABLE_NAME, BLOCK_ID);
+      Connection conn = connector.obtainSession();
       PreparedStatement insrt = conn.prepareStatement(insert);
       for (UnderReplicatedBlock b : newed) {
         insrt.setLong(1, b.getBlockId());
@@ -117,6 +121,7 @@ public class UnderReplicatedBlockDerby implements UnderReplicatedBlockDataAccess
   @Override
   public void removeAll() throws StorageException {
     try {
+      Connection conn = connector.obtainSession();
       String deleteAll = String.format("delete from %s", TABLE_NAME);
       PreparedStatement s = conn.prepareStatement(deleteAll);
       s.executeUpdate();
