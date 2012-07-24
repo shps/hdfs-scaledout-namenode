@@ -80,6 +80,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -373,6 +375,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void activate(Configuration conf) throws IOException {
     activateHandler.setParam1(conf).handleWithWriteLock(this);
+    DefaultMetricsSystem.instance().register(this);
   }
   TransactionalRequestHandler activateHandler = new TransactionalRequestHandler(OperationType.ACTIVATE) {
 
@@ -389,7 +392,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //      TODO:kamal, resouce monitor
 //      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
 //      nnrmthread.start();
-      DefaultMetricsSystem.instance().register(this);
       return null;
     }
   };
@@ -2396,7 +2398,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean mkdirs(String src, PermissionStatus permissions,
           boolean createParent) throws IOException, UnresolvedLinkException {
-    return (Boolean) mkdirsHanlder.setParam1(src).setParam2(permissions).handleWithWriteLock(this);
+    return (Boolean) mkdirsHanlder.setParam1(src).setParam2(permissions).setParam3(createParent).handleWithWriteLock(this);
   }
   TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler(OperationType.MKDIRS) {
 
@@ -3110,9 +3112,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
-      return blockManager.getMissingBlocksCount();
+      return getMissingBlocksCountNoTx();
     }
   };
+
+  public long getMissingBlocksCountNoTx() throws PersistanceException {
+    return blockManager.getMissingBlocksCount();
+  }
 
   /**
    * Increment expired heartbeat counter.
@@ -3125,12 +3131,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#getStats()
    */
   long[] getStats() {
-    final long[] stats = datanodeStatistics.getStats();
-    stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
-    stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
-    stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCount();
-    return stats;
+    try {
+      return (long[]) getStatusHandler.handle();
+    } catch (IOException ex) {
+      LOG.error(ex);
+      return null;
+    }
   }
+  TransactionalRequestHandler getStatusHandler = new TransactionalRequestHandler(OperationType.GET_STATUS) {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      final long[] stats = datanodeStatistics.getStats();
+      stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
+      stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
+      stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCountNoTx();
+      return stats;
+    }
+  };
 
   /**
    * Total raw bytes including non-dfs used space.
@@ -3919,9 +3937,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
-      return blockManager.getTotalBlocks();
+      return getBlocksTotalNoTx();
     }
   };
+
+  public long getBlocksTotalNoTx() throws PersistanceException {
+    return blockManager.getTotalBlocks();
+  }
 
   /**
    * Get the total number of COMPLETE blocks in the system. For safe mode only
@@ -3959,7 +3981,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
 
-      return getBlocksTotal() - numUCBlocks;
+      return getBlocksTotalNoTx() - numUCBlocks;
     } finally {
       readUnlock();
     }
@@ -4110,9 +4132,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Check to see if we have exceeded the limit on the number of inodes.
    */
-  void checkFsObjectLimit() throws IOException {
+  void checkFsObjectLimit() throws IOException, PersistanceException {
     if (maxFsObjects != 0
-            && maxFsObjects <= dir.totalInodes() + getBlocksTotal()) {
+            && maxFsObjects <= dir.totalInodes() + getBlocksTotalNoTx()) {
       throw new IOException("Exceeded the configured number of objects "
               + maxFsObjects + " in the filesystem.");
     }
@@ -4166,14 +4188,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @Metric
-  public long getPendingDeletionBlocks() throws PersistanceException {
-    return isWritingNN() ? blockManager.getPendingDeletionBlocksCount() : -1;
+  public long getPendingDeletionBlocks() throws IOException {
+    return isWritingNN() ? (Long) getPendingDeletionBlocksHandler.handle() : -1;
   }
+  TransactionalRequestHandler getPendingDeletionBlocksHandler = new TransactionalRequestHandler(OperationType.GET_PENDING_DELETION_BLOCKS_COUNT) {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      return blockManager.getPendingDeletionBlocksCount();
+    }
+  };
 
   @Metric
-  public long getExcessBlocks() throws PersistanceException {
-    return isWritingNN() ? blockManager.getExcessBlocksCount() : -1;
+  public long getExcessBlocks() throws IOException {
+    return isWritingNN() ? (Long)getExcessBlocksHandler.handle() : -1;
   }
+  TransactionalRequestHandler getExcessBlocksHandler = new TransactionalRequestHandler(OperationType.GET_EXCESS_BLOCKS_COUNT) {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      return blockManager.getExcessBlocksCount();
+    }
+  };
 
   @Metric
   public int getBlockCapacity() {

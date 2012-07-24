@@ -659,9 +659,10 @@ public class MiniDFSCluster {
 
 
     /*
-     * // Setting the configurations for all reader/writer namenodes if (nnInfos
-     * != null && nnInfos.length > 0) { for (int i = 0; i < nnInfos.length; i++)
-     * { nnInfos[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY,
+     * // Setting the configurations for all reader/writer namenodes if
+     * (nnInfos != null && nnInfos.length > 0) { for (int i = 0; i <
+     * nnInfos.length; i++) {
+     * nnInfos[i].conf.set(DFSConfigKeys.DFS_READ_NAMENODES_RPC_ADDRESS_KEY,
      * readerNNURIs);
      * nnInfos[i].conf.set(DFSConfigKeys.DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY,
      * writerNNURIs); } } for (int i = 0; i < writingNameNodes.length; i++) {
@@ -1579,16 +1580,6 @@ public class MiniDFSCluster {
    */
   public boolean isNameNodeUp(int nnIndex) {
     try {
-      return (Boolean)isNameNodeUpHandler.handle();
-    } catch (IOException ex) {
-      LOG.error(ex);
-      return false;
-    }
-  }
-  TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler(OperationType.IS_NAMENODE_UP) {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
       NameNode nameNode = writingNameNodes[nnIndex].nameNode;
       if (nameNode == null) {
         return false;
@@ -1602,10 +1593,22 @@ public class MiniDFSCluster {
         throw new AssertionError("Unexpected IOE thrown: "
                 + StringUtils.stringifyException(ioe));
       }
-      boolean isUp = false;
       synchronized (this) {
-        isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
+        return (Boolean) isNameNodeUpHandler.setParam1(nameNode).setParam2(sizes).handle();
       }
+    } catch (IOException ex) {
+      LOG.error(ex);
+      return false;
+    }
+  }
+  TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler(OperationType.IS_NAMENODE_UP) {
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      NameNode nameNode = (NameNode) getParam1();
+      long[] sizes = (long[]) getParam2();
+      boolean isUp = false;
+      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
       return isUp;
     }
   };

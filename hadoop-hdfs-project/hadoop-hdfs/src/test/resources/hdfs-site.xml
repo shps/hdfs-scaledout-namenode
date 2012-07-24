@@ -27,7 +27,7 @@
   </property>
 <property>
   <name>dfs.storage.type</name>
-  <value>clusterj</value>
+  <value>derby</value>
   <description>storage type could be one of derby, clusterj or ...</description>
 </property>
 </configuration>

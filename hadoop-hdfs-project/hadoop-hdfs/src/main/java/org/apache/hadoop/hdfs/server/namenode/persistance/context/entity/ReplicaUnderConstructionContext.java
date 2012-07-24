@@ -77,7 +77,7 @@ public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderC
 
   @Override
   public void prepare() throws StorageException {
-    throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
+    dataAccess.prepare(removedReplicasUc.values(), newReplicasUc.values(), null);
   }
 
   @Override
