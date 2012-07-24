@@ -1,7 +1,9 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.context;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
@@ -20,18 +22,22 @@ public class TransactionContext {
   private static Log logger = LogFactory.getLog(TransactionContext.class);
   private static String UNKNOWN_TYPE = "Unknown type:";
   private boolean activeTxExpected = false;
-  private Map<Class, EntityContext> entityContexts;
+  private Map<Class, EntityContext> typeContextMap;
+  private Set<EntityContext> contexts = new HashSet<EntityContext>();
   private StorageConnector connector;
 
-  public TransactionContext(StorageConnector connector, Map<Class, EntityContext> storages) {
-    this.entityContexts = storages;
+  public TransactionContext(StorageConnector connector, Map<Class, EntityContext> entityContext) {
+    this.typeContextMap = entityContext;
+    for(EntityContext context : entityContext.values())
+      if (!contexts.contains(context))
+        contexts.add(context);
     this.connector = connector;
   }
 
   private void resetContext() {
     activeTxExpected = false;
 
-    for (EntityContext context : entityContexts.values()) {
+    for (EntityContext context : contexts) {
       context.clear();
     }
   }
@@ -39,33 +45,33 @@ public class TransactionContext {
   public void begin() throws StorageException {
     activeTxExpected = true;
     connector.beginTransaction();
-    logger.debug("TX begin");
+    logger.debug("begin");
   }
 
   public void commit() throws StorageException {
     aboutToPerform();
-
-    for (EntityContext context : entityContexts.values()) {
+    
+    for (EntityContext context : contexts) {
       context.prepare();
     }
 
     resetContext();
 
     connector.commit();
-    logger.debug("Tx commit");
+    logger.debug("commit");
   }
 
   public void rollback() throws StorageException {
     resetContext();
     connector.rollback();
-    logger.debug("Tx rollback");
+    logger.debug("rollback");
   }
 
   public <T> void update(T obj) throws PersistanceException {
     aboutToPerform();
 
-    if (entityContexts.containsKey(obj.getClass())) {
-      entityContexts.get(obj.getClass()).update(obj);
+    if (typeContextMap.containsKey(obj.getClass())) {
+      typeContextMap.get(obj.getClass()).update(obj);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + obj.getClass());
     }
@@ -74,8 +80,8 @@ public class TransactionContext {
   public <T> void add(T obj) throws PersistanceException {
     aboutToPerform();
 
-    if (entityContexts.containsKey(obj.getClass())) {
-      entityContexts.get(obj.getClass()).add(obj);
+    if (typeContextMap.containsKey(obj.getClass())) {
+      typeContextMap.get(obj.getClass()).add(obj);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + obj.getClass());
     }
@@ -84,8 +90,8 @@ public class TransactionContext {
   public <T> void remove(T obj) throws PersistanceException {
     aboutToPerform();
 
-    if (entityContexts.containsKey(obj.getClass())) {
-      entityContexts.get(obj.getClass()).remove(obj);
+    if (typeContextMap.containsKey(obj.getClass())) {
+      typeContextMap.get(obj.getClass()).remove(obj);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + obj.getClass());
     }
@@ -94,8 +100,8 @@ public class TransactionContext {
   public void removeAll(Class type) throws PersistanceException {
     aboutToPerform();
 
-    if (entityContexts.containsKey(type)) {
-      entityContexts.get(type).removeAll();
+    if (typeContextMap.containsKey(type)) {
+      typeContextMap.get(type).removeAll();
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + type);
     }
@@ -103,8 +109,8 @@ public class TransactionContext {
 
   public <T> T find(FinderType<T> finder, Object... params) throws PersistanceException {
     aboutToPerform();
-    if (entityContexts.containsKey(finder.getType())) {
-      return (T) entityContexts.get(finder.getType()).find(finder, params);
+    if (typeContextMap.containsKey(finder.getType())) {
+      return (T) typeContextMap.get(finder.getType()).find(finder, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + finder.getType());
     }
@@ -112,8 +118,8 @@ public class TransactionContext {
 
   public <T> Collection<T> findList(FinderType<T> finder, Object... params) throws PersistanceException {
     aboutToPerform();
-    if (entityContexts.containsKey(finder.getType())) {
-      return entityContexts.get(finder.getType()).findList(finder, params);
+    if (typeContextMap.containsKey(finder.getType())) {
+      return typeContextMap.get(finder.getType()).findList(finder, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + finder.getType());
     }
@@ -121,8 +127,8 @@ public class TransactionContext {
 
   public int count(CounterType counter, Object... params) throws PersistanceException {
     aboutToPerform();
-    if (entityContexts.containsKey(counter.getType())) {
-      return entityContexts.get(counter.getType()).count(counter, params);
+    if (typeContextMap.containsKey(counter.getType())) {
+      return typeContextMap.get(counter.getType()).count(counter, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + counter.getType());
     }

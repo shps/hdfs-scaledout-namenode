@@ -18,7 +18,7 @@ public abstract class TransactionalRequestHandler {
   public enum OperationType {
     // NameNodeRpcServer
     INITIALIZE, ACTIVATE, META_SAVE, SET_PERMISSION, SET_OWNER, 
-    GET_BLOCK_LOCATIONS, CONCAT, SET_TIMES, CREATE_SYM_LINK, GET_PREFERRED_BLOCK_SIZE,
+    GET_BLOCK_LOCATIONS, GET_STATUS, CONCAT, SET_TIMES, CREATE_SYM_LINK, GET_PREFERRED_BLOCK_SIZE,
     SET_REPLICATION, START_FILE, RECOVER_LEASE, APPEND_FILE, GET_ADDITIONAL_BLOCK,
     GET_ADDITIONAL_DATANODE, ABANDON_BLOCK, COMPLETE_FILE, RENAME_TO, RENAME_TO3,
     RENAME_TO2, DELETE, GET_FILE_INFO, MKDIRS, GET_CONTENT_SUMMARY, SET_QUOTA,
@@ -27,7 +27,7 @@ public abstract class TransactionalRequestHandler {
     SET_SAFE_MODE, GET_BLOCKS_TOTAL, PROCESS_DISTRIBUTED_UPGRADE, GET_FS_STATE,
     UPDATE_BLOCK_FOR_PIPELINE, UPDATE_PIPELINE, LIST_CORRUPT_FILE_BLOCKS,
     GET_DELEGATION_TOKEN, RENEW_DELEGATION_TOKEN, CANCEL_DELEGATION_TOKEN,
-    GET_SAFE_MODE, GET_NUMBER_OF_MISSING_BLOCKS,
+    GET_SAFE_MODE, GET_NUMBER_OF_MISSING_BLOCKS, GET_PENDING_DELETION_BLOCKS_COUNT, GET_EXCESS_BLOCKS_COUNT,
     //BlockManager
     FIND_AND_MARK_BLOCKS_AS_CORRUPT, PROCESS_REPORT, BLOCK_RECEIVED_AND_DELETED,
     REPLICATION_MONITOR,
@@ -155,14 +155,14 @@ public abstract class TransactionalRequestHandler {
               log.error("Could not rollback transaction", ex);
             }
           }
-          if (!retry && exception != null) {
-            throw exception;
-          }
           if (writeLock) {
             namesystem.writeUnlock();
           }
           if (readLock) {
             namesystem.readUnlock();
+          }
+          if (tryCount == RETRY_COUNT && exception != null) {
+            throw exception;
           }
         }
         NDC.pop();
