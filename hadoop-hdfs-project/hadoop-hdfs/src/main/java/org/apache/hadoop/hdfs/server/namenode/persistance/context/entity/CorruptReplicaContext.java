@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
+public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   protected Map<String, CorruptReplica> corruptReplicas = new HashMap<String, CorruptReplica>();
   protected Map<Long, List<CorruptReplica>> blockCorruptReplicas = new HashMap<Long, List<CorruptReplica>>();
@@ -34,6 +34,8 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
     }
     corruptReplicas.put(entity.persistanceKey(), entity);
     newCorruptReplicas.put(entity.persistanceKey(), entity);
+    log("add-corrupt", CacheHitState.NA, 
+            new String[]{"bid", Long.toString(entity.getBlockId()),"sid", entity.getStorageId()});
   }
 
   @Override
@@ -44,6 +46,7 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
     modifiedCorruptReplicas.clear();
     removedCorruptReplicas.clear();
     allCorruptBlocksRead = false;
+    super.clear();
   }
 
   @Override
@@ -53,8 +56,10 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
     switch (cCounter) {
       case All:
         if (allCorruptBlocksRead) {
+          log("find-all", CacheHitState.HIT);
           return corruptReplicas.size();
         } else {
+          log("find-all", CacheHitState.LOSS);
           return dataAccess.countAll();
         }
     }
@@ -71,8 +76,10 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
         Long blockId = (Long) params[0];
         String storageId = (String) params[1];
         if (corruptReplicas.containsKey(blockId + storageId)) {
+          log("find-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return corruptReplicas.get(blockId + storageId);
         } else {
+          log("find-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return dataAccess.findByPk(blockId, storageId);
         }
     }
@@ -86,17 +93,20 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
     switch (cFinder) {
       case All:
         if (allCorruptBlocksRead) {
+          log("find-all", CacheHitState.HIT);
           return corruptReplicas.values();
         }
+        log("find-all", CacheHitState.LOSS);
         List<CorruptReplica> sync = syncCorruptReplicaInstances(dataAccess.findAll());
         allCorruptBlocksRead = true;
         return sync;
       case ByBlockId:
         Long blockId = (Long) params[0];
         if (blockCorruptReplicas.containsKey(blockId)) {
+          log("find-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
           return blockCorruptReplicas.get(blockId);
         }
-
+        log("find-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
         List<CorruptReplica> syncList = syncCorruptReplicaInstances(dataAccess.findByBlockId(blockId));
         blockCorruptReplicas.put(blockId, syncList);
         return syncList;
@@ -109,6 +119,7 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedCorruptReplicas.values(), newCorruptReplicas.values(), modifiedCorruptReplicas.values());
+    log("prepared");
   }
 
   @Override
@@ -121,6 +132,8 @@ public class CorruptReplicaContext implements EntityContext<CorruptReplica> {
     newCorruptReplicas.remove(entity.persistanceKey());
     modifiedCorruptReplicas.remove(entity.persistanceKey());
     removedCorruptReplicas.put(entity.persistanceKey(), entity);
+    log("removed", CacheHitState.NA, 
+            new String[]{"bid", Long.toString(entity.getBlockId()), "sid", entity.getStorageId()});
   }
 
   @Override

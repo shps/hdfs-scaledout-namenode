@@ -15,7 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaContext implements EntityContext<IndexedReplica> {
+public class ReplicaContext extends EntityContext<IndexedReplica> {
 
   /**
    * Mappings

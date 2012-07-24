@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class InodeContext implements EntityContext<INode> {
+public class InodeContext extends EntityContext<INode> {
 
   /**
    * Mappings

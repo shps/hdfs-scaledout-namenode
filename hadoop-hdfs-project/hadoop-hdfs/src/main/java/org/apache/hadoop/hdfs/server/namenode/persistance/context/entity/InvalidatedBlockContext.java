@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class InvalidatedBlockContext implements EntityContext<InvalidatedBlock> {
+public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
 
   private Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private Map<String, HashSet<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, HashSet<InvalidatedBlock>>();

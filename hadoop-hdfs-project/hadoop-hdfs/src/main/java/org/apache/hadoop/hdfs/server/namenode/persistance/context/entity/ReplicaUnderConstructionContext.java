@@ -15,7 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class ReplicaUnderConstructionContext implements EntityContext<ReplicaUnderConstruction> {
+public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderConstruction> {
 
   /**
    * Mappings

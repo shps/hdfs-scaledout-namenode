@@ -16,7 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeasePathContext implements EntityContext<LeasePath> {
+public class LeasePathContext extends EntityContext<LeasePath> {
 
   private Map<Integer, Collection<LeasePath>> holderLeasePaths = new HashMap<Integer, Collection<LeasePath>>();
   private Map<LeasePath, LeasePath> leasePaths = new HashMap<LeasePath, LeasePath>();

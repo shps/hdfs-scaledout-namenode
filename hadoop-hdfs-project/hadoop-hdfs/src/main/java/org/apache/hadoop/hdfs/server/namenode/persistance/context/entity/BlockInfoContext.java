@@ -8,16 +8,19 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContext;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.log4j.Logger;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
-public class BlockInfoContext implements EntityContext<BlockInfo> {
+public class BlockInfoContext extends EntityContext<BlockInfo> {
 
+  private final static Logger LOG = Logger.getLogger(TransactionContext.class);
   protected Map<Long, BlockInfo> blocks = new HashMap<Long, BlockInfo>();
   protected Map<Long, BlockInfo> newBlocks = new HashMap<Long, BlockInfo>();
   protected Map<Long, BlockInfo> modifiedBlocks = new HashMap<Long, BlockInfo>();
@@ -37,6 +40,7 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
     }
     blocks.put(block.getBlockId(), block);
     newBlocks.put(block.getBlockId(), block);
+    log("block-added", CacheHitState.NA, new String[]{"bid",Long.toString(block.getBlockId())});
   }
 
   @Override
@@ -47,6 +51,7 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
     removedBlocks.clear();
     inodeBlocks.clear();
     allBlocksRead = false;
+    super.clear();
   }
 
   @Override
@@ -55,8 +60,10 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
     switch (bCounter) {
       case All:
         if (allBlocksRead) {
+          log("Count-all-blocks", CacheHitState.HIT);
           return blocks.size();
         } else {
+          log("Count-all-blocks", CacheHitState.LOSS);
           return dataAccess.countAll();
         }
     }
@@ -72,10 +79,14 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
         long id = (Long) params[0];
         result = blocks.get(id);
         if (result == null) {
+          log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid",Long.toString(id)});
           result = dataAccess.findById(id);
           if (result != null) {
             blocks.put(id, result);
           }
+        } else
+        {
+          log("find-block-by-bid", CacheHitState.HIT, new String[]{"bid",Long.toString(id)});
         }
         return result;
     }
@@ -91,21 +102,25 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
       case ByInodeId:
         long inodeId = (Long) params[0];
         if (inodeBlocks.containsKey(inodeId)) {
+          log("find-by-inodeid", CacheHitState.HIT, new String[]{"inodeid", Long.toString(inodeId)});
           return inodeBlocks.get(inodeId);
         } else {
+          log("find-by-inodeid", CacheHitState.LOSS, new String[]{"inodeid", Long.toString(inodeId)});
           result = dataAccess.findByInodeId(inodeId);
           inodeBlocks.put(inodeId, syncBlockInfoInstances(result));
           return result;
         }
-
       case ByStorageId:
         String storageId = (String) params[0];
+        log("find-by-storageid", CacheHitState.NA, new String[]{"storageid", storageId});
         result = dataAccess.findByStorageId(storageId);
         return syncBlockInfoInstances(result);
       case All:
         if (allBlocksRead) {
+          log("find-all", CacheHitState.HIT);
           return new ArrayList<BlockInfo>(blocks.values());
         } else {
+          log("find-all", CacheHitState.LOSS);
           result = dataAccess.findAllBlocks();
           allBlocksRead = true;
           return syncBlockInfoInstances(result);
@@ -118,6 +133,7 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedBlocks.values(), newBlocks.values(), modifiedBlocks.values());
+    log("prepared");
   }
 
   @Override
@@ -136,6 +152,7 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
     newBlocks.remove(block.getBlockId());
     modifiedBlocks.remove(block.getBlockId());
     removedBlocks.put(block.getBlockId(), attachedBlock);
+    log("block-removed", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
   }
 
   @Override
@@ -150,6 +167,7 @@ public class BlockInfoContext implements EntityContext<BlockInfo> {
     }
     blocks.put(block.getBlockId(), block);
     modifiedBlocks.put(block.getBlockId(), block);
+    log("block-updated", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
   }
 
   private List<BlockInfo> syncBlockInfoInstances(List<BlockInfo> newBlocks) {

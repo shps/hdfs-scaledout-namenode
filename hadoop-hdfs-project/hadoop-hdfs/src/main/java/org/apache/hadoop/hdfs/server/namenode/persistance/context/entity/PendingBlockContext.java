@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class PendingBlockContext implements EntityContext<PendingBlockInfo> {
+public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
 
   private Map<Long, PendingBlockInfo> pendings = new HashMap<Long, PendingBlockInfo>();
   private Map<Long, PendingBlockInfo> newPendings = new HashMap<Long, PendingBlockInfo>();

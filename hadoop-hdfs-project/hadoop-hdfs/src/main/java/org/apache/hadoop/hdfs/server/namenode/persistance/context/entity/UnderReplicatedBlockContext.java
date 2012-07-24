@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
-public class UnderReplicatedBlockContext implements EntityContext<UnderReplicatedBlock> {
+public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBlock> {
 
   private Map<Long, UnderReplicatedBlock> urBlocks = new HashMap<Long, UnderReplicatedBlock>();
   private Map<Long, UnderReplicatedBlock> newurBlocks = new HashMap<Long, UnderReplicatedBlock>();

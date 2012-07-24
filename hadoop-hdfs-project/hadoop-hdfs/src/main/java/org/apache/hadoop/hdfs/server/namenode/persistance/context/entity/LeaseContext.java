@@ -13,7 +13,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author Hooman <hooman@sics.se>
  */
-public class LeaseContext implements EntityContext<Lease> {
+public class LeaseContext extends EntityContext<Lease> {
 
   /**
    * Lease
