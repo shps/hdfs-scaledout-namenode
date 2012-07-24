@@ -2,11 +2,13 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -22,22 +24,36 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   /*
    * the default framework is embedded
    */
-  private String framework = "embedded";
-  private String driver = "org.apache.derby.jdbc.EmbeddedDriver";
-  private String protocol = "jdbc:derby:memory:";
-  private String dbName = "derbyDB"; // the name of the database
+  public static final String DERBY_NETWORK_SERVER = "derby-net";
+  public static final String DERBY_EMBEDDED = "derby-em";
+  public static final String DEFAULT_DERBY_EMBEDDED_PROTOCOL = "jdbc:derby:memory:derbyDB";
+  public static final String DEFAULT_DERBY_NETWORK_SERVER_PROTOCOL = "jdbc:derby://localhost:1527/memory:derbyDB";
+  private String framework = null;
+  private String driver = null;
+  private String protocol = null;
   private ThreadLocal<Connection> connectionPool = new ThreadLocal<Connection>();
   private ThreadLocal<Boolean> activeTransactions = new ThreadLocal<Boolean>();
   private boolean dbStarted = false;
 
   private DerbyConnector() {
     log = LogFactory.getLog(DerbyConnector.class);
-    loadDriver();
   }
 
   @Override
   public synchronized void setConfiguration(Configuration conf) {
+    framework = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
+    if (framework.equals(DERBY_NETWORK_SERVER)) {
+      driver = "org.apache.derby.jdbc.ClientDriver";
+    } else if (framework.equals(DERBY_EMBEDDED)) {
+      this.driver = "org.apache.derby.jdbc.EmbeddedDriver";
+    } else {
+      throw new RuntimeException("Invalid Storage Type " + framework);
+    }
+
+    this.protocol = conf.get(DFSConfigKeys.DFS_STORAGE_DERBY_PROTOCOL_KEY);
+
     if (!dbStarted) {
+      loadDriver();
       try {
         startDatabase();
       } catch (StorageException ex) {
@@ -52,8 +68,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
     Connection conn = this.connectionPool.get();
     if (conn == null) {
       try {
-        conn = DriverManager.getConnection(protocol + dbName
-                + ";create=false");
+        conn = DriverManager.getConnection(protocol + ";create=false");
         conn.setAutoCommit(false);
         this.connectionPool.set(conn);
       } catch (SQLException ex) {
@@ -103,13 +118,10 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public boolean formatStorage() throws StorageException {
-//    startDatabase();
-//    return true;
     Connection conn = null;
     Statement s = null;
     try {
-      conn = DriverManager.getConnection(protocol + dbName
-              + ";create=false");
+      conn = DriverManager.getConnection(protocol + ";create=false");
 
       conn.setAutoCommit(false);
 
@@ -157,7 +169,6 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   }
 
   private void startDatabase() throws StorageException {
-    dropTables();
     log.info("Database is starting in " + framework + " mode");
 
     /*
@@ -177,10 +188,18 @@ public enum DerbyConnector implements StorageConnector<Connection> {
        * system property derby.system.home points to, or the current directory
        * (user.dir) if derby.system.home is not set.
        */
-      conn = DriverManager.getConnection(protocol + dbName
-              + ";create=true");
+      conn = DriverManager.getConnection(protocol + ";create=true");
+      ResultSet tables = conn.getMetaData().getTables(null, null, null, new String[]{"TABLE"});
+      if (tables.next()) {
+        log.info("No need to create tables, The following tables already exists:");
+        do {
+          log.info(tables.getString("TABLE_NAME"));
+        } while (tables.next());
+        dbStarted = true;
+        return;
+      }
 
-      log.info("Connected to and created database " + dbName);
+      log.info("Connected to and created database " + protocol);
 
       // We want to control transactions manually. Autocommit is on by
       // default in JDBC.
@@ -217,33 +236,32 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
   @Override
   public synchronized void stopStorage() {
-//    dbStarted = false;
-//    if (this.dbStarted) {
-//      if (framework.equals("embedded")) {
-//        try {
-//          // the shutdown=true attribute shuts down Derby
-//          DriverManager.getConnection(protocol + dbName + ";drop=true");
-//          this.dbStarted = false;
-//
-//          // To shut down a specific database only, but keep the
-//          // engine running (for example for connecting to other
-//          // databases), specify a database in the connection URL:
-//          //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
-//        } catch (SQLException se) {
-//          if (((se.getErrorCode() == 50000)
-//                  && ("XJ015".equals(se.getSQLState())))) {
-//            // we got the expected exception
-//            log.info("Derby shut down normally");
-//            // Note that for single database shutdown, the expected
-//            // SQL state is "08006", and the error code is 45000.
-//          } else {
-//            // if the error code or SQLState is different, we have
-//            // an unexpected exception (shutdown failed)
-//            log.error("Derby did not shut down normally");
-//          }
+    if (this.dbStarted) {
+//      if (framework.equals(DERBY_EMBEDDED)) {
+      try {
+        // the shutdown=true attribute shuts down Derby
+        DriverManager.getConnection(protocol + ";drop=true");
+
+        // To shut down a specific database only, but keep the
+        // engine running (for example for connecting to other
+        // databases), specify a database in the connection URL:
+        //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
+      } catch (SQLException se) {
+        if (((se.getErrorCode() == 45000 || se.getErrorCode() == -1)
+                && ("08006".equals(se.getSQLState())))) {
+          this.dbStarted = false;
+          // we got the expected exception
+          log.info("Derby shut down normally");
+          // Note that for single database shutdown, the expected
+          // SQL state is "08006", and the error code is 45000.
+        } else {
+          // if the error code or SQLState is different, we have
+          // an unexpected exception (shutdown failed)
+          log.error("Derby did not shut down normally");
+        }
 //        }
-//      }
-//    }
+      }
+    }
   }
 
   /*
@@ -345,7 +363,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             InodeDataAccess.HEADER, InodeDataAccess.IS_DIR_WITH_QUOTA,
             InodeDataAccess.NSCOUNT, InodeDataAccess.DSCOUNT, InodeDataAccess.SYMLINK,
             InodeDataAccess.ID));
-    log.info("Table inode is created.");
+    log.info(String.format("Table %s is created.", InodeDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
@@ -356,7 +374,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID,
             InvalidateBlockDataAccess.GENERATION_STAMP, InvalidateBlockDataAccess.NUM_BYTES,
             InvalidateBlockDataAccess.BLOCK_ID, InvalidateBlockDataAccess.STORAGE_ID));
-    log.info("Table invalidated_block is created.");
+    log.info(String.format("Table %s is created.", InvalidateBlockDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s varchar(255) NOT NULL,   "
@@ -365,14 +383,14 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s) )", LeaseDataAccess.TABLE_NAME,
             LeaseDataAccess.HOLDER, LeaseDataAccess.LAST_UPDATE, LeaseDataAccess.HOLDER_ID,
             LeaseDataAccess.HOLDER));
-    log.info("Table lease is created.");
+    log.info(String.format("Table %s is created.", LeaseDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s INTEGER NOT NULL,   "
             + "%s varchar(255) NOT NULL,   "
             + "PRIMARY KEY (%s) )", LeasePathDataAccess.TABLE_NAME,
             LeasePathDataAccess.HOLDER_ID, LeasePathDataAccess.PATH, LeasePathDataAccess.PATH));
-    log.info("Table lease_path is created.");
+    log.info(String.format("Table %s is created.", LeasePathDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s BIGINT NOT NULL, %s BIGINT NOT NULL,"
@@ -380,7 +398,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s) )", PendingBlockDataAccess.TABLE_NAME,
             PendingBlockDataAccess.BLOCK_ID, PendingBlockDataAccess.TIME_STAMP,
             PendingBlockDataAccess.NUM_REPLICAS_IN_PROGRESS, PendingBlockDataAccess.BLOCK_ID));
-    log.info("Table pending_block is created.");
+    log.info(String.format("Table %s is created.", PendingBlockDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s (   "
             + "%s BIGINT NOT NULL,   "
@@ -391,7 +409,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID,
             ReplicaUnderConstruntionDataAccess.STATE, ReplicaUnderConstruntionDataAccess.REPLICA_INDEX,
             ReplicaUnderConstruntionDataAccess.BLOCK_ID, ReplicaUnderConstruntionDataAccess.STORAGE_ID));
-    log.info("Table replica_uc is created.");
+    log.info(String.format("Table %s is created.", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,   "
@@ -401,7 +419,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             ReplicaDataAccess.BLOCK_ID, ReplicaDataAccess.STORAGE_ID,
             ReplicaDataAccess.REPLICA_INDEX, ReplicaDataAccess.BLOCK_ID,
             ReplicaDataAccess.STORAGE_ID));
-    log.info("Table tripletes is created.");
+    log.info(String.format("Table %s is created.", ReplicaDataAccess.TABLE_NAME));
 
     s.execute(String.format("CREATE TABLE %s ("
             + "%s BIGINT NOT NULL,"
@@ -409,16 +427,15 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s))", UnderReplicatedBlockDataAccess.TABLE_NAME,
             UnderReplicatedBlockDataAccess.BLOCK_ID, UnderReplicatedBlockDataAccess.LEVEL,
             UnderReplicatedBlockDataAccess.BLOCK_ID));
-    log.info("Table UnderReplicatedBlock is created.");
+    log.info(String.format("Table %s is created.", UnderReplicatedBlockDataAccess.TABLE_NAME));
 
   }
 
-  private void dropTables() throws StorageException {
+  public void dropTables() throws StorageException {
     Connection conn = null;
     Statement s = null;
     try {
-      conn = DriverManager.getConnection(protocol + dbName
-              + ";create=true");
+      conn = DriverManager.getConnection(protocol + ";create=false");
 
       s = conn.createStatement();
       s.execute(String.format("drop table %s", BlockInfoDataAccess.TABLE_NAME));

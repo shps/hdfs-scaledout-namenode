@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.derby.iapi.error.DerbySQLException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
@@ -34,9 +35,9 @@ public class StorageFactory {
   static {
     HdfsConfiguration conf = new HdfsConfiguration();
     String storageType = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
-    if (storageType.equals("derby")) {
+    if (storageType.equals(DerbyConnector.DERBY_EMBEDDED) || 
+            storageType.equals(DerbyConnector.DERBY_NETWORK_SERVER)) {
       defaultStorage = DerbyConnector.INSTANCE;
-
       blockInfoDataAccess = new BlockInfoDerby();
       corruptReplicaDataAccess = new CorruptReplicaDerby();
       excessReplicaDataAccess = new ExcessReplicaDerby();
