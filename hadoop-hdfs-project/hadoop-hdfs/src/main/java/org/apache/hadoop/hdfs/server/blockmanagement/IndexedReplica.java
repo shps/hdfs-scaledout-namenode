@@ -32,22 +32,4 @@ public class IndexedReplica extends Replica {
   public void setIndex(int index) {
     this.index = index;
   }
-
-  @Override
-  public boolean equals(Object obj) {
-    IndexedReplica that = (IndexedReplica) obj;
-
-    if (this == that) {
-      return true;
-    } else if (blockId == that.getBlockId() && this.getStorageId().equals(that.getStorageId())) {
-      return true;
-    }
-
-    return false;
-  }
-
-  public String cacheKey() {
-    StringBuilder builder = new StringBuilder(blockId + storageId);
-    return builder.toString();
-  }
 }

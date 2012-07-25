@@ -40,7 +40,8 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
     }
     blocks.put(block.getBlockId(), block);
     newBlocks.put(block.getBlockId(), block);
-    log("block-added", CacheHitState.NA, new String[]{"bid",Long.toString(block.getBlockId())});
+    log("added-blockinfo", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId()),
+              "inodeid", Long.toString(block.getInodeId())});
   }
 
   @Override
@@ -51,7 +52,6 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
     removedBlocks.clear();
     inodeBlocks.clear();
     allBlocksRead = false;
-    super.clear();
   }
 
   @Override
@@ -79,14 +79,13 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         long id = (Long) params[0];
         result = blocks.get(id);
         if (result == null) {
-          log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid",Long.toString(id)});
+          log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           result = dataAccess.findById(id);
           if (result != null) {
             blocks.put(id, result);
           }
-        } else
-        {
-          log("find-block-by-bid", CacheHitState.HIT, new String[]{"bid",Long.toString(id)});
+        } else {
+          log("find-block-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
         }
         return result;
     }
@@ -102,25 +101,25 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
       case ByInodeId:
         long inodeId = (Long) params[0];
         if (inodeBlocks.containsKey(inodeId)) {
-          log("find-by-inodeid", CacheHitState.HIT, new String[]{"inodeid", Long.toString(inodeId)});
+          log("find-blocks-by-inodeid", CacheHitState.HIT, new String[]{"inodeid", Long.toString(inodeId)});
           return inodeBlocks.get(inodeId);
         } else {
-          log("find-by-inodeid", CacheHitState.LOSS, new String[]{"inodeid", Long.toString(inodeId)});
+          log("find-blocks-by-inodeid", CacheHitState.LOSS, new String[]{"inodeid", Long.toString(inodeId)});
           result = dataAccess.findByInodeId(inodeId);
           inodeBlocks.put(inodeId, syncBlockInfoInstances(result));
           return result;
         }
       case ByStorageId:
         String storageId = (String) params[0];
-        log("find-by-storageid", CacheHitState.NA, new String[]{"storageid", storageId});
+        log("find-blocks-by-storageid", CacheHitState.NA, new String[]{"storageid", storageId});
         result = dataAccess.findByStorageId(storageId);
         return syncBlockInfoInstances(result);
       case All:
         if (allBlocksRead) {
-          log("find-all", CacheHitState.HIT);
+          log("find-all-blocks", CacheHitState.HIT);
           return new ArrayList<BlockInfo>(blocks.values());
         } else {
-          log("find-all", CacheHitState.LOSS);
+          log("find-all-blocks", CacheHitState.LOSS);
           result = dataAccess.findAllBlocks();
           allBlocksRead = true;
           return syncBlockInfoInstances(result);
@@ -133,7 +132,6 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedBlocks.values(), newBlocks.values(), modifiedBlocks.values());
-    log("prepared");
   }
 
   @Override
@@ -152,7 +150,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
     newBlocks.remove(block.getBlockId());
     modifiedBlocks.remove(block.getBlockId());
     removedBlocks.put(block.getBlockId(), attachedBlock);
-    log("block-removed", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
+    log("removed-blockinfo", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
   }
 
   @Override
@@ -167,7 +165,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
     }
     blocks.put(block.getBlockId(), block);
     modifiedBlocks.put(block.getBlockId(), block);
-    log("block-updated", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
+    log("updated-blockinfo", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId())});
   }
 
   private List<BlockInfo> syncBlockInfoInstances(List<BlockInfo> newBlocks) {

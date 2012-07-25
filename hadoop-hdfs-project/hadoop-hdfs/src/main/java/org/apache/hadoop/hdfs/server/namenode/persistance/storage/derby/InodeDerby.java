@@ -33,7 +33,11 @@ public class InodeDerby extends InodeDataAccess {
       PreparedStatement s = conn.prepareStatement(query);
       s.setLong(1, inodeId);
       ResultSet rSet = s.executeQuery();
-      return createInode(rSet);
+      INode result = null;
+      if (rSet.next()) {
+        result = createInode(rSet);
+      }
+      return result;
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     } catch (SQLException ex) {
@@ -70,7 +74,11 @@ public class InodeDerby extends InodeDataAccess {
       s.setString(1, name);
       s.setLong(2, parentId);
       ResultSet rSet = s.executeQuery();
-      return createInode(rSet);
+      INode result = null;
+      if (rSet.next()) {
+        result = createInode(rSet);
+      }
+      return result;
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     } catch (SQLException ex) {

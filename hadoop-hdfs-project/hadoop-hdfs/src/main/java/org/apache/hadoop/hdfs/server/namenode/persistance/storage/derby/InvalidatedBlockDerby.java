@@ -27,7 +27,11 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
       Connection conn = connector.obtainSession();
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
-      return rSet.getInt(1);
+      if (rSet.next()) {
+        return rSet.getInt(1);
+      } else {
+        return 0;
+      }
     } catch (SQLException ex) {
       handleSQLException(ex);
       return 0;
@@ -77,9 +81,10 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
       s.setLong(1, blockId);
       s.setString(2, storageId);
       ResultSet rSet = s.executeQuery();
-      return new InvalidatedBlock(
-              rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID),
-              rSet.getLong(GENERATION_STAMP), rSet.getLong(NUM_BYTES));
+      if (rSet.next()) {
+        result = createInvBlock(rSet);
+      }
+      return result;
     } catch (SQLException ex) {
       handleSQLException(ex);
       return null;
@@ -116,13 +121,13 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
   @Override
   public void prepare(Collection<InvalidatedBlock> removed, Collection<InvalidatedBlock> newed, Collection<InvalidatedBlock> modified) throws StorageException {
     try {
-    String insert = String.format("insert into %s values(?,?,?,?)",
-            TABLE_NAME, BLOCK_ID, STORAGE_ID, GENERATION_STAMP, NUM_BYTES);
-    String update = String.format("update %s set %s=?, %s=? where %s=? and %s=?",
-            TABLE_NAME, GENERATION_STAMP, NUM_BYTES, STORAGE_ID, BLOCK_ID);
-    String delete = String.format("delete from %s where %s=? and %s=?",
-            TABLE_NAME, BLOCK_ID, STORAGE_ID);
-    Connection conn = connector.obtainSession();
+      String insert = String.format("insert into %s values(?,?,?,?)",
+              TABLE_NAME, BLOCK_ID, STORAGE_ID, GENERATION_STAMP, NUM_BYTES);
+      String update = String.format("update %s set %s=?, %s=? where %s=? and %s=?",
+              TABLE_NAME, GENERATION_STAMP, NUM_BYTES, STORAGE_ID, BLOCK_ID);
+      String delete = String.format("delete from %s where %s=? and %s=?",
+              TABLE_NAME, BLOCK_ID, STORAGE_ID);
+      Connection conn = connector.obtainSession();
       Collection<InvalidatedBlock> existings = findBlocksByPkeys(newed);
       PreparedStatement insrt = conn.prepareStatement(insert);
       PreparedStatement updt = conn.prepareStatement(update);
@@ -159,11 +164,14 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
   private HashSet<InvalidatedBlock> convert(ResultSet rSet) throws SQLException {
     HashSet<InvalidatedBlock> result = new HashSet<InvalidatedBlock>();
     while (rSet.next()) {
-      InvalidatedBlock next = new InvalidatedBlock(
-              rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID),
-              rSet.getLong(GENERATION_STAMP), rSet.getLong(NUM_BYTES));
-      result.add(next);
+      result.add(createInvBlock(rSet));
     }
     return result;
+  }
+
+  private InvalidatedBlock createInvBlock(ResultSet rSet) throws SQLException {
+    return new InvalidatedBlock(
+            rSet.getString(STORAGE_ID), rSet.getLong(BLOCK_ID),
+            rSet.getLong(GENERATION_STAMP), rSet.getLong(NUM_BYTES));
   }
 }

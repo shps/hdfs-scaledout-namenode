@@ -38,7 +38,8 @@ public class ReplicaDerby extends ReplicaDataAccess {
   @Override
   public void prepare(Collection<IndexedReplica> removed, Collection<IndexedReplica> newed, Collection<IndexedReplica> modified) throws StorageException {
     try {
-      String insert = String.format("insert into %s values(?,?,?)", TABLE_NAME);
+      String insert = String.format("insert into %s(%s,%s,%s) values(?,?,?)", 
+              TABLE_NAME, BLOCK_ID, STORAGE_ID, REPLICA_INDEX);
       String delete = String.format("delete from %s where %s=? and %s=?",
               TABLE_NAME, BLOCK_ID, STORAGE_ID);
       String update = String.format("update %s set %s=? where %s=? and %s=?",

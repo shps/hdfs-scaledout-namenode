@@ -34,7 +34,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     }
     corruptReplicas.put(entity.persistanceKey(), entity);
     newCorruptReplicas.put(entity.persistanceKey(), entity);
-    log("add-corrupt", CacheHitState.NA, 
+    log("added-corrupt", CacheHitState.NA, 
             new String[]{"bid", Long.toString(entity.getBlockId()),"sid", entity.getStorageId()});
   }
 
@@ -46,7 +46,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     modifiedCorruptReplicas.clear();
     removedCorruptReplicas.clear();
     allCorruptBlocksRead = false;
-    super.clear();
   }
 
   @Override
@@ -56,10 +55,10 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     switch (cCounter) {
       case All:
         if (allCorruptBlocksRead) {
-          log("find-all", CacheHitState.HIT);
+          log("count-all-corrupts", CacheHitState.HIT);
           return corruptReplicas.size();
         } else {
-          log("find-all", CacheHitState.LOSS);
+          log("count-all-corrupts", CacheHitState.LOSS);
           return dataAccess.countAll();
         }
     }
@@ -76,10 +75,10 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
         Long blockId = (Long) params[0];
         String storageId = (String) params[1];
         if (corruptReplicas.containsKey(blockId + storageId)) {
-          log("find-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-corrupt-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return corruptReplicas.get(blockId + storageId);
         } else {
-          log("find-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-corrupt-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return dataAccess.findByPk(blockId, storageId);
         }
     }
@@ -93,20 +92,20 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     switch (cFinder) {
       case All:
         if (allCorruptBlocksRead) {
-          log("find-all", CacheHitState.HIT);
+          log("find-all-corrupts", CacheHitState.HIT);
           return corruptReplicas.values();
         }
-        log("find-all", CacheHitState.LOSS);
+        log("find-all-corrupts", CacheHitState.LOSS);
         List<CorruptReplica> sync = syncCorruptReplicaInstances(dataAccess.findAll());
         allCorruptBlocksRead = true;
         return sync;
       case ByBlockId:
         Long blockId = (Long) params[0];
         if (blockCorruptReplicas.containsKey(blockId)) {
-          log("find-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
+          log("find-corrupts-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
           return blockCorruptReplicas.get(blockId);
         }
-        log("find-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
+        log("find-corrupts-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
         List<CorruptReplica> syncList = syncCorruptReplicaInstances(dataAccess.findByBlockId(blockId));
         blockCorruptReplicas.put(blockId, syncList);
         return syncList;
@@ -119,7 +118,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedCorruptReplicas.values(), newCorruptReplicas.values(), modifiedCorruptReplicas.values());
-    log("prepared");
   }
 
   @Override
@@ -132,7 +130,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     newCorruptReplicas.remove(entity.persistanceKey());
     modifiedCorruptReplicas.remove(entity.persistanceKey());
     removedCorruptReplicas.put(entity.persistanceKey(), entity);
-    log("removed", CacheHitState.NA, 
+    log("removed-corrupt", CacheHitState.NA, 
             new String[]{"bid", Long.toString(entity.getBlockId()), "sid", entity.getStorageId()});
   }
 
@@ -143,11 +141,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void update(CorruptReplica entity) throws PersistanceException {
-//    if (removedCorruptReplicas.get(entity.persistanceKey()) != null) {
-//      throw new TransactionContextException("Removed corrupt replica passed to be persisted");
-//    }
-//    corruptReplicas.put(entity.persistanceKey(), entity);
-//    modifiedCorruptReplicas.put(entity.persistanceKey(), entity);
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

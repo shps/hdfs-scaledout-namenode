@@ -32,7 +32,12 @@ public abstract class EntityDataAccess {
     {
       throw new StorageException(ex);
     } else {
-      throw new RuntimeException(ex);
+      SQLException inEx = ex.getNextException();
+      if (inEx != null) {
+        throw new RuntimeException(inEx);
+      } else {
+        throw new RuntimeException(ex);
+      }
     }
 
   }

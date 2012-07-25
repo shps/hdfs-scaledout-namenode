@@ -34,7 +34,11 @@ public class BlockInfoDerby extends BlockInfoDataAccess {
       s = conn.prepareStatement(query);
 
       ResultSet result = s.executeQuery();
-      return result.getInt(1);
+      if (result.next()) {
+        return result.getInt(1);
+      } else {
+        return 0;
+      }
     } catch (SQLException e) {
       handleSQLException(e);
       return 0;
@@ -43,8 +47,9 @@ public class BlockInfoDerby extends BlockInfoDataAccess {
 
   @Override
   public void prepare(Collection<BlockInfo> removed, Collection<BlockInfo> news, Collection<BlockInfo> modified) throws StorageException {
-    String insertQuery = String.format("insert into %s values(?,?,?,?,?,?,?,?,?)",
-            TABLE_NAME);
+    String insertQuery = String.format("insert into %s(%s,%s,%s,%s,%s,%s,%s,%s,%s) values(?,?,?,?,?,?,?,?,?)",
+            TABLE_NAME, BLOCK_ID, BLOCK_INDEX, INODE_ID, NUM_BYTES, GENERATION_STAMP,
+            BLOCK_UNDER_CONSTRUCTION_STATE, TIME_STAMP, PRIMARY_NODE_INDEX, BLOCK_RECOVERY_ID);
     String deleteQuery = String.format("delete from %s where %s = ?",
             TABLE_NAME, BLOCK_ID);
     String updateQuery = String.format("update %s set "
@@ -60,6 +65,7 @@ public class BlockInfoDerby extends BlockInfoDataAccess {
         dlt.setLong(1, block.getBlockId());
         dlt.addBatch();
       }
+      dlt.executeBatch();
 
       PreparedStatement insrt = conn.prepareStatement(insertQuery);
       for (BlockInfo block : news) {
@@ -80,6 +86,7 @@ public class BlockInfoDerby extends BlockInfoDataAccess {
         }
         insrt.addBatch();
       }
+      insrt.executeBatch();
 
       PreparedStatement updt = conn.prepareStatement(updateQuery);
       for (BlockInfo block : modified) {
@@ -100,9 +107,6 @@ public class BlockInfoDerby extends BlockInfoDataAccess {
         }
         updt.addBatch();
       }
-
-      dlt.executeBatch();
-      insrt.executeBatch();
       updt.executeBatch();
     } catch (SQLException ex) {
       handleSQLException(ex);

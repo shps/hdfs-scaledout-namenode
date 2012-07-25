@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +21,9 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
   /**
    * Mappings
    */
-  private Map<String, IndexedReplica> removedReplicas = new HashMap<String, IndexedReplica>();
-  private Map<String, IndexedReplica> newReplicas = new HashMap<String, IndexedReplica>();
-  private Map<String, IndexedReplica> modifiedReplicas = new HashMap<String, IndexedReplica>();
+  private Map<IndexedReplica, IndexedReplica> removedReplicas = new HashMap<IndexedReplica, IndexedReplica>();
+  private Map<IndexedReplica, IndexedReplica> newReplicas = new HashMap<IndexedReplica, IndexedReplica>();
+  private Map<IndexedReplica, IndexedReplica> modifiedReplicas = new HashMap<IndexedReplica, IndexedReplica>();
   private Map<Long, List<IndexedReplica>> blockReplicas = new HashMap<Long, List<IndexedReplica>>();
   private ReplicaDataAccess dataAccess;
 
@@ -32,22 +33,22 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
 
   @Override
   public void add(IndexedReplica replica) throws PersistanceException {
-    if (removedReplicas.containsKey(replica.cacheKey())) {
+    if (removedReplicas.containsKey(replica)) {
       throw new TransactionContextException("Removed replica passed to be persisted");
     }
 
-    newReplicas.put(replica.cacheKey(), replica);
-    log("added-replica", CacheHitState.NA, 
+    newReplicas.put(replica, replica);
+    log("added-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
               "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 
   @Override
   public void clear() {
+    newReplicas.clear();
     modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
-    super.clear();
   }
 
   @Override
@@ -58,15 +59,14 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedReplicas.values(), newReplicas.values(), modifiedReplicas.values());
-    log("prepared");
   }
 
   @Override
   public void remove(IndexedReplica replica) throws PersistanceException {
-    modifiedReplicas.remove(replica.cacheKey());
+    modifiedReplicas.remove(replica);
     blockReplicas.get(replica.getBlockId()).remove(replica);
-    removedReplicas.put(replica.cacheKey(), replica);
-    log("removed-replica", CacheHitState.NA, 
+    removedReplicas.put(replica, replica);
+    log("removed-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
               "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
@@ -85,14 +85,14 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
       case ByBlockId:
         long id = (Long) params[0];
         if (blockReplicas.containsKey(id)) {
-          log("find-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
+          log("find-replicas-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
           result = blockReplicas.get(id);
         } else {
-          log("find-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
+          log("find-replicas-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           result = dataAccess.findReplicasById(id);
           blockReplicas.put(id, result);
         }
-        return result;
+        return new ArrayList<IndexedReplica>(result); // Shallow copy
     }
 
     throw new RuntimeException(UNSUPPORTED_FINDER);
@@ -105,12 +105,12 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
 
   @Override
   public void update(IndexedReplica replica) throws PersistanceException {
-    if (removedReplicas.containsKey(replica.cacheKey())) {
+    if (removedReplicas.containsKey(replica)) {
       throw new TransactionContextException("Removed replica passed to be persisted");
     }
 
-    modifiedReplicas.put(replica.cacheKey(), replica);
-    log("updated-replica", CacheHitState.NA, 
+    modifiedReplicas.put(replica, replica);
+    log("updated-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
               "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }

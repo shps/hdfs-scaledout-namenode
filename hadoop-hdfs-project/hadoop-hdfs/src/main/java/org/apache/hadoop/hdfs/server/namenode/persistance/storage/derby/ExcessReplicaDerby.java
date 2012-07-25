@@ -25,8 +25,12 @@ public class ExcessReplicaDerby extends ExcessReplicaDataAccess {
     String query = String.format("select count(*) from %s", TABLE_NAME);
     try {
       PreparedStatement s = connector.obtainSession().prepareStatement(query);
-      ResultSet result = s.executeQuery();
-      return result.getInt(1);
+      ResultSet rSet = s.executeQuery();
+      if (rSet.next()) {
+        return rSet.getInt(1);
+      } else {
+        return 0;
+      }
     } catch (SQLException ex) {
       handleSQLException(ex);
       return 0;
@@ -58,8 +62,12 @@ public class ExcessReplicaDerby extends ExcessReplicaDataAccess {
       PreparedStatement s = connector.obtainSession().prepareStatement(query);
       s.setLong(1, blockId);
       s.setString(2, storageId);
-      ResultSet result = s.executeQuery();
-      return createReplica(result);
+      ResultSet rSet = s.executeQuery();
+      ExcessReplica result = null;
+      if (rSet.next()) {
+        result = createReplica(rSet);
+      }
+      return result;
     } catch (SQLException ex) {
       handleSQLException(ex);
       return null;

@@ -53,7 +53,6 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     newInvBlocks.clear();
     removedInvBlocks.clear();
     allInvBlocksRead = false;
-    super.clear();
   }
 
   @Override
@@ -61,7 +60,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     InvalidatedBlock.Counter iCounter = (InvalidatedBlock.Counter) counter;
     switch (iCounter) {
       case All:
-        log("count-all");
+        log("count-all-invblocks");
         return dataAccess.countAll();
     }
 
@@ -78,13 +77,13 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
         String storageId = (String) params[1];
         InvalidatedBlock searchInstance = new InvalidatedBlock(storageId, blockId);
         if (invBlocks.containsKey(searchInstance)) {
-          log("find-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-invblock-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return invBlocks.get(searchInstance);
         } else if (removedInvBlocks.containsKey(searchInstance)) {
-          log("find-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-invblock-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return null;
         } else {
-          log("find-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-invblock-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           InvalidatedBlock result = dataAccess.findInvBlockByPkey(params);
           this.invBlocks.put(result, result);
           return result;
@@ -102,20 +101,20 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
       case ByStorageId:
         String storageId = (String) params[0];
         if (storageIdToInvBlocks.containsKey(storageId)) {
-          log("find-by-storageid", CacheHitState.HIT, new String[]{"sid", storageId});
+          log("find-invblocks-by-storageid", CacheHitState.HIT, new String[]{"sid", storageId});
           return new ArrayList<InvalidatedBlock>(this.storageIdToInvBlocks.get(storageId)); //clone the list reference
         } else {
-          log("find-by-storageid", CacheHitState.LOSS, new String[]{"sid", storageId});
+          log("find-invblocks-by-storageid", CacheHitState.LOSS, new String[]{"sid", storageId});
           return syncInstances(dataAccess.findInvalidatedBlockByStorageId(storageId));
         }
       case All:
         if (!allInvBlocksRead) {
-          log("find-all", CacheHitState.LOSS);
+          log("find-all-invblocks", CacheHitState.LOSS);
           List<InvalidatedBlock> result = syncInstances(dataAccess.findAllInvalidatedBlocks());
           allInvBlocksRead = true;
           return result;
         } else {
-          log("find-all", CacheHitState.HIT);
+          log("find-all-invblocks", CacheHitState.HIT);
           return new ArrayList<InvalidatedBlock>(invBlocks.values());
         }
     }
@@ -126,7 +125,6 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedInvBlocks.values(), newInvBlocks.values(), null);
-    log("prepared");
   }
 
   @Override
@@ -145,7 +143,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
         storageIdToInvBlocks.remove(invBlock.getStorageId());
       }
     }
-    log("remove-invblock", CacheHitState.NA, 
+    log("removed-invblock", CacheHitState.NA, 
             new String[]{"bid", Long.toString(invBlock.getBlockId()), "sid", invBlock.getStorageId()});
   }
 

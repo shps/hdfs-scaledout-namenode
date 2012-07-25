@@ -1,7 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;

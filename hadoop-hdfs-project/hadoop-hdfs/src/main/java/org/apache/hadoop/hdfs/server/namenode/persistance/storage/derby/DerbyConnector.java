@@ -140,6 +140,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
 
       //commit changes
       conn.commit();
+      log.info("formatted database with protocol: " + protocol);
       return true;
     } catch (SQLException ex) {
       throw new StorageException(ex);
@@ -237,29 +238,30 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   @Override
   public synchronized void stopStorage() {
     if (this.dbStarted) {
-//      if (framework.equals(DERBY_EMBEDDED)) {
-      try {
-        // the shutdown=true attribute shuts down Derby
-        DriverManager.getConnection(protocol + ";drop=true");
-
-        // To shut down a specific database only, but keep the
-        // engine running (for example for connecting to other
-        // databases), specify a database in the connection URL:
-        //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
-      } catch (SQLException se) {
-        if (((se.getErrorCode() == 45000 || se.getErrorCode() == -1)
-                && ("08006".equals(se.getSQLState())))) {
-          this.dbStarted = false;
-          // we got the expected exception
-          log.info("Derby shut down normally");
-          // Note that for single database shutdown, the expected
-          // SQL state is "08006", and the error code is 45000.
-        } else {
-          // if the error code or SQLState is different, we have
-          // an unexpected exception (shutdown failed)
-          log.error("Derby did not shut down normally");
+      if (framework.equals(DERBY_EMBEDDED)) {
+        try {
+          connectionPool = new ThreadLocal<Connection>();
+          activeTransactions = new ThreadLocal<Boolean>();
+          // the shutdown=true attribute shuts down Derby
+          DriverManager.getConnection(protocol + ";drop=true");
+          // To shut down a specific database only, but keep the
+          // engine running (for example for connecting to other
+          // databases), specify a database in the connection URL:
+          //DriverManager.getConnection("jdbc:derby:" + dbName + ";shutdown=true");
+        } catch (SQLException se) {
+          if (((se.getErrorCode() == 45000 || se.getErrorCode() == -1)
+                  && ("08006".equals(se.getSQLState())))) {
+            this.dbStarted = false;
+            // we got the expected exception
+            log.info("Derby shut down normally");
+            // Note that for single database shutdown, the expected
+            // SQL state is "08006", and the error code is 45000.
+          } else {
+            // if the error code or SQLState is different, we have
+            // an unexpected exception (shutdown failed)
+            log.error("Derby did not shut down normally");
+          }
         }
-//        }
       }
     }
   }

@@ -34,7 +34,7 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
 
     pendings.put(pendingBlock.getBlockId(), pendingBlock);
     newPendings.put(pendingBlock.getBlockId(), pendingBlock);
-    log("added-pendingblock", CacheHitState.NA, 
+    log("added-pending", CacheHitState.NA, 
             new String[]{"bid", Long.toString(pendingBlock.getBlockId()), 
             "numInProgress", Integer.toString(pendingBlock.getNumReplicas())});
   }
@@ -46,7 +46,6 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
     modifiedPendings.clear();
     removedPendings.clear();
     allPendingRead = false;
-    super.clear();
   }
 
   @Override
@@ -61,14 +60,14 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
     switch (pFinder) {
       case ByTimeLimit:
         long timeLimit = (Long) params[0];
-        log("find-by-timelimit", CacheHitState.NA, new String[]{"timelimit", Long.toString(timeLimit)});
+        log("find-pendings-by-timelimit", CacheHitState.NA, new String[]{"timelimit", Long.toString(timeLimit)});
         return syncInstances(dataAccess.findByTimeLimit(timeLimit));
       case All:
         if (allPendingRead) {
-          log("find-all", CacheHitState.HIT);
+          log("find-all-pendings", CacheHitState.HIT);
           result = new ArrayList(pendings.values());
         } else {
-          log("find-all", CacheHitState.LOSS);
+          log("find-all-pendings", CacheHitState.LOSS);
           result = syncInstances(dataAccess.findAll());
           allPendingRead = true;
         }
@@ -86,17 +85,17 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
       case ByPKey:
         long blockId = (Long) params[0];
         if (this.pendings.containsKey(blockId)) {
-          log("find-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
+          log("find-pending-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
           result = this.pendings.get(blockId);
         } else if (!this.removedPendings.containsKey(blockId)) {
-          log("find-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
+          log("find-pending-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
           result = dataAccess.findByPKey(blockId);
           if (result != null) {
             this.pendings.put(blockId, result);
           }
         } else
         {
-          log("find-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
+          log("find-pending-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
         }
         return result;
     }
@@ -107,7 +106,6 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedPendings.values(), newPendings.values(), modifiedPendings.values());
-    log("perpared");
   }
 
   @Override
@@ -118,7 +116,7 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
     newPendings.remove(pendingBlock.getBlockId());
     modifiedPendings.remove(pendingBlock.getBlockId());
     removedPendings.put(pendingBlock.getBlockId(), pendingBlock);
-    log("removed-pendingblock", CacheHitState.NA, new String[]{"bid", Long.toString(pendingBlock.getBlockId())});
+    log("removed-pending", CacheHitState.NA, new String[]{"bid", Long.toString(pendingBlock.getBlockId())});
   }
 
   @Override
@@ -134,7 +132,7 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
 
     pendings.put(pendingBlock.getBlockId(), pendingBlock);
     modifiedPendings.put(pendingBlock.getBlockId(), pendingBlock);
-    log("updated-pendingblock", CacheHitState.NA, 
+    log("updated-pending", CacheHitState.NA, 
             new String[]{"bid", Long.toString(pendingBlock.getBlockId()), 
             "numInProgress", Integer.toString(pendingBlock.getNumReplicas())});
   }

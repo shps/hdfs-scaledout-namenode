@@ -1,6 +1,5 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
-
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -14,10 +13,11 @@ import org.apache.log4j.NDC;
  * @author kamal hakimzadeh<kamal@sics.se>
  */
 public abstract class TransactionalRequestHandler {
-  
+
   public enum OperationType {
     // NameNodeRpcServer
-    INITIALIZE, ACTIVATE, META_SAVE, SET_PERMISSION, SET_OWNER, 
+
+    INITIALIZE, ACTIVATE, META_SAVE, SET_PERMISSION, SET_OWNER,
     GET_BLOCK_LOCATIONS, GET_STATUS, CONCAT, SET_TIMES, CREATE_SYM_LINK, GET_PREFERRED_BLOCK_SIZE,
     SET_REPLICATION, START_FILE, RECOVER_LEASE, APPEND_FILE, GET_ADDITIONAL_BLOCK,
     GET_ADDITIONAL_DATANODE, ABANDON_BLOCK, COMPLETE_FILE, RENAME_TO, RENAME_TO3,
@@ -65,7 +65,7 @@ public abstract class TransactionalRequestHandler {
     // TestOverReplicatedBlocks
     TEST_PROCESS_OVER_REPLICATED_BLOCKS,
     // TestPendingReplication
-    TEST_PENDING_REPLICATION, TEST_PENDING_REPLICATION2 , TEST_PENDING_REPLICATION3,
+    TEST_PENDING_REPLICATION, TEST_PENDING_REPLICATION2, TEST_PENDING_REPLICATION3,
     TEST_PENDING_REPLICATION4,
     // TestUnderReplicatedBlocks
     SET_REPLICA_INCREAMENT,
@@ -78,10 +78,8 @@ public abstract class TransactionalRequestHandler {
     // TestSafeMode
     TEST_DATANODE_THRESHOLD,
     // TestDfsRename
-    COUNT_LEASE_DFS_RENAME,
-    ;
+    COUNT_LEASE_DFS_RENAME,;
   }
-
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private Object[] params = new Object[8];
   public static final int RETRY_COUNT = 1;
@@ -148,24 +146,27 @@ public abstract class TransactionalRequestHandler {
           rollback = true;
           retry = true;
         } finally {
-          if (rollback) {
-            try {
-              EntityManager.rollback();
-            } catch (StorageException ex) {
-              log.error("Could not rollback transaction", ex);
+          try {
+            if (rollback) {
+              try {
+                EntityManager.rollback();
+              } catch (StorageException ex) {
+                log.error("Could not rollback transaction", ex);
+              }
             }
-          }
-          if (writeLock) {
-            namesystem.writeUnlock();
-          }
-          if (readLock) {
-            namesystem.readUnlock();
-          }
-          if (tryCount == RETRY_COUNT && exception != null) {
-            throw exception;
+            if (writeLock) {
+              namesystem.writeUnlock();
+            }
+            if (readLock) {
+              namesystem.readUnlock();
+            }
+            if (tryCount == RETRY_COUNT && exception != null) {
+              throw exception;
+            }
+          } finally {
+            NDC.pop();
           }
         }
-        NDC.pop();
       }
     }
     return null;

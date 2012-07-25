@@ -29,10 +29,7 @@ public abstract class EntityContext<T> {
 
   public abstract void add(T entity) throws PersistanceException;
 
-  public void clear()
-  {
-    log("cleared-context");
-  }
+  public abstract void clear();
 
   public abstract int count(CounterType<T> counter, Object... params) throws PersistanceException;
 
@@ -57,7 +54,7 @@ public abstract class EntityContext<T> {
       message.append("loss");
     }
     message.append(" ");
-    if (params != null) {
+    if (params.length > 1) {
       for (int i = 0; i < params.length; i = i + 2) {
         message.append(" ").append(params[i]);
         message.append("=").append(params[i + 1]);

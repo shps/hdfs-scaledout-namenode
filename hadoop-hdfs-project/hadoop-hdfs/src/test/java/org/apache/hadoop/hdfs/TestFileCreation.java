@@ -791,9 +791,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
-  public void xxxtestLeaseExpireHardLimit() throws Exception {
-      //FIXME[Hooman]: expected locations should be persisted in the database in order
-      // to make the recovery of the last block work.
+  public void testLeaseExpireHardLimit() throws Exception {
     LOG.info("testLeaseExpireHardLimit start");
     final long leasePeriod = 1000;
     final int DATANODE_NUM = 3;

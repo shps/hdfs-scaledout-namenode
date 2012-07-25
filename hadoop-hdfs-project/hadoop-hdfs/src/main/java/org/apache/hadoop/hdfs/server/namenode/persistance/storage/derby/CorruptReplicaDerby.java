@@ -28,8 +28,12 @@ public class CorruptReplicaDerby extends CorruptReplicaDataAccess {
       PreparedStatement s;
       s = conn.prepareStatement(query);
 
-      ResultSet result = s.executeQuery();
-      return result.getInt(1);
+      ResultSet rSet = s.executeQuery();
+      if (rSet.next()) {
+        return rSet.getInt(1);
+      } else {
+        return 0;
+      }
     } catch (SQLException e) {
       handleSQLException(e);
       return 0;

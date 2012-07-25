@@ -108,7 +108,7 @@ public class BlockInfo extends Block {
 
   public INodeFile getINode() throws PersistanceException {
     if (inode == null) {
-      inode = (INodeFile) EntityManager.find(INodeFile.Finder.ByPKey, inodeId);
+      setINode((INodeFile)EntityManager.find(INodeFile.Finder.ByPKey, inodeId));
     }
 
     return inode;
@@ -124,6 +124,8 @@ public class BlockInfo extends Block {
 
   public void setINode(INodeFile inode) {
     this.inode = inode;
+    if (inode != null)
+      setINodeId(inode.getId());
   }
 
   public List<IndexedReplica> getReplicas() throws PersistanceException {

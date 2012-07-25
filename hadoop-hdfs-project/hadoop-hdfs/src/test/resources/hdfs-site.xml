@@ -27,12 +27,12 @@
   </property>
 <property>
   <name>dfs.storage.type</name>
-  <value>derby-net</value>
+  <value>derby-em</value>
   <description>storage type could be one of derby-net, derby-em, clusterj or ...</description>
 </property>
 <property>
   <name>dfs.storage.derby.protocol</name>
-  <value>jdbc:derby://localhost:1527/memory:derbyDB</value>
+  <value>jdbc:derby:memory:derbyDB</value>
   <description>"jdbc:derby:memory:derbyDB" for embedded in-memory or "jdbc:derby://localhost:1527/memory:derbyDB" for network server in-memory</description>
 </property>
 </configuration>
