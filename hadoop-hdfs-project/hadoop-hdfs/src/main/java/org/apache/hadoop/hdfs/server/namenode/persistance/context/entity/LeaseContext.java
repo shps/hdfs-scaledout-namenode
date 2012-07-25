@@ -39,6 +39,7 @@ public class LeaseContext extends EntityContext<Lease> {
     newLeases.put(lease, lease);
     leases.put(lease.getHolder(), lease);
     idToLease.put(lease.getHolderID(), lease);
+    log("added-lease", CacheHitState.NA, new String[]{"holder", lease.getHolder()});
   }
 
   @Override
@@ -49,6 +50,7 @@ public class LeaseContext extends EntityContext<Lease> {
     removedLeases.clear();
     leases.clear();
     allLeasesRead = false;
+    super.clear();
   }
 
   @Override
@@ -56,6 +58,7 @@ public class LeaseContext extends EntityContext<Lease> {
     Lease.Counter lCounter = (Lease.Counter) counter;
     switch (lCounter) {
       case All:
+        log("count-all");
         return dataAccess.countAll();
     }
 
@@ -70,8 +73,10 @@ public class LeaseContext extends EntityContext<Lease> {
       case ByPKey:
         String holder = (String) params[0];
         if (leases.containsKey(holder)) {
+          log("find-by-pk", CacheHitState.HIT, new String[]{"holder", holder});
           result = leases.get(holder);
         } else {
+          log("find-by-pk", CacheHitState.LOSS, new String[]{"holder", holder});
           result = dataAccess.findByPKey(holder);
           if (result != null) {
             leases.put(result.getHolder(), result);
@@ -81,8 +86,10 @@ public class LeaseContext extends EntityContext<Lease> {
       case ByHolderId:
         int holderId = (Integer) params[0];
         if (idToLease.containsKey(holderId)) {
+          log("find-by-holderid", CacheHitState.HIT, new String[]{"hid", Integer.toString(holderId)});
           result = idToLease.get(holderId);
         } else {
+          log("find-by-holderid", CacheHitState.LOSS, new String[]{"hid", Integer.toString(holderId)});
           result = dataAccess.findByHolderId(holderId);
           if (result != null) {
             leases.put(result.getHolder(), result);
@@ -102,12 +109,15 @@ public class LeaseContext extends EntityContext<Lease> {
     switch (lFinder) {
       case ByTimeLimit:
         long timeLimit = (Long) params[0];
+        log("find-b-timelimit", CacheHitState.NA, new String[]{"timelimit", Long.toString(timeLimit)});
         result = syncLeaseInstances(dataAccess.findByTimeLimit(timeLimit));
         return result;
       case All:
         if (allLeasesRead) {
+          log("find-all", CacheHitState.HIT);
           result = new TreeSet<Lease>(this.leases.values());
         } else {
+          log("find-all", CacheHitState.LOSS);
           result = syncLeaseInstances(dataAccess.findAll());
           allLeasesRead = true;
         }
@@ -119,6 +129,7 @@ public class LeaseContext extends EntityContext<Lease> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedLeases.values(), newLeases.values(), modifiedLeases.values());
+    log("prepared");
   }
 
   @Override
@@ -130,6 +141,7 @@ public class LeaseContext extends EntityContext<Lease> {
     newLeases.remove(lease);
     modifiedLeases.remove(lease);
     removedLeases.put(lease, lease);
+    log("removed-lease", CacheHitState.NA, new String[]{"holder", lease.getHolder()});
   }
 
   @Override
@@ -146,6 +158,7 @@ public class LeaseContext extends EntityContext<Lease> {
     modifiedLeases.put(lease, lease);
     leases.put(lease.getHolder(), lease);
     idToLease.put(lease.getHolderID(), lease);
+    log("updated-lease", CacheHitState.NA, new String[]{"holder", lease.getHolder()});
   }
 
   private SortedSet<Lease> syncLeaseInstances(Collection<Lease> list) {

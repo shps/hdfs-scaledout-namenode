@@ -37,6 +37,9 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     }
 
     newReplicas.put(replica.cacheKey(), replica);
+    log("added-replica", CacheHitState.NA, 
+            new String[]{"bid", Long.toString(replica.getBlockId()),
+              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 
   @Override
@@ -44,6 +47,7 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     modifiedReplicas.clear();
     removedReplicas.clear();
     blockReplicas.clear();
+    super.clear();
   }
 
   @Override
@@ -54,6 +58,7 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedReplicas.values(), newReplicas.values(), modifiedReplicas.values());
+    log("prepared");
   }
 
   @Override
@@ -61,6 +66,9 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     modifiedReplicas.remove(replica.cacheKey());
     blockReplicas.get(replica.getBlockId()).remove(replica);
     removedReplicas.put(replica.cacheKey(), replica);
+    log("removed-replica", CacheHitState.NA, 
+            new String[]{"bid", Long.toString(replica.getBlockId()),
+              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 
   @Override
@@ -77,8 +85,10 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
       case ByBlockId:
         long id = (Long) params[0];
         if (blockReplicas.containsKey(id)) {
+          log("find-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
           result = blockReplicas.get(id);
         } else {
+          log("find-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           result = dataAccess.findReplicasById(id);
           blockReplicas.put(id, result);
         }
@@ -100,5 +110,8 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     }
 
     modifiedReplicas.put(replica.cacheKey(), replica);
+    log("updated-replica", CacheHitState.NA, 
+            new String[]{"bid", Long.toString(replica.getBlockId()),
+              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 }
