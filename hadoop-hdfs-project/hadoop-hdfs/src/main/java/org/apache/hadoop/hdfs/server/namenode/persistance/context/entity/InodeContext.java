@@ -29,7 +29,7 @@ public class InodeContext extends EntityContext<INode> {
   public InodeContext(InodeDataAccess dataAccess) {
     this.dataAccess = dataAccess;
   }
-  
+
   @Override
   public void add(INode inode) throws PersistanceException {
     if (removedInodes.containsKey(inode.getId())) {
@@ -39,6 +39,8 @@ public class InodeContext extends EntityContext<INode> {
     inodesIdIndex.put(inode.getId(), inode);
     inodesNameParentIndex.put(inode.nameParentKey(), inode);
     newInodes.put(inode.getId(), inode);
+    log("added-inode", CacheHitState.NA,
+            new String[]{"id", Long.toString(inode.getId()), "name", inode.getName()});
   }
 
   @Override
@@ -54,6 +56,7 @@ public class InodeContext extends EntityContext<INode> {
     removedInodes.clear();
     newInodes.clear();
     modifiedInodes.clear();
+    super.clear();
   }
 
   @Override
@@ -64,10 +67,13 @@ public class InodeContext extends EntityContext<INode> {
       case ByPKey:
         long inodeId = (Long) params[0];
         if (removedInodes.containsKey(inodeId)) {
+          log("find-by-pk-removed", CacheHitState.LOSS, new String[]{"id", Long.toString(inodeId)});
           result = null;
         } else if (inodesIdIndex.containsKey(inodeId)) {
+          log("find-by-pk", CacheHitState.HIT, new String[]{"id", Long.toString(inodeId)});
           result = inodesIdIndex.get(inodeId);
         } else {
+          log("find-by-pk", CacheHitState.LOSS, new String[]{"id", Long.toString(inodeId)});
           result = dataAccess.findInodeById(inodeId);
           if (result != null) {
             inodesIdIndex.put(inodeId, result);
@@ -80,15 +86,20 @@ public class InodeContext extends EntityContext<INode> {
         long parentId = (Long) params[1];
         String key = parentId + name;
         if (inodesNameParentIndex.containsKey(key)) {
+          log("find-by-name-parentid", CacheHitState.HIT,
+                  new String[]{"name", name, "pid", Long.toString(parentId)});
           result = inodesNameParentIndex.get(key);
         } else {
           result = dataAccess.findInodeByNameAndParentId(name, parentId);
           if (result != null) {
             if (removedInodes.containsKey(result.getId())) {
+              log("find-by-name-parentid-removed", CacheHitState.LOSS,
+                      new String[]{"name", name, "pid", Long.toString(parentId)});
               return null;
             }
             inodesIdIndex.put(result.getId(), result);
             inodesNameParentIndex.put(result.nameParentKey(), result);
+            log("find-by-name-parentid", CacheHitState.LOSS, new String[]{"name", name, "pid", Long.toString(parentId)});
           }
         }
         break;
@@ -105,8 +116,10 @@ public class InodeContext extends EntityContext<INode> {
       case ByParentId:
         long parentId = (Long) params[0];
         if (inodesParentIndex.containsKey(parentId)) {
+          log("find-by-parentid", CacheHitState.HIT, new String[]{"pid", Long.toString(parentId)});
           result = inodesParentIndex.get(parentId);
         } else {
+          log("find-by-parentid", CacheHitState.LOSS, new String[]{"pid", Long.toString(parentId)});
           result = syncInodeInstances(dataAccess.findInodesByParentIdSortedByName(parentId));
           Collections.sort(result, INode.Order.ByName);
           inodesParentIndex.put(parentId, result);
@@ -114,6 +127,7 @@ public class InodeContext extends EntityContext<INode> {
         break;
       case ByIds:
         List<Long> ids = (List<Long>) params[0];
+        log("find-by-ids", CacheHitState.NA, new String[]{"ids", ids.toString()});
         result = syncInodeInstances(dataAccess.findInodesByIds(ids));
         break;
     }
@@ -124,6 +138,7 @@ public class InodeContext extends EntityContext<INode> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedInodes.values(), newInodes.values(), modifiedInodes.values());
+    log("prepared");
   }
 
   @Override
@@ -133,6 +148,7 @@ public class InodeContext extends EntityContext<INode> {
     newInodes.remove(inode.getId());
     modifiedInodes.remove(inode.getId());
     removedInodes.put(inode.getId(), inode);
+    log("removed", CacheHitState.NA, new String[]{"id", Long.toString(inode.getId()), "name", inode.getName()});
   }
 
   @Override
@@ -150,6 +166,7 @@ public class InodeContext extends EntityContext<INode> {
     inodesIdIndex.put(inode.getId(), inode);
     inodesNameParentIndex.put(inode.nameParentKey(), inode);
     modifiedInodes.put(inode.getId(), inode);
+    log("updated", CacheHitState.NA, new String[]{"id", Long.toString(inode.getId()), "name", inode.getName()});
   }
 
   private List<INode> syncInodeInstances(List<INode> newInodes) {

@@ -33,6 +33,8 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
 
     exReplicas.put(exReplica, exReplica);
     newExReplica.put(exReplica, exReplica);
+    log("added-replica", CacheHitState.NA,
+            new String[]{"bid", Long.toString(exReplica.getBlockId()), "sid", exReplica.getStorageId()});
   }
 
   @Override
@@ -41,6 +43,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
     storageIdToExReplica.clear();
     newExReplica.clear();
     removedExReplica.clear();
+    super.clear();
   }
 
   @Override
@@ -48,6 +51,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
     ExcessReplica.Counter eCounter = (ExcessReplica.Counter) counter;
     switch (eCounter) {
       case All:
+        log("count-all");
         return dataAccess.countAll();
     }
 
@@ -66,10 +70,16 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
         String storageId = (String) params[1];
         ExcessReplica searchInstance = new ExcessReplica(storageId, blockId);
         if (exReplicas.containsKey(searchInstance)) {
+          log("find-by-pk", CacheHitState.HIT,
+                  new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = exReplicas.get(searchInstance);
         } else if (removedExReplica.containsKey(searchInstance)) {
+          log("find-by-pk-removed-item", CacheHitState.LOSS,
+                  new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = null;
         } else {
+          log("find-by-pk", CacheHitState.LOSS,
+                  new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = dataAccess.findByPkey(params);
           this.exReplicas.put(result, result);
         }
@@ -87,8 +97,10 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
       case ByStorageId:
         String sId = (String) params[0];
         if (storageIdToExReplica.containsKey(sId)) {
+          log("find-by-storageid", CacheHitState.HIT, new String[]{"sid", sId});
           result = storageIdToExReplica.get(sId);
         } else {
+          log("find-by-storageid", CacheHitState.LOSS, new String[]{"sid", sId});
           result = syncExcessReplicaInstances(dataAccess.findExcessReplicaByStorageId(sId));
           storageIdToExReplica.put(sId, result);
         }
@@ -100,6 +112,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
   @Override
   public void prepare() throws StorageException {
     dataAccess.prepare(removedExReplica.values(), newExReplica.values(), null);
+    log("prepared");
   }
 
   @Override
@@ -110,6 +123,8 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
 
     newExReplica.remove(exReplica);
     removedExReplica.put(exReplica, exReplica);
+    log("removed", CacheHitState.NA,
+            new String[]{"bid", Long.toString(exReplica.getBlockId()), "sid", exReplica.getStorageId()});
   }
 
   @Override
