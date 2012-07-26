@@ -352,7 +352,7 @@ public class BlockManager {
     synchronized (neededReplications) {
       out.println("Metasave: Blocks waiting for replication: "
               + neededReplications.size());
-      for (UnderReplicatedBlock urb : EntityManager.findList(UnderReplicatedBlock.Finder.AllSortedByLevel)) {
+      for (UnderReplicatedBlock urb : EntityManager.findList(UnderReplicatedBlock.Finder.All)) {
         Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
         List<DatanodeDescriptor> containingNodes =
                 new ArrayList<DatanodeDescriptor>();
@@ -1074,7 +1074,7 @@ public class BlockManager {
           return blocksToReplicate;
         }
 
-        Collection<UnderReplicatedBlock> urblocks = EntityManager.findList(UnderReplicatedBlock.Finder.AllSortedByLevel);
+        Collection<UnderReplicatedBlock> urblocks = EntityManager.findList(UnderReplicatedBlock.Finder.All);
         Iterator<UnderReplicatedBlock> iterator = urblocks.iterator();
         // skip to the first unprocessed block, which is at replIndex
         for (int i = 0; i < replIndex && iterator.hasNext(); i++) {

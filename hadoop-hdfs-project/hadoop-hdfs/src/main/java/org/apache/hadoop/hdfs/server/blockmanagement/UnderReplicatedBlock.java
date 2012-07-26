@@ -15,7 +15,7 @@ public class UnderReplicatedBlock {
   }
   public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<UnderReplicatedBlock> {
 
-    ByBlockId, AllSortedByLevel, ByLevel;
+    ByBlockId, All, ByLevel;
 
     @Override
     public Class getType() {

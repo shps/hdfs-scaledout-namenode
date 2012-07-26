@@ -95,19 +95,25 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
     try {
       if (invBlocks.size() > 0) {
         Iterator<InvalidatedBlock> iterator = invBlocks.iterator();
-        InvalidatedBlock next = iterator.next();
-        StringBuilder query = new StringBuilder("select * from ").append(TABLE_NAME).
-                append(" where (").append(STORAGE_ID).append("='").
-                append(next.getStorageId()).append("' and ").append(BLOCK_ID).append("=").
-                append(next.getBlockId()).append(")");
+        InvalidatedBlock next = null;
+        StringBuilder sIds = new StringBuilder(STORAGE_ID).append(" in (");
+        StringBuilder bIds = new StringBuilder(BLOCK_ID).append(" in (");
+        String comma = ",";
+        String quote = "'";
         while (iterator.hasNext()) {
           next = iterator.next();
-          query.append(" or (").append(STORAGE_ID).append("='").
-                  append(next.getStorageId()).append("' and ").append(BLOCK_ID).append("=").
-                  append(next.getBlockId()).append(")");
+          sIds.append(quote).append(next.getStorageId()).append(quote);
+          bIds.append(next.getBlockId());
+          if (iterator.hasNext()) {
+            sIds.append(comma);
+            bIds.append(comma);
+          }
         }
+        sIds.append(")");
+        bIds.append(")");
+        String query = String.format("select * from %s where %s and %s", TABLE_NAME, sIds.toString(), bIds.toString());
         Connection conn = connector.obtainSession();
-        ResultSet rs = conn.createStatement().executeQuery(query.toString());
+        ResultSet rs = conn.createStatement().executeQuery(query);
         return convert(rs);
       } else {
         return Collections.EMPTY_SET;
@@ -121,7 +127,7 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
   @Override
   public void prepare(Collection<InvalidatedBlock> removed, Collection<InvalidatedBlock> newed, Collection<InvalidatedBlock> modified) throws StorageException {
     try {
-      String insert = String.format("insert into %s values(?,?,?,?)",
+      String insert = String.format("insert into %s(%s,%s,%s,%s) values(?,?,?,?)",
               TABLE_NAME, BLOCK_ID, STORAGE_ID, GENERATION_STAMP, NUM_BYTES);
       String update = String.format("update %s set %s=?, %s=? where %s=? and %s=?",
               TABLE_NAME, GENERATION_STAMP, NUM_BYTES, STORAGE_ID, BLOCK_ID);

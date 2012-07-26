@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import java.util.*;
+import java.util.Map.Entry;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
@@ -16,6 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBlock> {
 
   private Map<Long, UnderReplicatedBlock> urBlocks = new HashMap<Long, UnderReplicatedBlock>();
+  private Map<Integer, HashSet<UnderReplicatedBlock>> levelToReplicas = new HashMap<Integer, HashSet<UnderReplicatedBlock>>();
   private Map<Long, UnderReplicatedBlock> newurBlocks = new HashMap<Long, UnderReplicatedBlock>();
   private Map<Long, UnderReplicatedBlock> modifiedurBlocks = new HashMap<Long, UnderReplicatedBlock>();
   private Map<Long, UnderReplicatedBlock> removedurBlocks = new HashMap<Long, UnderReplicatedBlock>();
@@ -32,8 +34,9 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
       throw new TransactionContextException("Removed under replica passed to be persisted");
     }
 
-    urBlocks.put(entity.getBlockId(), entity);
+    addNewReplica(entity);
     newurBlocks.put(entity.getBlockId(), entity);
+
     log("added-urblock", CacheHitState.NA,
             new String[]{"bid", Long.toString(entity.getBlockId()),
               "level", Integer.toString(entity.getLevel())});
@@ -45,6 +48,7 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     newurBlocks.clear();
     modifiedurBlocks.clear();
     removedurBlocks.clear();
+    levelToReplicas.clear();
     allUrBlocksRead = false;
   }
 
@@ -55,37 +59,37 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     switch (urCounter) {
       case All:
         log("count-all-urblocks");
-        return findList(UnderReplicatedBlock.Finder.AllSortedByLevel).size();
+        return findList(UnderReplicatedBlock.Finder.All).size();
       case ByLevel:
         Integer level = (Integer) params[0];
         if (allUrBlocksRead) {
           log("count-urblocks-by-level", CacheHitState.HIT, new String[]{Integer.toString(level)});
-          int count = 0;
-          for (UnderReplicatedBlock block : urBlocks.values()) {
-            if (block.getLevel() == level) {
-              count++;
-            }
-          }
-
-          return count;
+        } else {
+          log("count-urblocks-by-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
+          syncUnderReplicatedBlockInstances(dataAccess.findByLevel(level)).size();
         }
-        log("count-urblocks-by-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
-        return syncUnderReplicatedBlockInstances(dataAccess.findByLevel(level)).size();
+        if (levelToReplicas.containsKey(level)) {
+          return levelToReplicas.get(level).size();
+        } else {
+          return 0;
+        }
       case LessThanLevel:
         level = (Integer) params[0];
         if (allUrBlocksRead) {
           log("count-urblocks-less-than-level", CacheHitState.HIT, new String[]{Integer.toString(level)});
-          int count = 0;
-          for (UnderReplicatedBlock block : urBlocks.values()) {
-            if (block.getLevel() < level) {
-              count++;
-            }
-          }
-
-          return count;
+        } else {
+          log("count-urblocks-less-than-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
+          syncUnderReplicatedBlockInstances(dataAccess.findAllLessThanLevel(level)).size();
         }
-        log("count-urblocks-less-than-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
-        return syncUnderReplicatedBlockInstances(dataAccess.findAllLessThanLevel(level)).size();
+        int count = 0;
+        Iterator<Entry<Integer, HashSet<UnderReplicatedBlock>>> iterator = levelToReplicas.entrySet().iterator();
+        while (iterator.hasNext()) {
+          Entry<Integer, HashSet<UnderReplicatedBlock>> next = iterator.next();
+          if (next.getKey() < level) {
+            count += next.getValue().size();
+          }
+        }
+        return count;
     }
 
     throw new RuntimeException(UNSUPPORTED_COUNTER);
@@ -94,35 +98,31 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
   @Override
   public Collection<UnderReplicatedBlock> findList(FinderType<UnderReplicatedBlock> finder, Object... params) throws PersistanceException {
     UnderReplicatedBlock.Finder urFinder = (UnderReplicatedBlock.Finder) finder;
-    List<UnderReplicatedBlock> finalList = null;
     switch (urFinder) {
-      case AllSortedByLevel:
+      case All:
         if (allUrBlocksRead) {
           log("find-all-urblocks", CacheHitState.HIT);
-          finalList = new ArrayList(urBlocks.values());
         } else {
           log("find-all-urblocks", CacheHitState.LOSS);
-          finalList = dataAccess.findAllSortedByLevel();
-          List<UnderReplicatedBlock> synced = syncUnderReplicatedBlockInstances(finalList);
+          syncUnderReplicatedBlockInstances(dataAccess.findAll());
           allUrBlocksRead = true;
-          finalList = synced;
         }
-        return finalList;
+        List<UnderReplicatedBlock> result = new ArrayList(urBlocks.values());
+        Collections.sort(result, UnderReplicatedBlock.Order.ByLevel);
+        return result;
       case ByLevel:
         Integer level = (Integer) params[0];
         if (allUrBlocksRead) {
           log("find-urblocks-by-level", CacheHitState.HIT, new String[]{"level", Integer.toString(level)});
-          List<UnderReplicatedBlock> list = new ArrayList<UnderReplicatedBlock>();
-          for (UnderReplicatedBlock block : urBlocks.values()) {
-            if (block.getLevel() == level) {
-              list.add(block);
-            }
-          }
-
-          return list;
+        } else {
+          log("find-urblocks-by-level", CacheHitState.LOSS, new String[]{"level", Integer.toString(level)});
+          syncUnderReplicatedBlockInstances(dataAccess.findByLevel(level));
         }
-        log("find-urblocks-by-level", CacheHitState.LOSS, new String[]{"level", Integer.toString(level)});
-        return syncUnderReplicatedBlockInstances(dataAccess.findByLevel(level));
+        if (levelToReplicas.containsKey(level)) {
+          return new ArrayList(levelToReplicas.get(level));
+        } else {
+          return new ArrayList<UnderReplicatedBlock>();
+        }
     }
 
     throw new RuntimeException(UNSUPPORTED_FINDER);
@@ -164,6 +164,9 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     newurBlocks.remove(entity.getBlockId());
     modifiedurBlocks.remove(entity.getBlockId());
     removedurBlocks.put(entity.getBlockId(), entity);
+    if (levelToReplicas.containsKey(entity.getLevel())) {
+      levelToReplicas.get(entity.getLevel()).remove(entity);
+    }
     log("removed-urblock", CacheHitState.NA,
             new String[]{"bid", Long.toString(entity.getBlockId()),
               "level", Integer.toString(entity.getLevel())});
@@ -199,11 +202,19 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
       if (urBlocks.containsKey(block.getBlockId())) {
         finalList.add(urBlocks.get(block.getBlockId()));
       } else {
-        urBlocks.put(block.getBlockId(), block);
+        addNewReplica(block);
         finalList.add(block);
       }
     }
 
     return finalList;
+  }
+
+  private void addNewReplica(UnderReplicatedBlock block) {
+    urBlocks.put(block.getBlockId(), block);
+    if (!levelToReplicas.containsKey(block.getLevel())) {
+      levelToReplicas.put(block.getLevel(), new HashSet<UnderReplicatedBlock>());
+    }
+    levelToReplicas.get(block.getLevel()).add(block);
   }
 }

@@ -110,13 +110,12 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
       case All:
         if (!allInvBlocksRead) {
           log("find-all-invblocks", CacheHitState.LOSS);
-          List<InvalidatedBlock> result = syncInstances(dataAccess.findAllInvalidatedBlocks());
+          syncInstances(dataAccess.findAllInvalidatedBlocks());
           allInvBlocksRead = true;
-          return result;
         } else {
           log("find-all-invblocks", CacheHitState.HIT);
-          return new ArrayList<InvalidatedBlock>(invBlocks.values());
         }
+        return new ArrayList<InvalidatedBlock>(invBlocks.values());
     }
 
     throw new RuntimeException(UNSUPPORTED_FINDER);
@@ -157,6 +156,11 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
+  /**
+   * 
+   * @param list returns only the data fetched from the storage not those cached in memory.
+   * @return 
+   */
   private List<InvalidatedBlock> syncInstances(Collection<InvalidatedBlock> list) {
     List<InvalidatedBlock> finalList = new ArrayList<InvalidatedBlock>();
     for (InvalidatedBlock invBlock : list) {

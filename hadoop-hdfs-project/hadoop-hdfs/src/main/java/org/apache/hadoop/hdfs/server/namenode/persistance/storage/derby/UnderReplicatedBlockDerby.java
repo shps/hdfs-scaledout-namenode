@@ -41,14 +41,13 @@ public class UnderReplicatedBlockDerby extends UnderReplicatedBlockDataAccess {
   }
 
   @Override
-  public List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException {
+  public List<UnderReplicatedBlock> findAll() throws StorageException {
     try {
       Connection conn = connector.obtainSession();
       String query = String.format("select * from %s", TABLE_NAME);
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet rSet = s.executeQuery();
       List<UnderReplicatedBlock> result = createBlocks(rSet);
-      Collections.sort(result, UnderReplicatedBlock.Order.ByLevel);
       return result;
     } catch (SQLException ex) {
       handleSQLException(ex);

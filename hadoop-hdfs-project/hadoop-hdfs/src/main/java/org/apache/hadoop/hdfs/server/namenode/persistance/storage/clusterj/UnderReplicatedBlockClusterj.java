@@ -13,8 +13,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.UnderReplicatedBlockContext;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
@@ -91,14 +89,13 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
   }
 
   @Override
-  public List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException {
+  public List<UnderReplicatedBlock> findAll() throws StorageException {
     try {
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<UnderReplicatedBlocksDTO> dobj = qb.createQueryDefinition(UnderReplicatedBlocksDTO.class);
       Query<UnderReplicatedBlocksDTO> query = session.createQuery(dobj);
       List<UnderReplicatedBlocksDTO> urbks = query.getResultList();
       List<UnderReplicatedBlock> blocks = createUrBlockList(urbks);
-      Collections.sort(blocks, UnderReplicatedBlock.Order.ByLevel);
       return blocks;
     } catch (Exception e) {
       throw new StorageException(e);

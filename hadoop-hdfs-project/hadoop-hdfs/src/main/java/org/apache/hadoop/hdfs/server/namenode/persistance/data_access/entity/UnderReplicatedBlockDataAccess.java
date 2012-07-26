@@ -17,7 +17,7 @@ public abstract class UnderReplicatedBlockDataAccess extends EntityDataAccess {
 
   public abstract UnderReplicatedBlock findByBlockId(long blockId) throws StorageException;
 
-  public abstract List<UnderReplicatedBlock> findAllSortedByLevel() throws StorageException;
+  public abstract List<UnderReplicatedBlock> findAll() throws StorageException;
 
   public abstract List<UnderReplicatedBlock> findByLevel(int level) throws StorageException;
 

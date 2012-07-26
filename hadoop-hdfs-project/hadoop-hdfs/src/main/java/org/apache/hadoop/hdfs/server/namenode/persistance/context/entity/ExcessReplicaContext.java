@@ -51,7 +51,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
     switch (eCounter) {
       case All:
         log("count-all-excess");
-        return dataAccess.countAll();
+        return dataAccess.countAll() + newExReplica.size() - removedExReplica.size();
     }
 
     throw new RuntimeException(UNSUPPORTED_COUNTER);
@@ -97,12 +97,12 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
         String sId = (String) params[0];
         if (storageIdToExReplica.containsKey(sId)) {
           log("find-excess-by-storageid", CacheHitState.HIT, new String[]{"sid", sId});
-          result = storageIdToExReplica.get(sId);
         } else {
           log("find-excess-by-storageid", CacheHitState.LOSS, new String[]{"sid", sId});
-          result = syncExcessReplicaInstances(dataAccess.findExcessReplicaByStorageId(sId));
+          syncExcessReplicaInstances(dataAccess.findExcessReplicaByStorageId(sId));
           storageIdToExReplica.put(sId, result);
         }
+        result = storageIdToExReplica.get(sId);
         return result;
     }
     throw new RuntimeException(UNSUPPORTED_FINDER);

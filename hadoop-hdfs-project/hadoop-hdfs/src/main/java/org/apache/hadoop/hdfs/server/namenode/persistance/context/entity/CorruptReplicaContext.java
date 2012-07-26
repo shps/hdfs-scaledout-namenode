@@ -59,7 +59,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
           return corruptReplicas.size();
         } else {
           log("count-all-corrupts", CacheHitState.LOSS);
-          return dataAccess.countAll();
+          return dataAccess.countAll() + newCorruptReplicas.size() - removedCorruptReplicas.size(); 
         }
     }
 
@@ -93,12 +93,11 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
       case All:
         if (allCorruptBlocksRead) {
           log("find-all-corrupts", CacheHitState.HIT);
-          return corruptReplicas.values();
         }
         log("find-all-corrupts", CacheHitState.LOSS);
-        List<CorruptReplica> sync = syncCorruptReplicaInstances(dataAccess.findAll());
+        syncCorruptReplicaInstances(dataAccess.findAll());
         allCorruptBlocksRead = true;
-        return sync;
+        return corruptReplicas.values();
       case ByBlockId:
         Long blockId = (Long) params[0];
         if (blockCorruptReplicas.containsKey(blockId)) {
@@ -144,6 +143,11 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
+  /**
+   * 
+   * @param crs Returns only the fetched data from storage not those cached in the memory.
+   * @return 
+   */
   private List<CorruptReplica> syncCorruptReplicaInstances(List<CorruptReplica> crs) {
 
     ArrayList<CorruptReplica> finalList = new ArrayList<CorruptReplica>();
