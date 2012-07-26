@@ -402,12 +402,12 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  //@Test //TODO
+  @Test
   public void testHardLeaseRecoveryAfterNameNodeRestart() throws Exception {
     hardLeaseRecoveryRestartHelper(false);  
   }
   
-  //@Test //TODO
+  @Test
   public void testHardLeaseRecoveryWithRenameAfterNameNodeRestart()
       throws Exception {
     hardLeaseRecoveryRestartHelper(true);

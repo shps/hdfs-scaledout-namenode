@@ -78,7 +78,11 @@ public abstract class TransactionalRequestHandler {
     // TestSafeMode
     TEST_DATANODE_THRESHOLD,
     // TestDfsRename
-    COUNT_LEASE_DFS_RENAME,;
+    COUNT_LEASE_DFS_RENAME,
+    // NameNodeAdapter
+    GET_LEASE_BY_PATH,
+    ;
+    
   }
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private Object[] params = new Object[8];

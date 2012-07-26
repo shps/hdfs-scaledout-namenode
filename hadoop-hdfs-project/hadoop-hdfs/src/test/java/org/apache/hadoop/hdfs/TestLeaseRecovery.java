@@ -31,6 +31,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
 
@@ -135,8 +138,19 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       DFSTestUtil.waitReplication(dfs, filepath, (short) 1);
       waitLeaseRecovery(cluster);
       // verify that we still cannot recover the lease
-      LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
-      assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
+ 
+      TransactionalRequestHandler requestHandler = new TransactionalRequestHandler(OperationType.COUNT_LEASE) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          MiniDFSCluster cluster = (MiniDFSCluster) getParam1();
+          return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
+        }
+      }.setParam1(cluster);
+      
+      int count = (int) requestHandler.handle();
+    
+      assertTrue("Found " + count + " lease, expected 1", count == 1);
       cluster.getNameNodeRpc().setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
     } catch (Exception e) {
       e.printStackTrace();

@@ -65,12 +65,12 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
       case All:
         if (allPendingRead) {
           log("find-all-pendings", CacheHitState.HIT);
-          result = new ArrayList(pendings.values());
         } else {
           log("find-all-pendings", CacheHitState.LOSS);
-          result = syncInstances(dataAccess.findAll());
+          syncInstances(dataAccess.findAll());
           allPendingRead = true;
         }
+        result = new ArrayList(pendings.values());
         return result;
     }
 
@@ -137,6 +137,11 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
             "numInProgress", Integer.toString(pendingBlock.getNumReplicas())});
   }
 
+  /**
+   * This method only returns the result fetched from the storage not those in the memory.
+   * @param pendingTables
+   * @return 
+   */
   private List<PendingBlockInfo> syncInstances(Collection<PendingBlockInfo> pendingTables) {
     List<PendingBlockInfo> newPBlocks = new ArrayList<PendingBlockInfo>();
     for (PendingBlockInfo p : pendingTables) {

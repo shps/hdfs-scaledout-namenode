@@ -61,7 +61,7 @@ public class PendingBlockDerby extends PendingBlockDataAccess {
         result = new PendingBlockInfo(rSet.getLong(BLOCK_ID),
                 rSet.getLong(TIME_STAMP), rSet.getInt(NUM_REPLICAS_IN_PROGRESS));
       }
-      return null;
+      return result;
     } catch (SQLException ex) {
       handleSQLException(ex);
       return null;
