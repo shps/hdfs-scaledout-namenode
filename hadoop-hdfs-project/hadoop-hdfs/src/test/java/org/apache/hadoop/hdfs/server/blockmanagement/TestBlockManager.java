@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 public class TestBlockManager {
 
@@ -77,6 +79,14 @@ public class TestBlockManager {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
             "need to set a dummy value here so it assumes a multi-rack cluster");
+    StorageFactory.getConnector().setConfiguration(conf);
+    try {
+      StorageFactory.getConnector().formatStorage();
+    } catch (StorageException ex) {
+      Logger.getLogger(TestBlockManager.class.getName()).log(Level.SEVERE, null, ex);
+      assert false : ex.getMessage();
+    }
+    
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).isWritingNN();
@@ -342,7 +352,8 @@ public class TestBlockManager {
 
           for (DatanodeDescriptor dn : nodes) {
             IndexedReplica replica = blockInfo.addReplica(dn);
-            EntityManager.add(replica);
+            if (replica != null)
+              EntityManager.add(replica);
           }
           return blockInfo;
         }

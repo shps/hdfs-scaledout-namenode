@@ -74,13 +74,20 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
       case ByPk:
         Long blockId = (Long) params[0];
         String storageId = (String) params[1];
-        if (corruptReplicas.containsKey(blockId + storageId)) {
+        CorruptReplica result = null;
+        String searchKey = blockId + storageId;
+        if (corruptReplicas.containsKey(searchKey)) {
           log("find-corrupt-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
-          return corruptReplicas.get(blockId + storageId);
+          result = corruptReplicas.get(searchKey);
         } else {
           log("find-corrupt-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
-          return dataAccess.findByPk(blockId, storageId);
+          result = dataAccess.findByPk(blockId, storageId);
+          if (result != null)
+          {
+            corruptReplicas.put(searchKey, result);
+          }
         }
+        return result;
     }
     throw new RuntimeException(UNSUPPORTED_FINDER);
   }
@@ -102,12 +109,12 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
         Long blockId = (Long) params[0];
         if (blockCorruptReplicas.containsKey(blockId)) {
           log("find-corrupts-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
-          return blockCorruptReplicas.get(blockId);
+          return new ArrayList(blockCorruptReplicas.get(blockId));
         }
         log("find-corrupts-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
         List<CorruptReplica> syncList = syncCorruptReplicaInstances(dataAccess.findByBlockId(blockId));
         blockCorruptReplicas.put(blockId, syncList);
-        return syncList;
+        return new ArrayList(blockCorruptReplicas.get(blockId)); // Shallow copy
 
     }
 
@@ -121,14 +128,19 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void remove(CorruptReplica entity) throws PersistanceException {
-    if (corruptReplicas.get(entity.persistanceKey()) == null) {
+    String searchKey = entity.persistanceKey();
+    if (!corruptReplicas.containsKey(searchKey)) {
       throw new TransactionContextException("Unattached corrupt replica passed to be removed");
     }
 
-    corruptReplicas.remove(entity.persistanceKey());
-    newCorruptReplicas.remove(entity.persistanceKey());
-    modifiedCorruptReplicas.remove(entity.persistanceKey());
-    removedCorruptReplicas.put(entity.persistanceKey(), entity);
+    corruptReplicas.remove(searchKey);
+    newCorruptReplicas.remove(searchKey);
+    modifiedCorruptReplicas.remove(searchKey);
+    removedCorruptReplicas.put(searchKey, entity);
+    if (blockCorruptReplicas.containsKey(entity.getBlockId()))
+    {
+      blockCorruptReplicas.get(entity.getBlockId()).remove(entity);
+    }
     log("removed-corrupt", CacheHitState.NA, 
             new String[]{"bid", Long.toString(entity.getBlockId()), "sid", entity.getStorageId()});
   }

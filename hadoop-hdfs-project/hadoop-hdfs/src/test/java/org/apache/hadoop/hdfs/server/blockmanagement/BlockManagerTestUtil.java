@@ -92,33 +92,28 @@ public class BlockManagerTestUtil {
    * @throws IOException
    */
   private static int getNumberOfRacks(final BlockManager blockManager,
-          final Block b) throws IOException {
+          final Block b) throws IOException, PersistanceException {
     final Set<String> rackSet = new HashSet<String>(0);
-    new TransactionalRequestHandler(OperationType.GET_NUMBER_OF_RACKS) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        BlockInfo storedBlock = blockManager.getStoredBlock(b);
-        for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
-          if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-            if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
-              String rackName = cur.getNetworkLocation();
-              if (!rackSet.contains(rackName)) {
-                rackSet.add(rackName);
-              }
-            }
+    BlockInfo storedBlock = blockManager.getStoredBlock(b);
+    for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
+      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
+        if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
+          String rackName = cur.getNetworkLocation();
+          if (!rackSet.contains(rackName)) {
+            rackSet.add(rackName);
           }
         }
-        return null;
       }
-    }.handle();
+    }
     return rackSet.size();
   }
+    /**
+     * @param blockManager
+     * @return replication monitor thread instance from block manager.
+     */
+  
 
-  /**
-   * @param blockManager
-   * @return replication monitor thread instance from block manager.
-   */
   public static Daemon getReplicationThread(final BlockManager blockManager) {
     return blockManager.replicationThread;
   }

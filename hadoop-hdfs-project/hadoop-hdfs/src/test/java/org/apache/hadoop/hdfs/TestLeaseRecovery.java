@@ -147,7 +147,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
         }
       }.setParam1(cluster);
       
-      int count = (int) requestHandler.handle();
+      int count = (Integer) requestHandler.handle();
     
       assertTrue("Found " + count + " lease, expected 1", count == 1);
       cluster.getNameNodeRpc().setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);

@@ -81,6 +81,8 @@ public abstract class TransactionalRequestHandler {
     COUNT_LEASE_DFS_RENAME,
     // NameNodeAdapter
     GET_LEASE_BY_PATH,
+    // DFSTestUtil
+    WAIT_CORRUPT_REPLICAS,
     ;
     
   }

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedOutputStream;
@@ -71,6 +73,8 @@ import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -312,27 +316,38 @@ public class DFSTestUtil {
    * Keep accessing the given file until the namenode reports that the
    * given block in the file contains the given number of corrupt replicas.
    */
-  public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
-      Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException, PersistanceException {
-    int count = 0;
+  public static void waitCorruptReplicas(final FileSystem fs, final FSNamesystem ns,
+          final Path file, final ExtendedBlock b, final int corruptRepls)
+          throws IOException, TimeoutException, PersistanceException {
     final int ATTEMPTS = 50;
-    int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
-    while (repls != corruptRepls && count < ATTEMPTS) {
-      try {
-        IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
-            512, true);
-      } catch (IOException e) {
-        // Swallow exceptions
+    new TransactionalRequestHandler(OperationType.WAIT_CORRUPT_REPLICAS) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        int count = 0;
+        int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+        while (repls != corruptRepls && count < ATTEMPTS) {
+          try {
+            IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
+                    512, true);
+          } catch (IOException e) {
+            // Swallow exceptions
+          }
+          LOG.info("Waiting for " + corruptRepls + " corrupt replicas");
+          repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+          count++;
+        }
+        if (count == ATTEMPTS) {
+          try {
+            throw new TimeoutException("Timed out waiting for corrupt replicas."
+                    + " Waiting for " + corruptRepls + ", but only found " + repls);
+          } catch (TimeoutException ex) {
+            throw new IOException(ex);
+          }
+        }
+        return null;
       }
-      LOG.info("Waiting for "+corruptRepls+" corrupt replicas");
-      repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
-      count++;
-    }
-    if (count == ATTEMPTS) {
-      throw new TimeoutException("Timed out waiting for corrupt replicas."
-          + " Waiting for "+corruptRepls+", but only found "+repls);
-    }
+    }.handle();
   }
 
   /*
