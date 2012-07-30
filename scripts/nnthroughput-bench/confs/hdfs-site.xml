@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+	<!--<property>
+		<name>dfs.namenode.http-address</name>
+		<value>cloud1:6000</value>
+	</property> -->
+	<property>
+		<name>dfs.http.address</name>
+		<value>cloud1:6001</value>
+	</property>
+	<property>
+		<name>dfs.datanode.address</name>
+		<value>0.0.0.0:6002</value>
+	</property>
+	<property>
+		<name>dfs.datanode.http.address</name>
+		<value>0.0.0.0:6003</value>
+	</property>
+	<property>
+		<name>dfs.datanode.ipc.address</name>
+		<value>0.0.0.0:6004</value>
+	</property>
+	<property>
+		<name>dfs.storage.type</name>
+		<value>clusterj</value>
+		<description>storage type could be one of derby, clusterj or ...</description>
+	</property>
+</configuration>
