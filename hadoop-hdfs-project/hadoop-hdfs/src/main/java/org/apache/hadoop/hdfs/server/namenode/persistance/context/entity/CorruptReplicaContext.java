@@ -18,7 +18,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
   protected Map<String, CorruptReplica> corruptReplicas = new HashMap<String, CorruptReplica>();
   protected Map<Long, List<CorruptReplica>> blockCorruptReplicas = new HashMap<Long, List<CorruptReplica>>();
   protected Map<String, CorruptReplica> newCorruptReplicas = new HashMap<String, CorruptReplica>();
-  protected Map<String, CorruptReplica> modifiedCorruptReplicas = new HashMap<String, CorruptReplica>();
+//  protected Map<String, CorruptReplica> modifiedCorruptReplicas = new HashMap<String, CorruptReplica>();
   protected Map<String, CorruptReplica> removedCorruptReplicas = new HashMap<String, CorruptReplica>();
   protected boolean allCorruptBlocksRead = false;
   private CorruptReplicaDataAccess dataAccess;
@@ -43,7 +43,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     corruptReplicas.clear();
     blockCorruptReplicas.clear();
     newCorruptReplicas.clear();
-    modifiedCorruptReplicas.clear();
+//    modifiedCorruptReplicas.clear();
     removedCorruptReplicas.clear();
     allCorruptBlocksRead = false;
   }
@@ -123,7 +123,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void prepare() throws StorageException {
-    dataAccess.prepare(removedCorruptReplicas.values(), newCorruptReplicas.values(), modifiedCorruptReplicas.values());
+    dataAccess.prepare(removedCorruptReplicas.values(), newCorruptReplicas.values(), null);
   }
 
   @Override
@@ -135,7 +135,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
     corruptReplicas.remove(searchKey);
     newCorruptReplicas.remove(searchKey);
-    modifiedCorruptReplicas.remove(searchKey);
+//    modifiedCorruptReplicas.remove(searchKey);
     removedCorruptReplicas.put(searchKey, entity);
     if (blockCorruptReplicas.containsKey(entity.getBlockId()))
     {
