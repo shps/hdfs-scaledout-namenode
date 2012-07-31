@@ -1285,6 +1285,13 @@ public class NNThroughputBenchmark {
   }
 
   public static void main(String[] args) throws Exception {
+//    args = new String[6];
+//    args[0] = "-op";
+//    args[1] = "create";
+//    args[2] = "-threads";
+//    args[3] = "2";
+//    args[4] = "-files";
+//    args[5] = "10";
     runBenchmark(new HdfsConfiguration(), 
                   new ArrayList<String>(Arrays.asList(args)));
   }
