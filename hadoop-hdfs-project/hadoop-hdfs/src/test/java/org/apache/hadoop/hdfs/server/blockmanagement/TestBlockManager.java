@@ -79,7 +79,7 @@ public class TestBlockManager {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
             "need to set a dummy value here so it assumes a multi-rack cluster");
-    StorageFactory.getConnector().setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
     try {
       StorageFactory.getConnector().formatStorage();
     } catch (StorageException ex) {

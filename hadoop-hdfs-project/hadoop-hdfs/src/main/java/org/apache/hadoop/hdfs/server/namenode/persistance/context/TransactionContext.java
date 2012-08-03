@@ -28,9 +28,11 @@ public class TransactionContext {
 
   public TransactionContext(StorageConnector connector, Map<Class, EntityContext> entityContext) {
     this.typeContextMap = entityContext;
-    for(EntityContext context : entityContext.values())
-      if (!contexts.contains(context))
+    for (EntityContext context : entityContext.values()) {
+      if (!contexts.contains(context)) {
         contexts.add(context);
+      }
+    }
     this.connector = connector;
   }
 
@@ -50,7 +52,7 @@ public class TransactionContext {
 
   public void commit() throws StorageException {
     aboutToPerform();
-    
+
     for (EntityContext context : contexts) {
       context.prepare();
     }
@@ -110,6 +112,7 @@ public class TransactionContext {
   public <T> T find(FinderType<T> finder, Object... params) throws PersistanceException {
     aboutToPerform();
     if (typeContextMap.containsKey(finder.getType())) {
+//      logger.debug("TX-Find: " + finder.getType().getName());
       return (T) typeContextMap.get(finder.getType()).find(finder, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + finder.getType());
@@ -119,6 +122,7 @@ public class TransactionContext {
   public <T> Collection<T> findList(FinderType<T> finder, Object... params) throws PersistanceException {
     aboutToPerform();
     if (typeContextMap.containsKey(finder.getType())) {
+//      logger.debug("TX-FindList: " + finder.getType().getName());
       return typeContextMap.get(finder.getType()).findList(finder, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + finder.getType());
@@ -128,6 +132,7 @@ public class TransactionContext {
   public int count(CounterType counter, Object... params) throws PersistanceException {
     aboutToPerform();
     if (typeContextMap.containsKey(counter.getType())) {
+//      logger.debug("TX-Count: " + counter.getType().getName());
       return typeContextMap.get(counter.getType()).count(counter, params);
     } else {
       throw new RuntimeException(UNKNOWN_TYPE + counter.getType());

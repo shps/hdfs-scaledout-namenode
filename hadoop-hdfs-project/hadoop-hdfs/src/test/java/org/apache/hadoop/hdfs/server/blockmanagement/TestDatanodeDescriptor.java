@@ -59,7 +59,7 @@ public class TestDatanodeDescriptor extends TestCase {
   public void testBlocksCounter() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
-    StorageFactory.getConnector().setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
 
     final DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());

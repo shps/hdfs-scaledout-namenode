@@ -35,11 +35,12 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
 
     void setStorageId(String storageId);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public int countAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
 
       QueryDomainType qdt = qb.createQueryDefinition(ExcessReplicaDTO.class);
@@ -54,6 +55,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
   @Override
   public void prepare(Collection<ExcessReplica> removed, Collection<ExcessReplica> newed, Collection<ExcessReplica> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (ExcessReplica exReplica : newed) {
         ExcessReplicaDTO newInstance = session.newInstance(ExcessReplicaDTO.class);
         createPersistable(exReplica, newInstance);
@@ -74,6 +76,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
   @Override
   public List<ExcessReplica> findExcessReplicaByStorageId(String storageId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<ExcessReplicaDTO> qdt = qb.createQueryDefinition(ExcessReplicaDTO.class);
       qdt.where(qdt.get("storageId").equal(qdt.param("param")));
@@ -88,6 +91,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
   @Override
   public ExcessReplica findByPkey(Object[] params) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       ExcessReplicaDTO invTable = session.find(ExcessReplicaDTO.class, params);
       if (invTable == null) {
         return null;

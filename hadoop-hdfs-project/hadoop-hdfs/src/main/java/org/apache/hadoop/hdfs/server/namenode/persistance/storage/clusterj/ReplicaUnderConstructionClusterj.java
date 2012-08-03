@@ -48,10 +48,11 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstruntionDa
 
     void setState(int state);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public void prepare(Collection<ReplicaUnderConstruction> removed, Collection<ReplicaUnderConstruction> newed, Collection<ReplicaUnderConstruction> modified) throws StorageException {
+    Session session = connector.obtainSession();
     for (ReplicaUnderConstruction replica : removed) {
       Object[] pk = new Object[2];
       pk[0] = replica.getBlockId();
@@ -69,6 +70,7 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstruntionDa
   @Override
   public List<ReplicaUnderConstruction> findReplicaUnderConstructionByBlockId(long blockId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<ReplicaUcDTO> dobj = qb.createQueryDefinition(ReplicaUcDTO.class);
       dobj.where(dobj.get("blockId").equal(dobj.param("param")));
@@ -81,6 +83,7 @@ public class ReplicaUnderConstructionClusterj extends ReplicaUnderConstruntionDa
   }
 
   private List<ReplicaUnderConstruction> createReplicaList(List<ReplicaUcDTO> replicaUc) {
+    Session session = connector.obtainSession();
     List<ReplicaUnderConstruction> replicas = new ArrayList<ReplicaUnderConstruction>(replicaUc.size());
     for (ReplicaUcDTO t : replicaUc) {
       replicas.add(new ReplicaUnderConstruction(HdfsServerConstants.ReplicaState.values()[t.getState()],

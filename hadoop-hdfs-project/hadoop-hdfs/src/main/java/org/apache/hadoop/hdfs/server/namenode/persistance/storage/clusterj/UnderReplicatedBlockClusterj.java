@@ -10,7 +10,6 @@ import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
@@ -36,11 +35,12 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
 
     void setLevel(int level);
   }
-  Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public UnderReplicatedBlock findByBlockId(long blockId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       UnderReplicatedBlocksDTO urbt = session.find(UnderReplicatedBlocksDTO.class, blockId);
       if (urbt == null) {
         return null;
@@ -53,6 +53,7 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
 
   @Override
   public void prepare(Collection<UnderReplicatedBlock> removed, Collection<UnderReplicatedBlock> newed, Collection<UnderReplicatedBlock> modified) throws StorageException {
+    Session session = connector.obtainSession();
     for (UnderReplicatedBlock urBlock : removed) {
       session.deletePersistent(UnderReplicatedBlocksDTO.class, urBlock.getBlockId());
     }
@@ -91,6 +92,7 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
   @Override
   public List<UnderReplicatedBlock> findAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<UnderReplicatedBlocksDTO> dobj = qb.createQueryDefinition(UnderReplicatedBlocksDTO.class);
       Query<UnderReplicatedBlocksDTO> query = session.createQuery(dobj);
@@ -105,6 +107,7 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
   @Override
   public List<UnderReplicatedBlock> findByLevel(int level) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<UnderReplicatedBlocksDTO> dobj = qb.createQueryDefinition(UnderReplicatedBlocksDTO.class);
       Predicate pred = dobj.get("level").equal(dobj.param("level"));
@@ -120,6 +123,7 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
   @Override
   public List<UnderReplicatedBlock> findAllLessThanLevel(int level) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<UnderReplicatedBlocksDTO> dobj = qb.createQueryDefinition(UnderReplicatedBlocksDTO.class);
       Predicate pred = dobj.get("level").lessThan(dobj.param("level"));
@@ -135,6 +139,7 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
 
   @Override
   public void removeAll() throws StorageException {
+    Session session = connector.obtainSession();
     session.deletePersistentAll(UnderReplicatedBlocksDTO.class);
   }
 }

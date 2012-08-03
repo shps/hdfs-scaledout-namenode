@@ -36,11 +36,12 @@ public class LeasePathClusterj extends LeasePathDataAccess {
 
     void setPath(String path);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public void prepare(Collection<LeasePath> removed, Collection<LeasePath> newed, Collection<LeasePath> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (LeasePath lp : newed) {
         LeasePathsDTO lTable = session.newInstance(LeasePathsDTO.class);
         createPersistableLeasePathInstance(lp, lTable);
@@ -65,6 +66,7 @@ public class LeasePathClusterj extends LeasePathDataAccess {
   @Override
   public Collection<LeasePath> findByHolderId(int holderId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<LeasePathsDTO> dobj = qb.createQueryDefinition(LeasePathsDTO.class);
       dobj.where(dobj.get("holderId").equal(dobj.param("param")));
@@ -79,6 +81,7 @@ public class LeasePathClusterj extends LeasePathDataAccess {
   @Override
   public LeasePath findByPKey(String path) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       LeasePathsDTO lPTable = session.find(LeasePathsDTO.class, path);
       LeasePath lPath = null;
       if (lPTable != null) {
@@ -93,6 +96,7 @@ public class LeasePathClusterj extends LeasePathDataAccess {
   @Override
   public Collection<LeasePath> findByPrefix(String prefix) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType dobj = qb.createQueryDefinition(LeasePathsDTO.class);
       PredicateOperand propertyPredicate = dobj.get("path");
@@ -111,6 +115,7 @@ public class LeasePathClusterj extends LeasePathDataAccess {
   @Override
   public Collection<LeasePath> findAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType dobj = qb.createQueryDefinition(LeasePathsDTO.class);
       Query query = session.createQuery(dobj);

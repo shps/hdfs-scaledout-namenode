@@ -2,9 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.persistance.storage;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.derby.iapi.error.DerbySQLException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.*;
@@ -31,13 +30,16 @@ public class StorageFactory {
   private static ReplicaUnderConstruntionDataAccess replicaUnderConstruntionDataAccess;
   private static UnderReplicatedBlockDataAccess underReplicatedBlockDataAccess;
 
-//  private static final StorageConnector defaultStorage = ClusterjConnector.INSTANCE;
-  static {
-    HdfsConfiguration conf = new HdfsConfiguration();
+  public static StorageConnector getConnector() {
+    return defaultStorage;
+  }
+
+  public static void setConfiguration(Configuration conf) {
     String storageType = conf.get(DFSConfigKeys.DFS_STORAGE_TYPE_KEY);
-    if (storageType.equals(DerbyConnector.DERBY_EMBEDDED) || 
-            storageType.equals(DerbyConnector.DERBY_NETWORK_SERVER)) {
+    if (storageType.equals(DerbyConnector.DERBY_EMBEDDED)
+            || storageType.equals(DerbyConnector.DERBY_NETWORK_SERVER)) {
       defaultStorage = DerbyConnector.INSTANCE;
+      defaultStorage.setConfiguration(conf);
       blockInfoDataAccess = new BlockInfoDerby();
       corruptReplicaDataAccess = new CorruptReplicaDerby();
       excessReplicaDataAccess = new ExcessReplicaDerby();
@@ -51,6 +53,7 @@ public class StorageFactory {
       underReplicatedBlockDataAccess = new UnderReplicatedBlockDerby();
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
+      defaultStorage.setConfiguration(conf);
       blockInfoDataAccess = new BlockInfoClusterj();
       corruptReplicaDataAccess = new CorruptReplicaClusterj();
       excessReplicaDataAccess = new ExcessReplicaClusterj();
@@ -63,10 +66,6 @@ public class StorageFactory {
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionClusterj();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockClusterj();
     }
-  }
-
-  public static StorageConnector getConnector() {
-    return defaultStorage;
   }
 
   public static Map<Class, EntityContext> createEntityContexts() {

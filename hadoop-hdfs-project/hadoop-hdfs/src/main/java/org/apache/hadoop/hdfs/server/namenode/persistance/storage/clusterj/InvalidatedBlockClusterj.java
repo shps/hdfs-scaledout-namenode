@@ -45,7 +45,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
 
     void setNumBytes(long numBytes);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public int countAll() throws StorageException {
@@ -55,6 +55,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
   @Override
   public List<InvalidatedBlock> findAllInvalidatedBlocks() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType qdt = qb.createQueryDefinition(InvalidateBlocksDTO.class);
       return createList(session.createQuery(qdt).getResultList());
@@ -66,6 +67,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
   @Override
   public List<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<InvalidateBlocksDTO> qdt = qb.createQueryDefinition(InvalidateBlocksDTO.class);
       qdt.where(qdt.get("storageId").equal(qdt.param("param")));
@@ -80,6 +82,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
   @Override
   public InvalidatedBlock findInvBlockByPkey(Object[] params) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       InvalidateBlocksDTO invTable = session.find(InvalidateBlocksDTO.class, params);
       if (invTable == null) {
         return null;
@@ -93,6 +96,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
   @Override
   public void prepare(Collection<InvalidatedBlock> removed, Collection<InvalidatedBlock> newed, Collection<InvalidatedBlock> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (InvalidatedBlock invBlock : newed) {
         InvalidateBlocksDTO newInstance = session.newInstance(InvalidateBlocksDTO.class);
         createPersistable(invBlock, newInstance);

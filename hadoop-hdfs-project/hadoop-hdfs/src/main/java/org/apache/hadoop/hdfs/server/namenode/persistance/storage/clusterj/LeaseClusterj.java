@@ -43,7 +43,7 @@ public class LeaseClusterj extends LeaseDataAccess {
 
     void setHolderId(int holder_id);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public int countAll() throws StorageException {
@@ -53,6 +53,7 @@ public class LeaseClusterj extends LeaseDataAccess {
   @Override
   public Lease findByPKey(String holder) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       LeaseDTO lTable = session.find(LeaseDTO.class, holder);
       if (lTable != null) {
         Lease lease = createLease(lTable);
@@ -67,6 +68,7 @@ public class LeaseClusterj extends LeaseDataAccess {
   @Override
   public Lease findByHolderId(int holderId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<LeaseDTO> dobj = qb.createQueryDefinition(LeaseDTO.class);
 
@@ -94,6 +96,7 @@ public class LeaseClusterj extends LeaseDataAccess {
   @Override
   public Collection<Lease> findAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<LeaseDTO> dobj = qb.createQueryDefinition(LeaseDTO.class);
       Query<LeaseDTO> query = session.createQuery(dobj);
@@ -106,6 +109,7 @@ public class LeaseClusterj extends LeaseDataAccess {
   @Override
   public Collection<Lease> findByTimeLimit(long timeLimit) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType dobj = qb.createQueryDefinition(LeaseDTO.class);
       PredicateOperand propertyPredicate = dobj.get("lastUpdate");
@@ -124,12 +128,13 @@ public class LeaseClusterj extends LeaseDataAccess {
   @Override
   public void prepare(Collection<Lease> removed, Collection<Lease> newed, Collection<Lease> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (Lease l : newed) {
         LeaseDTO lTable = session.newInstance(LeaseDTO.class);
         createPersistableLeaseInstance(l, lTable);
         session.savePersistent(lTable);
       }
-      
+
       for (Lease l : modified) {
         LeaseDTO lTable = session.newInstance(LeaseDTO.class);
         createPersistableLeaseInstance(l, lTable);

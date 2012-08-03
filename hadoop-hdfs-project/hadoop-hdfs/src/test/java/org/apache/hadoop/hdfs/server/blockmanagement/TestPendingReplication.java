@@ -43,7 +43,7 @@ public class TestPendingReplication extends TestCase {
   public void testPendingReplication() {
     try {
       final PendingReplicationBlocks pendingReplications = new PendingReplicationBlocks(TIMEOUT * 1000);
-      StorageFactory.getConnector().setConfiguration(new HdfsConfiguration());
+      StorageFactory.setConfiguration(new HdfsConfiguration());
       StorageFactory.getConnector().formatStorage();
       try {
         new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {

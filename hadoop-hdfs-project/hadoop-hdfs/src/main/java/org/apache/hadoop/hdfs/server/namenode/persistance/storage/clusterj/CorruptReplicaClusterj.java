@@ -36,11 +36,12 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
 
     void setStorageId(String id);
   }
-  Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public int countAll() throws StorageException{
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<CorruptReplicaDTO> dobj = qb.createQueryDefinition(CorruptReplicaDTO.class);
       Query<CorruptReplicaDTO> query = session.createQuery(dobj);
@@ -52,6 +53,7 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
 
   @Override
   public void prepare(Collection<CorruptReplica> removed, Collection<CorruptReplica> newed, Collection<CorruptReplica> modified) throws StorageException {
+    Session session = connector.obtainSession();
     for (CorruptReplica corruptReplica : removed) {
       Object[] pk = new Object[2];
       pk[0] = corruptReplica.getBlockId();
@@ -64,17 +66,12 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
       createPersistable(corruptReplica, newInstance);
       session.savePersistent(newInstance);
     }
-
-    for (CorruptReplica corruptReplica : modified) {
-      CorruptReplicaDTO newInstance = session.newInstance(CorruptReplicaDTO.class);
-      createPersistable(corruptReplica, newInstance);
-      session.savePersistent(newInstance);
-    }
   }
 
   @Override
   public CorruptReplica findByPk(long blockId, String storageId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       Object[] keys = new Object[2];
       keys[0] = blockId;
       keys[1] = storageId;
@@ -92,6 +89,7 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
   @Override
   public List<CorruptReplica> findAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<CorruptReplicaDTO> dobj = qb.createQueryDefinition(CorruptReplicaDTO.class);
       Query<CorruptReplicaDTO> query = session.createQuery(dobj);
@@ -105,6 +103,7 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
   @Override
   public List<CorruptReplica> findByBlockId(long blockId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<CorruptReplicaDTO> dobj = qb.createQueryDefinition(CorruptReplicaDTO.class);
       Predicate pred = dobj.get("blockId").equal(dobj.param("blockId"));

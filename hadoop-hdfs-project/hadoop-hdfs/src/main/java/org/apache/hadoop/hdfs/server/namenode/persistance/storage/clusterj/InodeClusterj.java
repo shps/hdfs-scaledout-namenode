@@ -148,17 +148,18 @@ public class InodeClusterj extends InodeDataAccess {
 
     void setSymlink(String symlink);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public void prepare(Collection<INode> removed, Collection<INode> newed, Collection<INode> modified) throws StorageException {
+    Session session = connector.obtainSession();
     try {
       for (INode inode : newed) {
         InodeDTO persistable = session.newInstance(InodeDTO.class);
         createPersistable(inode, persistable);
         session.savePersistent(persistable);
       }
-      
+
       for (INode inode : modified) {
         InodeDTO persistable = session.newInstance(InodeDTO.class);
         createPersistable(inode, persistable);
@@ -176,6 +177,7 @@ public class InodeClusterj extends InodeDataAccess {
 
   @Override
   public INode findInodeById(long inodeId) throws StorageException {
+    Session session = connector.obtainSession();
     try {
       InodeDTO persistable = session.find(InodeDTO.class, inodeId);
 
@@ -194,6 +196,7 @@ public class InodeClusterj extends InodeDataAccess {
   @Override
   public List<INode> findInodesByParentIdSortedByName(long parentId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
 
       QueryDomainType<InodeDTO> dobj = qb.createQueryDefinition(InodeDTO.class);
@@ -212,6 +215,7 @@ public class InodeClusterj extends InodeDataAccess {
   @Override
   public INode findInodeByNameAndParentId(String name, long parentId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<InodeDTO> dobj = qb.createQueryDefinition(InodeDTO.class);
       Predicate pred1 = dobj.get("name").equal(dobj.param("name"));
@@ -243,6 +247,7 @@ public class InodeClusterj extends InodeDataAccess {
   @Override
   public List<INode> findInodesByIds(List<Long> ids) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<InodeDTO> dobj = qb.createQueryDefinition(InodeDTO.class);
       PredicateOperand field = dobj.get("id");

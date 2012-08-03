@@ -74,7 +74,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
 
     void setBlockRecoveryId(long recoveryId);
   }
-  Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public int countAll() throws StorageException {
@@ -84,6 +84,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   @Override
   public void prepare(Collection<BlockInfo> removed, Collection<BlockInfo> news, Collection<BlockInfo> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (BlockInfo block : removed) {
         BlockInfoDTO bTable = session.newInstance(BlockInfoDTO.class, block.getBlockId());
         session.deletePersistent(bTable);
@@ -108,6 +109,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   @Override
   public BlockInfo findById(long blockId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       BlockInfoDTO bit = session.find(BlockInfoDTO.class, blockId);
       if (bit == null) {
         return null;
@@ -121,6 +123,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   @Override
   public List<BlockInfo> findByInodeId(long id) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<BlockInfoDTO> dobj = qb.createQueryDefinition(BlockInfoDTO.class);
       dobj.where(dobj.get("iNodeId").equal(dobj.param("param")));
@@ -135,6 +138,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   @Override
   public List<BlockInfo> findAllBlocks() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<BlockInfoDTO> dobj = qb.createQueryDefinition(BlockInfoDTO.class);
       Query<BlockInfoDTO> query = session.createQuery(dobj);
@@ -147,6 +151,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   @Override
   public List<BlockInfo> findByStorageId(String storageId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       List<BlockInfo> ret = new ArrayList<BlockInfo>();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<ReplicaClusterj.ReplicaDTO> dobj = qb.createQueryDefinition(ReplicaClusterj.ReplicaDTO.class);

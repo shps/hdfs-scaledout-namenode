@@ -27,8 +27,20 @@
   </property>
 <property>
   <name>dfs.storage.type</name>
-  <value>derby-net</value>
+  <value>clusterj</value>
   <description>storage type could be one of derby-net, derby-em, clusterj or ...</description>
+</property>
+<property>
+  <name>dfs.dbconnector.string</name>
+  <value>cloud3.sics.se</value>
+</property>
+<property>
+  <name>dfs.dbconnector.database</name>
+  <value>hooman</value>
+</property>
+<property>
+  <name>dfs.dbconnector.num-session-factories</name>
+  <value>3</value>
 </property>
 <property>
   <name>dfs.storage.derby.protocol</name>
@@ -36,3 +48,4 @@
   <description>"jdbc:derby:memory:derbyDB" for embedded in-memory or "jdbc:derby://localhost:1527/memory:derbyDB" for network server in-memory</description>
 </property>
 </configuration>
+  

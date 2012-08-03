@@ -76,7 +76,6 @@ public enum ClusterjConnector implements StorageConnector<Session> {
   @Override
   public void beginTransaction() {
     Session session = obtainSession();
-//            session.setLockMode(LockMode.SHARED);
     session.currentTransaction().begin();
   }
 

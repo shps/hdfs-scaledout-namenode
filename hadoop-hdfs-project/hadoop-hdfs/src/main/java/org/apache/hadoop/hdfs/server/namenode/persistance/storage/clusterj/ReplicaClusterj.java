@@ -42,11 +42,12 @@ public class ReplicaClusterj extends ReplicaDataAccess {
 
     void setIndex(int index);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public List<IndexedReplica> findReplicasById(long id) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<ReplicaDTO> dobj = qb.createQueryDefinition(ReplicaDTO.class);
       dobj.where(dobj.get("blockId").equal(dobj.param("param")));
@@ -61,6 +62,7 @@ public class ReplicaClusterj extends ReplicaDataAccess {
   @Override
   public void prepare(Collection<IndexedReplica> removed, Collection<IndexedReplica> newed, Collection<IndexedReplica> modified) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       for (IndexedReplica replica : removed) {
         Object[] pk = new Object[2];
         pk[0] = replica.getBlockId();

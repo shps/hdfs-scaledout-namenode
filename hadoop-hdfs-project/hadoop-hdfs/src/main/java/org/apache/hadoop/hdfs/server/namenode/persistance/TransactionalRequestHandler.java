@@ -87,10 +87,6 @@ public abstract class TransactionalRequestHandler {
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private ThreadLocal<Object[]> params = new ThreadLocal<Object[]>();
   public static final int RETRY_COUNT = 1;
-  private boolean retry = true;
-  private boolean rollback = false;
-  private int tryCount = 0;
-  private IOException exception = null;
   private OperationType opType;
 
   public TransactionalRequestHandler(OperationType opType) {
@@ -116,7 +112,10 @@ public abstract class TransactionalRequestHandler {
     if (readLock) {
       namesystem.readLock();
     }
-    tryCount = 0;
+    boolean retry = true;
+    boolean rollback = false;
+    int tryCount = 0;
+    IOException exception = null;
 
     try {
       while (retry && tryCount < RETRY_COUNT) {
@@ -138,7 +137,7 @@ public abstract class TransactionalRequestHandler {
           rollback = true;
           retry = true;
         } catch (IOException ex) {
-          this.exception = ex;
+          exception = ex;
         } finally {
           try {
             if (!rollback) {
@@ -178,11 +177,9 @@ public abstract class TransactionalRequestHandler {
   }
 
   public abstract Object performTask() throws PersistanceException, IOException;
-  
-  private void checkParamsForThread()
-  {
-    if (params.get() == null)
-    {
+
+  private void checkParamsForThread() {
+    if (params.get() == null) {
       Object[] prmtrs = new Object[8];
       params.set(prmtrs);
     }

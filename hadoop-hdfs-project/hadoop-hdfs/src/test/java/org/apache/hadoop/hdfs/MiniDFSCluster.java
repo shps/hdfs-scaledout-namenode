@@ -581,8 +581,8 @@ public class MiniDFSCluster {
        * [thesis] For testing
        */
       if (format) {
+        StorageFactory.setConfiguration(conf);
         StorageConnector connector = StorageFactory.getConnector();
-        connector.setConfiguration(conf);
         try {
           assert (connector.formatStorage());
         } catch (StorageException ex) {

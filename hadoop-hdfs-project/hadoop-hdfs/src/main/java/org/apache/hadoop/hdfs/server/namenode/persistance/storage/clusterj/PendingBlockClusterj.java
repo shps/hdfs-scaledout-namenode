@@ -41,10 +41,11 @@ public class PendingBlockClusterj extends PendingBlockDataAccess {
 
     void setNumReplicasInProgress(int numReplicasInProgress);
   }
-  private Session session = ClusterjConnector.INSTANCE.obtainSession();
+  private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
   public void prepare(Collection<PendingBlockInfo> removed, Collection<PendingBlockInfo> newed, Collection<PendingBlockInfo> modified) throws StorageException {
+    Session session = connector.obtainSession();
     for (PendingBlockInfo p : newed) {
       PendingBlockDTO pTable = session.newInstance(PendingBlockDTO.class);
       createPersistablePendingBlockInfo(p, pTable);
@@ -65,6 +66,7 @@ public class PendingBlockClusterj extends PendingBlockDataAccess {
   @Override
   public PendingBlockInfo findByPKey(long blockId) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       PendingBlockDTO pendingTable = session.find(PendingBlockDTO.class, blockId);
       PendingBlockInfo pendingBlock = null;
       if (pendingTable != null) {
@@ -80,6 +82,7 @@ public class PendingBlockClusterj extends PendingBlockDataAccess {
   @Override
   public List<PendingBlockInfo> findAll() throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       Query<PendingBlockDTO> query =
               session.createQuery(qb.createQueryDefinition(PendingBlockDTO.class));
@@ -92,6 +95,7 @@ public class PendingBlockClusterj extends PendingBlockDataAccess {
   @Override
   public List<PendingBlockInfo> findByTimeLimit(long timeLimit) throws StorageException {
     try {
+      Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<PendingBlockDTO> qdt = qb.createQueryDefinition(PendingBlockDTO.class);
       PredicateOperand predicateOp = qdt.get("timestamp");

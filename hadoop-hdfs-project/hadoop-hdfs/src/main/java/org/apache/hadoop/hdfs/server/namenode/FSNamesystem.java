@@ -305,7 +305,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
-    StorageFactory.getConnector().setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
