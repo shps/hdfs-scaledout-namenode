@@ -28,7 +28,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>../clusterj</module>
     <module>hadoop-hdfs</module>
   </modules>
 

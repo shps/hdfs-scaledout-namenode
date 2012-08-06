@@ -32,7 +32,7 @@
 </property>
 <property>
   <name>dfs.dbconnector.string</name>
-  <value>cloud3.sics.se</value>
+  <value>cloud11.sics.se</value>
 </property>
 <property>
   <name>dfs.dbconnector.database</name>
