@@ -95,7 +95,7 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
           }
         } else
         {
-          log("find-pending-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
+          log("find-pending-by-pk-removed", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId)});
         }
         return result;
     }

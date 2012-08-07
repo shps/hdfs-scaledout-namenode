@@ -18,6 +18,15 @@ public abstract class EntityContext<T> {
   static String UNSUPPORTED_FINDER = "Unsupported finder.";
   static String UNSUPPORTED_COUNTER = "Unsupported counter.";
   private static final Logger LOG = Logger.getLogger(TransactionContext.class);
+  public static final String ANSI_RESET = "\u001B[0m";
+  public static final String ANSI_BLACK = "\u001B[30m";
+  public static final String ANSI_RED = "\u001B[31m";
+  public static final String ANSI_GREEN = "\u001B[32m";
+  public static final String ANSI_YELLOW = "\u001B[33m";
+  public static final String ANSI_BLUE = "\u001B[34m";
+  public static final String ANSI_PURPLE = "\u001B[35m";
+  public static final String ANSI_CYAN = "\u001B[36m";
+  public static final String ANSI_WHITE = "\u001B[37m";
 
   /**
    * Defines the cache state of the request. This enum is only used for logging purpose.
@@ -47,11 +56,12 @@ public abstract class EntityContext<T> {
 
   public void log(String opName, CacheHitState state, String... params) {
     StringBuilder message = new StringBuilder();
-    message.append(opName).append(" ");
     if (state == CacheHitState.HIT) {
-      message.append("hit");
+      message.append(ANSI_GREEN).append(opName).append(" ").append("hit").append(ANSI_RESET);
     } else if (state == CacheHitState.LOSS) {
-      message.append("loss");
+      message.append(ANSI_RED).append(opName).append(" ").append("loss").append(ANSI_RESET);
+    } else {
+      message.append(opName).append(" ");
     }
     message.append(" ");
     if (params.length > 1) {

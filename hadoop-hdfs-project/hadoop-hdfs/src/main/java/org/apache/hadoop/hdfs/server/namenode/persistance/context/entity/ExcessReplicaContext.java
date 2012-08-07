@@ -73,7 +73,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
                   new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = exReplicas.get(searchInstance);
         } else if (removedExReplica.containsKey(searchInstance)) {
-          log("find-excess-by-pk-removed-item", CacheHitState.LOSS,
+          log("find-excess-by-pk-removed-item", CacheHitState.HIT,
                   new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = null;
         } else {

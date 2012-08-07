@@ -80,7 +80,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
           log("find-invblock-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return invBlocks.get(searchInstance);
         } else if (removedInvBlocks.containsKey(searchInstance)) {
-          log("find-invblock-by-pk-removed", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          log("find-invblock-by-pk-removed", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return null;
         } else {
           log("find-invblock-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});

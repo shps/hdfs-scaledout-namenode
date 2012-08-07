@@ -67,7 +67,7 @@ public class InodeContext extends EntityContext<INode> {
       case ByPKey:
         long inodeId = (Long) params[0];
         if (removedInodes.containsKey(inodeId)) {
-          log("find-inode-by-pk-removed", CacheHitState.LOSS, new String[]{"id", Long.toString(inodeId)});
+          log("find-inode-by-pk-removed", CacheHitState.HIT, new String[]{"id", Long.toString(inodeId)});
           result = null;
         } else if (inodesIdIndex.containsKey(inodeId)) {
           log("find-inode-by-pk", CacheHitState.HIT, new String[]{"id", Long.toString(inodeId)});
