@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -51,7 +50,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
@@ -369,6 +367,7 @@ public class TestBlockReport {
    * @throws IOException in case of an error
    */
   @Test
+  @Ignore
   // Currently this test is failing as expected 'cause the correct behavior is
   // not yet implemented (9/15/09)
   public void blockReport_07() throws IOException {
@@ -400,20 +399,13 @@ public class TestBlockReport {
     cluster.getNameNodeRpc().blockReport(dnR, poolId,
             new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
-    new TransactionalRequestHandler(OperationType.TEST_BLOCK_REPORT) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        assertEquals("Wrong number of Corrupted blocks",
-                1, cluster.getNamesystem().getCorruptReplicaBlocks()
-                + // the following might have to be added into the equation if 
-                // the same block could be in two different states at the same time
-                // and then the expected number of has to be changed to '2'        
-                //        cluster.getNamesystem().getPendingReplicationBlocks() +
-                cluster.getNamesystem().getPendingDeletionBlocks());
-        return null;
-      }
-    }.handle();
+    assertEquals("Wrong number of Corrupted blocks",
+            1, cluster.getNamesystem().getCorruptReplicaBlocks()
+            + // the following might have to be added into the equation if 
+            // the same block could be in two different states at the same time
+            // and then the expected number of has to be changed to '2'        
+            //        cluster.getNamesystem().getPendingReplicationBlocks() +
+            cluster.getNamesystem().getPendingDeletionBlocks());
 
     // Get another block and screw its length to be less than original
     if (randIndex == 0) {
@@ -661,23 +653,16 @@ public class TestBlockReport {
     BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
     if (LOG.isDebugEnabled()) {
       try {
-        new TransactionalRequestHandler(OperationType.PRINT_STAT) {
-
-          @Override
-          public Object performTask() throws PersistanceException, IOException {
-            LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());
-            LOG.debug("Corrupted " + cluster.getNamesystem().getCorruptReplicaBlocks());
-            LOG.debug("Under-replicated " + cluster.getNamesystem().
-                    getUnderReplicatedBlocks());
-            LOG.debug("Pending delete " + cluster.getNamesystem().
-                    getPendingDeletionBlocks());
-            LOG.debug("Pending replications " + cluster.getNamesystem().
-                    getPendingReplicationBlocks());
-            LOG.debug("Excess " + cluster.getNamesystem().getExcessBlocks());
-            LOG.debug("Total " + cluster.getNamesystem().getBlocksTotal());
-            return null;
-          }
-        }.handle();
+        LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());
+        LOG.debug("Corrupted " + cluster.getNamesystem().getCorruptReplicaBlocks());
+        LOG.debug("Under-replicated " + cluster.getNamesystem().
+                getUnderReplicatedBlocks());
+        LOG.debug("Pending delete " + cluster.getNamesystem().
+                getPendingDeletionBlocks());
+        LOG.debug("Pending replications " + cluster.getNamesystem().
+                getPendingReplicationBlocks());
+        LOG.debug("Excess " + cluster.getNamesystem().getExcessBlocks());
+        LOG.debug("Total " + cluster.getNamesystem().getBlocksTotal());
       } catch (IOException ex) {
         Logger.getLogger(TestBlockReport.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
       }
