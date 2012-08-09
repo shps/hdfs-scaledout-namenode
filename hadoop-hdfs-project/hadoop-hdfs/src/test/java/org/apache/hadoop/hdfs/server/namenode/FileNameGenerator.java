@@ -30,13 +30,13 @@ import java.util.Arrays;
  * file is not less than the height of the tree minus one.
  */
 public class FileNameGenerator {
-  private static final int DEFAULT_FILES_PER_DIRECTORY = 32;
+  protected static final int DEFAULT_FILES_PER_DIRECTORY = 32;
   
   private int[] pathIndecies = new int[20]; // this will support up to 32**20 = 2**100 = 10**30 files
   private String baseDir;
-  private String currentDir;
-  private int filesPerDirectory;
-  private long fileCount;
+  protected String currentDir;
+  protected int filesPerDirectory;
+  protected long fileCount;
 
   FileNameGenerator(String baseDir) {
     this(baseDir, DEFAULT_FILES_PER_DIRECTORY);
@@ -77,7 +77,7 @@ public class FileNameGenerator {
     return fn;
   }
 
-  private synchronized void reset() {
+  protected synchronized void reset() {
     Arrays.fill(pathIndecies, -1);
     fileCount = 0L;
     currentDir = "";

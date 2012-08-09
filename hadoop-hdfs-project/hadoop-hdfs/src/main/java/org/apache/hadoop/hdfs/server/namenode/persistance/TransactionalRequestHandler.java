@@ -82,7 +82,9 @@ public abstract class TransactionalRequestHandler {
     // NameNodeAdapter
     GET_LEASE_BY_PATH,
     // DFSTestUtil
-    WAIT_CORRUPT_REPLICAS,;
+    WAIT_CORRUPT_REPLICAS,
+    // NNThroughputBenchmark
+    ADD_INODE,;
   }
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private ThreadLocal<Object[]> params = new ThreadLocal<Object[]>();

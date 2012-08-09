@@ -15,7 +15,7 @@
   </property>
   <property>
     <name>dfs.storage.type</name>
-    <value>derby-em</value>
+    <value>clusterj</value>
     <description>storage type could be one of derby-net, derby-em, clusterj or ...</description>
   </property>
   <property>
