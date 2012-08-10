@@ -225,9 +225,13 @@ public class INodeFile extends INode {
   }
 
   public long diskspaceConsumed() throws PersistanceException {
-    List<BlockInfo> list = getBlocks();
-    Block[] array = list.toArray(new Block[list.size()]);
-    return diskspaceConsumed(array);
+    if (id != 0) {
+      List<BlockInfo> list = getBlocks();
+      Block[] array = list.toArray(new Block[list.size()]);
+      return diskspaceConsumed(array);
+    } else {
+      return 0; // [H] If id == 0 means the file is just created and has no block. Do not need to check for id=0's blocks in the table.
+    }
   }
 
   public long diskspaceConsumed(Block[] blkArr) {

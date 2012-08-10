@@ -246,140 +246,138 @@ class NamenodeJspHelper {
 
     void generateHealthReport(JspWriter out, NameNode nn,
             HttpServletRequest request) throws IOException {
-      generateHealthReportHanlder.setParam1(out).setParam2(nn).setParam3(request).handle();
+
+      FSNamesystem fsn = nn.getNamesystem();
+      final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      dm.fetchDatanodes(live, dead, true);
+
+      int liveDecommissioned = 0;
+      for (DatanodeDescriptor d : live) {
+        liveDecommissioned += d.isDecommissioned() ? 1 : 0;
+      }
+
+      int deadDecommissioned = 0;
+      for (DatanodeDescriptor d : dead) {
+        deadDecommissioned += d.isDecommissioned() ? 1 : 0;
+      }
+
+      final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
+
+      sorterField = request.getParameter("sorter/field");
+      sorterOrder = request.getParameter("sorter/order");
+      if (sorterField == null) {
+        sorterField = "name";
+      }
+      if (sorterOrder == null) {
+        sorterOrder = "ASC";
+      }
+
+      // Find out common suffix. Should this be before or after the sort?
+      String port_suffix = null;
+      if (live.size() > 0) {
+        String name = live.get(0).getName();
+        int idx = name.indexOf(':');
+        if (idx > 0) {
+          port_suffix = name.substring(idx);
+        }
+
+        for (int i = 1; port_suffix != null && i < live.size(); i++) {
+          if (live.get(i).getName().endsWith(port_suffix) == false) {
+            port_suffix = null;
+            break;
+          }
+        }
+      }
+
+      counterReset();
+      long[] fsnStats = fsn.getStats();
+      long total = fsnStats[0];
+      long remaining = fsnStats[2];
+      long used = fsnStats[1];
+      long nonDFS = total - remaining - used;
+      nonDFS = nonDFS < 0 ? 0 : nonDFS;
+      float percentUsed = DFSUtil.getPercentUsed(used, total);
+      float percentRemaining = DFSUtil.getPercentRemaining(remaining, total);
+      float median = 0;
+      float max = 0;
+      float min = 0;
+      float dev = 0;
+
+      if (live.size() > 0) {
+        float totalDfsUsed = 0;
+        float[] usages = new float[live.size()];
+        int i = 0;
+        for (DatanodeDescriptor dn : live) {
+          usages[i++] = dn.getDfsUsedPercent();
+          totalDfsUsed += dn.getDfsUsedPercent();
+        }
+        totalDfsUsed /= live.size();
+        Arrays.sort(usages);
+        median = usages[usages.length / 2];
+        max = usages[usages.length - 1];
+        min = usages[0];
+
+        for (i = 0; i < usages.length; i++) {
+          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+        }
+        dev = (float) Math.sqrt(dev / usages.length);
+      }
+
+      long bpUsed = fsnStats[6];
+      float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
+      int underReplicatedNotMissingBlocks = (int) generateHealthReportHanlder.setParam1(fsn).handle();
+      out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
+              + "Configured Capacity" + colTxt() + ":" + colTxt()
+              + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
+              + colTxt() + ":" + colTxt() + StringUtils.byteDesc(used) + rowTxt()
+              + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt()
+              + StringUtils.byteDesc(nonDFS) + rowTxt() + colTxt()
+              + "DFS Remaining" + colTxt() + ":" + colTxt()
+              + StringUtils.byteDesc(remaining) + rowTxt() + colTxt() + "DFS Used%"
+              + colTxt() + ":" + colTxt()
+              + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
+              + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
+              + StringUtils.limitDecimalTo2(percentRemaining) + " %"
+              + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
+              + StringUtils.byteDesc(bpUsed) + rowTxt()
+              + colTxt() + "Block Pool Used%" + colTxt() + ":" + colTxt()
+              + StringUtils.limitDecimalTo2(percentBpUsed) + " %"
+              + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
+              + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
+              + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
+              + StringUtils.limitDecimalTo2(min) + " %"
+              + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
+              + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
+              + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
+              + rowTxt() + colTxt()
+              + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
+              + colTxt() + ":" + colTxt() + live.size()
+              + " (Decommissioned: " + liveDecommissioned + ")"
+              + rowTxt() + colTxt()
+              + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
+              + colTxt() + ":" + colTxt() + dead.size()
+              + " (Decommissioned: " + deadDecommissioned + ")"
+              + rowTxt() + colTxt()
+              + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
+              + "Decommissioning Nodes</a> "
+              + colTxt() + ":" + colTxt() + decommissioning.size()
+              + rowTxt() + colTxt("Excludes missing blocks.")
+              + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
+              + underReplicatedNotMissingBlocks
+              + "</table></div><br>\n");
+
+      if (live.isEmpty() && dead.isEmpty()) {
+        out.print("There are no datanodes in the cluster");
+      }
     }
     TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler(OperationType.GENERATE_HEALTH_REPORT) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        JspWriter out = (JspWriter) getParam1();
-        NameNode nn = (NameNode) getParam2();
-        HttpServletRequest request = (HttpServletRequest) getParam3();
-        FSNamesystem fsn = nn.getNamesystem();
-        final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
-        final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-        final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-        dm.fetchDatanodes(live, dead, true);
-
-        int liveDecommissioned = 0;
-        for (DatanodeDescriptor d : live) {
-          liveDecommissioned += d.isDecommissioned() ? 1 : 0;
-        }
-
-        int deadDecommissioned = 0;
-        for (DatanodeDescriptor d : dead) {
-          deadDecommissioned += d.isDecommissioned() ? 1 : 0;
-        }
-
-        final List<DatanodeDescriptor> decommissioning = dm.getDecommissioningNodes();
-
-        sorterField = request.getParameter("sorter/field");
-        sorterOrder = request.getParameter("sorter/order");
-        if (sorterField == null) {
-          sorterField = "name";
-        }
-        if (sorterOrder == null) {
-          sorterOrder = "ASC";
-        }
-
-        // Find out common suffix. Should this be before or after the sort?
-        String port_suffix = null;
-        if (live.size() > 0) {
-          String name = live.get(0).getName();
-          int idx = name.indexOf(':');
-          if (idx > 0) {
-            port_suffix = name.substring(idx);
-          }
-
-          for (int i = 1; port_suffix != null && i < live.size(); i++) {
-            if (live.get(i).getName().endsWith(port_suffix) == false) {
-              port_suffix = null;
-              break;
-            }
-          }
-        }
-
-        counterReset();
-        long[] fsnStats = fsn.getStats();
-        long total = fsnStats[0];
-        long remaining = fsnStats[2];
-        long used = fsnStats[1];
-        long nonDFS = total - remaining - used;
-        nonDFS = nonDFS < 0 ? 0 : nonDFS;
-        float percentUsed = DFSUtil.getPercentUsed(used, total);
-        float percentRemaining = DFSUtil.getPercentRemaining(remaining, total);
-        float median = 0;
-        float max = 0;
-        float min = 0;
-        float dev = 0;
-
-        if (live.size() > 0) {
-          float totalDfsUsed = 0;
-          float[] usages = new float[live.size()];
-          int i = 0;
-          for (DatanodeDescriptor dn : live) {
-            usages[i++] = dn.getDfsUsedPercent();
-            totalDfsUsed += dn.getDfsUsedPercent();
-          }
-          totalDfsUsed /= live.size();
-          Arrays.sort(usages);
-          median = usages[usages.length / 2];
-          max = usages[usages.length - 1];
-          min = usages[0];
-
-          for (i = 0; i < usages.length; i++) {
-            dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
-          }
-          dev = (float) Math.sqrt(dev / usages.length);
-        }
-
-        long bpUsed = fsnStats[6];
-        float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-
-        out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
-                + "Configured Capacity" + colTxt() + ":" + colTxt()
-                + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
-                + colTxt() + ":" + colTxt() + StringUtils.byteDesc(used) + rowTxt()
-                + colTxt() + "Non DFS Used" + colTxt() + ":" + colTxt()
-                + StringUtils.byteDesc(nonDFS) + rowTxt() + colTxt()
-                + "DFS Remaining" + colTxt() + ":" + colTxt()
-                + StringUtils.byteDesc(remaining) + rowTxt() + colTxt() + "DFS Used%"
-                + colTxt() + ":" + colTxt()
-                + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
-                + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
-                + StringUtils.limitDecimalTo2(percentRemaining) + " %"
-                + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
-                + StringUtils.byteDesc(bpUsed) + rowTxt()
-                + colTxt() + "Block Pool Used%" + colTxt() + ":" + colTxt()
-                + StringUtils.limitDecimalTo2(percentBpUsed) + " %"
-                + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
-                + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
-                + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
-                + StringUtils.limitDecimalTo2(min) + " %"
-                + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
-                + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
-                + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
-                + rowTxt() + colTxt()
-                + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
-                + colTxt() + ":" + colTxt() + live.size()
-                + " (Decommissioned: " + liveDecommissioned + ")"
-                + rowTxt() + colTxt()
-                + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
-                + colTxt() + ":" + colTxt() + dead.size()
-                + " (Decommissioned: " + deadDecommissioned + ")"
-                + rowTxt() + colTxt()
-                + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
-                + "Decommissioning Nodes</a> "
-                + colTxt() + ":" + colTxt() + decommissioning.size()
-                + rowTxt() + colTxt("Excludes missing blocks.")
-                + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-                + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()
-                + "</table></div><br>\n");
-
-        if (live.isEmpty() && dead.isEmpty()) {
-          out.print("There are no datanodes in the cluster");
-        }
-        return null;
+        FSNamesystem fsn = (FSNamesystem) getParam1();
+        return fsn.getBlockManager().getUnderReplicatedNotMissingBlocks();
       }
     };
   }
