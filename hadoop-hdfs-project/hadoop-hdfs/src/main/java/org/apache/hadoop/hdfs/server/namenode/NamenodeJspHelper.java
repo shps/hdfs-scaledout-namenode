@@ -327,7 +327,7 @@ class NamenodeJspHelper {
 
       long bpUsed = fsnStats[6];
       float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-      int underReplicatedNotMissingBlocks = (int) generateHealthReportHanlder.setParam1(fsn).handle();
+      int underReplicatedNotMissingBlocks = (Ineteger) generateHealthReportHanlder.setParam1(fsn).handle();
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
               + "Configured Capacity" + colTxt() + ":" + colTxt()
               + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
