@@ -571,6 +571,7 @@
 			<value>test-log4j.properties</value>
 		</property>
 	</systemproperties> -->
+          <printSummary>true</printSummary>
           <forkMode>always</forkMode>
           <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
@@ -638,6 +639,9 @@
             <exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
             <exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
             <exclude>**/TestDiskError.java</exclude> <!--[J] Takes a long time to complete! Will need to fix later -->
+            
+            <exclude>**/TestUnderReplicatedBlocks.java</exclude> <!-- infinit loop with clusterj-->
+            <exclude>**/TestDFSStorageStateRecovery.java</exclude>
           </excludes>
         </configuration>
       </plugin>
