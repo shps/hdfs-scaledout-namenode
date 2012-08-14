@@ -90,31 +90,29 @@ public class TestOverReplicatedBlocks extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
+      synchronized (hm) {
+        // set live datanode's remaining space to be 0 
+        // so they will be chosen to be deleted when over-replication occurs
+        String corruptMachineName = corruptDataNode.getName();
+        for (DatanodeDescriptor datanode : hm.getDatanodes()) {
+          if (!corruptMachineName.equals(datanode.getName())) {
+            datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
+          }
+        }
 
-      new TransactionalRequestHandler(OperationType.TEST_PROCESS_OVER_REPLICATED_BLOCKS) {
+        // decrease the replication factor to 1; 
+        NameNodeAdapter.setReplication(namesystem, fileName.toString(), (short) 1);
+        new TransactionalRequestHandler(OperationType.TEST_PROCESS_OVER_REPLICATED_BLOCKS) {
 
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          synchronized (hm) {
-            // set live datanode's remaining space to be 0 
-            // so they will be chosen to be deleted when over-replication occurs
-            String corruptMachineName = corruptDataNode.getName();
-            for (DatanodeDescriptor datanode : hm.getDatanodes()) {
-              if (!corruptMachineName.equals(datanode.getName())) {
-                datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
-              }
-            }
-
-            // decrease the replication factor to 1; 
-            NameNodeAdapter.setReplication(namesystem, fileName.toString(), (short) 1);
-
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
             // corrupt one won't be chosen to be excess one
             // without 4910 the number of live replicas would be 0: block gets lost
             assertEquals(1, bm.countNodes(block.getLocalBlock()).liveReplicas());
+            return null;
           }
-          return null;
-        }
-      }.handleWithWriteLock(namesystem);
+        }.handleWithWriteLock(namesystem);
+      }
     } finally {
       cluster.shutdown();
     }

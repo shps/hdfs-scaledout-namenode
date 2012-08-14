@@ -442,7 +442,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
-  public void xxxtestFileCreationNamenodeRestart() throws IOException {
+  public void testFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);

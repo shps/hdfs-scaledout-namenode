@@ -321,7 +321,6 @@ public class TestBlockReport {
    * @throws IOException in case of an error
    */
   @Test
-  @Ignore
   public void blockReport_06() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");

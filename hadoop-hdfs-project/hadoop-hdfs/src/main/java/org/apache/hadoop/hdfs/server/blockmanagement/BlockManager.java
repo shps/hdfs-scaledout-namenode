@@ -1103,7 +1103,12 @@ public class BlockManager {
             LOG.warn("Unexpected replication priority: "
                     + priority + " " + block);
           } else {
-            blocksToReplicate.get(priority).add(block);
+            if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
+            {
+              neededReplications.remove(new Block(urb.getBlockId()), priority);
+            } else {
+              blocksToReplicate.get(priority).add(block);
+            }
           }
         } // end for
       } // end synchronized neededReplication
@@ -2776,14 +2781,7 @@ public class BlockManager {
         Collection<IndexedReplica> replicas = EntityManager.findList(IndexedReplica.Finder.ByBlockId, block.getBlockId());
         for (IndexedReplica r : replicas) {
           EntityManager.remove(r);
-
-
-
-
-
-
         }
-
       }
     } catch (Exception ex) {
       Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
