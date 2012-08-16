@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
@@ -99,11 +101,14 @@ public class CorruptReplicaDerby extends CorruptReplicaDataAccess {
               TABLE_NAME, BLOCK_ID, STORAGE_ID);
 
       Connection conn = connector.obtainSession();
+      Collection<CorruptReplica> existings = findBlocksByPkeys(newed);
       PreparedStatement insrt = conn.prepareStatement(insert);
       for (CorruptReplica r : newed) {
-        insrt.setLong(1, r.getBlockId());
-        insrt.setString(2, r.getStorageId());
-        insrt.addBatch();
+        if (!existings.contains(r)) {
+          insrt.setLong(1, r.getBlockId());
+          insrt.setString(2, r.getStorageId());
+          insrt.addBatch();
+        }
       }
       insrt.executeBatch();
 
@@ -130,5 +135,46 @@ public class CorruptReplicaDerby extends CorruptReplicaDataAccess {
     }
 
     return replicas;
+  }
+
+  private Collection<CorruptReplica> findBlocksByPkeys(Collection<CorruptReplica> newed) throws StorageException {
+    try {
+      if (newed.size() > 0) {
+        Iterator<CorruptReplica> iterator = newed.iterator();
+        CorruptReplica next = null;
+        StringBuilder sIds = new StringBuilder(STORAGE_ID).append(" in (");
+        StringBuilder bIds = new StringBuilder(BLOCK_ID).append(" in (");
+        String comma = ",";
+        String quote = "'";
+        while (iterator.hasNext()) {
+          next = iterator.next();
+          sIds.append(quote).append(next.getStorageId()).append(quote);
+          bIds.append(next.getBlockId());
+          if (iterator.hasNext()) {
+            sIds.append(comma);
+            bIds.append(comma);
+          }
+        }
+        sIds.append(")");
+        bIds.append(")");
+        String query = String.format("select * from %s where %s and %s", TABLE_NAME, sIds.toString(), bIds.toString());
+        Connection conn = connector.obtainSession();
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        return convert(rs);
+      } else {
+        return Collections.EMPTY_SET;
+      }
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
+    }
+  }
+
+  private Collection<CorruptReplica> convert(ResultSet rs) throws SQLException {
+    HashSet<CorruptReplica> result = new HashSet<CorruptReplica>();
+    while (rs.next()) {
+      result.add(createReplica(rs));
+    }
+    return result;
   }
 }
