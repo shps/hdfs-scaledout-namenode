@@ -184,7 +184,7 @@ public class TestLargeBlock {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     try {
 
       // create a new file in test data directory

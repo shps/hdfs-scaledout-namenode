@@ -125,7 +125,7 @@ public class TestSeekBug extends TestCase {
   public void testSeekBugDFS() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("seektest.dat");
       writeFile(fileSys, file1);

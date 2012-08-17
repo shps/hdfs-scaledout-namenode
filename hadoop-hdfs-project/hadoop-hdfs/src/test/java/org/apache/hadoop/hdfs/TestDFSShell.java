@@ -95,7 +95,7 @@ public class TestDFSShell extends TestCase {
   public void testZeroSizeFile() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -137,7 +137,7 @@ public class TestDFSShell extends TestCase {
   public void testRecrusiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-	  FileSystem fs = cluster.getWritingFileSystem();
+	  FileSystem fs = cluster.getFileSystem();
 	  assertTrue("Not a HDFS: " + fs.getUri(), 
 			  fs instanceof DistributedFileSystem);
 	  try {
@@ -162,7 +162,7 @@ public class TestDFSShell extends TestCase {
   public void testDu() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -211,7 +211,7 @@ public class TestDFSShell extends TestCase {
   public void testPut() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -310,7 +310,7 @@ public class TestDFSShell extends TestCase {
     PrintStream bak = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      FileSystem srcFs = cluster.getWritingFileSystem();
+      FileSystem srcFs = cluster.getFileSystem();
       Path root = new Path("/nonexistentfile");
       bak = System.err;
       ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -458,8 +458,8 @@ public class TestDFSShell extends TestCase {
       nameDir.mkdirs();
       System.setProperty("test.build.data", nameDir.toString());
       dstCluster = new MiniDFSCluster.Builder(dstConf).numDataNodes(2).build();
-      FileSystem srcFs = srcCluster.getWritingFileSystem();
-      FileSystem dstFs = dstCluster.getWritingFileSystem();
+      FileSystem srcFs = srcCluster.getFileSystem();
+      FileSystem dstFs = dstCluster.getFileSystem();
       FsShell shell = new FsShell();
       shell.setConf(srcConf);
       //check for ls
@@ -548,7 +548,7 @@ public class TestDFSShell extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      final FileSystem dfs = cluster.getWritingFileSystem();
+      final FileSystem dfs = cluster.getFileSystem();
       textTest(new Path("/texttest").makeQualified(dfs.getUri(),
             dfs.getWorkingDirectory()), conf);
 
@@ -602,7 +602,7 @@ public class TestDFSShell extends TestCase {
   public void testCopyToLocal() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -699,7 +699,7 @@ public class TestDFSShell extends TestCase {
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -874,14 +874,14 @@ public class TestDFSShell extends TestCase {
     
     //test chmod on DFS
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    fs = cluster.getWritingFileSystem();
+    fs = cluster.getFileSystem();
     testChmod(conf, fs, "/tmp/chmodTest");
     
     // test chown and chgrp on DFS:
     
     FsShell shell = new FsShell();
     shell.setConf(conf);
-    fs = cluster.getWritingFileSystem();
+    fs = cluster.getFileSystem();
     
     /* For dfs, I am the super user and I can change owner of any file to
      * anything. "-R" option is already tested by chmod test above.
@@ -932,7 +932,7 @@ public class TestDFSShell extends TestCase {
     /* This tests some properties of ChecksumFileSystem as well.
      * Make sure that we create ChecksumDFS */
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
             fs instanceof DistributedFileSystem);
     DistributedFileSystem fileSys = (DistributedFileSystem)fs;
@@ -1202,7 +1202,7 @@ public class TestDFSShell extends TestCase {
     try {
       final Configuration conf = new HdfsConfiguration();
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      FileSystem fs = dfs.getWritingFileSystem();
+      FileSystem fs = dfs.getFileSystem();
       Path p = new Path("/foo");
       fs.mkdirs(p);
       fs.setPermission(p, new FsPermission((short)0700));
@@ -1241,7 +1241,7 @@ public class TestDFSShell extends TestCase {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
 
     try {
       final String fname = "testGet.txt";
@@ -1299,7 +1299,7 @@ public class TestDFSShell extends TestCase {
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
 
     try {
       final String root = createTree(dfs, "lsr");
@@ -1373,7 +1373,7 @@ public class TestDFSShell extends TestCase {
     final String testdir = TEST_ROOT_DIR + "/ForceTestDir";
     final Path hdfsTestDir = new Path(testdir);
     try {
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       fs.mkdirs(hdfsTestDir);
       localFile.createNewFile();
       writeFile(fs, new Path(TEST_ROOT_DIR, "testFileForPut"));

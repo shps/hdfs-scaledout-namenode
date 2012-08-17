@@ -100,7 +100,7 @@ public class TestConnCache {
     util = new BlockReaderTestUtil(REPLICATION_FACTOR);
     cluster = util.getCluster();
     conf = util.getConf();
-    fs = cluster.getWritingFileSystem();
+    fs = cluster.getFileSystem();
 
     authenticData = util.writeFile(testFile, FILE_SIZE / 1024);
   }

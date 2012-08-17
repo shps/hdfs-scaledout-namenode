@@ -68,7 +68,7 @@ public class TestReadWhileWriting {
 
       //wait for the cluster
       cluster.waitActive();
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       final Path p = new Path(DIR, "file1");
       final int half = BLOCK_SIZE/2;
 
@@ -89,7 +89,7 @@ public class TestReadWhileWriting {
       //   of data can be read successfully.
       checkFile(p, half, conf);
       AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-      ((DistributedFileSystem)fs).getDefaultDFSClient().leaserenewer.interruptAndJoin();
+      ((DistributedFileSystem)fs).dfs.leaserenewer.interruptAndJoin();
 
       //c. On M1, append another half block of data.  Close file on M1.
       {

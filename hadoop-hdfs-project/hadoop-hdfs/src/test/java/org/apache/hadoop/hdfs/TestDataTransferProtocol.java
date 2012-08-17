@@ -212,7 +212,7 @@ public class TestDataTransferProtocol extends TestCase {
       datanode = DataNodeTestUtils.getDNRegistrationForBP(
           cluster.getDataNodes().get(0), poolId);
       dnAddr = NetUtils.createSocketAddr(datanode.getName());
-      FileSystem fileSys = cluster.getWritingFileSystem();
+      FileSystem fileSys = cluster.getFileSystem();
 
       /* Test writing to finalized replicas */
       Path file = new Path("dataprotocol.dat");    
@@ -346,7 +346,7 @@ public class TestDataTransferProtocol extends TestCase {
                  conf);                
     datanode = dfsClient.datanodeReport(DatanodeReportType.LIVE)[0];
     dnAddr = NetUtils.createSocketAddr(datanode.getName());
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     
     int fileLen = Math.min(conf.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096), 4096);
     

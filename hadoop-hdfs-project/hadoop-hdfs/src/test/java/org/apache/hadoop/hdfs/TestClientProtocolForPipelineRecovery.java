@@ -43,7 +43,7 @@ public class TestClientProtocolForPipelineRecovery {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
-      FileSystem fileSys = cluster.getWritingFileSystem();
+      FileSystem fileSys = cluster.getFileSystem();
       NamenodeProtocols namenode = cluster.getNameNodeRpc();
 
       /* Test writing to finalized replicas */
@@ -89,8 +89,7 @@ public class TestClientProtocolForPipelineRecovery {
         }
 
         // test non-lease holder
-        //DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
-        DFSClient dfs = ((DistributedFileSystem)fileSys).getDefaultDFSClient();
+        DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
         try {
           namenode.updateBlockForPipeline(firstBlock, "test" + dfs.clientName);
           Assert.fail("Cannot get a new GS for a non lease holder");

@@ -48,7 +48,7 @@ public class TestAbandonBlock {
   @Before
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
-    fs = cluster.getWritingFileSystem();
+    fs = cluster.getFileSystem();
     cluster.waitActive();
   }
 

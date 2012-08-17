@@ -52,7 +52,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -92,7 +92,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       assertTrue(!fs.exists(file1));
       assertTrue(fs.exists(file2));

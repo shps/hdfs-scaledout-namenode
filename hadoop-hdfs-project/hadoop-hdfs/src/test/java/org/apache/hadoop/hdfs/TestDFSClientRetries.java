@@ -146,7 +146,7 @@ public class TestDFSClientRetries extends TestCase {
     
     try {
       cluster.waitActive();
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
     
       Path filePath = new Path("/testWriteTimeoutAtDataNode");
       OutputStream out = fs.create(filePath, true, bufferSize);
@@ -236,7 +236,7 @@ public class TestDFSClientRetries extends TestCase {
 
     try {
       cluster.waitActive();
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
       NamenodeProtocols spyNN = spy(preSpyNN);
       DFSClient client = new DFSClient(null, spyNN, conf, null);
@@ -438,7 +438,7 @@ public class TestDFSClientRetries extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
     cluster.waitActive();
     
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     Path file1 = new Path("test_data.dat");
     file1 = file1.makeQualified(fs.getUri(), fs.getWorkingDirectory()); // make URI hdfs://
     
@@ -540,7 +540,7 @@ public class TestDFSClientRetries extends TestCase {
     
     public void run() {
       try {
-        fs = cluster.getWritingFileSystem();
+        fs = cluster.getFileSystem();
         
         int bufferSize = len;
         byte[] buf = new byte[bufferSize];
@@ -596,7 +596,7 @@ public class TestDFSClientRetries extends TestCase {
       cluster.waitActive();
 
       //create a file
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, p, 1L << 20, (short)3, 20100402L);
 
       //get checksum

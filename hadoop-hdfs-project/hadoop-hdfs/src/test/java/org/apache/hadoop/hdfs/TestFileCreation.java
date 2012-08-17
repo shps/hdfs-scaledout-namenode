@@ -112,7 +112,7 @@ public class TestFileCreation extends junit.framework.TestCase {
                      .numDataNodes(DFSConfigKeys.DFS_REPLICATION_DEFAULT + 1)
                      .build();
     cluster.waitActive();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     try {
       FsServerDefaults serverDefaults = fs.getServerDefaults();
       assertEquals(DFS_BLOCK_SIZE_DEFAULT, serverDefaults.getBlockSize());
@@ -135,7 +135,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     try {
 
       //
@@ -213,7 +213,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     FileSystem localfs = FileSystem.getLocal(conf);
 
     try {
@@ -248,7 +248,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       localfs = null;
 
       // reopen file system and verify that file does not exist.
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       localfs = FileSystem.getLocal(conf);
 
       assertTrue(file1 + " still exists inspite of deletOnExit set.",
@@ -278,7 +278,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     cluster.waitActive();
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                    cluster.getNameNodePort());
@@ -357,8 +357,8 @@ public class TestFileCreation extends junit.framework.TestCase {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-      DFSClient client = dfs.getDefaultDFSClient();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
 
       // create a new file.
       //
@@ -416,8 +416,8 @@ public class TestFileCreation extends junit.framework.TestCase {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-      DFSClient client = dfs.getDefaultDFSClient();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
 
       // create a new file.
       final Path f = new Path("/foo.txt");
@@ -457,7 +457,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create a new file.
@@ -539,7 +539,7 @@ public class TestFileCreation extends junit.framework.TestCase {
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       // instruct the dfsclient to use a new filename when it requests
       // new blocks for files that were renamed.
@@ -562,7 +562,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       stm4.close();
 
       // verify that new block is associated with this file
-      DFSClient client = ((DistributedFileSystem)fs).getDefaultDFSClient();
+      DFSClient client = ((DistributedFileSystem)fs).dfs;
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       LOG.info("locations = " + locations.locatedBlockCount());
@@ -591,9 +591,9 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsclient = dfs.getDefaultDFSClient();
+    DFSClient dfsclient = dfs.dfs;
     try {
 
       // create a new file in home directory. Do not close it.
@@ -626,7 +626,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     final Path path = new Path("/" + System.currentTimeMillis()
         + "-testFileCreationNonRecursive");
     FSDataOutputStream out = null;
@@ -729,7 +729,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       
       Path[] p = {new Path("/foo"), new Path("/bar")};
       
@@ -762,7 +762,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       
       Path[] p = {new Path("/foo"), new Path("/bar")};
       
@@ -805,7 +805,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "foo";
@@ -824,7 +824,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // wait for the lease to expire
       try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
-      LocatedBlocks locations = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(
+      LocatedBlocks locations = dfs.dfs.getNamenode().getBlockLocations(
           f, 0, Long.MAX_VALUE);
       assertEquals(1, locations.locatedBlockCount());
       LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);
@@ -865,7 +865,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "foofs";
@@ -896,7 +896,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "testFsCloseAfterClusterShutdown";

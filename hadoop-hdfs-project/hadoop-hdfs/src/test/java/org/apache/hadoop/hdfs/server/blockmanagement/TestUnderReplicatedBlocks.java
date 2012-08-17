@@ -41,7 +41,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR + 1).build();
     try {
       // create a file with one block with a replication factor of 2
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
       // remove one replica from the blocksMap so block becomes under-replicated

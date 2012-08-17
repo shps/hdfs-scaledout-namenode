@@ -51,7 +51,7 @@ public class TestLocalDFS extends TestCase {
 
   static String getUserName(FileSystem fs) {
     if (fs instanceof DistributedFileSystem) {
-      return ((DistributedFileSystem)fs).getDefaultDFSClient().ugi.getShortUserName();
+      return ((DistributedFileSystem)fs).dfs.ugi.getShortUserName();
     }
     return System.getProperty("user.name");
   }
@@ -62,7 +62,7 @@ public class TestLocalDFS extends TestCase {
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     try {
       Path orig_path = fileSys.getWorkingDirectory();
       assertTrue(orig_path.isAbsolute());

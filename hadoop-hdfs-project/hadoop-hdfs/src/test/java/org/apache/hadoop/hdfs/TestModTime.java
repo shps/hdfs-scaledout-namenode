@@ -86,7 +86,7 @@ public class TestModTime extends TestCase {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     int replicas = numDatanodes - 1;
     assertTrue(fileSys instanceof DistributedFileSystem);
 

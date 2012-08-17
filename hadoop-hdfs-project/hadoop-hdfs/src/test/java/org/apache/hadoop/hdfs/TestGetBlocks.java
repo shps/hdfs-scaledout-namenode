@@ -61,7 +61,7 @@ public class TestGetBlocks extends TestCase {
       cluster.waitActive();
       
       // create a file with two blocks
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       FSDataOutputStream out = fs.create(new Path("/tmp.txt"),
           REPLICATION_FACTOR);
       byte [] data = new byte[1024];

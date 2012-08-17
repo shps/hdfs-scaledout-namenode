@@ -54,9 +54,8 @@ public class TestAddBlock {
     public void testAddBlock() throws IOException {
 
         cluster.waitActive();
-        dfs = (DistributedFileSystem) cluster.getWritingFileSystem();
-        //DFSClient client = dfs.dfs;
-        DFSClient client = dfs.getDefaultDFSClient();
+        dfs = (DistributedFileSystem) cluster.getFileSystem();
+        DFSClient client = dfs.dfs;
         // create a new file.
         //
         Path file1 = new Path("/hooman.dat");

@@ -62,7 +62,7 @@ public class TestFileCorruption extends TestCase {
     try {
       Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks
       File storageDir = MiniDFSCluster.getStorageDir(2, 0);
@@ -120,7 +120,7 @@ public class TestFileCorruption extends TestCase {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.waitActive();
       
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       final Path FILE_PATH = new Path("/tmp.txt");
       final long FILE_LEN = 1L;
       DFSTestUtil.createFile(fs, FILE_PATH, FILE_LEN, (short)2, 1L);

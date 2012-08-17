@@ -77,7 +77,7 @@ public class TestCrcCorruption {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat", replFactor);
       util.waitReplication(fs, "/srcdat", (short)2);
 
@@ -257,7 +257,7 @@ public class TestCrcCorruption {
 
     try {
       cluster.waitActive();
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
 
       DFSTestUtil.createFile(fs, file, fileSize, replFactor, 12345L /*seed*/);
       DFSTestUtil.waitReplication(fs, file, replFactor);

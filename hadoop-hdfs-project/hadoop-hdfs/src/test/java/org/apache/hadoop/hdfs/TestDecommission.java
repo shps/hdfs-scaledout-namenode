@@ -359,7 +359,7 @@ public class TestDecommission {
       // Start decommissioning one namenode at a time
       for (int i = 0; i < numNamenodes; i++) {
         ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
-        FileSystem fileSys = cluster.getWritingFileSystem(i);
+        FileSystem fileSys = cluster.getFileSystem(i);
         writeFile(fileSys, file1, replicas);
         
         // Decommission one node. Verify that node is decommissioned.
@@ -400,7 +400,7 @@ public class TestDecommission {
       
     for (int i = 0; i < numNamenodes; i++) {
       ArrayList<DatanodeInfo> decommissionedNodes = namenodeDecomList.get(i);
-      FileSystem fileSys = cluster.getWritingFileSystem(i);
+      FileSystem fileSys = cluster.getFileSystem(i);
       writeFile(fileSys, file1, replicas);
         
       // Decommission one node. Verify that node is decommissioned.
@@ -460,7 +460,7 @@ public class TestDecommission {
     startCluster(numNameNodes, numDatanodes, conf);
     
     for (int i = 0; i < numNameNodes; i++) {
-      FileSystem fileSys = cluster.getWritingFileSystem(i);
+      FileSystem fileSys = cluster.getFileSystem(i);
       Path file = new Path("testClusterStats.dat");
       writeFile(fileSys, file, 1);
       

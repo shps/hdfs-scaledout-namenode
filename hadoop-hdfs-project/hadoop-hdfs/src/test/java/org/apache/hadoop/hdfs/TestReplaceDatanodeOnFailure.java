@@ -121,7 +121,7 @@ public class TestReplaceDatanodeOnFailure {
         ).racks(racks).numDataNodes(REPLICATION).build();
 
     try {
-      final DistributedFileSystem fs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      final DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
       final Path dir = new Path(DIR);
       
       final SlowWriter[] slowwriters = new SlowWriter[10];

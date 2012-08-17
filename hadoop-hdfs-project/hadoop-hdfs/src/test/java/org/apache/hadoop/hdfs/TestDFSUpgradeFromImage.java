@@ -159,8 +159,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
       } else {
         // this is not a directory. Checksum the file data.
         CRC32 fileCRC = new CRC32();
-        //FSInputStream in = dfs.dfs.open(pathName);
-        FSInputStream in = dfs.getDefaultDFSClient().open(pathName);
+        FSInputStream in = dfs.dfs.open(pathName);
         byte[] buf = new byte[4096];
         int nRead = 0;
         while ( (nRead = in.read(buf, 0, buf.length)) > 0 ) {
@@ -288,9 +287,8 @@ public class TestDFSUpgradeFromImage extends TestCase {
                                   .clusterId("testClusterId")
                                   .build();
       cluster.waitActive();
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-      //DFSClient dfsClient = dfs.dfs;
-      DFSClient dfsClient = dfs.getDefaultDFSClient();
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient dfsClient = dfs.dfs;
       //Safemode will be off only after upgrade is complete. Wait for it.
       while ( dfsClient.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET) ) {
         LOG.info("Waiting for SafeMode to be OFF.");

@@ -137,7 +137,7 @@ public class TestInterDatanodeProtocol {
       cluster.waitActive();
 
       //create a file
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
       String filestr = "/foo";
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);
@@ -287,7 +287,7 @@ public class TestInterDatanodeProtocol {
       String bpid = cluster.getNamesystem().getBlockPoolId();
 
       //create a file
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
       String filestr = "/foo";
       Path filepath = new Path(filestr);
       DFSTestUtil.createFile(dfs, filepath, 1024L, (short)3, 0L);

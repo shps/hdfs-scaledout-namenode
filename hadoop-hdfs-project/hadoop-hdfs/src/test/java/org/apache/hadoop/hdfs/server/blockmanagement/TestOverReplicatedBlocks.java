@@ -53,7 +53,7 @@ public class TestOverReplicatedBlocks extends TestCase {
             DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
             Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
 
     try {
       final Path fileName = new Path("/foo1");

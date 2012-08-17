@@ -300,7 +300,7 @@ public class TestFSInputChecker extends TestCase {
 
     // test DFS
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     try {
       testChecker(fileSys, true);
       testChecker(fileSys, false);

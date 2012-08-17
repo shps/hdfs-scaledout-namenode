@@ -95,7 +95,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block with a replication factor of 3
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 1);
@@ -129,7 +129,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block with a replication factor of 1
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 0);
@@ -164,7 +164,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 1, REPLICATION_FACTOR, 1);
@@ -201,7 +201,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block with a replication factor of 2
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       
       DFSTestUtil.createFile(fs, filePath, fileLen, REPLICATION_FACTOR, 1L);
       final String fileContent = DFSTestUtil.readFile(fs, filePath);
@@ -252,7 +252,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
@@ -287,7 +287,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block with a replication factor of 2
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
@@ -342,7 +342,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
@@ -403,7 +403,7 @@ public class TestBlocksWithNotEnoughRacks {
 
     try {
       // Create a file with one block
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
@@ -452,7 +452,7 @@ public class TestBlocksWithNotEnoughRacks {
     final FSNamesystem ns = cluster.getNameNode().getNamesystem();
 
     try {
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, filePath, 1L, REPLICATION_FACTOR, 1L);
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, filePath);
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);

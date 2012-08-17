@@ -110,7 +110,7 @@ public class TestPrintMetrics {
     MiniDFSCluster cluster = null;
     try {
       cluster = startCluster(false);
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
 
       //create a directory
       Path filePath1 = new Path("/testDir1");

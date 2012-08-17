@@ -52,8 +52,8 @@ public class TestDeleteBlockPool {
 
       cluster.waitActive();
 
-      FileSystem fs1 = cluster.getWritingFileSystem(0);
-      FileSystem fs2 = cluster.getWritingFileSystem(1);
+      FileSystem fs1 = cluster.getFileSystem(0);
+      FileSystem fs2 = cluster.getFileSystem(1);
 
       DFSTestUtil.createFile(fs1, new Path("/alpha"), 1024, (short) 2, 54);
       DFSTestUtil.createFile(fs2, new Path("/beta"), 1024, (short) 2, 54);
@@ -160,8 +160,8 @@ public class TestDeleteBlockPool {
 
       cluster.waitActive();
 
-      FileSystem fs1 = cluster.getWritingFileSystem(0);
-      FileSystem fs2 = cluster.getWritingFileSystem(1);
+      FileSystem fs1 = cluster.getFileSystem(0);
+      FileSystem fs2 = cluster.getFileSystem(1);
 
       DFSTestUtil.createFile(fs1, new Path("/alpha"), 1024, (short) 1, 54);
       DFSTestUtil.createFile(fs2, new Path("/beta"), 1024, (short) 1, 54);

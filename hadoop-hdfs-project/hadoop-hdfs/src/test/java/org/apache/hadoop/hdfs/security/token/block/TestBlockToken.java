@@ -370,7 +370,7 @@ public class TestBlockToken {
     cluster.waitActive();
 
     try {
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       String fileName = "/testBlockTokenInLastLocatedBlock";
       Path filePath = new Path(fileName);
       FSDataOutputStream out = fs.create(filePath, (short) 1);

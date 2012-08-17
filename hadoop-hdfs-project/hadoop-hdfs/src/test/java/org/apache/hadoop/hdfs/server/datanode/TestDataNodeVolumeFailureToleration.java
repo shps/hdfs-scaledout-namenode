@@ -82,7 +82,7 @@ public class TestDataNodeVolumeFailureToleration {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    fs = cluster.getWritingFileSystem();
+    fs = cluster.getFileSystem();
     dataDir = cluster.getDataDirectory();
   }
 

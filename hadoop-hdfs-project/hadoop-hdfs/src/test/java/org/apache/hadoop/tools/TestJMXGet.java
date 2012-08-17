@@ -88,7 +88,7 @@ public class TestJMXGet extends TestCase {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getWritingFileSystem(), new Path("/test1"), 2);
+    writeFile(cluster.getFileSystem(), new Path("/test1"), 2);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services
@@ -116,7 +116,7 @@ public class TestJMXGet extends TestCase {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getWritingFileSystem(), new Path("/test"), 2);
+    writeFile(cluster.getFileSystem(), new Path("/test"), 2);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services

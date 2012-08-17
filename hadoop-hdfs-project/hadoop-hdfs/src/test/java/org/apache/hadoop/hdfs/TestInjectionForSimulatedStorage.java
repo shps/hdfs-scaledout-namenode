@@ -145,7 +145,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                             cluster.getNameNodePort()),
                                             conf);
       
-      writeFile(cluster.getWritingFileSystem(), testPath, numDataNodes);
+      writeFile(cluster.getFileSystem(), testPath, numDataNodes);
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
       Iterable<Block>[] blocksList = cluster.getAllBlockReports(bpid);
       

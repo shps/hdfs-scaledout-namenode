@@ -53,7 +53,7 @@ public class TestSafeMode {
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
       cls = cluster;
       cluster.waitActive();
-      final DistributedFileSystem fs = (DistributedFileSystem) cluster.getWritingFileSystem();
+      final DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
       dffs = fs;
       new TransactionalRequestHandler(OperationType.TEST_DATANODE_THRESHOLD) {
 

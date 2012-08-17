@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 
 /**
  * Test if live nodes count per node is correct so NN makes right decision for
@@ -65,7 +64,7 @@ public class TestNodeCount extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
 
       // populate the cluster with a one block file
       final Path FILE_PATH = new Path("/testfile");
@@ -86,15 +85,19 @@ public class TestNodeCount extends TestCase {
       DataNodeProperties dnprop = cluster.stopDataNode(datanode.getName());
 
       // make sure that NN detects that the datanode is down
-      try {
-        namesystem.writeLock();
-        synchronized (hm) {
-          datanode.setLastUpdate(0); // mark it dead
-          hm.heartbeatCheck();
+      TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          synchronized (hm) {
+            DatanodeDescriptor datanode = (DatanodeDescriptor) getParam1();
+            datanode.setLastUpdate(0); // mark it dead
+            hm.heartbeatCheck();
+          }
+          return null;
         }
-      } finally {
-        namesystem.writeUnlock();
-      }
+      }.setParam1(datanode);
+      handler.handle();
 
       // the block will be replicated
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);

@@ -98,7 +98,7 @@ public class TestBalancerWithMultipleNameNodes {
   /* create a file with a length of <code>fileLen</code> */
   private static void createFile(Suite s, int index, long len
       ) throws IOException {
-    final FileSystem fs = s.cluster.getWritingFileSystem(index);
+    final FileSystem fs = s.cluster.getFileSystem(index);
     DFSTestUtil.createFile(fs, FILE_PATH, len, s.replication, RANDOM.nextLong());
     DFSTestUtil.waitReplication(fs, FILE_PATH, s.replication);
   }

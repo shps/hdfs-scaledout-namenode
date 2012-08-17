@@ -116,7 +116,7 @@ public class TestFSOutputSummer extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(NUM_OF_DATANODES)
                                                .build();
-    fileSys = cluster.getWritingFileSystem();
+    fileSys = cluster.getFileSystem();
     try {
       Path file = new Path("try.dat");
       Random rand = new Random(seed);

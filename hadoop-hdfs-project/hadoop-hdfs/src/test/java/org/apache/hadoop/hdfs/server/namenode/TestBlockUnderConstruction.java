@@ -58,7 +58,7 @@ public class TestBlockUnderConstruction {
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
-    hdfs = (DistributedFileSystem) cluster.getWritingFileSystem();
+    hdfs = (DistributedFileSystem) cluster.getFileSystem();
   }
 
   @AfterClass

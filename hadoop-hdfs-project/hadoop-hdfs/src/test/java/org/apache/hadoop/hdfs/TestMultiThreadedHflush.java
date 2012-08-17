@@ -120,7 +120,7 @@ public class TestMultiThreadedHflush {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     Path p = new Path("/multiple-hflushers.dat");
     try {
       doMultithreadedWrites(conf, p, NUM_THREADS, WRITE_SIZE, NUM_WRITES_PER_THREAD);
@@ -141,7 +141,7 @@ public class TestMultiThreadedHflush {
   public void testHflushWhileClosing() throws Throwable {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     Path p = new Path("/hflush-and-close.dat");
 
     final FSDataOutputStream stm = createFile(fs, p, 1);

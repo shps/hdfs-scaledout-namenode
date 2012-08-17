@@ -24,14 +24,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 
 public class DFSClientAdapter {
   public static DFSClient getDFSClient(DistributedFileSystem dfs) {
-    //return dfs.dfs;
-    return dfs.getDefaultDFSClient();
+    return dfs.dfs;
   }
   
   public static void stopLeaseRenewer(DistributedFileSystem dfs) throws IOException {
     try {
-      //dfs.dfs.leaserenewer.interruptAndJoin();
-      dfs.getDefaultDFSClient().leaserenewer.interruptAndJoin();
+      dfs.dfs.leaserenewer.interruptAndJoin();
     } catch (InterruptedException e) {
       throw new IOException(e);
     }

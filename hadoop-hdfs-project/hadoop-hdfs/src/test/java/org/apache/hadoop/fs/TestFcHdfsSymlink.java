@@ -58,7 +58,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   protected URI testURI() {
     URI uri = null;
     try {
-      uri = cluster.getWritingFileSystem().getUri();
+      uri = cluster.getFileSystem().getUri();
     } catch (IOException ex) {
       Logger.getLogger(TestFcHdfsSymlink.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -80,7 +80,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");
     cluster = new MiniDFSCluster.Builder(conf).build();
-    fc = FileContext.getFileContext(cluster.getWritingFileSystem().getUri());
+    fc = FileContext.getFileContext(cluster.getFileSystem().getUri());
   }
   
   @AfterClass
@@ -138,7 +138,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     // Ditto when using another file context since the file system
     // for the slash is resolved according to the link's parent.
     FileContext localFc = FileContext.getLocalFSFileContext();
-    Path linkQual = new Path(cluster.getWritingURI(0).toString(), fileViaLink); 
+    Path linkQual = new Path(cluster.getURI(0).toString(), fileViaLink); 
     assertEquals(fileSize, localFc.getFileStatus(linkQual).getLen());    
   }
   

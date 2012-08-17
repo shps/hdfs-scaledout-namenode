@@ -65,7 +65,7 @@ public class TestDFSRename extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       assertTrue(fs.mkdirs(dir));
       { //test lease
         Path a = new Path(dir, "a");

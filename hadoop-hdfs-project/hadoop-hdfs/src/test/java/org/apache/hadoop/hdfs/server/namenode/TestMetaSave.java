@@ -70,7 +70,7 @@ public class TestMetaSave {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1L);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
-    fileSys = cluster.getWritingFileSystem();
+    fileSys = cluster.getFileSystem();
   }
 
   /**

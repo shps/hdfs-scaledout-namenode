@@ -46,7 +46,7 @@ public class TestUrlStreamHandler extends TestCase {
 
         Configuration conf = new HdfsConfiguration();
         MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-        FileSystem wfs = cluster.getWritingFileSystem();
+        FileSystem wfs = cluster.getFileSystem();
 
         // Setup our own factory
         // setURLSteramHandlerFactor is can be set at most once in the JVM

@@ -210,7 +210,7 @@ public class TestBlockTokenWithDFS {
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
       Path fileToAppend = new Path(FILE_TO_APPEND);
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
 
       // write a one-byte file
       FSDataOutputStream stm = writeFile(fs, fileToAppend,
@@ -271,7 +271,7 @@ public class TestBlockTokenWithDFS {
       // set a short token lifetime (1 second)
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
       Path fileToWrite = new Path(FILE_TO_WRITE);
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
 
       FSDataOutputStream stm = writeFile(fs, fileToWrite, (short) numDataNodes,
           BLOCK_SIZE);
@@ -326,7 +326,7 @@ public class TestBlockTokenWithDFS {
       SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
 
       Path fileToRead = new Path(FILE_TO_READ);
-      FileSystem fs = cluster.getWritingFileSystem();
+      FileSystem fs = cluster.getFileSystem();
       createFile(fs, fileToRead);
 
       /*

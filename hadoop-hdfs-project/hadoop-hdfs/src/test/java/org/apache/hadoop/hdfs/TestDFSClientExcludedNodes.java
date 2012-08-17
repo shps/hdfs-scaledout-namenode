@@ -38,7 +38,7 @@ public class TestDFSClientExcludedNodes {
   public void testExcludedNodes() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/testExcludedNodes");
 
     // kill a datanode

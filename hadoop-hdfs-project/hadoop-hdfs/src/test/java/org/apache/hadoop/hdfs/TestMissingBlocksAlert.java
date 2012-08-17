@@ -61,7 +61,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       DistributedFileSystem dfs =
-              (DistributedFileSystem) cluster.getWritingFileSystem();
+              (DistributedFileSystem) cluster.getFileSystem();
       // create a normal file
       DFSTestUtil.createFile(dfs, new Path("/testMissingBlocksAlert/file1"),
               fileLen, (short) 3, 0);

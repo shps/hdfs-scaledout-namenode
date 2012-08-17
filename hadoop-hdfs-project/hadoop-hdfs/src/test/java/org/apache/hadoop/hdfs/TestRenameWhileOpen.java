@@ -69,7 +69,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -143,7 +143,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       LOG.info("Total Datanodes for test: " + cluster.getDataNodes().size());
 
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       Path newfile = new Path("/user/dir3/dir1", "file1");
       assertTrue(fs.exists(newfile));
@@ -175,7 +175,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -219,7 +219,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       }
       cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       Path newfile = new Path("/user/dir3", "file1");
       assertTrue(!fs.exists(file1));
@@ -252,7 +252,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -288,7 +288,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       }
       cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       Path newfile = new Path("/user/dir2", "file1");
       assertTrue(!fs.exists(file1));
@@ -319,7 +319,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     FileSystem fs = null;
     try {
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -354,7 +354,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       }
       cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport).format(false).build();
       cluster.waitActive();
-      fs = cluster.getWritingFileSystem();
+      fs = cluster.getFileSystem();
 
       Path newfile = new Path("/user", "dir2");
       assertTrue(!fs.exists(file1));

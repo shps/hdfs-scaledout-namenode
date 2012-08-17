@@ -98,7 +98,7 @@ public class TestDistributedFileSystem {
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
 
     try {
       // create two files
@@ -116,7 +116,7 @@ public class TestDistributedFileSystem {
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
 
     try {
       String file = "/test/fileclosethenseek/file-0";
@@ -167,79 +167,80 @@ public class TestDistributedFileSystem {
       final long millis = System.currentTimeMillis();
 
       {
-        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-        dfs.getDefaultDFSClient().leaserenewer.setGraceSleepPeriod(grace);
-        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        DFSClient client = dfs.dfs;
+        client.leaserenewer.setGraceSleepPeriod(grace);
+        assertFalse(client.leaserenewer.isRunning());
   
         {
           //create a file
           final FSDataOutputStream out = dfs.create(filepaths[0]);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //write something
           out.writeLong(millis);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //close
           out.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.getDefaultDFSClient().leaserenewer.isRunning()) {
+            if (client.leaserenewer.isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertFalse(client.leaserenewer.isRunning());
         }
 
         {
           //create file1
           final FSDataOutputStream out1 = dfs.create(filepaths[1]);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //create file2
           final FSDataOutputStream out2 = dfs.create(filepaths[2]);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
 
           //write something to file1
           out1.writeLong(millis);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //close file1
           out1.close();
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
 
           //write something to file2
           out2.writeLong(millis);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //close file2
           out2.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
         }
 
         {
           //create file3
           final FSDataOutputStream out3 = dfs.create(filepaths[3]);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           Thread.sleep(grace/4*3);
           //passed previous grace period, should still running
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //write something to file3
           out3.writeLong(millis);
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           //close file3
           out3.close();
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertTrue(client.leaserenewer.isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.getDefaultDFSClient().leaserenewer.isRunning()) {
+            if (client.leaserenewer.isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+          assertFalse(client.leaserenewer.isRunning());
         }
 
         dfs.close();
@@ -247,7 +248,7 @@ public class TestDistributedFileSystem {
 
       {
         // Check to see if opening a non-existent file triggers a FNF
-        FileSystem fs = cluster.getWritingFileSystem();
+        FileSystem fs = cluster.getFileSystem();
         Path dir = new Path("/wrwelkj");
         assertFalse("File should not exist for test.", fs.exists(dir));
 
@@ -267,16 +268,17 @@ public class TestDistributedFileSystem {
       }
 
       {
-        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getWritingFileSystem();
-        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+        DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+        DFSClient client = dfs.dfs;
+        assertFalse(client.leaserenewer.isRunning());
 
         //open and check the file
         FSDataInputStream in = dfs.open(filepaths[0]);
-        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+        assertFalse(client.leaserenewer.isRunning());
         assertEquals(millis, in.readLong());
-        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+        assertFalse(client.leaserenewer.isRunning());
         in.close();
-        assertFalse(dfs.getDefaultDFSClient().leaserenewer.isRunning());
+        assertFalse(client.leaserenewer.isRunning());
         dfs.close();
       }
       
@@ -311,7 +313,7 @@ public class TestDistributedFileSystem {
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
-      final FileSystem fs = cluster.getWritingFileSystem();
+      final FileSystem fs = cluster.getFileSystem();
       Path dir = new Path("/test");
       Path file = new Path(dir, "file");
       
@@ -414,7 +416,7 @@ public class TestDistributedFileSystem {
     conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem hdfs = cluster.getWritingFileSystem();
+    final FileSystem hdfs = cluster.getFileSystem();
     final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     LOG.info("hftpuri=" + hftpuri);
     final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);

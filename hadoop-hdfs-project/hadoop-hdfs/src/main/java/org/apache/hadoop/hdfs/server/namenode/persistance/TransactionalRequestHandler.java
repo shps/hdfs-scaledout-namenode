@@ -84,7 +84,9 @@ public abstract class TransactionalRequestHandler {
     // DFSTestUtil
     WAIT_CORRUPT_REPLICAS,
     // NNThroughputBenchmark
-    ADD_INODE,;
+    ADD_INODE,
+    // TestNodeCount
+    TEST_NODE_COUNT,;
   }
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
   private ThreadLocal<Object[]> params = new ThreadLocal<Object[]>();

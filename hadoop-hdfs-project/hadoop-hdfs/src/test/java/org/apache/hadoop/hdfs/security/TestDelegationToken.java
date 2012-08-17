@@ -142,7 +142,7 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
-    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getWritingFileSystem();
+    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
@@ -155,7 +155,7 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
-    final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getWritingFileSystem();
+    final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     final Token<DelegationTokenIdentifier> token = 
       dfs.getDelegationToken("JobTracker");
     final UserGroupInformation longUgi = UserGroupInformation
@@ -165,7 +165,7 @@ public class TestDelegationToken {
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getWritingFileSystem();
+            .getFileSystem();
         try {
           //try renew with long name
           dfs.renewDelegationToken(token);
@@ -178,7 +178,7 @@ public class TestDelegationToken {
     shortUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getWritingFileSystem();
+            .getFileSystem();
         dfs.renewDelegationToken(token);
         return null;
       }
@@ -186,7 +186,7 @@ public class TestDelegationToken {
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getWritingFileSystem();
+            .getFileSystem();
         try {
           //try cancel with long name
           dfs.cancelDelegationToken(token);

@@ -54,7 +54,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
-    fc = FileContext.getFileContext(cluster.getWritingURI(0), CONF);
+    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);

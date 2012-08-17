@@ -84,7 +84,7 @@ public class TestBalancer extends TestCase {
   /* create a file with a length of <code>fileLen</code> */
   private void createFile(long fileLen, short replicationFactor)
   throws IOException {
-    FileSystem fs = cluster.getWritingFileSystem();
+    FileSystem fs = cluster.getFileSystem();
     DFSTestUtil.createFile(fs, filePath, fileLen, 
         replicationFactor, r.nextLong());
     DFSTestUtil.waitReplication(fs, filePath, replicationFactor);

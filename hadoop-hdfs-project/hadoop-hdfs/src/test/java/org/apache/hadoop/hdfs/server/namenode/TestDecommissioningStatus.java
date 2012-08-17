@@ -87,7 +87,7 @@ public class TestDecommissioningStatus {
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     cluster.waitActive();
-    fileSys = cluster.getWritingFileSystem();
+    fileSys = cluster.getFileSystem();
   }
 
   @AfterClass
@@ -189,7 +189,7 @@ public class TestDecommissioningStatus {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", 2, info.length);
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
 
     short replicas = 2;
     //

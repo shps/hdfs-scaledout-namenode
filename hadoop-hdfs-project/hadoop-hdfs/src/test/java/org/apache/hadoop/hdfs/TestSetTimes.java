@@ -96,7 +96,7 @@ public class TestSetTimes extends TestCase {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     int replicas = 1;
     assertTrue(fileSys instanceof DistributedFileSystem);
 
@@ -167,7 +167,7 @@ public class TestSetTimes extends TestCase {
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
-      fileSys = cluster.getWritingFileSystem();
+      fileSys = cluster.getFileSystem();
 
       // verify that access times and modification times persist after a
       // cluster restart.
@@ -210,7 +210,7 @@ public class TestSetTimes extends TestCase {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
-    FileSystem fileSys = cluster.getWritingFileSystem();
+    FileSystem fileSys = cluster.getFileSystem();
     assertTrue(fileSys instanceof DistributedFileSystem);
 
     try {
