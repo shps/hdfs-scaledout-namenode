@@ -253,7 +253,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 1");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numWNameNodes(nNameNodes)
+          .numNameNodes(nNameNodes)
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -274,7 +274,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numWNameNodes(nNameNodes)
+          .numNameNodes(nNameNodes)
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -328,7 +328,7 @@ public class TestBalancerWithMultipleNameNodes {
 
     LOG.info("RUN_TEST -1");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numWNameNodes(nNameNodes)
+        .numNameNodes(nNameNodes)
         .numDataNodes(nDataNodes)
         .racks(racks)
         .simulatedCapacities(capacities)

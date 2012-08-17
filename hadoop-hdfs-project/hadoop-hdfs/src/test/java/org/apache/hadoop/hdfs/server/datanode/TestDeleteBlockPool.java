@@ -47,7 +47,7 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).numWNameNodes(
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
           2).numDataNodes(2).build();
 
       cluster.waitActive();
@@ -155,7 +155,7 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).numWNameNodes(
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
           2).numDataNodes(1).build();
 
       cluster.waitActive();

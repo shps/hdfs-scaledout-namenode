@@ -57,7 +57,7 @@ public class TestDataNodeMultipleRegistrations {
    */
   @Test
   public void test2NNRegistration() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
         .wNameNodePort(9928).build();
     try {
       cluster.waitActive();
@@ -181,7 +181,7 @@ public class TestDataNodeMultipleRegistrations {
   
   @Test
   public void testClusterIdMismatch() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2).
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
     wNameNodePort(9928).build();
     try {
       cluster.waitActive();
@@ -217,7 +217,7 @@ public class TestDataNodeMultipleRegistrations {
 
     Configuration conf = new HdfsConfiguration();
     // start Federated cluster and add a node.
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numWNameNodes(2).
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
     wNameNodePort(9928).build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());

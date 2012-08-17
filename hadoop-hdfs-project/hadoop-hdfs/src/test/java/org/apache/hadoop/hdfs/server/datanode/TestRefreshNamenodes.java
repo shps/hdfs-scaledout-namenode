@@ -46,7 +46,7 @@ public class TestRefreshNamenodes {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
       cluster = new MiniDFSCluster.Builder(conf).federation(true).
-          numWNameNodes(1).wNameNodePort(nnPort1).build();
+          numNameNodes(1).wNameNodePort(nnPort1).build();
 
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().length);
