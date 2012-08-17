@@ -646,6 +646,10 @@
             <exclude>**/TestNodeCount.java</exclude>
             <exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
             <exclude>**/TestDFSRemove.java</exclude>
+            <exclude>**/TestHDFSTrash.java</exclude>
+            <exclude>**/TestBlockReplacement.java</exclude>
+            <exclude>**/TestPipelines.java</exclude>
+            <exclude>**/TestPrintMetrics.java</exclude>
           </excludes>
         </configuration>
       </plugin>
