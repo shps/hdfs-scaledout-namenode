@@ -389,10 +389,11 @@ public class LeaseManager {
         }
       }
 
-      if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed
-      {
-        sortedLeases.remove(oldest);
-      }
+//      if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed
+//      {
+//        sortedLeases.remove(oldest);
+//      }
+      sortedLeases.remove(oldest);
     }
   }
 
