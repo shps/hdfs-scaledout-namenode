@@ -1922,28 +1922,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException on error (eg lease mismatch, file not open, file
    * deleted)
    */
-  boolean completeFileOld(String src, String holder, ExtendedBlock last)
-          throws SafeModeException, UnresolvedLinkException, IOException, PersistanceException {
-    checkBlock(last);
-    boolean success = false;
-    writeLock();
-    try {
-      success = completeFileInternal(src, holder,
-              ExtendedBlock.getLocalBlock(last));
-    } finally {
-      writeUnlock();
-    }
-    return success;
-  }
-
-  /**
-   * Complete in-progress write to the given file.
-   *
-   * @return true if successful, false if the client should continue to retry
-   * (e.g if not all blocks have reached minimum replication yet)
-   * @throws IOException on error (eg lease mismatch, file not open, file
-   * deleted)
-   */
   boolean completeFile(String src, String holder, ExtendedBlock last)
           throws SafeModeException, UnresolvedLinkException, IOException {
     assert isWritingNN();
@@ -2293,7 +2271,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           boolean enforcePermission)
           throws AccessControlException, SafeModeException, UnresolvedLinkException,
           IOException, PersistanceException {
-    boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
 
     try {
@@ -2311,21 +2288,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!dir.delete(src, collectedBlocks)) {
         return false;
       }
-      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
-      if (deleteNow) { // Perform small deletes right away
-        removeBlocks(collectedBlocks);
-      }
-      //TODO[Hooman]: For now, the writelock optimization is commented and the whole transaction is being done with one writelock.
-  /*
-       * } finally { writeUnlock(); }
-       *
-       * //getEditLog().logSync();
-       *
-       * writeLock(); try {
-       */
-      if (!deleteNow) {
-        removeBlocks(collectedBlocks); // Incremental deletion of blocks
-      }
+      removeBlocks(collectedBlocks);
     } finally {
     }
     collectedBlocks.clear();
@@ -2644,6 +2607,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         assert false : "Already checked that the last block is incomplete";
         break;
       case COMMITTED:
+        //XXX [H]: It seems the following if statement never becomes true
         // Close file if committed blocks are minimally replicated
         if (penultimateBlockMinReplication
                 && blockManager.checkMinReplication(lastBlock)) {

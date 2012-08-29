@@ -1793,7 +1793,9 @@ public class FSDirectory implements Closeable {
             } else {
                 EntityManager.add(addedNode);
             }
-            EntityManager.update(pathComponents[pos - 1]);
+            // [H] The following updates modification time
+            if (quotaEnabled)
+              EntityManager.update(pathComponents[pos - 1]);
         }
 
         return addedNode;

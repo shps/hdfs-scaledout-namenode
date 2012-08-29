@@ -132,7 +132,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   private boolean hasExpectedReplicaIn(String storageId) throws PersistanceException {
-    for (IndexedReplica replica : getExpectedReplicas()) {
+    for (ReplicaUnderConstruction replica : getExpectedReplicas()) {
       if (replica.getStorageId().equals(storageId)) {
         return true;
       }

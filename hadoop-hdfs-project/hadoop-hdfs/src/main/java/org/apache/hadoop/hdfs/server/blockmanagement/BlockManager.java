@@ -1885,7 +1885,7 @@ public class BlockManager {
     // Now check for completion of blocks and safe block count
     NumberReplicas num = countNodes(storedBlock);
     int numLiveReplicas = num.liveReplicas();
-    int numCurrentReplica = numLiveReplicas + curReplicaDelta//[thesis] confirm this value!
+    int numCurrentReplica = numLiveReplicas + curReplicaDelta
             + pendingReplications.getNumReplicas(storedBlock);
 
 
@@ -2264,15 +2264,12 @@ public class BlockManager {
     }
 
     if (info.getReplicas().isEmpty() // no datanodes left
-            && info.getINode() == null) {
+            && info.getINode() == null) { // [H] This looks impossible in KTHFS. Cause whenever the inode is deleted the block-info also will be deleted.
       try {
         // does not belong to a file
         info.getINode().removeBlock(info);
         info.setINode(null);
         EntityManager.remove(info);
-
-
-
 
       } catch (Exception ex) {
         Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);

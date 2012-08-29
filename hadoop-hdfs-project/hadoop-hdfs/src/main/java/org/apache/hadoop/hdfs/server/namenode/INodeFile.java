@@ -178,7 +178,7 @@ public class INodeFile extends INode {
     for (BlockInfo blk : tempList) {
       v.add(blk);
       blk.setINode(null);
-      EntityManager.remove(blk);
+//      EntityManager.remove(blk);
     }
     blocks.clear();
 

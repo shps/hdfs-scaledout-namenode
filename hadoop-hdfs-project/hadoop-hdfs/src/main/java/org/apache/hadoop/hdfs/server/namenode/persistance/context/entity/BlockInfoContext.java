@@ -79,6 +79,10 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         long id = (Long) params[0];
         result = blocks.get(id);
         if (result == null) {
+          if (removedBlocks.containsKey(id)) {
+            log("find-block-by-bid-removed", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
+            return null;
+          }
           log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           result = dataAccess.findById(id);
           if (result != null) {
