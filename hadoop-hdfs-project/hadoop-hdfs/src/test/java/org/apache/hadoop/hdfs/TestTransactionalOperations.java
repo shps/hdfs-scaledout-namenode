@@ -3,7 +3,7 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
@@ -16,17 +16,14 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
-import org.omg.CORBA.TIMEOUT;
 
 /**
  *
@@ -275,27 +272,6 @@ public class TestTransactionalOperations {
     } finally {
       cluster.shutdown();
     }
-  }
-
-  private DataNode findDataNodeHavingAllReplicas(LocatedBlocks blocks, List<DataNode> dns) {
-    for (DataNode dn : dns) {
-      for (LocatedBlock lb : blocks.getLocatedBlocks()) {
-        DatanodeInfo[] locations = lb.getLocations();
-        boolean exist = false;
-        for (DatanodeInfo datanode : locations) {
-          if (datanode.getStorageID().equals(dn.getDatanodeId().getStorageID())) {
-            exist = true;
-            break;
-          }
-        }
-        if (!exist) {
-          break;
-        }
-      }
-      return dn;
-    }
-
-    return null;
   }
 
   //

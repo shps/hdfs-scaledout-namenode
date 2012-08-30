@@ -1803,7 +1803,7 @@ public class BlockManager {
   private void addStoredBlockImmediate(BlockInfo storedBlock,
           DatanodeDescriptor node)
           throws IOException, PersistanceException {
-    BlockManager.LOG.debug("WASIF inside BM.addStoredBlockImmediate " + storedBlock.getBlockId());
+    
     assert (storedBlock != null && namesystem.hasWriteLock());
     if (!namesystem.isInStartupSafeMode()
             || namesystem.isPopulatingReplQueues()) {
@@ -2264,7 +2264,7 @@ public class BlockManager {
     }
 
     if (info.getReplicas().isEmpty() // no datanodes left
-            && info.getINode() == null) { // [H] This looks impossible in KTHFS. Cause whenever the inode is deleted the block-info also will be deleted.
+            && info.getINode() == null) { // [H] This condition looks impossible in KTHFS. Cause whenever the inode is deleted the block-info also will be deleted.
       try {
         // does not belong to a file
         info.getINode().removeBlock(info);

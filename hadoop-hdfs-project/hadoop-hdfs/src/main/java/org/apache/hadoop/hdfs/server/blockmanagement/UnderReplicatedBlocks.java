@@ -20,6 +20,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO;
 
 /**
  * Keep track of under replication blocks. Blocks have replication priority,
@@ -111,7 +112,15 @@ class UnderReplicatedBlocks {
             expectedReplicas);
 
     if (priLevel != LEVEL) {
-      EntityManager.add(new UnderReplicatedBlock(priLevel, block.getBlockId()));
+      UnderReplicatedBlock urb = EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId());
+      if (urb == null) {
+        urb = new UnderReplicatedBlock(priLevel, block.getBlockId());
+        EntityManager.add(new UnderReplicatedBlock(priLevel, block.getBlockId()));
+      } else {
+        urb.setLevel(priLevel);
+        EntityManager.update(urb);
+      }
+      
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug(
                 "BLOCK* NameSystem.UnderReplicationBlock.add:"
