@@ -557,9 +557,6 @@ public class MiniDFSCluster {
     }
 
     if (!federation) {
-      /*
-       * [thesis] For testing
-       */
       if (format) {
         StorageFactory.setConfiguration(conf);
         StorageConnector connector = StorageFactory.getConnector();

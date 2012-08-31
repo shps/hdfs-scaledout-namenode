@@ -606,7 +606,6 @@
             <exclude>**/TestDFSShell.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
             <exclude>**/TestHDFSFileContextMainOperations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
 			<!-- Sometimes passes and sometimes fails -->
-            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             <exclude>**/TestFsck.java</exclude>
             <exclude>**/TestFsLimits.java</exclude>
             <exclude>**/TestBlockManager.java</exclude>
@@ -640,16 +639,10 @@
             <exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
             <exclude>**/TestDiskError.java</exclude> <!--[J] Takes a long time to complete! Will need to fix later -->
             
-            <exclude>**/TestUnderReplicatedBlocks.java</exclude> <!-- infinit loop-->
             <exclude>**/TestDFSStorageStateRecovery.java</exclude>
-            <exclude>**/TestPread.java</exclude>
             <exclude>**/TestNodeCount.java</exclude>
             <exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
-            <exclude>**/TestDFSRemove.java</exclude>
             <exclude>**/TestHDFSTrash.java</exclude>
-            <exclude>**/TestBlockReplacement.java</exclude>
-            <exclude>**/TestPipelines.java</exclude>
-            <exclude>**/TestPrintMetrics.java</exclude>
           </excludes>
         </configuration>
       </plugin>

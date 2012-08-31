@@ -2061,6 +2061,7 @@ public class BlockManager {
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
 
+    // TODO:[H] The following should become optimized.
     for (DatanodeDescriptor cur : dataNodes) {
       Collection<ExcessReplica> excessBlocks =
               EntityManager.findList(ExcessReplica.Finder.ByStorageId, cur.getStorageID());
@@ -2264,8 +2265,10 @@ public class BlockManager {
     }
 
     if (info.getReplicas().isEmpty() // no datanodes left
-            && info.getINode() == null) { // [H] This condition looks impossible in KTHFS. Cause whenever the inode is deleted the block-info also will be deleted.
+            && info.getINode() == null) { 
       try {
+        // [H] This condition looks impossible in KTHFS. Cause whenever the inode is deleted the block-info also will be deleted.
+        assert false : "This is assumed not to happen. So fix this.";
         // does not belong to a file
         info.getINode().removeBlock(info);
         info.setINode(null);
