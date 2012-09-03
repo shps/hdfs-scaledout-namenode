@@ -42,6 +42,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -598,6 +601,15 @@ public class NameNode {
       clusterId = NNStorage.newClusterID();
     }
     LOG.info("Formatting using clusterid: " + clusterId);
+    
+    // Format storage
+    StorageFactory.setConfiguration(conf);
+    StorageConnector connector = StorageFactory.getConnector();
+    try {
+      assert (connector.formatStorage());
+    } catch (StorageException ex) {
+      LOG.error(ex.getMessage(), ex);
+    }
     
     FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);

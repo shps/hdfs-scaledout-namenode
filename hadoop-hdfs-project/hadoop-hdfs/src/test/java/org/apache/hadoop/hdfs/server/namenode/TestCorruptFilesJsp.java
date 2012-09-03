@@ -87,10 +87,11 @@ public class TestCorruptFilesJsp  {
 
         // read the file so that the corrupt block is reported to NN
         FSDataInputStream in = fs.open(filepaths[idx]);
-        try {
+        try { 
           in.readFully(new byte[FILE_SIZE]);
         } catch (ChecksumException ignored) { // checksum error is expected.
         }
+
         in.close();
       }
 
