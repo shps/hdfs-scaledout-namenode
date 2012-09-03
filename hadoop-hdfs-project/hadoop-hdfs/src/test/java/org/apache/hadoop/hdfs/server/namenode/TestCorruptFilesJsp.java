@@ -87,13 +87,17 @@ public class TestCorruptFilesJsp  {
 
         // read the file so that the corrupt block is reported to NN
         FSDataInputStream in = fs.open(filepaths[idx]);
-        try {
+        try { 
           in.readFully(new byte[FILE_SIZE]);
         } catch (ChecksumException ignored) { // checksum error is expected.
         }
+
         in.close();
       }
 
+      // FIXME: [H]: The following assertion fails because the namenode receives the reportBadBlock of all blocks with latency.
+      // However this should not happen sicne the call of reportBadBlock should be synchronized.
+      
       // verify if all corrupt files were reported to NN
       badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("Expecting 3 corrupt files, but got " + badFiles.size(), badFiles.size() == 3);

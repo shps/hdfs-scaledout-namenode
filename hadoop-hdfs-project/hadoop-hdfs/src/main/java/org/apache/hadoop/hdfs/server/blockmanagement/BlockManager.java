@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.CorruptReplicaClusterj.CorruptReplicaDTO;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster. This
@@ -2440,15 +2441,16 @@ public class BlockManager {
     int excess = 0;
 
     List<DatanodeDescriptor> dnDescriptors = getDatanodes(getStoredBlock(b));
+    Collection<CorruptReplica> corrupts = EntityManager.findList(CorruptReplica.Finder.ByBlockId, b.getBlockId());
 
     for (DatanodeDescriptor node : dnDescriptors) {
-      if (isItCorruptedReplica(b.getBlockId(), node.getStorageID())) {
+      if (corrupts.contains(new CorruptReplica(b.getBlockId(), node.getStorageID()))) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       } else {
         Collection<ExcessReplica> blocksExcess =
-                EntityManager.findList(ExcessReplica.Finder.ByStorageId, node.getStorageID());
+                EntityManager.findList(ExcessReplica.Finder.ByBlockId, b.getBlockId());
         ExcessReplica searchKey = new ExcessReplica(node.getStorageID(), b.getBlockId());
         if (blocksExcess != null && blocksExcess.contains(searchKey)) {
           excess++;

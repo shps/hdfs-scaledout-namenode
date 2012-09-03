@@ -557,6 +557,7 @@ public class MiniDFSCluster {
     }
 
     if (!federation) {
+<<<<<<< HEAD
       if (format) {
         StorageFactory.setConfiguration(conf);
         StorageConnector connector = StorageFactory.getConnector();
@@ -567,6 +568,8 @@ public class MiniDFSCluster {
         }
       }
 
+=======
+>>>>>>> persistance
       conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + wNameNodePort);
       conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
               + wNameNodeHttpPort);

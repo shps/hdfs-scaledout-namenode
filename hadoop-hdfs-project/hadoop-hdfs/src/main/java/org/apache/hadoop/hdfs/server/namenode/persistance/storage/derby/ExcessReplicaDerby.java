@@ -51,6 +51,21 @@ public class ExcessReplicaDerby extends ExcessReplicaDataAccess {
       return Collections.EMPTY_LIST;
     }
   }
+  
+  @Override
+  public List<ExcessReplica> findExcessReplicaByBlockId(long bId) throws StorageException {
+    String query = String.format("select * from %s where %s=?",
+            TABLE_NAME, BLOCK_ID);
+    try {
+      PreparedStatement s = connector.obtainSession().prepareStatement(query);
+      s.setLong(1, bId);
+      ResultSet rSet = s.executeQuery();
+      return createList(rSet);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
+    }
+  }
 
   @Override
   public ExcessReplica findByPkey(Object[] params) throws StorageException {
