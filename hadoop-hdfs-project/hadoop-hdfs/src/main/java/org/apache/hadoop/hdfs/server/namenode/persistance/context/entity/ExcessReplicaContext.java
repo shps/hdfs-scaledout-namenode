@@ -16,6 +16,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
 
   private Map<ExcessReplica, ExcessReplica> exReplicas = new HashMap<ExcessReplica, ExcessReplica>();
+  private Map<Long, TreeSet<ExcessReplica>> blockIdToExReplica = new HashMap<Long, TreeSet<ExcessReplica>>();
   private Map<String, TreeSet<ExcessReplica>> storageIdToExReplica = new HashMap<String, TreeSet<ExcessReplica>>();
   private Map<ExcessReplica, ExcessReplica> newExReplica = new HashMap<ExcessReplica, ExcessReplica>();
   private Map<ExcessReplica, ExcessReplica> removedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
@@ -41,6 +42,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
   public void clear() {
     exReplicas.clear();
     storageIdToExReplica.clear();
+    blockIdToExReplica.clear();
     newExReplica.clear();
     removedExReplica.clear();
   }
@@ -99,10 +101,22 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
           log("find-excess-by-storageid", CacheHitState.HIT, new String[]{"sid", sId});
         } else {
           log("find-excess-by-storageid", CacheHitState.LOSS, new String[]{"sid", sId});
-          syncExcessReplicaInstances(dataAccess.findExcessReplicaByStorageId(sId));
-          storageIdToExReplica.put(sId, result);
+          TreeSet<ExcessReplica> syncSet = syncExcessReplicaInstances(dataAccess.findExcessReplicaByStorageId(sId));
+          storageIdToExReplica.put(sId, syncSet);
         }
         result = storageIdToExReplica.get(sId);
+        return result;
+      case ByBlockId:
+        long bId = (Long) params[0];
+        if (blockIdToExReplica.containsKey(bId))
+        {
+          log("find-excess-by-blockId", CacheHitState.HIT, new String[]{"bid", String.valueOf(bId)});
+        } else {
+          log("find-excess-by-blockId", CacheHitState.LOSS, new String[]{"bid", String.valueOf(bId)});
+          TreeSet<ExcessReplica> syncSet = syncExcessReplicaInstances(dataAccess.findExcessReplicaByBlockId(bId));
+          blockIdToExReplica.put(bId, syncSet);
+        }
+        result = blockIdToExReplica.get(bId);
         return result;
     }
     throw new RuntimeException(UNSUPPORTED_FINDER);

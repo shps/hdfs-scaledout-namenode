@@ -87,6 +87,21 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
       throw new StorageException(e);
     }
   }
+  
+  @Override
+  public List<ExcessReplica> findExcessReplicaByBlockId(long bId) throws StorageException {
+    try {
+      Session session = connector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<ExcessReplicaDTO> qdt = qb.createQueryDefinition(ExcessReplicaDTO.class);
+      qdt.where(qdt.get("blockId").equal(qdt.param("param")));
+      Query<ExcessReplicaDTO> query = session.createQuery(qdt);
+      query.setParameter("param", bId);
+      return createList(query.getResultList());
+    } catch (Exception e) {
+      throw new StorageException(e);
+    }
+  }
 
   @Override
   public ExcessReplica findByPkey(Object[] params) throws StorageException {
