@@ -339,4 +339,9 @@ public class INodeFile extends INode {
     addBlock(bUc);
     return bUc;
   }
+  
+  /** @return the number of blocks */ 
+  public int numBlocks() throws PersistanceException {
+    return getBlocks().size();
+  }
 }
