@@ -602,47 +602,38 @@
             <exclude>**/Test*$*.java</exclude>
 <!--hold start-->
 <!--hold end-->
-            <exclude>**/TestDatanodeBlockScanner.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-            <exclude>**/TestDFSShell.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-            <exclude>**/TestHDFSFileContextMainOperations.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
-			<!-- Sometimes passes and sometimes fails -->
-            <exclude>**/TestFsck.java</exclude>
+            <exclude>**/TestCorruptFilesJsp.java</exclude>
             <exclude>**/TestFsLimits.java</exclude>
-            <exclude>**/TestBlockManager.java</exclude>
-            <exclude>**/TestRefreshUserMappings.java</exclude>
-            <exclude>**/TestViewFsFileStatusHdfs.java</exclude>
-            <exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
             <exclude>**/TestDfsOverAvroRpc.java</exclude>
+            <exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
+            <exclude>**/TestInjectionForSimulatedStorage.java</exclude>
+            <exclude>**/TestNameNodeMetrics.java</exclude>
+            <exclude>**/TestLargeDirectoryDelete.java</exclude>
+            <exclude>**/TestDistributedUpgrade.java</exclude>
+            <exclude>**/TestDatanodeBlockScanner.java</exclude> <!--kamal: will be fixed at the point of NN restart support-->
+            <exclude>**/TestDecommission.java</exclude>
             <exclude>**/TestJMXGet.java</exclude>
             <exclude>**/TestDeleteBlockPool.java</exclude>
-            <exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
-            <exclude>**/TestDFSFinalize.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
-            <exclude>**/TestDFSRollback.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
-            <exclude>**/TestDFSStartupVersions.java</exclude><!-- upgrade stuff--> <!-- infinite loop for MiniCluster to come up -->
-            <exclude>**/TestBalancer.java</exclude>
-            <exclude>**/TestBalancerWithMultipleNameNodes.java</exclude>
-            <exclude>**/TestDecommissioningStatus.java</exclude>
-            <exclude>**/TestInjectionForSimulatedStorage.java</exclude>
-            <exclude>**/TestLargeDirectoryDelete.java</exclude><!--passes though it is very time-consuming -->
-            <exclude>**/TestDistributedUpgrade.java</exclude>
-            <exclude>**/TestDecommission.java</exclude>
-            <exclude>**/TestOverReplicatedBlocks.java</exclude>
+            <exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
+            <exclude>**/TestFsck.java</exclude>
+            <exclude>**/TestHeartbeatHandling.java</exclude>
+            <exclude>**/TestClientReportBadBlock.java</exclude>
             <exclude>**/TestQuota.java</exclude>
-            <exclude>**/TestWriteRead.java</exclude> <!-- takes up too much time, its passing-->
-            <exclude>**/TestCrcCorruption.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
-            <exclude>**/TestNNMetricFilesInGetListingOps.java</exclude><!-- Either it stucks in a loop or very time consuming one-->
             <exclude>**/TestMetaSave.java</exclude>
-            <exclude>**/TestNNThroughputBenchmark.java</exclude> <!-- seems very time consuming-->
+            <exclude>**/TestDFSShell.java</exclude> 
+            <exclude>**/TestNNThroughputBenchmark.java</exclude>
             <exclude>**/TestDFSUpgradeFromImage.java</exclude>
             <exclude>**/TestHDFSCLI.java</exclude>
-            <exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
-            <exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
-            <exclude>**/TestDiskError.java</exclude> <!--[J] Takes a long time to complete! Will need to fix later -->
-            
+            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             <exclude>**/TestDFSStorageStateRecovery.java</exclude>
-            <exclude>**/TestNodeCount.java</exclude>
-            <exclude>**/TestBlocksWithNotEnoughRacks.java</exclude>
             <exclude>**/TestHDFSTrash.java</exclude>
+            
+            <exclude>**/TestBalancer.java</exclude> <!-- Needs the getBlocks RPC in NN -->
+            <exclude>**/TestBalancerWithMultipleNameNodes.java</exclude> <!-- Needs the getBlocks RPC in NN -->
+            <exclude>**/TestDataNodeMultipleRegistrations.java</exclude> <!--Federated NN -->
+            <exclude>**/TestGetBlocks.java</exclude> <!-- Needs the getBlocks RPC in NN, just needed for admin commands -->
+            <exclude>**/TestRefreshNamenodes.java</exclude> <!--Federetd NN -->
+            <exclude>**/TestBlockManager.java</exclude> <!-- uses mocking -->
           </excludes>
         </configuration>
       </plugin>
