@@ -467,12 +467,11 @@ public class BlockManager {
     if (lastBlock.isComplete()) {
       return false; // already completed (e.g. by syncBlock) 
     }
-
-    NumberReplicas blockStatus = countNodes(lastBlock);
+    
     final boolean b = commitBlock((BlockInfoUnderConstruction) lastBlock, commitBlock);
 
-    if (blockStatus.liveReplicas() >= minReplication) {
-      completeBlock(fileINode, lastBlock);
+    if (countNodes(lastBlock).liveReplicas() >= minReplication) {
+      completeBlock(fileINode, fileINode.numBlocks() - 1);
     }
     return b;
   }
@@ -520,14 +519,6 @@ public class BlockManager {
 
     List<BlockInfo> fileBlocks = fileINode.getBlocks();
     for (int idx = 0; idx < fileBlocks.size(); idx++) {
-      if ((fileBlocks.get(idx).getBlockId() != block.getBlockId()) && (fileBlocks.get(idx).getBlockUCState() == BlockUCState.COMMITTED)) {
-        // try to complete the committed block if it  has reached minimum replication
-        if (countNodes(fileBlocks.get(idx)).liveReplicas() >= minReplication) {
-          // try to complete this block first
-          LOG.warn("Block  [" + fileBlocks.get(idx).getBlockId() + "] was not completed. Status [" + fileBlocks.get(idx).getBlockUCState().name() + "]. Trying to complete block... ");
-          completeBlock(fileINode, idx);
-        }
-      }
       if (fileBlocks.get(idx).getBlockId() == block.getBlockId()) {
         return completeBlock(fileINode, idx);
       }
