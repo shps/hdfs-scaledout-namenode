@@ -3,7 +3,6 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +39,25 @@ public class TestTransactionalOperations {
   static private String fakeUsername = "fakeUser1";
   static private String fakeGroup = "supergroup";
 
+  @Test
+  public void testMkdirs() throws IOException
+  {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    
+    try {
+      DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      Path exPath = new Path("/e1/e2");
+      dfs.mkdirs(exPath);
+      assert dfs.exists(exPath) : String.format("The path %s is not created.",exPath.toString());
+      Path newPath = new Path(exPath.toString() + "/n3/n4");
+      dfs.mkdirs(newPath);
+      assert dfs.exists(newPath) : String.format("The path %s is not created.",newPath.toString());
+    } finally{
+      cluster.shutdown();
+    }
+  }
+  
   /**
    * Tries different possible scenarios on startFile operation.
    * @throws IOException

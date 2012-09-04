@@ -2061,16 +2061,16 @@ public class BlockManager {
     }
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
     List<DatanodeDescriptor> dataNodes = getDatanodes(getStoredBlock(block));
-
-    // TODO:[H] The following should become optimized.
+    
+    Collection<ExcessReplica> excessBlocks =
+            EntityManager.findList(ExcessReplica.Finder.ByBlockId, block.getBlockId());
+    Collection<CorruptReplica> corruptReplicas = EntityManager.findList(CorruptReplica.Finder.ByBlockId, block.getBlockId());
     for (DatanodeDescriptor cur : dataNodes) {
-      Collection<ExcessReplica> excessBlocks =
-              EntityManager.findList(ExcessReplica.Finder.ByStorageId, cur.getStorageID());
       ExcessReplica searchkey = new ExcessReplica(cur.getStorageID(), block.getBlockId());
       if (excessBlocks == null || !excessBlocks.contains(searchkey)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
-          if (!isItCorruptedReplica(block.getBlockId(), cur.getStorageID())) {
+          if (!corruptReplicas.contains(new CorruptReplica(block.getBlockId(), cur.getStorageID()))) {
             nonExcess.add(cur);
           }
         }

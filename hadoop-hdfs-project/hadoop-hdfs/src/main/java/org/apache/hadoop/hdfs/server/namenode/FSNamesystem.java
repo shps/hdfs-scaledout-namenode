@@ -2426,7 +2426,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // validate that we have enough inodes. This is, at best, a 
     // heuristic because the mkdirs() operation migth need to 
     // create multiple inodes.
-    checkFsObjectLimit();
+    checkFsObjectLimit(); 
 
     if (!dir.mkdirs(src, permissions, false, now())) {
       throw new IOException("Failed to create directory: " + src);
