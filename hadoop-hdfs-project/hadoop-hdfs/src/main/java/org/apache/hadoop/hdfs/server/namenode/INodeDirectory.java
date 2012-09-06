@@ -508,6 +508,7 @@ public class INodeDirectory extends INode {
 
     parent = null;
     children = null;
+    EntityManager.remove(this);
     return total;
   }
 }
