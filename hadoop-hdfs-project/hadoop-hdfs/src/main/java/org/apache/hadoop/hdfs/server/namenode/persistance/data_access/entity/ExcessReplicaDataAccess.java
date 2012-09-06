@@ -18,6 +18,7 @@ public abstract class ExcessReplicaDataAccess extends EntityDataAccess {
   public abstract int countAll() throws StorageException;
 
   public abstract List<ExcessReplica> findExcessReplicaByStorageId(String sId) throws StorageException;
+  public abstract List<ExcessReplica> findExcessReplicaByBlockId(long bId) throws StorageException;
 
   public abstract ExcessReplica findByPkey(Object[] params) throws StorageException;
   

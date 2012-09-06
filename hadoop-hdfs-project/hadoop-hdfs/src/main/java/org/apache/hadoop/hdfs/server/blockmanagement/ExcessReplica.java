@@ -18,7 +18,7 @@ public class ExcessReplica extends Replica {
 
   public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<ExcessReplica> {
 
-    ByStorageId, ByPKey;
+    ByStorageId, ByPKey, ByBlockId;
 
     @Override
     public Class getType() {

@@ -71,7 +71,7 @@ public class TestNodeCount extends TestCase {
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
       //ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, FILE_PATH); // [1] This is a bug in this test case:  cannot be cast to Comparable
-      Block block = DFSTestUtil.getFirstBlock(fs, FILE_PATH).getLocalBlock();
+      final Block block = DFSTestUtil.getFirstBlock(fs, FILE_PATH).getLocalBlock();
 
       // keep a copy of all datanode descriptor
       final DatanodeDescriptor[] datanodes = hm.getDatanodes();
@@ -97,7 +97,7 @@ public class TestNodeCount extends TestCase {
           return null;
         }
       }.setParam1(datanode);
-      handler.handle();
+      handler.handleWithWriteLock(namesystem);
 
       // the block will be replicated
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
@@ -112,34 +112,47 @@ public class TestNodeCount extends TestCase {
       while (countNodes(block, namesystem).excessReplicas() == 0) { // Modification in changes to the bug [1]
         checkTimeout("excess replicas not detected");
       }
+      
+      handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
 
-      // find out a non-excess node
-      List<DatanodeDescriptor> dataNodes = bm.getDatanodes(bm.getStoredBlock(block));
-      DatanodeDescriptor nonExcessDN = null;
-      for (DatanodeDescriptor dn : dataNodes) {
-        Collection<ExcessReplica> excessReplicas =
-                EntityManager.findList(ExcessReplica.Finder.ByStorageId, dn.getStorageID());
-        ExcessReplica searchKey = new ExcessReplica(dn.getStorageID(), block.getBlockId());
-        if (excessReplicas == null || !excessReplicas.contains(searchKey)) {
-          nonExcessDN = dn;
-          break;
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          // find out a non-excess node
+          List<DatanodeDescriptor> dataNodes = bm.getDatanodes(bm.getStoredBlock(block));
+          DatanodeDescriptor nonExcessDN = null;
+          for (DatanodeDescriptor dn : dataNodes) {
+            Collection<ExcessReplica> excessReplicas =
+                    EntityManager.findList(ExcessReplica.Finder.ByStorageId, dn.getStorageID());
+            ExcessReplica searchKey = new ExcessReplica(dn.getStorageID(), block.getBlockId());
+            if (excessReplicas == null || !excessReplicas.contains(searchKey)) {
+              nonExcessDN = dn;
+              break;
+            }
+          }
+          return nonExcessDN;
         }
-      }
+      };
+      
+      DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) handler.handle();
       assertTrue(nonExcessDN != null);
 
       // bring down non excessive datanode
       dnprop = cluster.stopDataNode(nonExcessDN.getName());
       // make sure that NN detects that the datanode is down
 
-      try {
-        namesystem.writeLock();
-        synchronized (hm) {
-          nonExcessDN.setLastUpdate(0); // mark it dead
-          hm.heartbeatCheck();
+      handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          synchronized (hm) {
+            DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) getParam1();
+            nonExcessDN.setLastUpdate(0); // mark it dead
+            hm.heartbeatCheck();
+          }
+          return null;
         }
-      } finally {
-        namesystem.writeUnlock();
-      }
+      }.setParam1(nonExcessDN);
+      handler.handleWithWriteLock(namesystem);
 
       // The block should be replicated
       initializeTimeout(TIMEOUT);

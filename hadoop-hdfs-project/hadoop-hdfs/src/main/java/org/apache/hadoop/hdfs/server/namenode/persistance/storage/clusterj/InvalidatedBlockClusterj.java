@@ -40,7 +40,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
 
     void setGenerationStamp(long generationStamp);
 
-    @Column(name = GENERATION_STAMP)
+    @Column(name = NUM_BYTES)
     long getNumBytes();
 
     void setNumBytes(long numBytes);

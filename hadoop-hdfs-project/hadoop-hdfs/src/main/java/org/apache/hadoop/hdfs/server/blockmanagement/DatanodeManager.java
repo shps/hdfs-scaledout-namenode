@@ -913,19 +913,20 @@ public class DatanodeManager {
         }
 
         final List<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
-        //check pending replication
-        List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
-                maxTransfers);
-        if (pendingList != null) {
-          cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
-                  pendingList));
-        }
         //check block invalidation
         Block[] blks = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
 
         if (blks != null) {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
                   blockPoolId, blks));
+        }
+        
+        //check pending replication
+        List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+                maxTransfers);
+        if (pendingList != null) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+                  pendingList));
         }
 
         blockManager.addKeyUpdateCommand(cmds, nodeinfo);

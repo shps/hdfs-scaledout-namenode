@@ -557,19 +557,6 @@ public class MiniDFSCluster {
     }
 
     if (!federation) {
-      /*
-       * [thesis] For testing
-       */
-      if (format) {
-        StorageFactory.setConfiguration(conf);
-        StorageConnector connector = StorageFactory.getConnector();
-        try {
-          assert (connector.formatStorage());
-        } catch (StorageException ex) {
-          Logger.getLogger(MiniDFSCluster.class.getName()).log(Level.SEVERE, null, ex);
-        }
-      }
-
       conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + wNameNodePort);
       conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
               + wNameNodeHttpPort);
