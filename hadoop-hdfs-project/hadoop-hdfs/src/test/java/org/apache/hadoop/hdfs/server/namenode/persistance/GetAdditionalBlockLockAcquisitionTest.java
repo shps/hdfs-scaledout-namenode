@@ -1,6 +1,9 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,9 +51,9 @@ public class GetAdditionalBlockLockAcquisitionTest {
 
     /**
      * writing 3 blocks into a file with replication factor 3
-     * @throws IOException 
+     *
+     * @throws IOException
      */
-    @Ignore
     @Test
     public void testScenario1() throws IOException {
         dfs = (DistributedFileSystem) cluster.getFileSystem();
@@ -64,10 +67,11 @@ public class GetAdditionalBlockLockAcquisitionTest {
         strm.close();
 
     }
-    
+
     /**
-     *  append 2 blocks right after 2 existing blocks
+     * append 2 blocks right after 2 existing blocks
      */
+    @Ignore
     @Test
     public void testScenario2() throws IOException {
         dfs = (DistributedFileSystem) cluster.getFileSystem();
@@ -79,16 +83,33 @@ public class GetAdditionalBlockLockAcquisitionTest {
         writeFile(strm, blockSize * 2);
         strm.hflush();
         strm.close();
-        
+
         strm = dfs.append(file1);
-        writeFile(strm, blockSize*2);
+        writeFile(strm, blockSize * 2);
         strm.flush();
         strm.close();
     }
-    
+
+    @Ignore
+    @Test
+    public void testScenario3() throws IOException {
+
+        dfs = (DistributedFileSystem) cluster.getFileSystem();
+        Path file1 = new Path("/ed1/ed2/ed3/f");
+        FSDataOutputStream strm;
+        strm = createFile(dfs, file1, 3);
+        writeFile(strm, blockSize * 2);
+        strm.flush();
+        strm.close();
+        
+        cluster.getNameNodeRpc().addBlock("/ed1/ed2/ed3/f", "test", null, null);
+
+    }
+
     //
     // writes specified bytes to file.
     //
+
     private void writeFile(FSDataOutputStream stm, int size) throws IOException {
         byte[] buffer = AppendTestUtil.randomBytes(seed, size);
         stm.write(buffer, 0, size);
