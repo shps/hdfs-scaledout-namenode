@@ -2159,26 +2159,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     return isRenameDone;
-//    return (Boolean) renameTo3Handler.setParam1(src).setParam2(dst).setParam3(dinfo).handle();
   }
-//  TransactionalRequestHandler renameTo3Handler = new TransactionalRequestHandler(OperationType.RENAME_TO3) {
-//
-//    @Override
-//    public Object performTask() throws PersistanceException, IOException {
-//      String src = (String) getParam1();
-//      String dst = (String) getParam2();
-//      HdfsFileStatus dinfo = (HdfsFileStatus) getParam3();
-//      boolean isRenameDone = false;
-//      if (dir.renameTo(src, dst)) {
-//        unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
-//        isRenameDone = true;
-//      } else {
-//        isRenameDone = false;
-//      }
-//
-//      return isRenameDone;
-//    }
-//  };
 
   /**
    * Rename src to dst
