@@ -2813,6 +2813,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
           }
         }
+        //FIXME: [H] is bUC changes being persisted?
         // add pipeline locations into the INodeUnderConstruction
         BlockInfoUnderConstruction bUc = iFile.setLastBlock(storedBlock);
         for (DatanodeID id : newtargets) {
@@ -4425,11 +4426,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     EntityManager.update(blockinfo);
 
+    //[H]: No need to persist blocks in KTHFS.
     // persist blocks only if append is supported
-    String src = leaseManager.findPath(pendingFile);
-    if (supportAppends) {
-      dir.persistBlocks(src, pendingFile);
-    }
+//    String src = leaseManager.findPath(pendingFile);  
+//    if (supportAppends) {
+//      dir.persistBlocks(src, pendingFile);
+//    }
   }
 
   // rename was successful. If any part of the renamed subtree had
@@ -4961,7 +4963,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
-      return getMissingBlocksCount();
+      return getMissingBlocksCount(); // FIXME [H]: nested transactions
     }
   };
 

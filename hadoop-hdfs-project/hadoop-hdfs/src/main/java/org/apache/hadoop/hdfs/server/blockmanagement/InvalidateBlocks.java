@@ -76,7 +76,6 @@ class InvalidateBlocks {
    * Remove a storage from the invalidatesSet
    */
   synchronized void remove(final String storageID) throws PersistanceException {
-    //[H] ClusterJ limitation: no delete op using where clause
     List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageID);
     if (invBlocks != null) {
       for (InvalidatedBlock invBlock : invBlocks) {
