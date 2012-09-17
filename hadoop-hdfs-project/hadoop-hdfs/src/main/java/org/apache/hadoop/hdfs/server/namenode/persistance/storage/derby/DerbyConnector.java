@@ -472,4 +472,19 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       }
     }
   }
+
+  @Override
+  public void readLock() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void writeLock() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void readCommitted() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

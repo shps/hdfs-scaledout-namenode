@@ -24,4 +24,10 @@ public interface StorageConnector<T> {
   public boolean isTransactionActive();
   
   public void stopStorage();
+  
+  public void readLock();
+  
+  public void writeLock();
+  
+  public void readCommitted();
 }
