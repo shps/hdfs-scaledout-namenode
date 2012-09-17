@@ -28,6 +28,12 @@ public abstract class EntityContext<T> {
   public static final String ANSI_CYAN = "\u001B[36m";
   public static final String ANSI_WHITE = "\u001B[37m";
 
+  public enum LockMode {
+
+    READ_LOCK, WRITE_LOCK, READ_COMMITTED
+  }
+  public static ThreadLocal<LockMode> currentLockMode = new ThreadLocal<LockMode>();
+
   /**
    * Defines the cache state of the request. This enum is only used for logging purpose.
    */
@@ -59,7 +65,11 @@ public abstract class EntityContext<T> {
     if (state == CacheHitState.HIT) {
       message.append(ANSI_GREEN).append(opName).append(" ").append("hit").append(ANSI_RESET);
     } else if (state == CacheHitState.LOSS) {
-      message.append(ANSI_RED).append(opName).append(" ").append("loss").append(ANSI_RESET);
+      LockMode curLock = currentLockMode.get();
+      message.append(ANSI_RED);
+      if (curLock != null)
+        message.append(curLock.name()).append(" ");
+      message.append(opName).append(" ").append("loss").append(ANSI_RESET);
     } else {
       message.append(opName).append(" ");
     }
@@ -79,5 +89,13 @@ public abstract class EntityContext<T> {
 
   public void log(String opName, CacheHitState state) {
     log(opName, state, (String) null);
+  }
+
+  public static void setLockMode(LockMode lock) {
+    currentLockMode.set(lock);
+  }
+
+  public static LockMode getLockMode() {
+    return currentLockMode.get();
   }
 }

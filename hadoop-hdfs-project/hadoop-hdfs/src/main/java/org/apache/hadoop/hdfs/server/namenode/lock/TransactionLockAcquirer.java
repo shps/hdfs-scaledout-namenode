@@ -24,8 +24,10 @@ import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.EntityContext.LockMode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
+import org.apache.log4j.NDC;
 
 /**
  *
@@ -70,7 +72,6 @@ public class TransactionLockAcquirer {
   // invalidated blocks
   private LockType invLocks = null;
   private Object invParam = null;
-  private StorageConnector connector = StorageFactory.getConnector();
 
   private List<Lease> acquireLeaseLock(LockType lockType, Object leaseParam) throws PersistanceException {
 
@@ -124,7 +125,7 @@ public class TransactionLockAcquirer {
   }
 
   private void checkStringParam(Object param) {
-    if (!(param instanceof String)) {
+    if (param != null && !(param instanceof String)) {
       throw new IllegalArgumentException("Param is expected to be a String but is " + param.getClass().getName());
     }
   }
@@ -313,7 +314,7 @@ public class TransactionLockAcquirer {
     boolean lastComp = (count == components.length - 1);
     if (lastComp && lastWriteLock) // if root is the last directory, we should acquire the write lock over the root
     {
-      connector.writeLock();
+      EntityManager.writeLock();
       curNode = EntityManager.find(INode.Finder.ByPKey, 0);
       return curNode;
     }
@@ -321,9 +322,9 @@ public class TransactionLockAcquirer {
     while (count < components.length && curNode != null) {
 
       if (lastWriteLock && (count + 1 == components.length - 1)) {
-        connector.writeLock(); // if the next p-component is the last one, acquire the write lock
+        EntityManager.writeLock(); // if the next p-component is the last one, acquire the write lock
       } else {
-        connector.readLock();
+        EntityManager.readLock();
       }
 
       curNode = getChildINode(components[count + 1], curNode.getId());
@@ -371,7 +372,7 @@ public class TransactionLockAcquirer {
 
   private List<BlockInfo> acquireBlockLock(LockType lock, Object param) throws PersistanceException {
 
-    if (!(param instanceof Long)) {
+    if (param != null && !(param instanceof Long)) {
       throw new IllegalArgumentException("Param is expected to be Long but received " + param.getClass().toString());
     }
 
@@ -384,10 +385,9 @@ public class TransactionLockAcquirer {
       if (result != null) {
         blocks.add(result);
       }
-    } else if (inodeResult != null) {
-      long inodeId = (Long) param;
+    } else if (inodeResult != null && inodeResult instanceof INodeFile) {
       setLockMode(lock);
-      blocks.addAll(EntityManager.findList(BlockInfo.Finder.ByInodeId, inodeId));
+      blocks.addAll(EntityManager.findList(BlockInfo.Finder.ByInodeId, inodeResult.getId()));
     }
 
     return blocks;
@@ -395,9 +395,9 @@ public class TransactionLockAcquirer {
 
   private void setLockMode(LockType mode) {
     if (mode == LockType.WRITE) {
-      connector.writeLock();
+      EntityManager.writeLock();
     } else {
-      connector.readLock();
+      EntityManager.readLock();
     }
   }
 }

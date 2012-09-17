@@ -5056,4 +5056,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public BlockManager getBlockManager() {
     return blockManager;
   }
+  
+  /**
+   * Added for acquiring locks in KTHFS.
+   */
+  public FSDirectory getFsDirectory()
+  {
+    return this.dir;
+  }
 }

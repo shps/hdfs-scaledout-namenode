@@ -17,6 +17,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -40,24 +43,23 @@ public class TestTransactionalOperations {
   static private String fakeGroup = "supergroup";
 
   @Test
-  public void testMkdirs() throws IOException
-  {
+  public void testMkdirs() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    
+
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
       Path exPath = new Path("/e1/e2");
       dfs.mkdirs(exPath);
-      assert dfs.exists(exPath) : String.format("The path %s is not created.",exPath.toString());
+      assert dfs.exists(exPath) : String.format("The path %s is not created.", exPath.toString());
       Path newPath = new Path(exPath.toString() + "/n3/n4");
       dfs.mkdirs(newPath);
-      assert dfs.exists(newPath) : String.format("The path %s is not created.",newPath.toString());
-    } finally{
+      assert dfs.exists(newPath) : String.format("The path %s is not created.", newPath.toString());
+    } finally {
       cluster.shutdown();
     }
   }
-  
+
   /**
    * Tries different possible scenarios on startFile operation.
    * @throws IOException
@@ -285,6 +287,43 @@ public class TestTransactionalOperations {
         waitLeaseRecovery(cluster, SHORT_LEASE_PERIOD, SHORT_LEASE_PERIOD);
 
       } catch (InterruptedException ex) {
+        assert false : ex.getMessage();
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testNormalLockAcquirer() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, "1"); // To make the access time percision expired by default it is one hour
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    try {
+      DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      Path f1 = new Path("/ed1/ed2/f1");
+      dfs.mkdirs(f1.getParent(), FsPermission.getDefault());
+      assert dfs.exists(f1.getParent()) : String.format("The path %s does not exist.",
+              f1.getParent().toString());
+      FSDataOutputStream stm = dfs.create(f1, false, bufferSize, (short) 2, blockSize);
+      writeFile(stm, 2 * blockSize);
+      stm.hflush();
+      assert dfs.dfs.getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
+
+      // Acquire locks for the getAdditionalBlocks
+      
+      try {
+        EntityManager.begin();
+
+        TransactionLockAcquirer tla = new TransactionLockAcquirer();
+        tla.addINode(TransactionLockAcquirer.INodeLockType.BY_PATH_LAST_WRITE_LOCK, f1.toString(), cluster.getNamesystem().getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockAcquirer.LockType.WRITE, null).addLease(TransactionLockAcquirer.LockType.READ, null).addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).addExcess(TransactionLockAcquirer.LockType.WRITE, null).addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null);
+
+        tla.acquire();
+        EntityManager.commit();
+      } catch (PersistanceException ex) {
+        Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);
         assert false : ex.getMessage();
       }
     } finally {

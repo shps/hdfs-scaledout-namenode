@@ -42,6 +42,8 @@ public class TransactionContext {
     for (EntityContext context : contexts) {
       context.clear();
     }
+    
+    EntityContext.setLockMode(null); // null won't be logged
   }
 
   public void begin() throws StorageException {
