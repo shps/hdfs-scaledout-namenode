@@ -220,6 +220,18 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addUnderReplicatedBlock(LockType lock, Object param) {
+    this.urbLock = lock;
+    this.urbParam = param;
+    return this;
+  }
+  
+  public TransactionLockAcquirer addInvalidatedBlock(LockType lock, Object param) {
+    this.invLocks = lock;
+    this.invParam = param;
+    return this;
+  }
+
   public void acquire() throws PersistanceException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null) {
