@@ -12,6 +12,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
@@ -24,10 +25,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.EntityContext.LockMode;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
-import org.apache.log4j.NDC;
 
 /**
  *
@@ -37,6 +34,7 @@ public class TransactionLockAcquirer {
 
   //inode
   private INodeLockType inodeLock = null;
+  private INodeResolveType inodeResolveType = null;
   private Object inodeParam = null;
   private INode inodeResult = null;
   private INode rootDir = null;
@@ -165,14 +163,22 @@ public class TransactionLockAcquirer {
 
   public enum INodeLockType {
 
-    BY_PATH_ALL_READ_LOCK // read lock on all the paths components
-    , BY_PATH_LAST_WRITE_LOCK // read lock on all path components and write lock on the last path component.
-    , BY_INODE_ID_WRITE_LOCK // write lock over the given inode
-    , BY_INODE_ID_READ_LOCK // read lock over the given inode
+    WRITE,
+    WRITE_ON_PARENT // Write lock on the parent of the last path component.
+    , READ
   }
 
-  public TransactionLockAcquirer addINode(INodeLockType lock, Object param, INode rootDir) {
+  public enum INodeResolveType {
+
+    ONLY_PATH // resolve only the given path
+    , PATH_AND_IMMEDIATE_CHILDREN // resolve path and find the given directory's children
+    , PATH_AND_ALL_CHILDREN_RECURESIVELY // resolve the given path and find all the children recursively.
+  }
+
+  public TransactionLockAcquirer addINode(INodeResolveType resolveType,
+          INodeLockType lock, Object param, INode rootDir) {
     this.inodeLock = lock;
+    this.inodeResolveType = resolveType;
     this.inodeParam = param;
     this.rootDir = rootDir;
     return this;
@@ -225,7 +231,7 @@ public class TransactionLockAcquirer {
     this.urbParam = param;
     return this;
   }
-  
+
   public TransactionLockAcquirer addInvalidatedBlock(LockType lock, Object param) {
     this.invLocks = lock;
     this.invParam = param;
@@ -235,7 +241,7 @@ public class TransactionLockAcquirer {
   public void acquire() throws PersistanceException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null) {
-      inodeResult = acquireInodeLocks(inodeLock, inodeParam);
+      inodeResult = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam);
     }
 
     if (blockLock != null) {
@@ -272,8 +278,7 @@ public class TransactionLockAcquirer {
       }
 
       if (invLocks != null) {
-        // FIXME
-        throw new UnsupportedOperationException("Invalidated Blocks are not supported yet");
+        acquireReplicasLock(invLocks, InvalidatedBlock.Finder.ByBlockId);
       }
 
       if (urbLock != null) {
@@ -286,17 +291,11 @@ public class TransactionLockAcquirer {
     }
   }
 
-  private INode acquireInodeLocks(INodeLockType lock, Object param) {
+  private INode acquireInodeLocks(INodeResolveType resType, INodeLockType lock, Object param) {
     try {
-      switch (lock) {
-        case BY_PATH_ALL_READ_LOCK:
-          return acquireInodeLockByPath(false, param);
-        case BY_PATH_LAST_WRITE_LOCK:
-          return acquireInodeLockByPath(true, param);
-        case BY_INODE_ID_READ_LOCK:
-          break;
-        case BY_INODE_ID_WRITE_LOCK:
-          break;
+      switch (resType) {
+        case ONLY_PATH:
+          return acquireInodeLockByPath(lock, param);
         default:
           throw new IllegalArgumentException("Unknown type " + lock.name());
       }
@@ -310,7 +309,7 @@ public class TransactionLockAcquirer {
     return null;
   }
 
-  private INode acquireInodeLockByPath(boolean lastWriteLock, Object path) throws UnresolvedPathException, PersistanceException {
+  private INode acquireInodeLockByPath(INodeLockType lock, Object path) throws UnresolvedPathException, PersistanceException {
     boolean resolveLink = true; // FIXME [H]: This can differ for different operations
 
     checkStringParam(path);
@@ -324,17 +323,19 @@ public class TransactionLockAcquirer {
 
     int count = 0;
     boolean lastComp = (count == components.length - 1);
-    if (lastComp && lastWriteLock) // if root is the last directory, we should acquire the write lock over the root
+    if (lastComp && (lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT)) // if root is the last directory, we should acquire the write lock over the root
     {
-      EntityManager.writeLock();
-      curNode = EntityManager.find(INode.Finder.ByPKey, 0);
-      return curNode;
+      return acquireWriteLockOnRoot(); 
+    } else if ((count == components.length - 2) && lock == INodeLockType.WRITE_ON_PARENT) // if Root is the parent
+    {
+      curNode = acquireWriteLockOnRoot();
     }
 
     while (count < components.length && curNode != null) {
 
-      if (lastWriteLock && (count + 1 == components.length - 1)) {
-        EntityManager.writeLock(); // if the next p-component is the last one, acquire the write lock
+      if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count + 1 == components.length - 1)) ||
+              (lock == INodeLockType.WRITE_ON_PARENT && (count + 1 == components.length - 2))) {
+        EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
       } else {
         EntityManager.readLock();
       }
@@ -364,6 +365,11 @@ public class TransactionLockAcquirer {
     }
 
     return curNode;
+  }
+
+  private INode acquireWriteLockOnRoot() throws PersistanceException {
+    EntityManager.writeLock();
+    return EntityManager.find(INode.Finder.ByPKey, 0);
   }
 
   private INode getChildINode(byte[] name, long parentId) throws PersistanceException {

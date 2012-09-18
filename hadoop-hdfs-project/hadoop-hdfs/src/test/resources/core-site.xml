@@ -24,7 +24,7 @@
   </property>
   <property>
     <name>dfs.dbconnector.database</name>
-    <value>hooman</value>
+    <value>hooman1</value>
   </property>
   <property>
     <name>dfs.dbconnector.num-session-factories</name>
