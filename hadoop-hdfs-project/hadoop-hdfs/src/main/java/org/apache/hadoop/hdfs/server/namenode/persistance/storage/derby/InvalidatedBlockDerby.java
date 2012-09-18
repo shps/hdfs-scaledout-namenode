@@ -53,6 +53,22 @@ public class InvalidatedBlockDerby extends InvalidateBlockDataAccess {
       return Collections.EMPTY_LIST;
     }
   }
+  
+    @Override
+  public Collection<InvalidatedBlock> findInvalidatedBlocksByBlockId(long bid) throws StorageException {
+    try {
+      String query = String.format("select * from %s where %s=?",
+              TABLE_NAME, BLOCK_ID);
+      Connection conn = connector.obtainSession();
+      PreparedStatement s = conn.prepareStatement(query);
+      s.setLong(1, bid);
+      ResultSet rSet = s.executeQuery();
+      return convert(rSet);
+    } catch (SQLException ex) {
+      handleSQLException(ex);
+      return Collections.EMPTY_LIST;
+    }
+  }
 
   @Override
   public Collection<InvalidatedBlock> findAllInvalidatedBlocks() throws StorageException {

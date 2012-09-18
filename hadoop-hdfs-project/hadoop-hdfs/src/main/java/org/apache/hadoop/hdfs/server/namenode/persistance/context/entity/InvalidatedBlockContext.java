@@ -1,6 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.context.entity;
 
 import java.util.*;
+import org.apache.avro.generic.GenericData.Array;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
@@ -17,6 +18,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
 
   private Map<InvalidatedBlock, InvalidatedBlock> invBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private Map<String, HashSet<InvalidatedBlock>> storageIdToInvBlocks = new HashMap<String, HashSet<InvalidatedBlock>>();
+  private Map<Long, HashSet<InvalidatedBlock>> blockIdToInvBlocks = new HashMap<Long, HashSet<InvalidatedBlock>>();
   private Map<InvalidatedBlock, InvalidatedBlock> newInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private Map<InvalidatedBlock, InvalidatedBlock> removedInvBlocks = new HashMap<InvalidatedBlock, InvalidatedBlock>();
   private boolean allInvBlocksRead = false;
@@ -32,17 +34,18 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
       throw new TransactionContextException("Removed invalidated-block passed to be persisted");
     }
 
-    if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
-      storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
-    } else {
-      HashSet<InvalidatedBlock> invBlockList = new HashSet<InvalidatedBlock>();
-      invBlockList.add(invBlock);
-      storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
-    }
-
     invBlocks.put(invBlock, invBlock);
     newInvBlocks.put(invBlock, invBlock);
-    log("added-invblock", CacheHitState.NA, 
+
+    if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
+      storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
+    }
+
+    if (blockIdToInvBlocks.containsKey(invBlock.getBlockId())) {
+      blockIdToInvBlocks.get(invBlock.getBlockId()).add(invBlock);
+    }
+
+    log("added-invblock", CacheHitState.NA,
             new String[]{"bid", Long.toString(invBlock.getBlockId()), "sid", invBlock.getStorageId()});
   }
 
@@ -52,6 +55,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     storageIdToInvBlocks.clear();
     newInvBlocks.clear();
     removedInvBlocks.clear();
+    blockIdToInvBlocks.clear();
     allInvBlocksRead = false;
   }
 
@@ -98,6 +102,15 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     InvalidatedBlock.Finder iFinder = (InvalidatedBlock.Finder) finder;
 
     switch (iFinder) {
+      case ByBlockId:
+        long bid = (Long) params[0];
+        if (blockIdToInvBlocks.containsKey(bid)) {
+          log("find-invblocks-by-bid", CacheHitState.HIT, new String[]{"bid", String.valueOf(bid)});
+          return new ArrayList<InvalidatedBlock>(this.blockIdToInvBlocks.get(bid)); //clone the list reference
+        } else {
+          log("find-invblocks-by-bid", CacheHitState.LOSS, new String[]{"bid", String.valueOf(bid)});
+          return syncInstancesForBlockId(dataAccess.findInvalidatedBlocksByBlockId(bid), bid);
+        }
       case ByStorageId:
         String storageId = (String) params[0];
         if (storageIdToInvBlocks.containsKey(storageId)) {
@@ -105,7 +118,7 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
           return new ArrayList<InvalidatedBlock>(this.storageIdToInvBlocks.get(storageId)); //clone the list reference
         } else {
           log("find-invblocks-by-storageid", CacheHitState.LOSS, new String[]{"sid", storageId});
-          return syncInstances(dataAccess.findInvalidatedBlockByStorageId(storageId));
+          return syncInstancesForStorageId(dataAccess.findInvalidatedBlockByStorageId(storageId), storageId);
         }
       case All:
         if (!allInvBlocksRead) {
@@ -138,11 +151,12 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
     if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
       HashSet<InvalidatedBlock> ibs = storageIdToInvBlocks.get(invBlock.getStorageId());
       ibs.remove(invBlock);
-      if (ibs.isEmpty()) {
-        storageIdToInvBlocks.remove(invBlock.getStorageId());
-      }
     }
-    log("removed-invblock", CacheHitState.NA, 
+    if (blockIdToInvBlocks.containsKey(invBlock.getBlockId())) {
+      HashSet<InvalidatedBlock> ibs = blockIdToInvBlocks.get(invBlock.getBlockId());
+      ibs.remove(invBlock);
+    }
+    log("removed-invblock", CacheHitState.NA,
             new String[]{"bid", Long.toString(invBlock.getBlockId()), "sid", invBlock.getStorageId()});
   }
 
@@ -171,16 +185,50 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
           invBlocks.put(invBlock, invBlock);
           finalList.add(invBlock);
         }
-        if (storageIdToInvBlocks.containsKey(invBlock.getStorageId())) {
-          storageIdToInvBlocks.get(invBlock.getStorageId()).add(invBlock);
-        } else {
-          HashSet<InvalidatedBlock> invBlockList = new HashSet<InvalidatedBlock>();
-          invBlockList.add(invBlock);
-          storageIdToInvBlocks.put(invBlock.getStorageId(), invBlockList);
-        }
       }
     }
 
     return finalList;
+  }
+
+  private List<InvalidatedBlock> syncInstancesForStorageId(Collection<InvalidatedBlock> list, String sid) {
+    HashSet<InvalidatedBlock> ibs = new HashSet<InvalidatedBlock>();
+    for (InvalidatedBlock newBlock : newInvBlocks.values()) {
+      if (newBlock.getStorageId().equals(sid)) {
+        ibs.add(newBlock);
+      }
+    }
+
+    filterRemovedBlocks(list, ibs);
+    storageIdToInvBlocks.put(sid, ibs);
+    
+    return new ArrayList<InvalidatedBlock>(ibs);
+  }
+
+  private void filterRemovedBlocks(Collection<InvalidatedBlock> list, HashSet<InvalidatedBlock> existings) {
+    for (InvalidatedBlock invBlock : list) {
+      if (!removedInvBlocks.containsKey(invBlock)) {
+        if (invBlocks.containsKey(invBlock)) {
+          existings.add(invBlocks.get(invBlock));
+        } else {
+          invBlocks.put(invBlock, invBlock);
+          existings.add(invBlock);
+        }
+      }
+    }
+  }
+
+  private List<InvalidatedBlock> syncInstancesForBlockId(Collection<InvalidatedBlock> list, long bid) {
+    HashSet<InvalidatedBlock> ibs = new HashSet<InvalidatedBlock>();
+    for (InvalidatedBlock newBlock : newInvBlocks.values()) {
+      if (newBlock.getBlockId() == bid) {
+        ibs.add(newBlock);
+      }
+    }
+
+    filterRemovedBlocks(list, ibs);
+    blockIdToInvBlocks.put(bid, ibs);
+
+    return new ArrayList<InvalidatedBlock>(ibs);
   }
 }

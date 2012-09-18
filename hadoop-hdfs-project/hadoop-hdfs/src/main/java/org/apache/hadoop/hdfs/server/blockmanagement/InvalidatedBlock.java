@@ -19,7 +19,7 @@ public class InvalidatedBlock extends Replica {
   
   public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<InvalidatedBlock> {
 
-    ByStorageId, ByPrimaryKey, All;
+    ByBlockId, ByStorageId, ByPrimaryKey, All;
 
     @Override
     public Class getType() {
