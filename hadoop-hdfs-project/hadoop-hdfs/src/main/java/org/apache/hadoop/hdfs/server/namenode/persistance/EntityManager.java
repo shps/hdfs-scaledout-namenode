@@ -89,4 +89,12 @@ public class EntityManager {
     EntityContext.setLockMode(EntityContext.LockMode.READ_COMMITTED);
     connector.readCommitted();
   }
+  
+  /**
+   * Clears transaction context's in-memory data
+   */
+  public static void clearContext()
+  {
+    context().clearContext();
+  }
 }

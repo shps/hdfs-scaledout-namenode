@@ -38,12 +38,14 @@ public class TransactionContext {
 
   private void resetContext() {
     activeTxExpected = false;
+    clearContext();
+    EntityContext.setLockMode(null); // null won't be logged
+  }
 
+  public void clearContext() {
     for (EntityContext context : contexts) {
       context.clear();
     }
-    
-    EntityContext.setLockMode(null); // null won't be logged
   }
 
   public void begin() throws StorageException {

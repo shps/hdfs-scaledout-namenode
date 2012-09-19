@@ -525,7 +525,7 @@ public class TestTransactionalOperations {
                 addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
                 acquire();
         EntityManager.commit();
-        
+
         // DELETE
 
         EntityManager.begin();
@@ -539,6 +539,34 @@ public class TestTransactionalOperations {
                 addBlock(TransactionLockAcquirer.LockType.WRITE, null).
                 addReplica(TransactionLockAcquirer.LockType.WRITE, null).
                 addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
+                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
+                acquire();
+        EntityManager.commit();
+
+        // MKDIR , CREATE_SYM_LINK
+        Path f8 = new Path(f1.getParent().toString() + "/nd1/nd2/f8");
+        EntityManager.begin();
+        tla = new TransactionLockAcquirer();
+        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockAcquirer.INodeLockType.WRITE,
+                new String[]{f8.getParent().toString()},
+                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                acquire();
+        EntityManager.commit();
+
+        // START_FILE
+        EntityManager.begin();
+        tla = new TransactionLockAcquirer();
+        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockAcquirer.INodeLockType.WRITE_ON_PARENT,
+                new String[]{f7.toString()},
+                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
+                addLease(TransactionLockAcquirer.LockType.WRITE, "1234Holder").
+                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
+                addReplica(TransactionLockAcquirer.LockType.WRITE, null).
+                addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
+                addExcess(TransactionLockAcquirer.LockType.READ, null).
                 addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
                 acquire();
         EntityManager.commit();
