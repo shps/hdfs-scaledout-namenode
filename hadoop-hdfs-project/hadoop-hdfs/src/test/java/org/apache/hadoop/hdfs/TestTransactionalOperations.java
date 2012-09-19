@@ -295,17 +295,23 @@ public class TestTransactionalOperations {
   }
 
   @Test
-  public void testNormalLockAcquirer() throws IOException {
+  public void testNormalLockAcquirer() throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
     conf.set(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, "1"); // To make the access time percision expired by default it is one hour
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      DistributedFileSystem dfs2 = (DistributedFileSystem) getFSAsAnotherUser(conf, fakeUsername, fakeGroup);
       Path f1 = new Path("/ed1/ed2/f1");
       Path f2 = new Path("/ed1/ed2/f2");
       Path f3 = new Path("/ed1/ed2/f3");
+      Path f4 = new Path("/ed1/ed2/ed3/f4");
+      Path f5 = new Path("/ed1/ed2/ed4/f5");
+      Path f6 = new Path("/ed1/ed2/ed4/ed5/f6");
+      Path f7 = new Path("/ed1/ed2/ed4/ed5/f7");
       dfs.mkdirs(f1.getParent(), FsPermission.getDefault());
+      dfs.mkdirs(f7.getParent(), FsPermission.getDefault());
       assert dfs.exists(f1.getParent()) : String.format("The path %s does not exist.",
               f1.getParent().toString());
       FSDataOutputStream stm = dfs.create(f1, false, bufferSize, (short) 2, blockSize);
@@ -319,6 +325,18 @@ public class TestTransactionalOperations {
       stm.hflush();
       assert dfs.dfs.getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
 
+      FSDataOutputStream stm2 = dfs2.create(f4, false, bufferSize, (short) 2, blockSize);
+      writeFile(stm, 2 * blockSize);
+      stm2.hflush();
+      stm2 = dfs2.create(f5, false, bufferSize, (short) 2, blockSize);
+      writeFile(stm, 2 * blockSize);
+      stm2.hflush();
+      stm2 = dfs2.create(f6, false, bufferSize, (short) 2, blockSize);
+      writeFile(stm, 2 * blockSize);
+      stm2.hflush();
+      stm2 = dfs2.create(f7, false, bufferSize, (short) 2, blockSize);
+      writeFile(stm, 2 * blockSize);
+      stm2.hflush();
       // Acquire locks for the getAdditionalBlocks
 
       try {
@@ -505,6 +523,23 @@ public class TestTransactionalOperations {
                 addExcess(TransactionLockAcquirer.LockType.READ, null).
                 addCorrupt(TransactionLockAcquirer.LockType.READ, null).
                 addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
+                acquire();
+        EntityManager.commit();
+        
+        // DELETE
+
+        EntityManager.begin();
+        tla = new TransactionLockAcquirer();
+        tla.addINode(TransactionLockAcquirer.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
+                TransactionLockAcquirer.INodeLockType.WRITE,
+                new String[]{f1.getParent().toString()},
+                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                addLease(TransactionLockAcquirer.LockType.WRITE, "ZzZzZz").
+                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
+                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
+                addReplica(TransactionLockAcquirer.LockType.WRITE, null).
+                addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
+                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
                 acquire();
         EntityManager.commit();
       } catch (PersistanceException ex) {

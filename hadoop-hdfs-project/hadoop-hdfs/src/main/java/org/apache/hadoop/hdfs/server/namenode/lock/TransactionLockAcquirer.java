@@ -1,9 +1,10 @@
 package org.apache.hadoop.hdfs.server.namenode.lock;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -74,51 +75,26 @@ public class TransactionLockAcquirer {
 
   private List<Lease> acquireLeaseLock(LockType lockType, Object leaseParam) throws PersistanceException {
 
+    checkStringParam(leaseParam);
     setLockMode(lockType);
-
-    ArrayList<Lease> leases = new ArrayList<Lease>();
+    SortedSet<String> holders = new TreeSet<String>();
     if (leaseParam != null) {
-      String leaseHolder = (String) leaseParam;
-      checkStringParam(leaseParam);
-      if (inodeResult != null) {
-        if (inodeResult.length > 0 && inodeResult[0] instanceof INodeFile) { // This only supports acquiring lease for one inodefile.
-          String inodeHolder = ((INodeFile) inodeResult[0]).getClientName();
-          Lease l1 = null;
-          Lease l2 = null;
-          // must acquire lock with holders sorted lexicographically, descending order
-          if (inodeHolder.compareTo(leaseHolder) > 0) {
-            l1 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
-            l2 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
-          } else {
-            l1 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
-            l2 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
-          }
-
-          if (l1 != null) {
-            leases.add(l1);
-          }
-
-          if (l2 != null) {
-            leases.add(l2);
-          }
-
-          return leases;
-        }
-      }
-
-      Lease l = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
-      if (l != null) {
-        leases.add(l);
-      }
-
-      return leases;
+      holders.add((String) leaseParam);
     }
 
-    if (inodeResult != null && inodeResult.length > 0 && inodeResult[0] instanceof INodeFile) {
-      String inodeHolder = ((INodeFile) inodeResult[0]).getClientName();
-      Lease l = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
-      if (l != null) {
-        leases.add(l);
+    if (inodeResult != null) {
+      for (INode f : inodeResult) {
+        if (f instanceof INodeFile) {
+          holders.add(((INodeFile) f).getClientName());
+        }
+      }
+    }
+
+    List<Lease> leases = new ArrayList<Lease>();
+    for (String holder : holders) {
+      Lease lease = EntityManager.find(Lease.Finder.ByPKey, holder);
+      if (lease != null) {
+        leases.add(lease);
       }
     }
 
@@ -168,6 +144,31 @@ public class TransactionLockAcquirer {
         }
       }
     }
+    inodes = new INode[children.size()];
+    return children.toArray(inodes);
+  }
+
+  private INode[] findChildrenRecursively(INode[] inodes) throws PersistanceException {
+    ArrayList<INode> children = new ArrayList<INode>();
+    LinkedList<INode> unCheckedDirs = new LinkedList<INode>();
+    if (inodes != null) {
+      for (INode dir : inodes) {
+        if (dir instanceof INodeDirectory) {
+          unCheckedDirs.add(dir);
+        }
+      }
+    }
+
+    // Find all the children in the sub-directories.
+    while (!unCheckedDirs.isEmpty()) {
+      INode next = unCheckedDirs.poll();
+      if (next instanceof INodeDirectory) {
+        unCheckedDirs.addAll(((INodeDirectory) next).getChildren());
+      } else if (next instanceof INodeFile) {
+        children.add(next); // We only need INodeFiles later to get the blocks.
+      }
+    }
+
     inodes = new INode[children.size()];
     return children.toArray(inodes);
   }
@@ -312,11 +313,14 @@ public class TransactionLockAcquirer {
     switch (resType) {
       case ONLY_PATH:
       case PATH_AND_IMMEDIATE_CHILDREN:
+      case PATH_AND_ALL_CHILDREN_RECURESIVELY:
         for (int i = 0; i < params.length; i++) {
           inodes[i] = acquireInodeLockByPath(lock, params[i]);
         }
         if (resType == INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN) {
           inodes = findImmediateChildren(inodes);
+        } else if (resType == INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY) {
+          inodes = findChildrenRecursively(inodes);
         }
         return inodes;
       default:
