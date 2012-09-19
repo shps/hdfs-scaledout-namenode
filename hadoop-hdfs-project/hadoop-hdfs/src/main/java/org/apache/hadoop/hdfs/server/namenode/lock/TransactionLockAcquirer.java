@@ -18,6 +18,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
@@ -35,8 +36,8 @@ public class TransactionLockAcquirer {
   //inode
   private INodeLockType inodeLock = null;
   private INodeResolveType inodeResolveType = null;
-  private Object inodeParam = null;
-  private INode inodeResult = null;
+  private Object[] inodeParam = null;
+  private INode[] inodeResult = null;
   private INode rootDir = null;
   //block
   private LockType blockLock = null;
@@ -79,28 +80,30 @@ public class TransactionLockAcquirer {
     if (leaseParam != null) {
       String leaseHolder = (String) leaseParam;
       checkStringParam(leaseParam);
-      if (inodeResult != null && inodeResult instanceof INodeFile) {
-        String inodeHolder = ((INodeFile) inodeResult).getClientName();
-        Lease l1 = null;
-        Lease l2 = null;
-        // must acquire lock with holders sorted lexicographically, descending order
-        if (inodeHolder.compareTo(leaseHolder) > 0) {
-          l1 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
-          l2 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
-        } else {
-          l1 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
-          l2 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
-        }
+      if (inodeResult != null) {
+        if (inodeResult.length > 0 && inodeResult[0] instanceof INodeFile) { // This only supports acquiring lease for one inodefile.
+          String inodeHolder = ((INodeFile) inodeResult[0]).getClientName();
+          Lease l1 = null;
+          Lease l2 = null;
+          // must acquire lock with holders sorted lexicographically, descending order
+          if (inodeHolder.compareTo(leaseHolder) > 0) {
+            l1 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
+            l2 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
+          } else {
+            l1 = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
+            l2 = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
+          }
 
-        if (l1 != null) {
-          leases.add(l1);
-        }
+          if (l1 != null) {
+            leases.add(l1);
+          }
 
-        if (l2 != null) {
-          leases.add(l2);
-        }
+          if (l2 != null) {
+            leases.add(l2);
+          }
 
-        return leases;
+          return leases;
+        }
       }
 
       Lease l = EntityManager.find(Lease.Finder.ByPKey, leaseHolder);
@@ -111,8 +114,8 @@ public class TransactionLockAcquirer {
       return leases;
     }
 
-    if (inodeResult != null && inodeResult instanceof INodeFile) {
-      String inodeHolder = ((INodeFile) inodeResult).getClientName();
+    if (inodeResult != null && inodeResult.length > 0 && inodeResult[0] instanceof INodeFile) {
+      String inodeHolder = ((INodeFile) inodeResult[0]).getClientName();
       Lease l = EntityManager.find(Lease.Finder.ByPKey, inodeHolder);
       if (l != null) {
         leases.add(l);
@@ -156,6 +159,19 @@ public class TransactionLockAcquirer {
     }
   }
 
+  private INode[] findImmediateChildren(INode[] inodes) throws PersistanceException {
+    ArrayList<INode> children = new ArrayList<INode>();
+    if (inodes != null) {
+      for (INode dir : inodes) {
+        if (dir instanceof INodeDirectory) {
+          children.addAll(((INodeDirectory) dir).getChildren());
+        }
+      }
+    }
+    inodes = new INode[children.size()];
+    return children.toArray(inodes);
+  }
+
   public enum LockType {
 
     WRITE, READ
@@ -176,7 +192,7 @@ public class TransactionLockAcquirer {
   }
 
   public TransactionLockAcquirer addINode(INodeResolveType resolveType,
-          INodeLockType lock, Object param, INode rootDir) {
+          INodeLockType lock, Object[] param, INode rootDir) {
     this.inodeLock = lock;
     this.inodeResolveType = resolveType;
     this.inodeParam = param;
@@ -238,7 +254,7 @@ public class TransactionLockAcquirer {
     return this;
   }
 
-  public void acquire() throws PersistanceException {
+  public void acquire() throws PersistanceException, UnresolvedPathException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null) {
       inodeResult = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam);
@@ -291,22 +307,21 @@ public class TransactionLockAcquirer {
     }
   }
 
-  private INode acquireInodeLocks(INodeResolveType resType, INodeLockType lock, Object param) {
-    try {
-      switch (resType) {
-        case ONLY_PATH:
-          return acquireInodeLockByPath(lock, param);
-        default:
-          throw new IllegalArgumentException("Unknown type " + lock.name());
-      }
-    } catch (UnresolvedPathException ex) {
-      // FIXME throw exception to the upper level
-      Logger.getLogger(TransactionLockAcquirer.class.getName()).log(Level.SEVERE, null, ex);
-    } catch (PersistanceException ex) {
-      Logger.getLogger(TransactionLockAcquirer.class.getName()).log(Level.SEVERE, null, ex);
+  private INode[] acquireInodeLocks(INodeResolveType resType, INodeLockType lock, Object[] params) throws UnresolvedPathException, PersistanceException {
+    INode[] inodes = new INode[params.length];
+    switch (resType) {
+      case ONLY_PATH:
+      case PATH_AND_IMMEDIATE_CHILDREN:
+        for (int i = 0; i < params.length; i++) {
+          inodes[i] = acquireInodeLockByPath(lock, params[i]);
+        }
+        if (resType == INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN) {
+          inodes = findImmediateChildren(inodes);
+        }
+        return inodes;
+      default:
+        throw new IllegalArgumentException("Unknown type " + lock.name());
     }
-
-    return null;
   }
 
   private INode acquireInodeLockByPath(INodeLockType lock, Object path) throws UnresolvedPathException, PersistanceException {
@@ -325,7 +340,7 @@ public class TransactionLockAcquirer {
     boolean lastComp = (count == components.length - 1);
     if (lastComp && (lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT)) // if root is the last directory, we should acquire the write lock over the root
     {
-      return acquireWriteLockOnRoot(); 
+      return acquireWriteLockOnRoot();
     } else if ((count == components.length - 2) && lock == INodeLockType.WRITE_ON_PARENT) // if Root is the parent
     {
       curNode = acquireWriteLockOnRoot();
@@ -333,8 +348,8 @@ public class TransactionLockAcquirer {
 
     while (count < components.length && curNode != null) {
 
-      if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count + 1 == components.length - 1)) ||
-              (lock == INodeLockType.WRITE_ON_PARENT && (count + 1 == components.length - 2))) {
+      if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count + 1 == components.length - 1))
+              || (lock == INodeLockType.WRITE_ON_PARENT && (count + 1 == components.length - 2))) {
         EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
       } else {
         EntityManager.readLock();
@@ -403,9 +418,13 @@ public class TransactionLockAcquirer {
       if (result != null) {
         blocks.add(result);
       }
-    } else if (inodeResult != null && inodeResult instanceof INodeFile) {
-      setLockMode(lock);
-      blocks.addAll(EntityManager.findList(BlockInfo.Finder.ByInodeId, inodeResult.getId()));
+    } else if (inodeResult != null) {
+      for (INode inode : inodeResult) {
+        if (inode instanceof INodeFile) {
+          setLockMode(lock);
+          blocks.addAll(EntityManager.findList(BlockInfo.Finder.ByInodeId, inode.getId()));
+        }
+      }
     }
 
     return blocks;
