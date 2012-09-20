@@ -192,7 +192,7 @@ public class TransactionLockAcquirer {
   public enum INodeLockType {
 
     WRITE,
-    WRITE_ON_PARENT // Write lock on the parent of the last path component.
+    WRITE_ON_PARENT // Write lock on the parent of the last path component. This has the WRITE effect when using inode-id.
     , READ, READ_COMMITED // No Lock
   }
 
@@ -213,9 +213,19 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addINode(INodeLockType lock) {
+    addINode(null, lock, null, null);
+    return this;
+  }
+
   public TransactionLockAcquirer addBlock(LockType lock, Object param) {
     this.blockLock = lock;
     this.blockParam = param;
+    return this;
+  }
+
+  public TransactionLockAcquirer addBlock(LockType lock) {
+    addBlock(lock, null);
     return this;
   }
 
@@ -225,9 +235,19 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addLease(LockType lock) {
+    addLease(lock, null);
+    return this;
+  }
+
   public TransactionLockAcquirer addCorrupt(LockType lock, Object param) {
     this.crLock = lock;
     this.crParam = param;
+    return this;
+  }
+
+  public TransactionLockAcquirer addCorrupt(LockType lock) {
+    addCorrupt(lock, null);
     return this;
   }
 
@@ -237,9 +257,19 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addExcess(LockType lock) {
+    addExcess(lock, null);
+    return this;
+  }
+
   public TransactionLockAcquirer addReplicaUc(LockType lock, Object param) {
     this.rucLock = lock;
     this.rucParam = param;
+    return this;
+  }
+
+  public TransactionLockAcquirer addReplicaUc(LockType lock) {
+    addReplicaUc(lock, null);
     return this;
   }
 
@@ -249,9 +279,19 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addReplica(LockType lock) {
+    addReplica(lock, null);
+    return this;
+  }
+
   public TransactionLockAcquirer addLeasePath(LockType lock, Object param) {
     this.lpLock = lock;
     this.lpParam = param;
+    return this;
+  }
+
+  public TransactionLockAcquirer addLeasePath(LockType lock) {
+    addLeasePath(lock, null);
     return this;
   }
 
@@ -261,12 +301,34 @@ public class TransactionLockAcquirer {
     return this;
   }
 
+  public TransactionLockAcquirer addUnderReplicatedBlock(LockType lock) {
+    addUnderReplicatedBlock(lock, null);
+    return this;
+  }
+
   public TransactionLockAcquirer addInvalidatedBlock(LockType lock, Object param) {
     this.invLocks = lock;
     this.invParam = param;
     return this;
   }
 
+  public TransactionLockAcquirer addInvalidatedBlock(LockType lock) {
+    addInvalidatedBlock(lock, null);
+    return this;
+  }
+  
+  public TransactionLockAcquirer addPendingBlock(LockType lock) {
+    addPendingBlock(lock, null);
+    return this;
+  }
+
+  public TransactionLockAcquirer addPendingBlock(LockType lock, Object param)
+  {
+    this.pbLock = lock;
+    this.pbParam = param;
+    return this;
+  }
+  
   public void acquire() throws PersistanceException, UnresolvedPathException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null && inodeParam.length > 0) {
@@ -281,6 +343,15 @@ public class TransactionLockAcquirer {
       blockResults = acquireBlockLock(blockLock, blockParam);
     }
 
+    acquireLockInternal(); // acquire locks on the rest of the tables.
+  }
+
+  /**
+   * Acquires lock on the lease, lease-path, replicas, excess, corrupt, invalidated,
+   * under-replicated and pending blocks.
+   * @throws PersistanceException 
+   */
+  private void acquireLockInternal() throws PersistanceException {
     if (leaseLock != null) {
       leaseResult = acquireLeaseLock(leaseLock, leaseParam);
     }
@@ -320,7 +391,7 @@ public class TransactionLockAcquirer {
     }
   }
 
-  private INode[] acquireInodeLocks(INodeResolveType resType, INodeLockType lock, Object[] params) throws UnresolvedPathException, PersistanceException {
+  private INode[] acquireInodeLocks(INodeResolveType resType, INodeLockType lock, Object... params) throws UnresolvedPathException, PersistanceException {
     INode[] inodes = new INode[params.length];
     switch (resType) {
       case ONLY_PATH:
@@ -356,6 +427,11 @@ public class TransactionLockAcquirer {
     }
 
     return inodes;
+  }
+
+  private INode acquireINodeLockById(INodeLockType lock, long id) throws PersistanceException {
+    lockINode(lock);
+    return EntityManager.find(INode.Finder.ByPKey, id);
   }
 
   private LinkedList<INode> acquireInodeLockByPath(INodeLockType lock, Object path) throws UnresolvedPathException, PersistanceException {
@@ -446,9 +522,7 @@ public class TransactionLockAcquirer {
 
   private List<BlockInfo> acquireBlockLock(LockType lock, Object param) throws PersistanceException {
 
-    if (param != null && !(param instanceof Long)) {
-      throw new IllegalArgumentException("Param is expected to be Long but received " + param.getClass().toString());
-    }
+    checkLongParam(param);
 
     List<BlockInfo> blocks = new ArrayList<BlockInfo>();
 
@@ -471,11 +545,73 @@ public class TransactionLockAcquirer {
     return blocks;
   }
 
+  private void checkLongParam(Object param) {
+    if (param != null && !(param instanceof Long)) {
+      throw new IllegalArgumentException("Param is expected to be Long but received " + param.getClass().toString());
+    }
+  }
+
   private void setLockMode(LockType mode) {
     if (mode == LockType.WRITE) {
       EntityManager.writeLock();
     } else {
       EntityManager.readLock();
+    }
+  }
+
+  /**
+   * This method acquires lockk on the inode starting with a block-id. The lock-types
+   * should be set before using add* methods. Otherwise, no lock would be acquired.
+   * @throws PersistanceException 
+   */
+  public void acquireByBlock() throws PersistanceException, UnresolvedPathException {
+    if (inodeLock == null) // inodelock must be set before.
+    {
+      return;
+    }
+    checkLongParam(blockParam);
+    EntityManager.readCommited();
+    BlockInfo rcBlock = EntityManager.find(BlockInfo.Finder.ById, (Long) blockParam);
+
+    if (rcBlock == null) {
+      return;
+    }
+    EntityManager.clearContext();
+
+    INode inode = acquireINodeLockById(inodeLock, rcBlock.getInodeId());
+
+    //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
+    if (inode == null || !(inode instanceof INodeFile)) {
+      return;
+    }
+    inodeResult = new INode[1];
+    inodeResult[0] = inode;
+
+    setLockMode(blockLock);
+    blockResults = (List<BlockInfo>) EntityManager.findList(BlockInfo.Finder.ByInodeId, ((INodeFile) inode).getId());
+
+    //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
+    if (blockResults.isEmpty() || !blockResults.contains(rcBlock)) {
+      return;
+    }
+
+    // read-committed block is the same as block found by inode-file so everything is fine and continue the rest.
+    acquireLockInternal();
+
+  }
+
+  private void lockINode(INodeLockType lock) {
+    switch (lock) {
+      case WRITE:
+      case WRITE_ON_PARENT:
+        EntityManager.writeLock();
+        break;
+      case READ:
+        EntityManager.readLock();
+        break;
+      case READ_COMMITED:
+        EntityManager.readCommited();
+        break;
     }
   }
 }

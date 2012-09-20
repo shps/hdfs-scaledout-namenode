@@ -570,6 +570,24 @@ public class TestTransactionalOperations {
                 addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
                 acquire();
         EntityManager.commit();
+
+        LocatedBlocks locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(f1.toString(), 0, blockSize);
+        assert locatedBlocks.getLocatedBlocks().size() > 0;
+        // BLOCK_RECEIVED_AND_DELETED
+        long bid = locatedBlocks.getLocatedBlocks().get(0).getBlock().getBlockId();
+        EntityManager.begin();
+        tla = new TransactionLockAcquirer();
+        tla.addINode(TransactionLockAcquirer.INodeLockType.READ).
+                addBlock(TransactionLockAcquirer.LockType.WRITE, bid).
+                addReplica(TransactionLockAcquirer.LockType.WRITE).
+                addExcess(TransactionLockAcquirer.LockType.WRITE).
+                addCorrupt(TransactionLockAcquirer.LockType.WRITE).
+                addUnderReplicatedBlock(TransactionLockAcquirer.LockType.WRITE).
+                addPendingBlock(TransactionLockAcquirer.LockType.WRITE).
+                addReplicaUc(TransactionLockAcquirer.LockType.WRITE).
+                addInvalidatedBlock(TransactionLockAcquirer.LockType.READ).
+                acquireByBlock();
+        EntityManager.commit();
       } catch (PersistanceException ex) {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);
         assert false : ex.getMessage();
