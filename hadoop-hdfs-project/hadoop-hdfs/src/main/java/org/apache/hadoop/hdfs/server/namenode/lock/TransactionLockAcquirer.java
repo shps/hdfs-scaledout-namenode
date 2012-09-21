@@ -2,6 +2,8 @@ package org.apache.hadoop.hdfs.server.namenode.lock;
 
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -19,6 +21,25 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
  * @author Hooman <hooman@sics.se>
  */
 public class TransactionLockAcquirer {
+
+  public static ConcurrentHashMap<String, ReentrantLock> datanodeLocks = new ConcurrentHashMap<String, ReentrantLock>();
+
+  public static void addToDataNodeLockMap(String storageId) {
+    datanodeLocks.put(storageId, new ReentrantLock(true));
+  }
+
+  public static void removeFromDataNodeLockMap(String storageId) {
+    throw new UnsupportedOperationException("removing datanodes from locks is not supported.");
+  }
+
+  public boolean lockDataNode(String storageId) {
+    if (datanodeLocks.contains(this)) {
+      datanodeLocks.get(storageId).lock();
+      return true;
+    }
+
+    return false;
+  }
 
   public static <T> Collection<T> acquireLockList(TransactionLockManager.LockType lock, FinderType<T> finder, Object param) throws PersistanceException {
     setLockMode(lock);
@@ -144,7 +165,7 @@ public class TransactionLockAcquirer {
     }
     return buf.toString();
   }
-  
+
   private static void setLockMode(LockType mode) {
     switch (mode) {
       case WRITE:
