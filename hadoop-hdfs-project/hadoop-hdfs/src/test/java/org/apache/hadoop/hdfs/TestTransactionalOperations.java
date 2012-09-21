@@ -15,9 +15,16 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -343,113 +350,113 @@ public class TestTransactionalOperations {
         // GetAdditionalBlock
         EntityManager.begin();
 
-        TransactionLockAcquirer tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addLease(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
-                addExcess(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addExcess(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
                 acquire();
 
         EntityManager.commit();
 
         // Complete
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addLease(TransactionLockAcquirer.LockType.WRITE, null).
-                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
                 acquire();
 
         EntityManager.commit();
 
         // GetFileInfo and GetContentSummary
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.READ,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.READ, null).
+        tla.addBlock(TransactionLockManager.LockType.READ).
                 acquire();
 
         EntityManager.commit();
 
         // GetBlockLocations
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE, new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.READ, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE, new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.READ).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
                 acquire();
 
         EntityManager.commit();
 
         // recoverLease
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addLease(TransactionLockAcquirer.LockType.WRITE, "IamAnotherHolder").
-                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
-                addUnderReplicatedBlock(TransactionLockAcquirer.LockType.WRITE, null).
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, "IamAnotherHolder").
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
 
         EntityManager.commit();
 
         //RenewLease
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addLease(TransactionLockAcquirer.LockType.WRITE, "IamAHolder").
+        tla = new TransactionLockManager();
+        tla.addLease(TransactionLockManager.LockType.WRITE, "IamAHolder").
                 acquire();
         EntityManager.commit();
 
         // GetAdditionalDataNode
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.READ,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addLease(TransactionLockAcquirer.LockType.READ, null).
+                addLease(TransactionLockManager.LockType.READ).
                 acquire();
 
         EntityManager.commit();
 
         // Set_Permission, Set_Owner, SET_TIMES
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addBlock(TransactionLockAcquirer.LockType.READ, null).
+                addBlock(TransactionLockManager.LockType.READ).
                 acquire();
 
         EntityManager.commit();
 
         // GET_PREFFERED_BLOCK_SIZE
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.READ,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
                 acquire();
 
@@ -457,28 +464,28 @@ public class TestTransactionalOperations {
 
         //Append_file
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
-        tla.addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addLease(TransactionLockAcquirer.LockType.WRITE, "IamAnotherHolder").
-                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
-                addUnderReplicatedBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addInvalidatedBlock(TransactionLockAcquirer.LockType.WRITE, null).
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, "IamAnotherHolder").
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                addInvalidatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
 
         EntityManager.commit();
 
         // SET_QUOTA
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
                 acquire();
         EntityManager.commit();
@@ -486,69 +493,69 @@ public class TestTransactionalOperations {
         // SET_REPLICATION
 
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE_ON_PARENT,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
                 new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addUnderReplicatedBlock(TransactionLockAcquirer.LockType.WRITE, null).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
         EntityManager.commit();
 
         // CONCAT
 
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH,
-                TransactionLockAcquirer.INodeLockType.WRITE_ON_PARENT,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
                 new String[]{f1.toString(), f2.toString(), f3.toString()},
                 cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
+                addBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
         EntityManager.commit();
 
         // GET_LISTING
 
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
-                TransactionLockAcquirer.INodeLockType.READ,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
+                TransactionLockManager.INodeLockType.READ,
                 new String[]{f1.getParent().toString()},
                 cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addBlock(TransactionLockAcquirer.LockType.READ, null).
-                addReplica(TransactionLockAcquirer.LockType.READ, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addCorrupt(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.READ, null).
+                addBlock(TransactionLockManager.LockType.READ).
+                addReplica(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
                 acquire();
         EntityManager.commit();
 
         // DELETE
 
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f1.getParent().toString()},
                 cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addLease(TransactionLockAcquirer.LockType.WRITE, "ZzZzZz").
-                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
-                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.WRITE, null).
-                addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
+                addLease(TransactionLockManager.LockType.WRITE, "ZzZzZz").
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
                 acquire();
         EntityManager.commit();
 
         // MKDIR , CREATE_SYM_LINK
         Path f8 = new Path(f1.getParent().toString() + "/nd1/nd2/f8");
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
-                TransactionLockAcquirer.INodeLockType.WRITE,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockManager.INodeLockType.WRITE,
                 new String[]{f8.getParent().toString()},
                 cluster.getNamesystem().getFsDirectory().getRootDir()).
                 acquire();
@@ -556,18 +563,18 @@ public class TestTransactionalOperations {
 
         // START_FILE
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
-                TransactionLockAcquirer.INodeLockType.WRITE_ON_PARENT,
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
                 new String[]{f7.toString()},
                 cluster.getNamesystem().getFsDirectory().getRootDir()).
-                addBlock(TransactionLockAcquirer.LockType.WRITE, null).
-                addLease(TransactionLockAcquirer.LockType.WRITE, "1234Holder").
-                addLeasePath(TransactionLockAcquirer.LockType.WRITE, null).
-                addReplica(TransactionLockAcquirer.LockType.WRITE, null).
-                addCorrupt(TransactionLockAcquirer.LockType.WRITE, null).
-                addExcess(TransactionLockAcquirer.LockType.READ, null).
-                addReplicaUc(TransactionLockAcquirer.LockType.WRITE, null).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, "1234Holder").
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
                 acquire();
         EntityManager.commit();
 
@@ -576,18 +583,26 @@ public class TestTransactionalOperations {
         // BLOCK_RECEIVED_AND_DELETED
         long bid = locatedBlocks.getLocatedBlocks().get(0).getBlock().getBlockId();
         EntityManager.begin();
-        tla = new TransactionLockAcquirer();
-        tla.addINode(TransactionLockAcquirer.INodeLockType.READ).
-                addBlock(TransactionLockAcquirer.LockType.WRITE, bid).
-                addReplica(TransactionLockAcquirer.LockType.WRITE).
-                addExcess(TransactionLockAcquirer.LockType.WRITE).
-                addCorrupt(TransactionLockAcquirer.LockType.WRITE).
-                addUnderReplicatedBlock(TransactionLockAcquirer.LockType.WRITE).
-                addPendingBlock(TransactionLockAcquirer.LockType.WRITE).
-                addReplicaUc(TransactionLockAcquirer.LockType.WRITE).
-                addInvalidatedBlock(TransactionLockAcquirer.LockType.READ).
+        tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(TransactionLockManager.LockType.WRITE, bid).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addExcess(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                addPendingBlock(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                addInvalidatedBlock(TransactionLockManager.LockType.READ).
                 acquireByBlock();
         EntityManager.commit();
+
+        // HANDLE_HEARTBEAT
+        EntityManager.begin();
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, ReplicaUnderConstruction.Finder.ByBlockId, bid);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, UnderReplicatedBlock.Finder.All, null);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, PendingBlockInfo.Finder.All, null);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, BlockInfo.Finder.All, null);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
       } catch (PersistanceException ex) {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);
         assert false : ex.getMessage();
