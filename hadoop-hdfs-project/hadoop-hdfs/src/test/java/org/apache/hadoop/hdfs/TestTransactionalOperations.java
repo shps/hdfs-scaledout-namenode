@@ -603,6 +603,21 @@ public class TestTransactionalOperations {
         TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, PendingBlockInfo.Finder.All, null);
         TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, BlockInfo.Finder.All, null);
         TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
+        EntityManager.commit();
+
+        // LEASE_MANAGER
+        EntityManager.begin();
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(TransactionLockManager.INodeLockType.WRITE).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, dfs.dfs.clientName).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                acquireByLease(cluster.getNamesystem().getFsDirectory().getRootDir());
+        EntityManager.commit();
       } catch (PersistanceException ex) {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);
         assert false : ex.getMessage();

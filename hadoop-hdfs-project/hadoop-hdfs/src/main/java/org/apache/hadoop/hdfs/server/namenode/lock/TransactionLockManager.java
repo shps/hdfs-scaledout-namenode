@@ -44,7 +44,7 @@ public class TransactionLockManager {
   // lease
   private LockType leaseLock = null;
   private String leaseParam = null;
-  private Collection<Lease> leaseResult = null;
+  private Collection<Lease> leaseResults = null;
   // lease paths
   private LockType lpLock = null;
   // replica
@@ -95,13 +95,15 @@ public class TransactionLockManager {
     }
   }
 
-  private void acquireLeasePathsLock(LockType lock) throws PersistanceException {
-    if (leaseResult != null && !leaseResult.isEmpty()) {
-      for (Lease l : leaseResult) {
-        // We don't need to keep the results, just cache them
-        TransactionLockAcquirer.acquireLockList(lock, LeasePath.Finder.ByHolderId, l.getHolderID());
+  private List<LeasePath> acquireLeasePathsLock(LockType lock) throws PersistanceException {
+    List<LeasePath> lPaths = new LinkedList<LeasePath>();
+    if (leaseResults != null) {
+      for (Lease l : leaseResults) {
+        lPaths.addAll(TransactionLockAcquirer.acquireLockList(lock, LeasePath.Finder.ByHolderId, l.getHolderID()));
       }
     }
+
+    return lPaths;
   }
 
   private void acquireReplicasLock(LockType lock, FinderType finder) throws PersistanceException {
@@ -279,7 +281,18 @@ public class TransactionLockManager {
       blockResults = acquireBlockLock(blockLock, blockParam);
     }
 
-    acquireLockInternal(); // acquire locks on the rest of the tables.
+    acquireLeaseAndLpathLockNormal();
+    acquireBlockRelatedLocksNormal(); // acquire locks on the rest of the tables.
+  }
+
+  private void acquireLeaseAndLpathLockNormal() throws PersistanceException {
+    if (leaseLock != null) {
+      leaseResults = acquireLeaseLock(leaseLock, leaseParam);
+    }
+
+    if (lpLock != null) {
+      acquireLeasePathsLock(lpLock);
+    }
   }
 
   /**
@@ -287,14 +300,8 @@ public class TransactionLockManager {
    * under-replicated and pending blocks.
    * @throws PersistanceException 
    */
-  private void acquireLockInternal() throws PersistanceException {
-    if (leaseLock != null) {
-      leaseResult = acquireLeaseLock(leaseLock, leaseParam);
-    }
+  private void acquireBlockRelatedLocksNormal() throws PersistanceException {
 
-    if (lpLock != null) {
-      acquireLeasePathsLock(lpLock);
-    }
 
     if (blockResults != null && !blockResults.isEmpty()) {
       if (replicaLock != null) {
@@ -427,7 +434,57 @@ public class TransactionLockManager {
     }
 
     // read-committed block is the same as block found by inode-file so everything is fine and continue the rest.
-    acquireLockInternal();
+    acquireLeaseAndLpathLockNormal();
+    acquireBlockRelatedLocksNormal();
 
+  }
+
+  public void acquireByLease(INode rootDir) throws PersistanceException, UnresolvedPathException {
+    this.rootDir = rootDir;
+    if (leaseParam == null) {
+      return;
+    }
+
+    Lease rcLease = TransactionLockAcquirer.acquireLock(LockType.READ_COMMITTED, Lease.Finder.ByPKey, leaseParam);
+    if (rcLease == null) {
+      return;
+    }
+
+    Collection<LeasePath> rclPaths = TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
+            LeasePath.Finder.ByHolderId, rcLease.getHolderID());
+
+    if (rclPaths.isEmpty()) {
+      return; // TODO: It should retry to get lease again. Because there shouldn't be any lease with no lease-paths. perhaps, it was deleted between the two queries.
+    }
+
+    EntityManager.clearContext();
+
+    SortedSet<String> sortedPaths = new TreeSet<String>();
+
+    for (LeasePath lp : rclPaths) {
+      sortedPaths.add(lp.getPath()); // sorts paths in order to lock paths in the lexicographic order.
+    }
+
+    inodeResult = acquireInodeLocks(INodeResolveType.ONLY_PATH, inodeLock, sortedPaths.toArray(new String[sortedPaths.size()]));
+
+    if (inodeResult.length == 0) {
+      return; // TODO: something is wrong, it should retry again.
+    }
+    Lease lease = TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByPKey, leaseParam);
+    if (lease == null) {
+      return; // Lease does not exist anymore.
+    }
+
+    blockResults = acquireBlockLock(blockLock, null);
+
+    leaseResults = new ArrayList<Lease>();
+    leaseResults.add(lease);
+
+    List<LeasePath> lpResults = acquireLeasePathsLock(lpLock);
+    if (lpResults.size() > rclPaths.size()) {
+      return; // TODO: It should retry again, cause there are new lease-paths for this lease which we have not acquired their inodes locks.
+    }
+
+    acquireBlockRelatedLocksNormal();
   }
 }
