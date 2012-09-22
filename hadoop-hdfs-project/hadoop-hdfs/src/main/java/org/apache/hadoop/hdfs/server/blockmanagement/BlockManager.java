@@ -1540,12 +1540,12 @@ public class BlockManager {
       ReplicaState iState = itBR.getCurrentReplicaState();
       processReportHandler.setParam1(iblk).setParam2(iState).setParam3(node).setParam4(existingBlocks);
       processReportHandler.handle();
+    }
 
-      // collect blocks that have not been reported
-      for (Block b : existingBlocks) {
-        afterReportHandler.setParam1(b).setParam2(node);
-        afterReportHandler.handle();
-      }
+    // collect blocks that have not been reported
+    for (Block b : existingBlocks) {
+      afterReportHandler.setParam1(b).setParam2(node);
+      afterReportHandler.handle();
     }
   }
   private TransactionalRequestHandler processReportHandler = new TransactionalRequestHandler(OperationType.PROCESS_REPORT) {
@@ -2363,7 +2363,7 @@ public class BlockManager {
       // necessary. In that case, put block on a possibly-will-
       // be-replicated list.
       //
-      INode fileINode = getINode(block);
+      INode fileINode = getINode(block); 
       if (fileINode != null) {
         namesystem.decrementSafeBlockCount(block);
         updateNeededReplications(block, -1, 0);

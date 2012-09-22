@@ -71,4 +71,30 @@ public class EntityManager {
   public static <T> void add(T entity) throws PersistanceException {
     context().add(entity);
   }
+  
+  public static void writeLock()
+  {
+    EntityContext.setLockMode(EntityContext.LockMode.WRITE_LOCK);
+    connector.writeLock();
+  }
+  
+  public static void readLock()
+  {
+    EntityContext.setLockMode(EntityContext.LockMode.READ_LOCK);
+    connector.readLock();
+  }
+  
+  public static void readCommited()
+  {
+    EntityContext.setLockMode(EntityContext.LockMode.READ_COMMITTED);
+    connector.readCommitted();
+  }
+  
+  /**
+   * Clears transaction context's in-memory data
+   */
+  public static void clearContext()
+  {
+    context().clearContext();
+  }
 }

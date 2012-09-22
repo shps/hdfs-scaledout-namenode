@@ -11,6 +11,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
+import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
@@ -144,5 +145,23 @@ public enum ClusterjConnector implements StorageConnector<Session> {
 
   @Override
   public void stopStorage() {
+  }
+
+  @Override
+  public void readLock() {
+    Session session = obtainSession();
+    session.setLockMode(LockMode.SHARED);
+  }
+
+  @Override
+  public void writeLock() {
+    Session session = obtainSession();
+    session.setLockMode(LockMode.EXCLUSIVE);
+  }
+
+  @Override
+  public void readCommitted() {
+    Session session = obtainSession();
+    session.setLockMode(LockMode.READ_COMMITTED);
   }
 }

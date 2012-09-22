@@ -2137,26 +2137,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     return isRenameDone;
-//    return (Boolean) renameTo3Handler.setParam1(src).setParam2(dst).setParam3(dinfo).handle();
   }
-//  TransactionalRequestHandler renameTo3Handler = new TransactionalRequestHandler(OperationType.RENAME_TO3) {
-//
-//    @Override
-//    public Object performTask() throws PersistanceException, IOException {
-//      String src = (String) getParam1();
-//      String dst = (String) getParam2();
-//      HdfsFileStatus dinfo = (HdfsFileStatus) getParam3();
-//      boolean isRenameDone = false;
-//      if (dir.renameTo(src, dst)) {
-//        unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
-//        isRenameDone = true;
-//      } else {
-//        isRenameDone = false;
-//      }
-//
-//      return isRenameDone;
-//    }
-//  };
 
   /**
    * Rename src to dst
@@ -2813,6 +2794,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
           }
         }
+        //FIXME: [H] is bUC changes being persisted?
         // add pipeline locations into the INodeUnderConstruction
         BlockInfoUnderConstruction bUc = iFile.setLastBlock(storedBlock);
         for (DatanodeID id : newtargets) {
@@ -4425,11 +4407,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     EntityManager.update(blockinfo);
 
+    //[H]: No need to persist blocks in KTHFS.
     // persist blocks only if append is supported
-    String src = leaseManager.findPath(pendingFile);
-    if (supportAppends) {
-      dir.persistBlocks(src, pendingFile);
-    }
+//    String src = leaseManager.findPath(pendingFile);  
+//    if (supportAppends) {
+//      dir.persistBlocks(src, pendingFile);
+//    }
   }
 
   // rename was successful. If any part of the renamed subtree had
@@ -4961,7 +4944,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     @Override
     public Object performTask() throws PersistanceException, IOException {
-      return getMissingBlocksCount();
+      return getMissingBlocksCount(); // FIXME [H]: nested transactions
     }
   };
 
@@ -5053,5 +5036,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public BlockManager getBlockManager() {
     return blockManager;
+  }
+  
+  /**
+   * Added for acquiring locks in KTHFS.
+   */
+  public FSDirectory getFsDirectory()
+  {
+    return this.dir;
   }
 }

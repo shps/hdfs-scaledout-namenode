@@ -326,7 +326,7 @@ public class INodeFile extends INode {
     }
 
     BlockInfoUnderConstruction bUc;
-    if (getBlocks().contains(lastBlock));
+    if (getBlocks().contains(lastBlock)); // FIXME [H]: What is this?!
     removeBlock(lastBlock);
     if (lastBlock.isComplete()) {
       bUc = new BlockInfoUnderConstruction(lastBlock);

@@ -19,6 +19,8 @@ public abstract class InvalidateBlockDataAccess extends EntityDataAccess{
   public abstract int countAll() throws StorageException;
 
   public abstract Collection<InvalidatedBlock> findInvalidatedBlockByStorageId(String storageId) throws StorageException;
+  
+  public abstract Collection<InvalidatedBlock> findInvalidatedBlocksByBlockId(long bid) throws StorageException;
 
   public abstract Collection<InvalidatedBlock> findAllInvalidatedBlocks() throws StorageException;
 

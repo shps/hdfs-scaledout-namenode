@@ -2258,4 +2258,14 @@ public class FSDirectory implements Closeable {
             inode.setName(name.getBytes());
         }
     }
+    
+    /**
+     * Created for acquiring locks in KTHFS
+     * 
+     * @return 
+     */
+    public INode getRootDir()
+    {
+      return this.rootDir;
+    }
 }

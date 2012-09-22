@@ -78,6 +78,21 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
       throw new StorageException(e);
     }
   }
+  
+  @Override
+  public Collection<InvalidatedBlock> findInvalidatedBlocksByBlockId(long bid) throws StorageException {
+    try {
+      Session session = connector.obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<InvalidateBlocksDTO> qdt = qb.createQueryDefinition(InvalidateBlocksDTO.class);
+      qdt.where(qdt.get("blockId").equal(qdt.param("param")));
+      Query<InvalidateBlocksDTO> query = session.createQuery(qdt);
+      query.setParameter("param", bid);
+      return createList(query.getResultList());
+    } catch (Exception e) {
+      throw new StorageException(e);
+    }
+  }
 
   @Override
   public InvalidatedBlock findInvBlockByPkey(Object[] params) throws StorageException {
