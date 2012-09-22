@@ -1168,7 +1168,7 @@ public class FSDirectory implements Closeable {
             return 0;
         }
         // set the parent's modification time
-        inodes[pos - 1].setModificationTime(mtime); //FIXME: [thesis] should be persisted to DB
+        inodes[pos - 1].setModificationTime(mtime);
 
         int filesRemoved = 1;
         if (targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota) {
