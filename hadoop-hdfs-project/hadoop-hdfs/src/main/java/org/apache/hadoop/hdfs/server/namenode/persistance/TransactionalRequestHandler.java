@@ -39,7 +39,7 @@ public abstract class TransactionalRequestHandler {
     //HeartbeatManager
     HEARTBEAT_MONITOR,
     //LeaseManager
-    LEASE_MANAGER_MONITOR,
+    PREPARE_LEASE_MANAGER_MONITOR, LEASE_MANAGER_MONITOR,
     //NamenodeJspHElper
     GET_SAFE_MODE_TEXT, GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
     TO_XML_CORRUPT_BLOCK_INFO,

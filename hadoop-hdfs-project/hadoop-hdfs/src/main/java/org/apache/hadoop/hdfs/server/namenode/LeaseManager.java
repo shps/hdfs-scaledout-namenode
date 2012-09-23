@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
@@ -308,12 +309,18 @@ public class LeaseManager {
     public void run() {
       for (; fsnamesystem.isRunning();) {
         try {
-          handler.handleWithWriteLock(fsnamesystem);
+          SortedSet<Lease> sortedLeases = (SortedSet<Lease>) prepareHandler.handleWithWriteLock(fsnamesystem);
+          if (sortedLeases == null) {
+            return;
+          }
+          for (; sortedLeases.size() > 0;) {
+            final Lease oldest = sortedLeases.first();
+            handler.setParam1(oldest.getHolder()).handleWithWriteLock(fsnamesystem);
+            sortedLeases.remove(oldest);
+          }
         } catch (IOException ex) {
           LOG.error(ex);
         }
-
-
         try {
           Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch (InterruptedException ie) {
@@ -323,12 +330,26 @@ public class LeaseManager {
         }
       }
     }
-    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
+    TransactionalRequestHandler prepareHandler = new TransactionalRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (!fsnamesystem.isInSafeMode()) {
-          checkLeases();
+          assert fsnamesystem.hasWriteLock();
+          long expiredTime = now() - hardLimit;
+          SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
+          return sortedLeases;
+        }
+        return null;
+      }
+    };
+    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        String holder = (String) getParam1();
+        if (holder != null) {
+          checkLeases(holder);
         }
         return null;
       }
@@ -338,63 +359,58 @@ public class LeaseManager {
   /**
    * Check the leases beginning from the oldest.
    */
-  private synchronized void checkLeases() throws PersistanceException {
-    assert fsnamesystem.hasWriteLock();
-    long expiredTime = now() - hardLimit;
-    SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
-    if (sortedLeases == null) {
+  private synchronized void checkLeases(String holder) throws PersistanceException {
+    Lease oldest = EntityManager.find(Lease.Finder.ByPKey, holder);
+
+    if (oldest == null) {
       return;
     }
 
-    for (; sortedLeases.size() > 0;) {
-      final Lease oldest = sortedLeases.first();
-      if (!expiredHardLimit(oldest)) {
-        return;
-      }
+    if (!expiredHardLimit(oldest)) {
+      return;
+    }
 
-      LOG.info("Lease " + oldest + " has expired hard limit");
+    LOG.info("Lease " + oldest + " has expired hard limit");
 
-      final List<LeasePath> removing = new ArrayList<LeasePath>();
-      // need to create a copy of the oldest lease paths, becuase 
-      // internalReleaseLease() removes paths corresponding to empty files,
-      // i.e. it needs to modify the collection being iterated over
-      // causing ConcurrentModificationException
-      Collection<LeasePath> paths = oldest.getPaths();
-      assert paths != null : "The lease " + oldest.toString() + " has no path.";
-      LeasePath[] leasePaths = new LeasePath[paths.size()];
-      paths.toArray(leasePaths);
-      for (LeasePath lPath : leasePaths) {
-        try {
-          boolean leaseReleased = false;
-          leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(),
-                  HdfsServerConstants.NAMENODE_LEASE_HOLDER);
-          if (leaseReleased) {
-            LOG.info("Lease recovery for file " + lPath
-                    + " is complete. File closed.");
-            removing.add(lPath);
-          } else {
-            LOG.info("Started block recovery for file " + lPath
-                    + " lease " + oldest);
-          }
-
-        } catch (IOException e) {
-          LOG.error("Cannot release the path " + lPath + " in the lease " + oldest, e);
+    final List<LeasePath> removing = new ArrayList<LeasePath>();
+    // need to create a copy of the oldest lease paths, becuase 
+    // internalReleaseLease() removes paths corresponding to empty files,
+    // i.e. it needs to modify the collection being iterated over
+    // causing ConcurrentModificationException
+    Collection<LeasePath> paths = oldest.getPaths();
+    assert paths != null : "The lease " + oldest.toString() + " has no path.";
+    LeasePath[] leasePaths = new LeasePath[paths.size()];
+    paths.toArray(leasePaths);
+    for (LeasePath lPath : leasePaths) {
+      try {
+        boolean leaseReleased = false;
+        leaseReleased = fsnamesystem.internalReleaseLease(oldest, lPath.getPath(),
+                HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+        if (leaseReleased) {
+          LOG.info("Lease recovery for file " + lPath
+                  + " is complete. File closed.");
           removing.add(lPath);
+        } else {
+          LOG.info("Started block recovery for file " + lPath
+                  + " lease " + oldest);
         }
-      }
 
-      for (LeasePath lPath : removing) {
-        if (oldest.getPaths().contains(lPath)) {
-          removeLease(oldest, lPath);
-        }
+      } catch (IOException e) {
+        LOG.error("Cannot release the path " + lPath + " in the lease " + oldest, e);
+        removing.add(lPath);
       }
+    }
+
+    for (LeasePath lPath : removing) {
+      if (oldest.getPaths().contains(lPath)) {
+        removeLease(oldest, lPath);
+      }
+    }
 
 //      if (!expiredHardLimit(oldest) || !oldest.hasPath()) // if Lease is renewed or removed
 //      {
 //        sortedLeases.remove(oldest);
 //      }
-      sortedLeases.remove(oldest);
-    }
   }
 
   private boolean expiredHardLimit(Lease lease) {
