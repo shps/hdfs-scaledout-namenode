@@ -2819,16 +2819,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see org.apache.hadoop.hdfs.server.datanode.DataNode
    */
   void registerDatanode(final DatanodeRegistration nodeReg) throws IOException {
-    TransactionalRequestHandler registerDatanodeHanlder = new TransactionalRequestHandler(OperationType.REGISTER_DATANODE) {
+    writeLock();
+    try {
+      getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true, OperationType.REGISTER_DATANODE);
+      new TransactionalRequestHandler(OperationType.REGISTER_DATANODE) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true);
-        checkSafeMode();
-        return null;
-      }
-    };
-    registerDatanodeHanlder.handleWithWriteLock(this);
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          checkSafeMode();
+          return null;
+        }
+      }.handle();
+    } finally {
+      writeUnlock();
+    }
   }
 
   /**

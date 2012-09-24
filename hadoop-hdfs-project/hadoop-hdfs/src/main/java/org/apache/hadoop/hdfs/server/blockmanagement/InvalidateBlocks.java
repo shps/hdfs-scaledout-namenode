@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * Keeps a Collection for every named machine containing blocks that have
@@ -75,12 +77,29 @@ class InvalidateBlocks {
   /**
    * Remove a storage from the invalidatesSet
    */
-  synchronized void remove(final String storageID) throws PersistanceException {
-    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageID);
+  synchronized void remove(final String storageID, TransactionalRequestHandler.OperationType opType) throws IOException {
+    TransactionalRequestHandler findInvBlocksHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageID);
+      }
+    };
+
+    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) findInvBlocksHandler.handle();
     if (invBlocks != null) {
+      TransactionalRequestHandler removeInvBlockHandler = new TransactionalRequestHandler(opType) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          InvalidatedBlock invBlock = (InvalidatedBlock) getParams()[0];
+          EntityManager.remove(invBlock);
+          return null;
+        }
+      };
       for (InvalidatedBlock invBlock : invBlocks) {
         if (invBlock != null) {
-          EntityManager.remove(invBlock);
+          removeInvBlockHandler.setParams(invBlock).handle();
         }
       }
     }

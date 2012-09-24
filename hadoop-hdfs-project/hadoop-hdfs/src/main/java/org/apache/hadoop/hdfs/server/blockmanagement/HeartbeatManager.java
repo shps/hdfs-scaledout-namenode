@@ -193,13 +193,22 @@ class HeartbeatManager implements DatanodeStatistics {
    * only one datanode is marked dead at a time within the synchronized section.
    * Otherwise, a cascading effect causes more datanodes to be declared dead.
    */
-  void heartbeatCheck() throws IOException, PersistanceException {
+  void heartbeatCheck() throws IOException{
     final DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
     // It's OK to check safe mode w/o taking the lock here, we re-check
     // for safe mode after taking the lock before removing a datanode.
-    if (namesystem.isInSafeMode()) {
+    TransactionalRequestHandler safeModeHandler = new TransactionalRequestHandler(OperationType.HEARTBEAT_MONITOR) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return namesystem.isInSafeMode();
+      }
+    };
+    
+    if ((Boolean) safeModeHandler.handle()) {
       return;
     }
+    
     boolean allAlive = false;
     while (!allAlive) {
       // locate the first dead node.
@@ -217,13 +226,13 @@ class HeartbeatManager implements DatanodeStatistics {
       allAlive = dead == null;
       if (!allAlive) {
         // acquire the fsnamesystem lock, and then remove the dead node.
-        if (namesystem.isInSafeMode()) {
+        if ((Boolean) safeModeHandler.handle()) {
           return;
         }
         try {
           namesystem.writeLock();
           synchronized (this) {
-            dm.removeDeadDatanode(dead);
+            dm.removeDeadDatanode(dead, OperationType.HEARTBEAT_MONITOR);
           }
         } finally {
           namesystem.writeUnlock();
@@ -247,7 +256,7 @@ class HeartbeatManager implements DatanodeStatistics {
           final long now = Util.now();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
             // Will not be part of an outer db transaction (lock)
-            handler.handle();
+            heartbeatCheck();
             lastHeartbeatCheck = now;
           }
           if (namesystem.getBlockManager().shouldUpdateBlockKey(
@@ -268,14 +277,6 @@ class HeartbeatManager implements DatanodeStatistics {
         }
       }
     }
-    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.HEARTBEAT_MONITOR) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        heartbeatCheck();
-        return null;
-      }
-    };
   }
 
   /**

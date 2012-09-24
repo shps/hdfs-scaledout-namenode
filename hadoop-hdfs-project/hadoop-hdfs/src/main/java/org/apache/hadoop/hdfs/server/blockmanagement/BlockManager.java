@@ -849,16 +849,32 @@ public class BlockManager {
    *
    * @throws IOException
    */
-  void removeBlocksAssociatedTo(final DatanodeDescriptor node) throws IOException, PersistanceException {
-    final Iterator<? extends Block> it =
-            EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()).iterator();
+  void removeBlocksAssociatedTo(final DatanodeDescriptor node, OperationType opType) throws IOException {
+    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()).iterator();
+      }
+    };
+    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
+
+    TransactionalRequestHandler removeBlockHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        Block blockToRemove = (Block) getParams()[0];
+        removeStoredBlock(blockToRemove, node);
+        return null;
+      }
+    };
 
     while (it.hasNext()) {
-      removeStoredBlock(it.next(), node);
+      removeBlockHandler.setParams(it.next()).handle();
     }
 
     node.resetBlocks();
-    invalidateBlocks.remove(node.getStorageID());
+    invalidateBlocks.remove(node.getStorageID(), opType);
   }
 
   /**
@@ -2663,19 +2679,35 @@ public class BlockManager {
    * @throws IOException
    */
   void processOverReplicatedBlocksOnReCommission(
-          final DatanodeDescriptor srcNode) throws IOException, PersistanceException {
-    final Iterator<? extends Block> it =
-            EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
-    while (it.hasNext()) {
-      final Block block = it.next();
-      INodeFile fileINode = getINode(block);
-      short expectedReplication = fileINode.getReplication();
-      NumberReplicas num = countNodes(block);
-      int numCurrentReplica = num.liveReplicas();
-      if (numCurrentReplica > expectedReplication) {
-        // over-replicated block 
-        processOverReplicatedBlock(block, expectedReplication, null, null);
+          final DatanodeDescriptor srcNode, OperationType opType) throws IOException {
+    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
       }
+    };
+    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
+
+    TransactionalRequestHandler processBlockHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        final Block block = (Block) getParams()[0];
+        INodeFile fileINode = getINode(block);
+        short expectedReplication = fileINode.getReplication();
+        NumberReplicas num = countNodes(block);
+        int numCurrentReplica = num.liveReplicas();
+        if (numCurrentReplica > expectedReplication) {
+          // over-replicated block 
+          processOverReplicatedBlock(block, expectedReplication, null, null);
+        }
+        return null;
+      }
+    };
+
+    while (it.hasNext()) {
+      processBlockHandler.setParams(it.next()).handle();
     }
   }
 
@@ -2685,56 +2717,73 @@ public class BlockManager {
    *
    * @throws IOException
    */
-  boolean isReplicationInProgress(DatanodeDescriptor srcNode) throws IOException, PersistanceException {
-    boolean status = false;
-    int underReplicatedBlocks = 0;
-    int decommissionOnlyReplicas = 0;
-    int underReplicatedInOpenFiles = 0;
-    final Iterator<? extends Block> it =
-            EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
-    while (it.hasNext()) {
-      final Block block = it.next();
-      INode fileINode = getINode(block);
+  boolean isReplicationInProgress(final DatanodeDescriptor srcNode, OperationType opType) throws IOException{
+    final boolean[] status = new boolean[]{false};
+    final int[] underReplicatedBlocks = new int[]{0};
+    final int[] decommissionOnlyReplicas = new int[]{0};
+    final int[] underReplicatedInOpenFiles = new int[]{0};
+    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
+      }
+    }; 
+    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
+    
+    TransactionalRequestHandler checkReplicationHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        final Block block = (Block) getParams()[0];
+        
+        INode fileINode = getINode(block);
 
 
-      if (fileINode != null) {
-        NumberReplicas num = countNodes(block);
-        int curReplicas = num.liveReplicas();
-        int curExpectedReplicas = getReplication(block);
-        if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
-          if (curExpectedReplicas > curReplicas) {
-            //Log info about one block for this node which needs replication
-            if (!status) {
-              status = true;
-              logBlockReplicationInfo(block, srcNode, num);
+        if (fileINode != null) {
+          NumberReplicas num = countNodes(block);
+          int curReplicas = num.liveReplicas();
+          int curExpectedReplicas = getReplication(block);
+          if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
+            if (curExpectedReplicas > curReplicas) {
+              //Log info about one block for this node which needs replication
+              if (!status[0]) {
+                status[0] = true;
+                logBlockReplicationInfo(block, srcNode, num);
+              }
+              underReplicatedBlocks[0]++;
+              if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
+                decommissionOnlyReplicas[0]++;
+              }
+              if (fileINode.isUnderConstruction()) {
+                underReplicatedInOpenFiles[0]++;
+              }
             }
-            underReplicatedBlocks++;
-            if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
-              decommissionOnlyReplicas++;
+            if (!neededReplications.contains(block)
+                    && pendingReplications.getNumReplicas(block) == 0) {
+              //
+              // These blocks have been reported from the datanode
+              // after the startDecommission method has been executed. These
+              // blocks were in flight when the decommissioning was started.
+              //
+              neededReplications.add(block,
+                      curReplicas,
+                      num.decommissionedReplicas(),
+                      curExpectedReplicas);
             }
-            if (fileINode.isUnderConstruction()) {
-              underReplicatedInOpenFiles++;
-            }
-          }
-          if (!neededReplications.contains(block)
-                  && pendingReplications.getNumReplicas(block) == 0) {
-            //
-            // These blocks have been reported from the datanode
-            // after the startDecommission method has been executed. These
-            // blocks were in flight when the decommissioning was started.
-            //
-            neededReplications.add(block,
-                    curReplicas,
-                    num.decommissionedReplicas(),
-                    curExpectedReplicas);
           }
         }
+        return null;
       }
+    };
+            
+    while (it.hasNext()) {
+      checkReplicationHandler.setParams(it.next()).handle();
     }
-    srcNode.decommissioningStatus.set(underReplicatedBlocks,
-            decommissionOnlyReplicas,
-            underReplicatedInOpenFiles);
-    return status;
+    srcNode.decommissioningStatus.set(underReplicatedBlocks[0],
+            decommissionOnlyReplicas[0],
+            underReplicatedInOpenFiles[0]);
+    return status[0];
   }
 
   public int getActiveBlockCount() throws PersistanceException {
