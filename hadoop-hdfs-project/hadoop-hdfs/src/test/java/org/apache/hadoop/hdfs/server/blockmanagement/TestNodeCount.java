@@ -90,13 +90,13 @@ public class TestNodeCount extends TestCase {
         @Override
         public Object performTask() throws PersistanceException, IOException {
           synchronized (hm) {
-            DatanodeDescriptor datanode = (DatanodeDescriptor) getParam1();
+            DatanodeDescriptor datanode = (DatanodeDescriptor) getParams()[0];
             datanode.setLastUpdate(0); // mark it dead
             hm.heartbeatCheck();
           }
           return null;
         }
-      }.setParam1(datanode);
+      }.setParams(datanode);
       handler.handleWithWriteLock(namesystem);
 
       // the block will be replicated
@@ -145,13 +145,13 @@ public class TestNodeCount extends TestCase {
         @Override
         public Object performTask() throws PersistanceException, IOException {
           synchronized (hm) {
-            DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) getParam1();
+            DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) getParams()[0];
             nonExcessDN.setLastUpdate(0); // mark it dead
             hm.heartbeatCheck();
           }
           return null;
         }
-      }.setParam1(nonExcessDN);
+      }.setParams(nonExcessDN);
       handler.handleWithWriteLock(namesystem);
 
       // The block should be replicated

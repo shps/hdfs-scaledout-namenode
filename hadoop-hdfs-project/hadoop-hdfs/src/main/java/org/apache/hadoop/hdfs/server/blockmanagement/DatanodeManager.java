@@ -279,21 +279,20 @@ public class DatanodeManager {
   public void removeDatanode(final DatanodeID node) throws UnregisteredNodeException, IOException {
     final DatanodeDescriptor descriptor = getDatanode(node);
     if (descriptor != null) {
-      removeDataNodeHandler.setParam1(descriptor).handleWithWriteLock(namesystem);
+      TransactionalRequestHandler removeDataNodeHandler = new TransactionalRequestHandler(OperationType.REMOVE_DATANODE) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          removeDatanode(descriptor);
+          return null;
+        }
+      };
+      removeDataNodeHandler.handleWithWriteLock(namesystem);
     } else {
       NameNode.stateChangeLog.warn("BLOCK* removeDatanode: "
               + node.getName() + " does not exist");
     }
   }
-  TransactionalRequestHandler removeDataNodeHandler = new TransactionalRequestHandler(OperationType.REMOVE_DATANODE) {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      DatanodeDescriptor descriptor = (DatanodeDescriptor) getParam1();
-      removeDatanode(descriptor);
-      return null;
-    }
-  };
 
   /**
    * Remove a dead datanode.
@@ -920,7 +919,7 @@ public class DatanodeManager {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
                   blockPoolId, blks));
         }
-        
+
         //check pending replication
         List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
                 maxTransfers);
