@@ -90,11 +90,11 @@ public class NameNodeAdapter {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        NameNode namenode = (NameNode) getParam1();
-        String path = (String) getParam2();
+        NameNode namenode = (NameNode) getParams()[0];
+        String path = (String) getParams()[0];
         return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
       }
-    }.setParam1(namenode).setParam2(path).handle();
+    }.setParams(namenode, path).handle();
     
     return (String) result;
   }

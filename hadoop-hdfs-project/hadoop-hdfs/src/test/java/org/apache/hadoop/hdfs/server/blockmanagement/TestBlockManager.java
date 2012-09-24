@@ -109,13 +109,13 @@ public class TestBlockManager {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        DatanodeDescriptor deadNode = (DatanodeDescriptor) getParam1();
+        DatanodeDescriptor deadNode = (DatanodeDescriptor) getParams()[0];
         NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
         cluster.remove(deadNode);
         bm.removeBlocksAssociatedTo(deadNode);
         return null;
       }
-    }.setParam1(deadNode).handle();
+    }.setParams(deadNode).handle();
   }
 
   /**

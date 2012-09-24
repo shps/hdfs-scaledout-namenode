@@ -309,14 +309,40 @@ public class LeaseManager {
     public void run() {
       for (; fsnamesystem.isRunning();) {
         try {
+          
+          TransactionalRequestHandler prepareHandler = new TransactionalRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
+
+            @Override
+            public Object performTask() throws PersistanceException, IOException {
+              if (!fsnamesystem.isInSafeMode()) {
+                assert fsnamesystem.hasWriteLock();
+                long expiredTime = now() - hardLimit;
+                SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
+                return sortedLeases;
+              }
+              return null;
+            }
+          };
+          
           SortedSet<Lease> sortedLeases = (SortedSet<Lease>) prepareHandler.handleWithWriteLock(fsnamesystem);
           if (sortedLeases == null) {
             return;
           }
-          for (; sortedLeases.size() > 0;) {
-            final Lease oldest = sortedLeases.first();
-            handler.setParam1(oldest.getHolder()).handleWithWriteLock(fsnamesystem);
-            sortedLeases.remove(oldest);
+          
+          TransactionalRequestHandler expiredLeaseHandler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
+
+            @Override
+            public Object performTask() throws PersistanceException, IOException {
+              String holder = (String) getParams()[0];
+              if (holder != null) {
+                checkLeases(holder);
+              }
+              return null;
+            }
+          };
+          
+          for (Lease expiredLease : sortedLeases) {
+            expiredLeaseHandler.setParams(expiredLease.getHolder()).handleWithWriteLock(fsnamesystem);
           }
         } catch (IOException ex) {
           LOG.error(ex);
@@ -330,30 +356,6 @@ public class LeaseManager {
         }
       }
     }
-    TransactionalRequestHandler prepareHandler = new TransactionalRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        if (!fsnamesystem.isInSafeMode()) {
-          assert fsnamesystem.hasWriteLock();
-          long expiredTime = now() - hardLimit;
-          SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
-          return sortedLeases;
-        }
-        return null;
-      }
-    };
-    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        String holder = (String) getParam1();
-        if (holder != null) {
-          checkLeases(holder);
-        }
-        return null;
-      }
-    };
   }
 
   /**

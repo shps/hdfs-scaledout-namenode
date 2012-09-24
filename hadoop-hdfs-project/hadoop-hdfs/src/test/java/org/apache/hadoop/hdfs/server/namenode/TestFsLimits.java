@@ -75,11 +75,11 @@ public class TestFsLimits {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
-            FSDirectory dir = (FSDirectory) getParam1();
+            FSDirectory dir = (FSDirectory) getParams()[0];
             dir.verifyFsLimits(pathComponents, pos, child);
             return null;
           }
-        }.setParam1(this).handle();
+        }.setParams(this).handle();
       } catch (IOException ex) {
         Logger.getLogger(TestFsLimits.class.getName()).log(Level.SEVERE, null, ex);
       }
