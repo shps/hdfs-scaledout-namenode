@@ -74,38 +74,32 @@ class DecommissionManager {
     public void run() {
       for (; fsnamesystem.isRunning();) {
         try {
-          decommisionHandler.handleWithWriteLock(fsnamesystem);
+          fsnamesystem.writeLock();
+          final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
+          int count = 0;
+          for (Map.Entry<String, DatanodeDescriptor> entry : dm.getDatanodeCyclicIteration(firstkey)) {
+            final DatanodeDescriptor d = entry.getValue();
+            firstkey = entry.getKey();
+
+            if (d.isDecommissionInProgress()) {
+              try {
+                dm.checkDecommissionState(d, OperationType.DECOMMISION_MONITOR);
+              } catch (Exception e) {
+                LOG.warn("entry=" + entry, e);
+              }
+              if (++count == numNodesPerCheck) {
+                break;
+              }
+            }
+          }
+
           Thread.sleep(recheckInterval);
-        } catch (IOException ex) {
-          //This shouldn't occure
         } catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
+        } finally {
+          fsnamesystem.writeUnlock();
         }
       }
     }
-    TransactionalRequestHandler decommisionHandler = new TransactionalRequestHandler(OperationType.DECOMMISION_MONITOR) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        final DatanodeManager dm = fsnamesystem.getBlockManager().getDatanodeManager();
-        int count = 0;
-        for (Map.Entry<String, DatanodeDescriptor> entry : dm.getDatanodeCyclicIteration(firstkey)) {
-          final DatanodeDescriptor d = entry.getValue();
-          firstkey = entry.getKey();
-
-          if (d.isDecommissionInProgress()) {
-            try {
-              dm.checkDecommissionState(d);
-            } catch (Exception e) {
-              LOG.warn("entry=" + entry, e);
-            }
-            if (++count == numNodesPerCheck) {
-              return null;
-            }
-          }
-        }
-        return null;
-      }
-    };
   }
 }

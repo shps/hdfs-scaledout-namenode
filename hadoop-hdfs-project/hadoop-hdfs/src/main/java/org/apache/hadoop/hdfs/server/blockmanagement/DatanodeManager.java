@@ -258,17 +258,25 @@ public class DatanodeManager {
    * @param nodeInfo datanode descriptor.
    * @throws IOException
    */
-  private void removeDatanode(DatanodeDescriptor nodeInfo) throws IOException, PersistanceException {
+  private void removeDatanode(DatanodeDescriptor nodeInfo, OperationType opType) throws IOException{
     assert namesystem.hasWriteLock();
     //FIXME[H]: Important! What happens if dnd info is removed from in memory datastructures but it fails to remove them from DB?
     heartbeatManager.removeDatanode(nodeInfo);
-    blockManager.removeBlocksAssociatedTo(nodeInfo);
+    blockManager.removeBlocksAssociatedTo(nodeInfo, opType);
     networktopology.remove(nodeInfo);
     host2DatanodeMap.remove(nodeInfo);
     if (LOG.isDebugEnabled()) {
       LOG.debug("remove datanode " + nodeInfo.getName());
     }
-    namesystem.checkSafeMode();
+    
+    new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        namesystem.checkSafeMode();
+        return null;
+      }
+    }.handle();
   }
 
   /**
@@ -279,28 +287,24 @@ public class DatanodeManager {
   public void removeDatanode(final DatanodeID node) throws UnregisteredNodeException, IOException {
     final DatanodeDescriptor descriptor = getDatanode(node);
     if (descriptor != null) {
-      removeDataNodeHandler.setParam1(descriptor).handleWithWriteLock(namesystem);
+      namesystem.writeLock();
+      try {
+        removeDatanode(descriptor, OperationType.REMOVE_DATANODE);
+      } finally {
+        namesystem.writeUnlock();
+      }
     } else {
       NameNode.stateChangeLog.warn("BLOCK* removeDatanode: "
               + node.getName() + " does not exist");
     }
   }
-  TransactionalRequestHandler removeDataNodeHandler = new TransactionalRequestHandler(OperationType.REMOVE_DATANODE) {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      DatanodeDescriptor descriptor = (DatanodeDescriptor) getParam1();
-      removeDatanode(descriptor);
-      return null;
-    }
-  };
 
   /**
    * Remove a dead datanode.
    *
    * @throws IOException
    */
-  void removeDeadDatanode(final DatanodeID nodeID) throws IOException, PersistanceException {
+  void removeDeadDatanode(final DatanodeID nodeID, OperationType opType) throws IOException{
     synchronized (datanodeMap) {
       DatanodeDescriptor d;
       try {
@@ -311,7 +315,7 @@ public class DatanodeManager {
       if (d != null && isDatanodeDead(d)) {
         NameNode.stateChangeLog.info(
                 "BLOCK* removeDeadDatanode: lost heartbeat from " + d.getName());
-        removeDatanode(d);
+        removeDatanode(d, opType);
       }
     }
   }
@@ -481,11 +485,11 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr)
-          throws IOException, PersistanceException {
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr, OperationType opType)
+          throws IOException{
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg, ipAddr)) {
-      startDecommission(nodeReg);
+      startDecommission(nodeReg, opType);
     }
   }
 
@@ -495,11 +499,11 @@ public class DatanodeManager {
    *
    * @throws IOException
    */
-  boolean checkDecommissionState(DatanodeDescriptor node) throws IOException, PersistanceException {
+  boolean checkDecommissionState(DatanodeDescriptor node, OperationType opType) throws IOException{
     // Check to see if all blocks in this decommissioned
     // node has reached their target replication factor.
     if (node.isDecommissionInProgress()) {
-      if (!blockManager.isReplicationInProgress(node)) {
+      if (!blockManager.isReplicationInProgress(node, opType)) {
         node.setDecommissioned();
         LOG.info("Decommission complete for node " + node.getName());
       }
@@ -510,7 +514,7 @@ public class DatanodeManager {
   /**
    * Start decommissioning the specified datanode.
    */
-  private void startDecommission(DatanodeDescriptor node) throws IOException, PersistanceException {
+  private void startDecommission(DatanodeDescriptor node, OperationType opType) throws IOException{
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName() + " with "
               + node.numBlocks() + " blocks.");
@@ -518,18 +522,18 @@ public class DatanodeManager {
       node.decommissioningStatus.setStartTime(now());
 
       // all the blocks that reside on this node have to be replicated.
-      checkDecommissionState(node);
+      checkDecommissionState(node, opType);
     }
   }
 
   /**
    * Stop decommissioning the specified datanodes.
    */
-  void stopDecommission(DatanodeDescriptor node) throws IOException, PersistanceException {
+  void stopDecommission(DatanodeDescriptor node, OperationType opType) throws IOException{
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
-      blockManager.processOverReplicatedBlocksOnReCommission(node);
+      blockManager.processOverReplicatedBlocksOnReCommission(node, opType);
     }
   }
 
@@ -553,7 +557,7 @@ public class DatanodeManager {
   }
 
   public void registerDatanode(DatanodeRegistration nodeReg,
-          boolean transactional) throws IOException, PersistanceException {
+          boolean transactional, OperationType opType) throws IOException{
     String dnAddress = Server.getRemoteAddress();
     if (dnAddress == null) {
       // Mostly called inside an RPC.
@@ -633,7 +637,7 @@ public class DatanodeManager {
 
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS, dnAddress);
+      checkDecommissioning(nodeS, dnAddress, opType);
 
       return;
     }
@@ -653,7 +657,7 @@ public class DatanodeManager {
     DatanodeDescriptor nodeDescr = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr, dnAddress);
+    checkDecommissioning(nodeDescr, dnAddress, opType);
 
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
@@ -669,16 +673,13 @@ public class DatanodeManager {
   public void refreshNodes(final Configuration conf) throws IOException {
     namesystem.checkSuperuserPrivilege();
     refreshHostsReader(conf);
-    refreshNodesHandler.handleWithWriteLock(namesystem);
-  }
-  TransactionalRequestHandler refreshNodesHandler = new TransactionalRequestHandler(OperationType.REFRESH_NODES) {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      refreshDatanodes();
-      return null;
+    namesystem.writeLock();
+    try {
+      refreshDatanodes(OperationType.REFRESH_NODES);
+    } finally {
+      namesystem.writeUnlock();
     }
-  };
+  }
 
   /**
    * Reread include/exclude files.
@@ -699,16 +700,16 @@ public class DatanodeManager {
    * --> mark AdminState as decommissioned. 3. Added to exclude --> start
    * decommission. 4. Removed from exclude --> stop decommission.
    */
-  private void refreshDatanodes() throws IOException, PersistanceException {
+  private void refreshDatanodes(OperationType opType) throws IOException{
     for (DatanodeDescriptor node : datanodeMap.values()) {
       // Check if not include.
       if (!inHostsList(node, null)) {
         node.setDisallowed(true); // case 2.
       } else {
         if (inExcludedHostsList(node, null)) {
-          startDecommission(node); // case 3.
+          startDecommission(node, opType); // case 3.
         } else {
-          stopDecommission(node); // case 4.
+          stopDecommission(node, opType); // case 4.
         }
       }
     }
@@ -920,7 +921,7 @@ public class DatanodeManager {
           cmds.add(new BlockCommand(DatanodeProtocol.DNA_INVALIDATE,
                   blockPoolId, blks));
         }
-        
+
         //check pending replication
         List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
                 maxTransfers);

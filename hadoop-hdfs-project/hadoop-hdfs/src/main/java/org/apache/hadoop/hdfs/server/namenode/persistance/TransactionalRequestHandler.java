@@ -20,7 +20,7 @@ public abstract class TransactionalRequestHandler {
     INITIALIZE, ACTIVATE, META_SAVE, SET_PERMISSION, SET_OWNER,
     GET_BLOCK_LOCATIONS, GET_STATUS, CONCAT, SET_TIMES, CREATE_SYM_LINK, GET_PREFERRED_BLOCK_SIZE,
     SET_REPLICATION, START_FILE, RECOVER_LEASE, APPEND_FILE, GET_ADDITIONAL_BLOCK,
-    GET_ADDITIONAL_DATANODE, ABANDON_BLOCK, COMPLETE_FILE, RENAME_TO, RENAME_TO2, 
+    GET_ADDITIONAL_DATANODE, ABANDON_BLOCK, COMPLETE_FILE, RENAME_TO, RENAME_TO2,
     DELETE, GET_FILE_INFO, MKDIRS, GET_CONTENT_SUMMARY, SET_QUOTA,
     FSYNC, COMMIT_BLOCK_SYNCHRONIZATION, RENEW_LEASE, GET_LISTING, REGISTER_DATANODE,
     HANDLE_HEARTBEAT, GET_MISSING_BLOCKS_COUNT, SAVE_NAMESPACE, SAFE_MODE_MONITOR,
@@ -29,7 +29,7 @@ public abstract class TransactionalRequestHandler {
     GET_DELEGATION_TOKEN, RENEW_DELEGATION_TOKEN, CANCEL_DELEGATION_TOKEN,
     GET_SAFE_MODE, GET_NUMBER_OF_MISSING_BLOCKS, GET_PENDING_DELETION_BLOCKS_COUNT, GET_EXCESS_BLOCKS_COUNT,
     //BlockManager
-    FIND_AND_MARK_BLOCKS_AS_CORRUPT, PREPARE_PROCESS_REPORT, PROCESS_FIRST_BLOCK_REPORT, PROCESS_REPORT, AFTER_PROCESS_REPORT, 
+    FIND_AND_MARK_BLOCKS_AS_CORRUPT, PREPARE_PROCESS_REPORT, PROCESS_FIRST_BLOCK_REPORT, PROCESS_REPORT, AFTER_PROCESS_REPORT,
     BLOCK_RECEIVED_AND_DELETED,
     REPLICATION_MONITOR,
     // DatanodeManager
@@ -39,7 +39,7 @@ public abstract class TransactionalRequestHandler {
     //HeartbeatManager
     HEARTBEAT_MONITOR,
     //LeaseManager
-    LEASE_MANAGER_MONITOR,
+    PREPARE_LEASE_MANAGER_MONITOR, LEASE_MANAGER_MONITOR,
     //NamenodeJspHElper
     GET_SAFE_MODE_TEXT, GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
     TO_XML_CORRUPT_BLOCK_INFO,
@@ -90,7 +90,7 @@ public abstract class TransactionalRequestHandler {
     TEST_NODE_COUNT,;
   }
   private static Log log = LogFactory.getLog(TransactionalRequestHandler.class);
-  private ThreadLocal<Object[]> params = new ThreadLocal<Object[]>();
+  private Object[] params = null;
   public static final int RETRY_COUNT = 1;
   private OperationType opType;
 
@@ -183,98 +183,12 @@ public abstract class TransactionalRequestHandler {
 
   public abstract Object performTask() throws PersistanceException, IOException;
 
-  private void checkParamsForThread() {
-    if (params.get() == null) {
-      Object[] prmtrs = new Object[8];
-      params.set(prmtrs);
-    }
-  }
-
-  public Object getParam1() {
-    checkParamsForThread();
-    return params.get()[0];
-  }
-
-  public TransactionalRequestHandler setParam1(Object param1) {
-    checkParamsForThread();
-    this.params.get()[0] = param1;
+  public TransactionalRequestHandler setParams(Object... params) {
+    this.params = params;
     return this;
   }
 
-  public Object getParam2() {
-    checkParamsForThread();
-    return params.get()[1];
-  }
-
-  public TransactionalRequestHandler setParam2(Object param2) {
-    checkParamsForThread();
-    this.params.get()[1] = param2;
-    return this;
-  }
-
-  public Object getParam3() {
-    checkParamsForThread();
-    return params.get()[2];
-  }
-
-  public TransactionalRequestHandler setParam3(Object param3) {
-    checkParamsForThread();
-    this.params.get()[2] = param3;
-    return this;
-  }
-
-  public Object getParam4() {
-    checkParamsForThread();
-    return params.get()[3];
-  }
-
-  public TransactionalRequestHandler setParam4(Object param4) {
-    checkParamsForThread();
-    this.params.get()[3] = param4;
-    return this;
-  }
-
-  public Object getParam5() {
-    checkParamsForThread();
-    return params.get()[4];
-  }
-
-  public TransactionalRequestHandler setParam5(Object param5) {
-    checkParamsForThread();
-    this.params.get()[4] = param5;
-    return this;
-  }
-
-  public Object getParam6() {
-    checkParamsForThread();
-    return params.get()[5];
-  }
-
-  public TransactionalRequestHandler setParam6(Object param6) {
-    checkParamsForThread();
-    this.params.get()[5] = param6;
-    return this;
-  }
-
-  public TransactionalRequestHandler setParam7(Object param7) {
-    checkParamsForThread();
-    this.params.get()[6] = param7;
-    return this;
-  }
-
-  public Object getParam7() {
-    checkParamsForThread();
-    return params.get()[6];
-  }
-
-  public TransactionalRequestHandler setParam8(Object param8) {
-    checkParamsForThread();
-    this.params.get()[7] = param8;
-    return this;
-  }
-
-  public Object getParam8() {
-    checkParamsForThread();
-    return params.get()[7];
+  public Object[] getParams() {
+    return this.params;
   }
 }

@@ -1402,11 +1402,11 @@ public class MiniDFSCluster {
    */
   public boolean isNameNodeUp(int nnIndex) {
     try {
-      NameNode nameNode = nameNodes[nnIndex].nameNode;
+      final NameNode nameNode = nameNodes[nnIndex].nameNode;
       if (nameNode == null) {
         return false;
       }
-      long[] sizes;
+      final long[] sizes;
       try {
         sizes = nameNode.getRpcServer().getStats();
       } catch (IOException ioe) {
@@ -1416,24 +1416,22 @@ public class MiniDFSCluster {
                 + StringUtils.stringifyException(ioe));
       }
       synchronized (this) {
-        return (Boolean) isNameNodeUpHandler.setParam1(nameNode).setParam2(sizes).handle();
+        TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler(OperationType.IS_NAMENODE_UP) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            boolean isUp = false;
+            isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
+            return isUp;
+          }
+        };
+        return (Boolean) isNameNodeUpHandler.handle();
       }
     } catch (IOException ex) {
       LOG.error(ex);
       return false;
     }
   }
-  TransactionalRequestHandler isNameNodeUpHandler = new TransactionalRequestHandler(OperationType.IS_NAMENODE_UP) {
-
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      NameNode nameNode = (NameNode) getParam1();
-      long[] sizes = (long[]) getParam2();
-      boolean isUp = false;
-      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
-      return isUp;
-    }
-  };
 
   /**
    * Returns true if all the NameNodes are running and is out of Safe Mode.

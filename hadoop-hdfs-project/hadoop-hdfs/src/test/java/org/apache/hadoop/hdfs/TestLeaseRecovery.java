@@ -142,10 +142,10 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
-          MiniDFSCluster cluster = (MiniDFSCluster) getParam1();
+          MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
           return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
         }
-      }.setParam1(cluster);
+      }.setParams(cluster);
       
       int count = (Integer) requestHandler.handle();
     

@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -65,20 +63,19 @@ import org.znerd.xmlenc.XMLOutputter;
 
 class NamenodeJspHelper {
 
-  static String getSafeModeText(FSNamesystem fsn) throws IOException {
-    return (String) getSafeModeTextHandler.setParam1(fsn).handle();
-  }
-  static TransactionalRequestHandler getSafeModeTextHandler = new TransactionalRequestHandler(OperationType.GET_SAFE_MODE_TEXT) {
+  static String getSafeModeText(final FSNamesystem fsn) throws IOException {
+    TransactionalRequestHandler getSafeModeTextHandler = new TransactionalRequestHandler(OperationType.GET_SAFE_MODE_TEXT) {
 
-    @Override
-    public Object performTask() throws PersistanceException, IOException {
-      FSNamesystem fsn = (FSNamesystem) getParam1();
-      if (!fsn.isInSafeMode()) {
-        return "";
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        if (!fsn.isInSafeMode()) {
+          return "";
+        }
+        return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
       }
-      return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
-    }
-  };
+    };
+    return (String) getSafeModeTextHandler.handle();
+  }
 
   /**
    * returns security mode of the cluster (namenode)
@@ -247,7 +244,7 @@ class NamenodeJspHelper {
     void generateHealthReport(JspWriter out, NameNode nn,
             HttpServletRequest request) throws IOException {
 
-      FSNamesystem fsn = nn.getNamesystem();
+      final FSNamesystem fsn = nn.getNamesystem();
       final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
       final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
       final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
@@ -327,7 +324,14 @@ class NamenodeJspHelper {
 
       long bpUsed = fsnStats[6];
       float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-      int underReplicatedNotMissingBlocks = (Integer) generateHealthReportHanlder.setParam1(fsn).handle();
+      TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler(OperationType.GENERATE_HEALTH_REPORT) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          return fsn.getBlockManager().getUnderReplicatedNotMissingBlocks();
+        }
+      };
+      int underReplicatedNotMissingBlocks = (Integer) generateHealthReportHanlder.handle();
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
               + "Configured Capacity" + colTxt() + ":" + colTxt()
               + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
@@ -372,14 +376,6 @@ class NamenodeJspHelper {
         out.print("There are no datanodes in the cluster");
       }
     }
-    TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler(OperationType.GENERATE_HEALTH_REPORT) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        FSNamesystem fsn = (FSNamesystem) getParam1();
-        return fsn.getBlockManager().getUnderReplicatedNotMissingBlocks();
-      }
-    };
   }
 
   static String getDelegationToken(final NamenodeProtocols nn,
@@ -762,110 +758,109 @@ class NamenodeJspHelper {
       }
     }
 
-    public void toXML(XMLOutputter doc) throws IOException {
-      toXMLHandler.setParam1(doc).handle();
-    }
-    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_BLOCK_INFO) {
+    public void toXML(final XMLOutputter doc) throws IOException {
+      TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_BLOCK_INFO) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        XMLOutputter doc = (XMLOutputter) getParam1();
-        doc.startTag("block_info");
-        if (block == null) {
-          doc.startTag("error");
-          doc.pcdata("blockId must be a Long");
-          doc.endTag();
-        } else {
-          doc.startTag("block_id");
-          doc.pcdata("" + block.getBlockId());
-          doc.endTag();
-
-          doc.startTag("block_name");
-          doc.pcdata(block.getBlockName());
-          doc.endTag();
-
-          if (inode != null) {
-            doc.startTag("file");
-
-            doc.startTag("local_name");
-            doc.pcdata(inode.getName());
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          doc.startTag("block_info");
+          if (block == null) {
+            doc.startTag("error");
+            doc.pcdata("blockId must be a Long");
+            doc.endTag();
+          } else {
+            doc.startTag("block_id");
+            doc.pcdata("" + block.getBlockId());
             doc.endTag();
 
-            doc.startTag("local_directory");
-            doc.pcdata(inode.getLocalParentDir());
+            doc.startTag("block_name");
+            doc.pcdata(block.getBlockName());
             doc.endTag();
 
-            doc.startTag("user_name");
-            doc.pcdata(inode.getUserName());
-            doc.endTag();
+            if (inode != null) {
+              doc.startTag("file");
 
-            doc.startTag("group_name");
-            doc.pcdata(inode.getGroupName());
-            doc.endTag();
+              doc.startTag("local_name");
+              doc.pcdata(inode.getName());
+              doc.endTag();
 
-            doc.startTag("is_directory");
-            doc.pcdata("" + inode.isDirectory());
-            doc.endTag();
+              doc.startTag("local_directory");
+              doc.pcdata(inode.getLocalParentDir());
+              doc.endTag();
 
-            doc.startTag("access_time");
-            doc.pcdata("" + inode.getAccessTime());
-            doc.endTag();
+              doc.startTag("user_name");
+              doc.pcdata(inode.getUserName());
+              doc.endTag();
 
-            doc.startTag("is_under_construction");
-            doc.pcdata("" + inode.isUnderConstruction());
-            doc.endTag();
+              doc.startTag("group_name");
+              doc.pcdata(inode.getGroupName());
+              doc.endTag();
 
-            doc.startTag("ds_quota");
-            doc.pcdata("" + inode.getDsQuota());
-            doc.endTag();
+              doc.startTag("is_directory");
+              doc.pcdata("" + inode.isDirectory());
+              doc.endTag();
 
-            doc.startTag("permission_status");
-            doc.pcdata(inode.getPermissionStatus().toString());
-            doc.endTag();
+              doc.startTag("access_time");
+              doc.pcdata("" + inode.getAccessTime());
+              doc.endTag();
 
-            doc.startTag("replication");
-            doc.pcdata("" + inode.getReplication());
-            doc.endTag();
+              doc.startTag("is_under_construction");
+              doc.pcdata("" + inode.isUnderConstruction());
+              doc.endTag();
 
-            doc.startTag("disk_space_consumed");
-            doc.pcdata("" + inode.diskspaceConsumed());
-            doc.endTag();
+              doc.startTag("ds_quota");
+              doc.pcdata("" + inode.getDsQuota());
+              doc.endTag();
 
-            doc.startTag("preferred_block_size");
-            doc.pcdata("" + inode.getPreferredBlockSize());
-            doc.endTag();
+              doc.startTag("permission_status");
+              doc.pcdata(inode.getPermissionStatus().toString());
+              doc.endTag();
 
-            doc.endTag(); // </file>
+              doc.startTag("replication");
+              doc.pcdata("" + inode.getReplication());
+              doc.endTag();
+
+              doc.startTag("disk_space_consumed");
+              doc.pcdata("" + inode.diskspaceConsumed());
+              doc.endTag();
+
+              doc.startTag("preferred_block_size");
+              doc.pcdata("" + inode.getPreferredBlockSize());
+              doc.endTag();
+
+              doc.endTag(); // </file>
+            }
+
+            doc.startTag("replicas");
+            List<DatanodeDescriptor> dataNodes = blockManager.getDatanodes(blockManager.getStoredBlock(block));
+
+            for (DatanodeDescriptor dd : dataNodes) {
+
+              doc.startTag("replica");
+              doc.startTag("host_name");
+              doc.pcdata(dd.getHostName());
+              doc.endTag();
+
+              boolean isCorrupt = blockManager.getCorruptReplicaBlockIds(0,
+                      block.getBlockId()) != null;
+
+              doc.startTag("is_corrupt");
+              doc.pcdata("" + isCorrupt);
+              doc.endTag();
+
+              doc.endTag(); // </replica>
+            }
+            doc.endTag(); // </replicas>
+
           }
 
-          doc.startTag("replicas");
-          List<DatanodeDescriptor> dataNodes = blockManager.getDatanodes(blockManager.getStoredBlock(block));
+          doc.endTag(); // </block_info>
 
-          for (DatanodeDescriptor dd : dataNodes) {
-
-            doc.startTag("replica");
-            doc.startTag("host_name");
-            doc.pcdata(dd.getHostName());
-            doc.endTag();
-
-            boolean isCorrupt = blockManager.getCorruptReplicaBlockIds(0,
-                    block.getBlockId()) != null;
-
-            doc.startTag("is_corrupt");
-            doc.pcdata("" + isCorrupt);
-            doc.endTag();
-
-            doc.endTag(); // </replica>
-          }
-          doc.endTag(); // </replicas>
-
+          return null;
         }
-
-        doc.endTag(); // </block_info>
-
-        return null;
-      }
-    };
+      };
+      toXMLHandler.handle();
+    }
   }
 
   // utility class used in corrupt_replicas_xml.jsp
@@ -884,54 +879,53 @@ class NamenodeJspHelper {
       this.startingBlockId = startingBlockId;
     }
 
-    public void toXML(XMLOutputter doc) throws IOException {
-      toXMLHandler.setParam1(doc).handle();
-    }
-    TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_CORRUPT_BLOCK_INFO) {
+    public void toXML(final XMLOutputter doc) throws IOException {
+      TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_CORRUPT_BLOCK_INFO) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        XMLOutputter doc = (XMLOutputter) getParam1();
-        doc.startTag("corrupt_block_info");
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          doc.startTag("corrupt_block_info");
 
-        if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
-          doc.startTag("error");
-          doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
-          doc.endTag();
-        }
-
-        doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
-        doc.pcdata("" + conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
-                DFSConfigKeys.DFS_REPLICATION_DEFAULT));
-        doc.endTag();
-
-        doc.startTag("num_missing_blocks");
-        doc.pcdata("" + blockManager.getMissingBlocksCount());
-        doc.endTag();
-
-        doc.startTag("num_corrupt_replica_blocks");
-        doc.pcdata("" + blockManager.getCorruptReplicaBlocksCount());
-        doc.endTag();
-
-        doc.startTag("corrupt_replica_block_ids");
-        final Long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
-                numCorruptBlocks, startingBlockId);
-        if (corruptBlockIds != null) {
-          for (Long blockId : corruptBlockIds) {
-            doc.startTag("block_id");
-            doc.pcdata("" + blockId);
+          if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
+            doc.startTag("error");
+            doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
             doc.endTag();
           }
+
+          doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
+          doc.pcdata("" + conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+                  DFSConfigKeys.DFS_REPLICATION_DEFAULT));
+          doc.endTag();
+
+          doc.startTag("num_missing_blocks");
+          doc.pcdata("" + blockManager.getMissingBlocksCount());
+          doc.endTag();
+
+          doc.startTag("num_corrupt_replica_blocks");
+          doc.pcdata("" + blockManager.getCorruptReplicaBlocksCount());
+          doc.endTag();
+
+          doc.startTag("corrupt_replica_block_ids");
+          final Long[] corruptBlockIds = blockManager.getCorruptReplicaBlockIds(
+                  numCorruptBlocks, startingBlockId);
+          if (corruptBlockIds != null) {
+            for (Long blockId : corruptBlockIds) {
+              doc.startTag("block_id");
+              doc.pcdata("" + blockId);
+              doc.endTag();
+            }
+          }
+
+          doc.endTag(); // </corrupt_replica_block_ids>
+
+          doc.endTag(); // </corrupt_block_info>
+
+          doc.getWriter().flush();
+
+          return null;
         }
-
-        doc.endTag(); // </corrupt_replica_block_ids>
-
-        doc.endTag(); // </corrupt_block_info>
-
-        doc.getWriter().flush();
-
-        return null;
-      }
-    };
+      };
+      toXMLHandler.handle();
+    }
   }
 }

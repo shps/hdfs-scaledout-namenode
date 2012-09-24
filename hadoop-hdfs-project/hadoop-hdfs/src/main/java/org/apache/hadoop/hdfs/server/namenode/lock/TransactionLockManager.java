@@ -354,13 +354,16 @@ public class TransactionLockManager {
         break;
       case ONLY_PATH_WITH_UNKNOWN_HEAD:
         for (int i = 0; i < params.length; i++) {
-          // supports for only one given path
-          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, params[0], rootDir);
+          String fullPath = params[i];
+          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir);
           int resolvedSize = resolvedInodes.size();
           String existingPath = buildPath(resolvedInodes);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
           resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir);
           if (resolvedSize == resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
+            // lock any remained path component if added between the two transactions
+            LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, resolvedInodes.getLast(), fullPath, existingPath);
+            resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.getLast();
           }
         }

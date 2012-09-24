@@ -105,17 +105,9 @@ public class TestBlockManager {
   }
 
   private void removeNode(DatanodeDescriptor deadNode) throws IOException {
-    new TransactionalRequestHandler(OperationType.REMOVE_NODE) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        DatanodeDescriptor deadNode = (DatanodeDescriptor) getParam1();
-        NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
-        cluster.remove(deadNode);
-        bm.removeBlocksAssociatedTo(deadNode);
-        return null;
-      }
-    }.setParam1(deadNode).handle();
+    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+    cluster.remove(deadNode);
+    bm.removeBlocksAssociatedTo(deadNode, OperationType.REMOVE_NODE);
   }
 
   /**
