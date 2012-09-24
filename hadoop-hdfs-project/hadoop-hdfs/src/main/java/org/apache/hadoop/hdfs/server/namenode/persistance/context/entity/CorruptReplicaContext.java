@@ -22,6 +22,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     protected Map<String, CorruptReplica> removedCorruptReplicas = new HashMap<String, CorruptReplica>();
     protected boolean allCorruptBlocksRead = false;
     private CorruptReplicaDataAccess dataAccess;
+    private int nullCount = 0;
 
     public CorruptReplicaContext(CorruptReplicaDataAccess dataAccess) {
         this.dataAccess = dataAccess;
@@ -31,6 +32,9 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     public void add(CorruptReplica entity) throws PersistanceException {
         if (removedCorruptReplicas.get(entity.persistanceKey()) != null) {
             throw new TransactionContextException("Removed corrupt replica passed to be persisted");
+        }
+        if (corruptReplicas.containsKey(entity.persistanceKey()) && corruptReplicas.get(entity.persistanceKey()) == null) {
+            nullCount--;
         }
         corruptReplicas.put(entity.persistanceKey(), entity);
         newCorruptReplicas.put(entity.persistanceKey(), entity);
@@ -46,6 +50,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 //    modifiedCorruptReplicas.clear();
         removedCorruptReplicas.clear();
         allCorruptBlocksRead = false;
+        nullCount = 0;
     }
 
     @Override
@@ -56,7 +61,7 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
             case All:
                 if (allCorruptBlocksRead) {
                     log("count-all-corrupts", CacheHitState.HIT);
-                    return corruptReplicas.size();
+                    return corruptReplicas.size() - nullCount;
                 } else {
                     log("count-all-corrupts", CacheHitState.LOSS);
                     return dataAccess.countAll() + newCorruptReplicas.size() - removedCorruptReplicas.size();
@@ -82,6 +87,9 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
                 } else {
                     log("find-corrupt-by-pk", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId), "sid", storageId});
                     result = dataAccess.findByPk(blockId, storageId);
+                    if (result == null) {
+                        nullCount++;
+                    }
                     corruptReplicas.put(searchKey, result);
                 }
                 return result;
@@ -97,11 +105,17 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
             case All:
                 if (allCorruptBlocksRead) {
                     log("find-all-corrupts", CacheHitState.HIT);
+                } else {
+                    log("find-all-corrupts", CacheHitState.LOSS);
+                    syncCorruptReplicaInstances(dataAccess.findAll());
+                    allCorruptBlocksRead = true;
                 }
-                log("find-all-corrupts", CacheHitState.LOSS);
-                syncCorruptReplicaInstances(dataAccess.findAll());
-                allCorruptBlocksRead = true;
-                return corruptReplicas.values();
+                List<CorruptReplica> list = new ArrayList<CorruptReplica>();
+                for (CorruptReplica cr : corruptReplicas.values()) {
+                    if(cr != null)
+                        list.add(cr);
+                }
+                return list;
             case ByBlockId:
                 Long blockId = (Long) params[0];
                 if (blockCorruptReplicas.containsKey(blockId)) {
@@ -166,6 +180,10 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
                 continue;
             }
             if (corruptReplicas.containsKey(replica.persistanceKey())) {
+                if(corruptReplicas.get(replica.persistanceKey()) == null) {
+                    corruptReplicas.put(replica.persistanceKey(), replica);
+                    nullCount--;
+                }
                 finalList.add(corruptReplicas.get(replica.persistanceKey()));
             } else {
                 corruptReplicas.put(replica.persistanceKey(), replica);

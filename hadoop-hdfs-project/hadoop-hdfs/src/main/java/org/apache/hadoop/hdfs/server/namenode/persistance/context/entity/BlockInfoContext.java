@@ -25,6 +25,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
     protected Map<Long, List<BlockInfo>> inodeBlocks = new HashMap<Long, List<BlockInfo>>();
     protected boolean allBlocksRead = false;
     BlockInfoDataAccess dataAccess;
+    private int nullCount = 0;
 
     public BlockInfoContext(BlockInfoDataAccess dataAccess) {
         this.dataAccess = dataAccess;
@@ -35,6 +36,8 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         if (removedBlocks.containsKey(block.getBlockId())) {
             throw new TransactionContextException("Removed block passed to be persisted");
         }
+        if(blocks.containsKey(block.getBlockId()) && blocks.get(block.getBlockId()) == null)
+            nullCount--;
         blocks.put(block.getBlockId(), block);
         newBlocks.put(block.getBlockId(), block);
         log("added-blockinfo", CacheHitState.NA, new String[]{"bid", Long.toString(block.getBlockId()),
@@ -49,6 +52,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         removedBlocks.clear();
         inodeBlocks.clear();
         allBlocksRead = false;
+        nullCount = 0;
     }
 
     @Override
@@ -58,7 +62,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
             case All:
                 if (allBlocksRead) {
                     log("Count-all-blocks", CacheHitState.HIT);
-                    return blocks.size();
+                    return blocks.size() - nullCount;
                 } else {
                     log("Count-all-blocks", CacheHitState.LOSS);
                     return dataAccess.countAll();
@@ -78,6 +82,8 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
                 if (result == null) {
                     log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
                     result = dataAccess.findById(id);
+                    if (result == null)
+                        nullCount++;
                     blocks.put(id, result);
                 } else {
                     log("find-block-by-bid", CacheHitState.HIT, new String[]{"bid", Long.toString(id)});
@@ -112,7 +118,11 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
             case All:
                 if (allBlocksRead) {
                     log("find-all-blocks", CacheHitState.HIT);
-                    return new ArrayList<BlockInfo>(blocks.values());
+                    List<BlockInfo> list = new ArrayList<BlockInfo>();
+                    for(BlockInfo info : blocks.values())
+                        if(info != null)
+                            list.add(info);
+                    return list;
                 } else {
                     log("find-all-blocks", CacheHitState.LOSS);
                     result = dataAccess.findAllBlocks();
@@ -168,6 +178,10 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
 
         for (BlockInfo blockInfo : newBlocks) {
             if (blocks.containsKey(blockInfo.getBlockId()) && !removedBlocks.containsKey(blockInfo.getBlockId())) {
+                if(blocks.get(blockInfo.getBlockId()) == null) {
+                    blocks.put(blockInfo.getBlockId(), blockInfo);
+                    nullCount--;
+                }
                 finalList.add(blocks.get(blockInfo.getBlockId()));
             } else {
                 blocks.put(blockInfo.getBlockId(), blockInfo);

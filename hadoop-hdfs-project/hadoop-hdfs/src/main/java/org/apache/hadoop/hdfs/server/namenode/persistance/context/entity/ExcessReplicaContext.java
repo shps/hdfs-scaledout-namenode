@@ -21,7 +21,8 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
     private Map<ExcessReplica, ExcessReplica> newExReplica = new HashMap<ExcessReplica, ExcessReplica>();
     private Map<ExcessReplica, ExcessReplica> removedExReplica = new HashMap<ExcessReplica, ExcessReplica>();
     private ExcessReplicaDataAccess dataAccess;
-
+    private int nullCount = 0;
+    
     public ExcessReplicaContext(ExcessReplicaDataAccess dataAccess) {
         this.dataAccess = dataAccess;
     }
@@ -32,6 +33,9 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
             throw new TransactionContextException("Removed excess-replica passed to be persisted");
         }
 
+        if (exReplicas.containsKey(exReplica) && exReplicas.get(exReplica) == null)
+            nullCount--;
+        
         exReplicas.put(exReplica, exReplica);
         newExReplica.put(exReplica, exReplica);
         log("added-excess", CacheHitState.NA,
@@ -45,6 +49,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
         blockIdToExReplica.clear();
         newExReplica.clear();
         removedExReplica.clear();
+        nullCount = 0;
     }
 
     @Override
@@ -53,7 +58,7 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
         switch (eCounter) {
             case All:
                 log("count-all-excess");
-                return dataAccess.countAll() + newExReplica.size() - removedExReplica.size();
+                return dataAccess.countAll() + newExReplica.size() - removedExReplica.size() - nullCount;
         }
 
         throw new RuntimeException(UNSUPPORTED_COUNTER);
@@ -82,6 +87,8 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
                     log("find-excess-by-pk", CacheHitState.LOSS,
                             new String[]{"bid", Long.toString(blockId), "sid", storageId});
                     result = dataAccess.findByPkey(params);
+                    if (result == null)
+                        nullCount++;
                     this.exReplicas.put(result, result);
                 }
                 return result;
@@ -154,6 +161,10 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
         for (ExcessReplica replica : list) {
             if (!removedExReplica.containsKey(replica)) {
                 if (exReplicas.containsKey(replica)) {
+                    if (exReplicas.get(replica) == null) {
+                        exReplicas.put(replica, replica);
+                        nullCount--;
+                    }
                     replicaSet.add(exReplicas.get(replica));
                 } else {
                     exReplicas.put(replica, replica);

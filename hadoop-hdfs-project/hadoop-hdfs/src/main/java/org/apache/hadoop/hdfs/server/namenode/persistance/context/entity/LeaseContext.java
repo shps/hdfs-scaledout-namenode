@@ -24,6 +24,8 @@ public class LeaseContext extends EntityContext<Lease> {
     private Map<Lease, Lease> modifiedLeases = new HashMap<Lease, Lease>();
     private Map<Lease, Lease> removedLeases = new HashMap<Lease, Lease>();
     private boolean allLeasesRead = false;
+    private int byHoldernullCount = 0;
+    private int byIdNullCount = 0;
     private LeaseDataAccess dataAccess;
 
     public LeaseContext(LeaseDataAccess dataAccess) {
@@ -36,6 +38,13 @@ public class LeaseContext extends EntityContext<Lease> {
             throw new TransactionContextException("Removed lease passed to be persisted");
         }
 
+        if (leases.containsKey(lease.getHolder()) && leases.get(lease.getHolder()) == null) {
+            byHoldernullCount--;
+        }
+
+        if (idToLease.containsKey(lease.getHolderID()) && idToLease.get(lease.getHolderID()) == null) {
+            byIdNullCount--;
+        }
         newLeases.put(lease, lease);
         leases.put(lease.getHolder(), lease);
         idToLease.put(lease.getHolderID(), lease);
@@ -50,6 +59,8 @@ public class LeaseContext extends EntityContext<Lease> {
         removedLeases.clear();
         leases.clear();
         allLeasesRead = false;
+        byHoldernullCount = 0;
+        byIdNullCount = 0;
     }
 
     @Override
@@ -57,8 +68,13 @@ public class LeaseContext extends EntityContext<Lease> {
         Lease.Counter lCounter = (Lease.Counter) counter;
         switch (lCounter) {
             case All:
-                log("count-all-leases");
-                return dataAccess.countAll();
+                if (allLeasesRead) {
+                    log("count-all-leases", CacheHitState.HIT);
+                    return leases.size() - byHoldernullCount;
+                } else {
+                    log("count-all-leases", CacheHitState.LOSS);
+                    return dataAccess.countAll();
+                }
         }
 
         throw new RuntimeException(UNSUPPORTED_COUNTER);
@@ -77,6 +93,11 @@ public class LeaseContext extends EntityContext<Lease> {
                 } else {
                     log("find-lease-by-pk", CacheHitState.LOSS, new String[]{"holder", holder});
                     result = dataAccess.findByPKey(holder);
+                    if (result == null) {
+                        byHoldernullCount++;
+                    } else {
+                        idToLease.put(result.getHolderID(), result);
+                    }
                     leases.put(holder, result);
                 }
                 return result;
@@ -88,8 +109,11 @@ public class LeaseContext extends EntityContext<Lease> {
                 } else {
                     log("find-lease-by-holderid", CacheHitState.LOSS, new String[]{"hid", Integer.toString(holderId)});
                     result = dataAccess.findByHolderId(holderId);
-                    if (result != null)
+                    if (result == null) {
+                        byIdNullCount++;
+                    } else {
                         leases.put(result.getHolder(), result);
+                    }
                     idToLease.put(holderId, result);
                 }
                 return result;
@@ -111,7 +135,12 @@ public class LeaseContext extends EntityContext<Lease> {
             case All:
                 if (allLeasesRead) {
                     log("find-all-leases", CacheHitState.HIT);
-                    result = new TreeSet<Lease>(this.leases.values());
+                    result = new TreeSet<Lease>();
+                    for (Lease l : leases.values()) {
+                        if (l != null) {
+                            result.add(l);
+                        }
+                    }
                 } else {
                     log("find-all-leases", CacheHitState.LOSS);
                     result = syncLeaseInstances(dataAccess.findAll());
@@ -161,10 +190,22 @@ public class LeaseContext extends EntityContext<Lease> {
         for (Lease lease : list) {
             if (!removedLeases.containsKey(lease)) {
                 if (leases.containsKey(lease.getHolder())) {
+                    if (leases.get(lease.getHolder()) == null) {
+                        byHoldernullCount--;
+                        leases.put(lease.getHolder(), lease);
+                    }
                     finalSet.add(leases.get(lease.getHolder()));
                 } else {
                     finalSet.add(lease);
                     leases.put(lease.getHolder(), lease);
+                }
+
+                if (idToLease.containsKey(lease.getHolderID())) {
+                    if (idToLease.get(lease.getHolderID()) == null) {
+                        byIdNullCount--;
+                        idToLease.put(lease.getHolderID(), lease);
+                    }
+                } else {
                     idToLease.put(lease.getHolderID(), lease);
                 }
             }

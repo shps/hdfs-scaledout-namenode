@@ -118,7 +118,12 @@ public class LeasePathContext extends EntityContext<LeasePath> {
             case All:
                 if (allLeasePathsRead) {
                     log("find-all-lpaths", CacheHitState.HIT);
-                    result = new TreeSet<LeasePath>(leasePaths.values());
+                    result = new TreeSet<LeasePath>();
+                    for (LeasePath lp : leasePaths.values()) {
+                        if (lp != null) {
+                            result.add(lp);
+                        }
+                    }
                 } else {
                     log("find-all-lpaths", CacheHitState.LOSS);
                     result = syncLeasePathInstances(dataAccess.findAll(), true);
@@ -187,11 +192,20 @@ public class LeasePathContext extends EntityContext<LeasePath> {
 
         for (LeasePath lPath : list) {
             if (!removedLPaths.containsKey(lPath)) {
-                if (this.leasePaths.containsKey(lPath)) {
-                    lPath = this.leasePaths.get(lPath);
+                if (leasePaths.containsKey(lPath)) {
+                    if (leasePaths.get(lPath) == null) {
+                        leasePaths.put(lPath, lPath);
+                    }
+                    lPath = leasePaths.get(lPath);
                 } else {
                     this.leasePaths.put(lPath, lPath);
-                    this.pathToLeasePath.put(lPath.getPath(), lPath);
+                }
+                if (pathToLeasePath.containsKey(lPath.getPath())) {
+                    if (pathToLeasePath.get(lPath.getPath()) == null) {
+                        pathToLeasePath.put(lPath.getPath(), lPath);
+                    }
+                } else {
+                    pathToLeasePath.put(lPath.getPath(), lPath);
                 }
                 finalList.add(lPath);
                 if (allRead) {

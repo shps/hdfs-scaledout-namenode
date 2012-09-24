@@ -174,11 +174,23 @@ public class InodeContext extends EntityContext<INode> {
                 continue;
             }
             if (inodesIdIndex.containsKey(inode.getId())) {
+                if (inodesIdIndex.get(inode.getId()) == null) {
+                    inodesIdIndex.put(inode.getId(), inode);
+                }
                 finalList.add(inodesIdIndex.get(inode.getId()));
             } else {
                 inodesIdIndex.put(inode.getId(), inode);
-                inodesNameParentIndex.put(inode.nameParentKey(), inode);
                 finalList.add(inode);
+            }
+
+            String key = inode.nameParentKey();
+            if (inodesParentIndex.containsKey(key)) {
+                if( inodesParentIndex.get(key) == null) {
+                    inodesNameParentIndex.put(key, inode);
+                }
+                
+            } else {
+                inodesNameParentIndex.put(key, inode);
             }
         }
 

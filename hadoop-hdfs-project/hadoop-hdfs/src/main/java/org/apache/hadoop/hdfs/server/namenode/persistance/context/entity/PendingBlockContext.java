@@ -31,7 +31,7 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
         if (removedPendings.containsKey(pendingBlock.getBlockId())) {
             throw new TransactionContextException("Removed pending-block passed to be persisted");
         }
-
+        
         pendings.put(pendingBlock.getBlockId(), pendingBlock);
         newPendings.put(pendingBlock.getBlockId(), pendingBlock);
         log("added-pending", CacheHitState.NA,
@@ -70,7 +70,11 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
                     syncInstances(dataAccess.findAll());
                     allPendingRead = true;
                 }
-                result = new ArrayList(pendings.values());
+                result = new ArrayList();
+                for (PendingBlockInfo pendingBlockInfo : pendings.values()) {
+                    if(pendingBlockInfo != null)
+                        result.add(pendingBlockInfo);
+                }
                 return result;
         }
 
@@ -145,6 +149,8 @@ public class PendingBlockContext extends EntityContext<PendingBlockInfo> {
         List<PendingBlockInfo> newPBlocks = new ArrayList<PendingBlockInfo>();
         for (PendingBlockInfo p : pendingTables) {
             if (pendings.containsKey(p.getBlockId())) {
+                if(pendings.get(p.getBlockId()) == null)
+                    pendings.put(p.getBlockId(), p);
                 newPBlocks.add(pendings.get(p.getBlockId()));
             } else if (!removedPendings.containsKey(p.getBlockId())) {
                 pendings.put(p.getBlockId(), p);
