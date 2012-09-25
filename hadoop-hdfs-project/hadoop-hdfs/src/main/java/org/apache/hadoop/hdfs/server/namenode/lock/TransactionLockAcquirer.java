@@ -62,14 +62,14 @@ public class TransactionLockAcquirer {
     LinkedList<INode> resolved = new LinkedList<INode>();
     byte[][] fullComps = INode.getPathComponents(fullPath);
     byte[][] prefixComps = INode.getPathComponents(prefix);
-    int[] count = new int[]{prefixComps.length};
+    int[] count = new int[]{prefixComps.length - 1};
     boolean resolveLink = true; // FIXME [H]: This can differ for different operations
     boolean lastComp = (count[0] == fullComps.length - 1);
     lockINode(lock);
     INode[] curInode = new INode[]{baseInode};
     while (count[0] < fullComps.length && curInode[0] != null) {
       lastComp = getNextChild(curInode, fullComps, count, resolved, resolveLink);
-      if (lastComp || !curInode[0].isDirectory()) {
+      if (lastComp) {
         break;
       }
     }
@@ -147,6 +147,8 @@ public class TransactionLockAcquirer {
       }
 
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
+      if (lastComp)
+        break;
     }
 
     return resolvedInodes;

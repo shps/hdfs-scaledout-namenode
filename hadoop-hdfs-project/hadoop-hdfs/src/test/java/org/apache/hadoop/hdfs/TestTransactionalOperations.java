@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,6 +16,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
@@ -23,10 +25,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -302,10 +306,9 @@ public class TestTransactionalOperations {
   }
 
   @Test
-  public void testNormalLockAcquirer() throws IOException, InterruptedException {
+  public void testTransactionLockManager() throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, "1"); // To make the access time percision expired by default it is one hour
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
@@ -622,6 +625,45 @@ public class TestTransactionalOperations {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);
         assert false : ex.getMessage();
       }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  @Test
+  public void testTransactionLockAcquirer() throws IOException, StorageException, UnresolvedPathException, PersistanceException
+  {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      Path p1 = new Path("/ed1/ed2/");
+      Path p2 = new Path("/ed1/ed2/ed3/ed4");
+      dfs.mkdirs(p2, FsPermission.getDefault());
+      assert dfs.exists(p2);
+      
+      EntityManager.begin();
+      // first get write lock on ed2
+      LinkedList<INode> lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE, p1.toString(), 
+              cluster.getNamesystem().getFsDirectory().getRootDir());
+      assert lockedINodes != null;
+      assert lockedINodes.size() == 2; // first two path components
+      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE, 
+              lockedINodes.getLast(), p2.toString(), p1.toString());
+      assert lockedINodes != null && lockedINodes.size() == 2; // the other two
+      EntityManager.commit();
+      
+      EntityManager.begin();
+      // The same thing with write on parent
+      lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, p1.toString(), 
+              cluster.getNamesystem().getFsDirectory().getRootDir());
+      assert lockedINodes != null;
+      assert lockedINodes.size() == 2; // first two path components
+      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, 
+              lockedINodes.getLast(), p2.toString(), p1.toString());
+      assert lockedINodes != null && lockedINodes.size() == 2; // the other two
+      EntityManager.commit();
     } finally {
       cluster.shutdown();
     }
