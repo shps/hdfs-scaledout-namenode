@@ -187,28 +187,29 @@ class HeartbeatManager implements DatanodeStatistics {
     stats.add(node);
   }
 
-  /**
-   * Check if there are any expired heartbeats, and if so, whether any blocks
-   * have to be re-replicated. While removing dead datanodes, make sure that
-   * only one datanode is marked dead at a time within the synchronized section.
-   * Otherwise, a cascading effect causes more datanodes to be declared dead.
-   */
-  void heartbeatCheck() throws IOException{
-    final DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
-    // It's OK to check safe mode w/o taking the lock here, we re-check
-    // for safe mode after taking the lock before removing a datanode.
-    TransactionalRequestHandler safeModeHandler = new TransactionalRequestHandler(OperationType.HEARTBEAT_MONITOR) {
+  TransactionalRequestHandler safeModeHandler = new TransactionalRequestHandler(OperationType.HEARTBEAT_MONITOR) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return namesystem.isInSafeMode();
       }
     };
-    
+  
+  /**
+   * Check if there are any expired heartbeats, and if so, whether any blocks
+   * have to be re-replicated. While removing dead datanodes, make sure that
+   * only one datanode is marked dead at a time within the synchronized section.
+   * Otherwise, a cascading effect causes more datanodes to be declared dead.
+   */
+  void heartbeatCheck() throws IOException {
+    final DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
+    // It's OK to check safe mode w/o taking the lock here, we re-check
+    // for safe mode after taking the lock before removing a datanode.
+
     if ((Boolean) safeModeHandler.handle()) {
       return;
     }
-    
+
     boolean allAlive = false;
     while (!allAlive) {
       // locate the first dead node.

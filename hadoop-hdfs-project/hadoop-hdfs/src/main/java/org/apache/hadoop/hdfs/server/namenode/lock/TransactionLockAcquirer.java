@@ -57,18 +57,19 @@ public class TransactionLockAcquirer {
     return EntityManager.find(finder, param);
   }
 
-  public static LinkedList<INode> acquireLockOnRestOfPath(INodeLockType lock, INode curNode,
+  public static LinkedList<INode> acquireLockOnRestOfPath(INodeLockType lock, INode baseInode,
           String fullPath, String prefix) throws PersistanceException, UnresolvedPathException {
     LinkedList<INode> resolved = new LinkedList<INode>();
     byte[][] fullComps = INode.getPathComponents(fullPath);
     byte[][] prefixComps = INode.getPathComponents(prefix);
-    int[] count = new int[]{prefixComps.length};
+    int[] count = new int[]{prefixComps.length - 1};
     boolean resolveLink = true; // FIXME [H]: This can differ for different operations
     boolean lastComp = (count[0] == fullComps.length - 1);
     lockINode(lock);
-    while (count[0] < fullComps.length && curNode != null) {
-      lastComp = getNextChild(curNode, fullComps, count, resolved, resolveLink);
-      if (lastComp || !curNode.isDirectory()) {
+    INode[] curInode = new INode[]{baseInode};
+    while (count[0] < fullComps.length && curInode[0] != null) {
+      lastComp = getNextChild(curInode, fullComps, count, resolved, resolveLink);
+      if (lastComp) {
         break;
       }
     }
@@ -76,29 +77,35 @@ public class TransactionLockAcquirer {
     return resolved;
   }
 
-  private static boolean getNextChild(INode curNode, byte[][] components, int[] count, LinkedList<INode> resolvedInodes, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
-    curNode = getChildINode(components[count[0] + 1], curNode.getId());
+  private static boolean getNextChild(INode[] curInode, byte[][] components,
+          int[] count, LinkedList<INode> resolvedInodes, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
     boolean lastComp = (count[0] == components.length - 1);
-    if (curNode != null) {
-      resolvedInodes.add(curNode);
-      count[0]++;
-
-      if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
-        final String symPath = constructPath(components, 0, components.length);
-        final String preceding = constructPath(components, 0, count[0]);
-        final String remainder =
-                constructPath(components, count[0] + 1, components.length);
-        final String link = DFSUtil.bytes2String(components[count[0]]);
-        final String target = ((INodeSymlink) curNode).getLinkValue();
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("UnresolvedPathException "
-                  + " path: " + symPath + " preceding: " + preceding
-                  + " count: " + count + " link: " + link + " target: " + target
-                  + " remainder: " + remainder);
-        }
-        throw new UnresolvedPathException(symPath, preceding, remainder, target);
+    if (curInode[0].isLink() && (!lastComp || (lastComp && resolveLink))) {
+      final String symPath = constructPath(components, 0, components.length);
+      final String preceding = constructPath(components, 0, count[0]);
+      final String remainder =
+              constructPath(components, count[0] + 1, components.length);
+      final String link = DFSUtil.bytes2String(components[count[0]]);
+      final String target = ((INodeSymlink) curInode[0]).getLinkValue();
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("UnresolvedPathException "
+                + " path: " + symPath + " preceding: " + preceding
+                + " count: " + count + " link: " + link + " target: " + target
+                + " remainder: " + remainder);
       }
+      throw new UnresolvedPathException(symPath, preceding, remainder, target);
     }
+    
+    if (lastComp || !curInode[0].isDirectory()) {
+      return lastComp;
+    }
+    
+    curInode[0] = getChildINode(components[count[0] + 1], curInode[0].getId());
+    if (curInode[0] != null) {
+      resolvedInodes.add(curInode[0]);
+    }
+    count[0] = count[0] + 1;
+
     return lastComp;
   }
 
@@ -111,10 +118,10 @@ public class TransactionLockAcquirer {
     }
 
     byte[][] components = INode.getPathComponents(path);
-    INode curNode = rootDir;
+    INode[] curNode = new INode[]{rootDir};
 
-    assert INode.compareBytes(curNode.getNameBytes(), components[0]) == 0 :
-            "Incorrect name " + curNode.getName() + " expected "
+    assert INode.compareBytes(curNode[0].getNameBytes(), components[0]) == 0 :
+            "Incorrect name " + curNode[0].getName() + " expected "
             + DFSUtil.bytes2String(components[0]);
 
     int[] count = new int[]{0};
@@ -125,10 +132,10 @@ public class TransactionLockAcquirer {
       return resolvedInodes;
     } else if ((count[0] == components.length - 2) && lock == INodeLockType.WRITE_ON_PARENT) // if Root is the parent
     {
-      curNode = acquireWriteLockOnRoot();
+      curNode[0] = acquireWriteLockOnRoot();
     }
 
-    while (count[0] < components.length && curNode != null) {
+    while (count[0] < components.length && curNode[0] != null) {
 
       if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count[0] + 1 == components.length - 1))
               || (lock == INodeLockType.WRITE_ON_PARENT && (count[0] + 1 == components.length - 2))) {
@@ -140,9 +147,8 @@ public class TransactionLockAcquirer {
       }
 
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
-      if (lastComp || !curNode.isDirectory()) {
+      if (lastComp)
         break;
-      }
     }
 
     return resolvedInodes;

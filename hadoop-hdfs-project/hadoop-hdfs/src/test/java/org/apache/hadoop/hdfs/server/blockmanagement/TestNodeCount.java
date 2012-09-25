@@ -84,20 +84,10 @@ public class TestNodeCount extends TestCase {
       DatanodeDescriptor datanode = datanodes[0];
       DataNodeProperties dnprop = cluster.stopDataNode(datanode.getName());
 
-      // make sure that NN detects that the datanode is down
-      TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          synchronized (hm) {
-            DatanodeDescriptor datanode = (DatanodeDescriptor) getParams()[0];
-            datanode.setLastUpdate(0); // mark it dead
-            hm.heartbeatCheck();
-          }
-          return null;
-        }
-      }.setParams(datanode);
-      handler.handleWithWriteLock(namesystem);
+      synchronized (hm) {
+        datanode.setLastUpdate(0); // mark it dead
+        hm.heartbeatCheck();
+      }
 
       // the block will be replicated
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
@@ -113,7 +103,7 @@ public class TestNodeCount extends TestCase {
         checkTimeout("excess replicas not detected");
       }
       
-      handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
+      TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
@@ -140,19 +130,10 @@ public class TestNodeCount extends TestCase {
       dnprop = cluster.stopDataNode(nonExcessDN.getName());
       // make sure that NN detects that the datanode is down
 
-      handler = new TransactionalRequestHandler(OperationType.TEST_NODE_COUNT) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          synchronized (hm) {
-            DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) getParams()[0];
-            nonExcessDN.setLastUpdate(0); // mark it dead
-            hm.heartbeatCheck();
-          }
-          return null;
-        }
-      }.setParams(nonExcessDN);
-      handler.handleWithWriteLock(namesystem);
+      synchronized (hm) {
+        nonExcessDN.setLastUpdate(0); // mark it dead
+        hm.heartbeatCheck();
+      }
 
       // The block should be replicated
       initializeTimeout(TIMEOUT);
