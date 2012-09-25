@@ -92,12 +92,13 @@ class DecommissionManager {
               }
             }
           }
-
+        } finally {
+          fsnamesystem.writeUnlock();
+        }
+        try {
           Thread.sleep(recheckInterval);
         } catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
-        } finally {
-          fsnamesystem.writeUnlock();
         }
       }
     }
