@@ -30,6 +30,7 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 import java.util.regex.Pattern;
+import javax.persistence.TransactionRequiredException;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
@@ -434,9 +435,10 @@ public class TestFsck extends TestCase {
         @Override
         public Object performTask() throws PersistanceException, IOException {
           MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
-          INodeFile node = (INodeFile) cluster.getNamesystem().dir.rootDir.getNode(fileName,
+          // intentionally corrupt NN data structure
+          INodeFile node =
+                  (INodeFile) cluster.getNamesystem().dir.rootDir.getNode(fileName,
                   true);
-          // intentionally corrupt NN data structure        
           assertEquals(node.getBlocks().size(), 1);
           node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative
           EntityManager.update(node.getBlocks().get(0));
@@ -445,7 +447,6 @@ public class TestFsck extends TestCase {
       };
       
       handler.setParams(cluster).handleWithWriteLock(cluster.getNamesystem());
-      
       // run fsck and expect a failure with -1 as the error code
       String outStr = runFsck(conf, -1, true, fileName);
       LOG.info(outStr);
