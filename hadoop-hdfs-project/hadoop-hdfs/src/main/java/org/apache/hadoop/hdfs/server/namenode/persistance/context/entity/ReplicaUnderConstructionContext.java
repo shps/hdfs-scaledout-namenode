@@ -36,13 +36,14 @@ public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderC
     }
 
     newReplicasUc.put(replica, replica);
-    log("added-replicauc", CacheHitState.NA, 
-            new String[]{"bid", Long.toString(replica.getBlockId()), 
+    log("added-replicauc", CacheHitState.NA,
+            new String[]{"bid", Long.toString(replica.getBlockId()),
               "sid", replica.getStorageId(), "state", replica.getState().name()});
   }
 
   @Override
   public void clear() {
+    storageCallPrevented = false;
     newReplicasUc.clear();
     removedReplicasUc.clear();
     blockReplicasUc.clear();
@@ -66,6 +67,7 @@ public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderC
           result = blockReplicasUc.get(blockId);
         } else {
           log("find-replicaucs-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(blockId)});
+          aboutToAccessStorage();
           result = dataAccess.findReplicaUnderConstructionByBlockId(blockId);
           blockReplicasUc.put(blockId, result);
         }
@@ -89,8 +91,8 @@ public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderC
   public void remove(ReplicaUnderConstruction replica) throws PersistanceException {
     newReplicasUc.remove(replica);
     removedReplicasUc.put(replica, replica);
-        log("removed-replicauc", CacheHitState.NA, 
-            new String[]{"bid", Long.toString(replica.getBlockId()), 
+    log("removed-replicauc", CacheHitState.NA,
+            new String[]{"bid", Long.toString(replica.getBlockId()),
               "sid", replica.getStorageId(), "state", replica.getState().name()});
   }
 

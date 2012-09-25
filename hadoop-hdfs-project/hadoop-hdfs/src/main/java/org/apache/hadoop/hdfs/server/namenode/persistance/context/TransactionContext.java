@@ -54,6 +54,12 @@ public class TransactionContext {
     logger.debug("begin");
   }
 
+  public void preventStorageCall() {
+    for (EntityContext context : contexts) {
+      context.preventStorageCall();
+    }
+  }
+
   public void commit() throws StorageException {
     aboutToPerform();
 

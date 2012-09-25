@@ -45,6 +45,7 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
 
   @Override
   public void clear() {
+    storageCallPrevented = false;
     newReplicas.clear();
     modifiedReplicas.clear();
     removedReplicas.clear();
@@ -89,6 +90,7 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
           result = blockReplicas.get(id);
         } else {
           log("find-replicas-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
+          aboutToAccessStorage();
           result = dataAccess.findReplicasById(id);
           blockReplicas.put(id, result);
         }

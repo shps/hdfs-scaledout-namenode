@@ -277,6 +277,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // lock to protect FSNamesystem.
   private ReentrantReadWriteLock fsLock;
   private NameNode nameNode;
+  private static boolean systemLevelLockEnabled = false;
 
   /**
    * FSNamesystem constructor.
@@ -303,6 +304,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //        DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
+    systemLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_DEFAULT);
     StorageFactory.setConfiguration(conf);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
@@ -354,6 +356,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     this.safeMode = new SafeModeInfo(conf);
+  }
+
+  public static boolean systemLevelLock() {
+    return systemLevelLockEnabled;
   }
 
   void activateSecretManager() throws IOException {
@@ -457,36 +463,53 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override
   public void readLock() {
-    this.fsLock.readLock().lock();
+    if (systemLevelLock()) {
+      this.fsLock.readLock().lock();
+    }
   }
 
   @Override
   public void readUnlock() {
-    this.fsLock.readLock().unlock();
+    if (systemLevelLock()) {
+      this.fsLock.readLock().unlock();
+    }
   }
 
   @Override
   public void writeLock() {
-    this.fsLock.writeLock().lock();
+    if (systemLevelLock()) {
+      this.fsLock.writeLock().lock();
+    }
   }
 
   @Override
   public void writeUnlock() {
-    this.fsLock.writeLock().unlock();
+    if (systemLevelLock()) {
+      this.fsLock.writeLock().unlock();
+    }
   }
 
   @Override
   public boolean hasWriteLock() {
+    if (!systemLevelLock()) {
+      return true;
+    }
     return this.fsLock.isWriteLockedByCurrentThread();
   }
 
   @Override
   public boolean hasReadLock() {
+    if (!systemLevelLock()) {
+      return true;
+    }
     return this.fsLock.getReadHoldCount() > 0;
   }
 
   @Override
   public boolean hasReadOrWriteLock() {
+    if (!systemLevelLock()) {
+      return true;
+    }
     return hasReadLock() || hasWriteLock();
   }
 
@@ -2337,7 +2360,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // validate that we have enough inodes. This is, at best, a 
     // heuristic because the mkdirs() operation migth need to 
     // create multiple inodes.
-    checkFsObjectLimit(); 
+    checkFsObjectLimit();
 
     if (!dir.mkdirs(src, permissions, false, now())) {
       throw new IOException("Failed to create directory: " + src);
@@ -4832,7 +4855,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return -1;
   }
 
-
   @Override // NameNodeMXBean
   public int getThreads() {
     return ManagementFactory.getThreadMXBean().getThreadCount();
@@ -4921,12 +4943,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public BlockManager getBlockManager() {
     return blockManager;
   }
-  
+
   /**
    * Added for acquiring locks in KTHFS.
    */
-  public FSDirectory getFsDirectory()
-  {
+  public FSDirectory getFsDirectory() {
     return this.dir;
   }
 }

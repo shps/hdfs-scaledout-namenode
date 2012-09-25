@@ -36,6 +36,10 @@ public class EntityManager {
     context().begin();
   }
 
+  public static void preventStorageCall() {
+    context().preventStorageCall();
+  }
+
   public static void commit() throws StorageException {
     context().commit();
   }
@@ -71,30 +75,26 @@ public class EntityManager {
   public static <T> void add(T entity) throws PersistanceException {
     context().add(entity);
   }
-  
-  public static void writeLock()
-  {
+
+  public static void writeLock() {
     EntityContext.setLockMode(EntityContext.LockMode.WRITE_LOCK);
     connector.writeLock();
   }
-  
-  public static void readLock()
-  {
+
+  public static void readLock() {
     EntityContext.setLockMode(EntityContext.LockMode.READ_LOCK);
     connector.readLock();
   }
-  
-  public static void readCommited()
-  {
+
+  public static void readCommited() {
     EntityContext.setLockMode(EntityContext.LockMode.READ_COMMITTED);
     connector.readCommitted();
   }
-  
+
   /**
    * Clears transaction context's in-memory data
    */
-  public static void clearContext()
-  {
+  public static void clearContext() {
     context().clearContext();
   }
 }

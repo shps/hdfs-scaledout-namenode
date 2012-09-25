@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode.persistance;
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -111,11 +112,14 @@ public abstract class TransactionalRequestHandler {
   }
 
   private Object run(boolean writeLock, boolean readLock, Namesystem namesystem) throws IOException {
-    if (writeLock) {
-      namesystem.writeLock();
-    }
-    if (readLock) {
-      namesystem.readLock();
+    boolean systemLevelLock = FSNamesystem.systemLevelLock();
+    if (systemLevelLock) {
+      if (writeLock) {
+        namesystem.writeLock();
+      }
+      if (readLock) {
+        namesystem.readLock();
+      }
     }
     boolean retry = true;
     boolean rollback = false;
@@ -132,6 +136,10 @@ public abstract class TransactionalRequestHandler {
           NDC.push(opType.name()); // Defines a context for every operation to track them in the logs easily.
 
           EntityManager.begin();
+          if (! systemLevelLock) { 
+            acquireLock();
+            EntityManager.preventStorageCall();
+          }
           return performTask();
         } catch (TransactionContextException ex) {
           log.error("Could not perfortm task", ex);
@@ -171,15 +179,19 @@ public abstract class TransactionalRequestHandler {
         }
       }
     } finally {
-      if (writeLock) {
-        namesystem.writeUnlock();
-      }
-      if (readLock) {
-        namesystem.readUnlock();
+      if (systemLevelLock) {
+        if (writeLock) {
+          namesystem.writeUnlock();
+        }
+        if (readLock) {
+          namesystem.readUnlock();
+        }
       }
     }
     return null;
   }
+
+  public void acquireLock(){}
 
   public abstract Object performTask() throws PersistanceException, IOException;
 
