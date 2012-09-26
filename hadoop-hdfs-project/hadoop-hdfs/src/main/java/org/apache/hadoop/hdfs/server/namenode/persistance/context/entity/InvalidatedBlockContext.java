@@ -168,7 +168,8 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
   @Override
   public void remove(InvalidatedBlock invBlock) throws TransactionContextException {
     if (!invBlocks.containsKey(invBlock)) {
-      throw new TransactionContextException("Unattached invalidated-block passed to be removed");
+      // This is not necessary for invalidated-block
+//      throw new TransactionContextException("Unattached invalidated-block passed to be removed");
     }
 
     invBlocks.remove(invBlock);
