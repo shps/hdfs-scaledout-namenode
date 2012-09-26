@@ -102,20 +102,27 @@ public class TestPendingReplication extends TestCase {
               int numReplicas = pendingReplications.getNumReplicas(block);
               assertTrue(numReplicas == i);
             }
+            return null;
+          }
+        }.handle();
 
-            //
-            // verify that nothing has timed out so far
-            //
-            assertTrue(pendingReplications.getTimedOutBlocks() == null);
+        //
+        // verify that nothing has timed out so far
+        //
+        assertTrue(pendingReplications.getTimedOutBlocks(OperationType.TEST_PENDING_REPLICATION4) == null);
 
-            //
-            // Wait for one second and then insert some more items.
-            //
-            try {
-              Thread.sleep(1000);
-            } catch (Exception e) {
-            }
+        //
+        // Wait for one second and then insert some more items.
+        //
+        try {
+          Thread.sleep(1000);
+        } catch (Exception e) {
+        }
 
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION4) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
             for (int i = 10; i < 15; i++) {
               Block block = new Block(i, i, 0);
               pendingReplications.add(block, i);
@@ -135,27 +142,19 @@ public class TestPendingReplication extends TestCase {
             }
             LOG.info("Had to wait for " + loop
                     + " seconds for the lot to timeout");
-            return null;
-          }
-        }.handle();
-
-        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION4) {
-
-          @Override
-          public Object performTask() throws PersistanceException, IOException {
             //
             // Verify that everything has timed out.
             //
             assertEquals("Size of pendingReplications ",
                     0, pendingReplications.size());
-            List<PendingBlockInfo> timedOut = pendingReplications.getTimedOutBlocks();
-            assertTrue(timedOut != null && timedOut.size() == 15);
-            for (int i = 0; i < timedOut.size(); i++) {
-              assertTrue(timedOut.get(i).getBlockId() < 15);
-            }
             return null;
           }
         }.handle();
+        List<PendingBlockInfo> timedOut = pendingReplications.getTimedOutBlocks(OperationType.TEST_PENDING_REPLICATION4);
+        assertTrue(timedOut != null && timedOut.size() == 15);
+        for (int i = 0; i < timedOut.size(); i++) {
+          assertTrue(timedOut.get(i).getBlockId() < 15);
+        }
       } catch (IOException ex) {
         Logger.getLogger(TestPendingReplication.class.getName()).log(Level.SEVERE, null, ex);
       }

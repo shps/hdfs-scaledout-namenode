@@ -61,24 +61,27 @@ public class TestComputeInvalidateWork extends TestCase {
               bm.addToInvalidates(block, nodes[i]);
             }
           }
-
-          assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
-                  bm.computeInvalidateWork(NUM_OF_DATANODES + 1));
-          assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
-                  bm.computeInvalidateWork(NUM_OF_DATANODES));
-          assertEquals(blockInvalidateLimit * (NUM_OF_DATANODES - 1),
-                  bm.computeInvalidateWork(NUM_OF_DATANODES - 1));
-          int workCount = bm.computeInvalidateWork(1);
-          if (workCount == 1) {
-            assertEquals(blockInvalidateLimit + 1, bm.computeInvalidateWork(2));
-          } else {
-            assertEquals(workCount, blockInvalidateLimit);
-            assertEquals(2, bm.computeInvalidateWork(2));
-          }
           return null;
         }
       }.handleWithWriteLock(namesystem);
       namesystem.writeLock();
+      try {
+        assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
+                bm.computeInvalidateWork(NUM_OF_DATANODES + 1, OperationType.COMP_INVALIDATE));
+        assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
+                bm.computeInvalidateWork(NUM_OF_DATANODES, OperationType.COMP_INVALIDATE));
+        assertEquals(blockInvalidateLimit * (NUM_OF_DATANODES - 1),
+                bm.computeInvalidateWork(NUM_OF_DATANODES - 1, OperationType.COMP_INVALIDATE));
+        int workCount = bm.computeInvalidateWork(1, OperationType.COMP_INVALIDATE);
+        if (workCount == 1) {
+          assertEquals(blockInvalidateLimit + 1, bm.computeInvalidateWork(2, OperationType.COMP_INVALIDATE));
+        } else {
+          assertEquals(workCount, blockInvalidateLimit);
+          assertEquals(2, bm.computeInvalidateWork(2, OperationType.COMP_INVALIDATE));
+        }
+      } finally {
+        namesystem.writeUnlock();
+      }
     } finally {
       cluster.shutdown();
     }

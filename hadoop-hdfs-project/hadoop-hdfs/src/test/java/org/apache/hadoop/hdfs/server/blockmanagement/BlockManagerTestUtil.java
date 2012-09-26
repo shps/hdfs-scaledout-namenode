@@ -125,12 +125,6 @@ public class BlockManagerTestUtil {
    * @throws IOException
    */
   public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException {
-    return (Integer) new TransactionalRequestHandler(OperationType.GET_COMPUTED_DATANODE_WORK) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return blockManager.computeDatanodeWork();
-      }
-    }.handle();
+    return blockManager.computeDatanodeWork(OperationType.GET_COMPUTED_DATANODE_WORK);
   }
 }

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.PrintWriter;
@@ -26,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * *************************************************
@@ -128,14 +130,20 @@ class PendingReplicationBlocks {
    * Returns a list of blocks that have timed out their replication requests.
    * Returns null if no blocks have timed out.
    */
-  List<PendingBlockInfo> getTimedOutBlocks() throws PersistanceException {
-    long timeLimit = now() - timeout;
-    List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
-    if (timedoutPendings == null || timedoutPendings.size() <= 0) {
-      return null;
-    }
+  List<PendingBlockInfo> getTimedOutBlocks(TransactionalRequestHandler.OperationType opType) throws IOException {
+    return (List<PendingBlockInfo>) new TransactionalRequestHandler(opType) {
 
-    return timedoutPendings;
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        long timeLimit = now() - timeout;
+        List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
+        if (timedoutPendings == null || timedoutPendings.size() <= 0) {
+          return null;
+        }
+
+        return timedoutPendings;
+      }
+    }.handle();
   }
 
   /**

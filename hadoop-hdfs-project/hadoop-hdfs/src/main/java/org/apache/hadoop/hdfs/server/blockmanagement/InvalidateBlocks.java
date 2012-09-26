@@ -164,19 +164,21 @@ class InvalidateBlocks {
   /**
    * Invalidate work for the storage.
    */
-  int invalidateWork(final String storageId) throws PersistanceException {
+  int invalidateWork(final String storageId, TransactionalRequestHandler.OperationType opType) throws IOException {
     final DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(storageId);
     if (dn == null) {
-      List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageId);
+      
+      List<InvalidatedBlock> invBlocks = findInvBlocksbyStorageId(storageId, opType);
+      
       if (invBlocks != null) {
         for (InvalidatedBlock ib : invBlocks) {
-          EntityManager.remove(ib);
+          removeInvBlock(ib, opType);
         }
       }
 
       return 0;
     }
-    final List<Block> toInvalidate = invalidateWork(storageId, dn);
+    final List<Block> toInvalidate = invalidateWork(storageId, dn, opType);
     if (toInvalidate == null) {
       return 0;
     }
@@ -187,10 +189,32 @@ class InvalidateBlocks {
     }
     return toInvalidate.size();
   }
+  
+  private void removeInvBlock(InvalidatedBlock ib, TransactionalRequestHandler.OperationType opType) throws IOException {
+    new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        InvalidatedBlock ib = (InvalidatedBlock) getParams()[0];
+        EntityManager.remove(ib);
+        return null;
+      }
+    }.setParams(ib).handle();
+  }
+  
+  private List<InvalidatedBlock> findInvBlocksbyStorageId(final String sid, TransactionalRequestHandler.OperationType opType) throws IOException {
+    return (List<InvalidatedBlock>) new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, sid);
+      }
+    }.handle();
+  }
 
   private synchronized List<Block> invalidateWork(
-          final String storageId, final DatanodeDescriptor dn) throws PersistanceException {
-    final List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageId);
+          final String storageId, final DatanodeDescriptor dn, TransactionalRequestHandler.OperationType opType) throws IOException {
+    final List<InvalidatedBlock> invBlocks = findInvBlocksbyStorageId(storageId, opType);
     if (invBlocks == null || invBlocks.isEmpty()) {
       return null;
     }
@@ -203,7 +227,7 @@ class InvalidateBlocks {
       InvalidatedBlock invBlock = it.next();
       toInvalidate.add(new Block(invBlock.getBlockId(),
               invBlock.getNumBytes(), invBlock.getGenerationStamp()));
-      EntityManager.remove(invBlock);
+      removeInvBlock(invBlock, opType);
     }
 
     dn.addBlocksToBeInvalidated(toInvalidate);

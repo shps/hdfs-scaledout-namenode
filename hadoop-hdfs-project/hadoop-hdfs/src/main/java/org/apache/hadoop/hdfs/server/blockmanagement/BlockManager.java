@@ -1019,15 +1019,23 @@ public class BlockManager {
    * @param nodesToProcess number of datanodes to schedule deletion work
    * @return total number of block for deletion
    */
-  int computeInvalidateWork(int nodesToProcess) throws PersistanceException {
-    final List<String> nodes = invalidateBlocks.getStorageIDs();
+  int computeInvalidateWork(int nodesToProcess, OperationType opType) throws IOException{
+    TransactionalRequestHandler getStorageIdsHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return invalidateBlocks.getStorageIDs();
+      }
+    };
+    
+    final List<String> nodes = (List<String>) getStorageIdsHandler.handle();
     Collections.shuffle(nodes);
 
     nodesToProcess = Math.min(nodes.size(), nodesToProcess);
 
     int blockCnt = 0;
     for (int nodeCnt = 0; nodeCnt < nodesToProcess; nodeCnt++) {
-      blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt));
+      blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt), opType);
     }
     return blockCnt;
   }
@@ -1041,15 +1049,25 @@ public class BlockManager {
    *
    * @return number of blocks scheduled for replication during this iteration.
    */
-  private int computeReplicationWork(int blocksToProcess) throws IOException, PersistanceException {
+  private int computeReplicationWork(int blocksToProcess, OperationType opType) throws IOException{
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate =
-            chooseUnderReplicatedBlocks(blocksToProcess);
+            chooseUnderReplicatedBlocks(blocksToProcess, opType);
+
+    TransactionalRequestHandler computeReplicationWorkHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        Block block = (Block) getParams()[0];
+        int priority = (Integer) getParams()[1];
+        return computeReplicationWorkForBlock(block, priority);
+      }
+    };
     // replicate blocks
     int scheduledReplicationCount = 0;
     for (int i = 0; i < blocksToReplicate.size(); i++) {
       for (Block block : blocksToReplicate.get(i)) {
-        if (computeReplicationWorkForBlock(block, i)) {
+        if ((Boolean) computeReplicationWorkHandler.setParams(block, i).handle()) {
           scheduledReplicationCount++;
         }
       }
@@ -1065,9 +1083,9 @@ public class BlockManager {
    * @return Return a list of block lists to be replicated. The block list index
    * represents its replication priority.
    */
-  private List<List<Block>> chooseUnderReplicatedBlocks(int blocksToProcess) throws PersistanceException {
+  private List<List<Block>> chooseUnderReplicatedBlocks(int blocksToProcess, OperationType opType) throws IOException {
     // initialize data structure for the return value
-    List<List<Block>> blocksToReplicate = new ArrayList<List<Block>>(
+    final List<List<Block>> blocksToReplicate = new ArrayList<List<Block>>(
             UnderReplicatedBlocks.LEVEL);
     for (int i = 0; i < UnderReplicatedBlocks.LEVEL; i++) {
       blocksToReplicate.add(new ArrayList<Block>());
@@ -1075,12 +1093,24 @@ public class BlockManager {
     namesystem.writeLock();
     try {
       synchronized (neededReplications) {
-        if (neededReplications.size() == 0) {
-          return blocksToReplicate;
-        }
+        TransactionalRequestHandler findAllUrbHander = new TransactionalRequestHandler(opType) {
 
-        Collection<UnderReplicatedBlock> urblocks = EntityManager.findList(UnderReplicatedBlock.Finder.All);
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            return EntityManager.findList(UnderReplicatedBlock.Finder.All);
+          }
+        };
+        
+//        if (neededReplications.size() == 0) {
+//          return blocksToReplicate;
+//        }
+
+        Collection<UnderReplicatedBlock> urblocks = (Collection<UnderReplicatedBlock>) findAllUrbHander.handle();
+        if (urblocks.isEmpty())
+          return blocksToReplicate;
+        
         Iterator<UnderReplicatedBlock> iterator = urblocks.iterator();
+        int urbSize = urblocks.size();
         // skip to the first unprocessed block, which is at replIndex
         for (int i = 0; i < replIndex && iterator.hasNext(); i++) {
           iterator.next();
@@ -1088,13 +1118,37 @@ public class BlockManager {
         // Go through all blocks that need replications.
         // # of blocks to process equals either twice the number of live
         // data-nodes or the number of under-replicated blocks whichever is less
-        blocksToProcess = Math.min(blocksToProcess, neededReplications.size());
+        blocksToProcess = Math.min(blocksToProcess, urbSize);
+
+        TransactionalRequestHandler findBlock = new TransactionalRequestHandler(opType) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            UnderReplicatedBlock urb = (UnderReplicatedBlock) getParams()[0];
+            int urbSize = (Integer) getParams()[1];
+            Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
+            int priority = urb.getLevel();
+            if (priority < 0 || priority >= blocksToReplicate.size()) {
+              LOG.warn("Unexpected replication priority: "
+                      + priority + " " + block);
+            } else {
+              if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
+              {
+                neededReplications.remove(new Block(urb.getBlockId()), priority);
+                urbSize--;
+              } else {
+                blocksToReplicate.get(priority).add(block);
+              }
+            }
+            return urbSize;
+          }
+        };
 
         for (int blkCnt = 0; blkCnt < blocksToProcess; blkCnt++, replIndex++) {
           if (!iterator.hasNext()) {
             // start from the beginning
             replIndex = 0;
-            blocksToProcess = Math.min(blocksToProcess, neededReplications.size());
+            blocksToProcess = Math.min(blocksToProcess, urbSize);
             if (blkCnt >= blocksToProcess) {
               break;
             }
@@ -1102,19 +1156,7 @@ public class BlockManager {
             assert iterator.hasNext() : "neededReplications should not be empty.";
           }
           UnderReplicatedBlock urb = iterator.next();
-          Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
-          int priority = urb.getLevel();
-          if (priority < 0 || priority >= blocksToReplicate.size()) {
-            LOG.warn("Unexpected replication priority: "
-                    + priority + " " + block);
-          } else {
-            if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
-            {
-              neededReplications.remove(new Block(urb.getBlockId()), priority);
-            } else {
-              blocksToReplicate.get(priority).add(block);
-            }
-          }
+          urbSize = (Integer) findBlock.setParams(urb, urbSize).handle();
         } // end for
       } // end synchronized neededReplication
     } finally {
@@ -1419,30 +1461,14 @@ public class BlockManager {
    *
    * @throws IOException
    */
-  private void processPendingReplications() throws IOException, PersistanceException {
-    Block[] timedOutItems = null;
-    List<PendingBlockInfo> timedoutPendings = pendingReplications.getTimedOutBlocks();
+  private void processPendingReplications(OperationType opType) throws IOException {
+    List<PendingBlockInfo> timedoutPendings = pendingReplications.getTimedOutBlocks(opType);
     if (timedoutPendings != null) {
-      timedOutItems = new Block[timedoutPendings.size()];
-
-      for (int i = 0; i < timedoutPendings.size(); i++) {
-        PendingBlockInfo p = timedoutPendings.get(i);
-        timedOutItems[i] = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
-      }
-    }
-
-    if (timedOutItems != null) {
       namesystem.writeLock();
       try {
-        for (int i = 0; i < timedOutItems.length; i++) {
-          NumberReplicas num = countNodes(timedOutItems[i]);
-          if (isNeededReplication(timedOutItems[i], getReplication(timedOutItems[i]),
-                  num.liveReplicas())) {
-            neededReplications.add(timedOutItems[i],
-                    num.liveReplicas(),
-                    num.decommissionedReplicas(),
-                    getReplication(timedOutItems[i]));
-          }
+        for (int i = 0; i < timedoutPendings.size(); i++) {
+          PendingBlockInfo p = timedoutPendings.get(i);
+          processTimedOutPendingBlock(p, opType);
         }
       } finally {
         namesystem.writeUnlock();
@@ -1451,7 +1477,28 @@ public class BlockManager {
        * If we know the target datanodes where the replication timedout, we
        * could invoke decBlocksScheduled() on it. Its ok for now.
        */
+
     }
+  }
+  
+  private void processTimedOutPendingBlock(final PendingBlockInfo p, OperationType opType) throws IOException
+  {
+    new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+          Block timedOutItem = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
+          NumberReplicas num = countNodes(timedOutItem);
+          if (isNeededReplication(timedOutItem, getReplication(timedOutItem),
+                  num.liveReplicas())) {
+            neededReplications.add(timedOutItem,
+                    num.liveReplicas(),
+                    num.decommissionedReplicas(),
+                    getReplication(timedOutItem));
+          }
+          return null;
+      }
+    }.handle();
   }
 
   /**
@@ -2860,16 +2907,16 @@ public class BlockManager {
    *
    * @return number of blocks scheduled for removal during this iteration.
    */
-  private int invalidateWorkForOneNode(String nodeId) throws PersistanceException {
+  private int invalidateWorkForOneNode(String nodeId, OperationType opType) throws IOException {
     namesystem.writeLock();
     try {
       // blocks should not be replicated or removed if safe mode is on
-      if (namesystem.isInSafeMode()) {
+      if (isInSafeMode(opType)) {
         return 0;
       }
       // get blocks to invalidate for the nodeId
       assert nodeId != null;
-      return invalidateBlocks.invalidateWork(nodeId);
+      return invalidateBlocks.invalidateWork(nodeId, opType);
     } finally {
       namesystem.writeUnlock();
     }
@@ -3050,7 +3097,8 @@ public class BlockManager {
     public void run() {
       while (namesystem.isRunning()) {
         try {
-          requestHandler.handle();
+          computeDatanodeWork(OperationType.REPLICATION_MONITOR);
+          processPendingReplications(OperationType.REPLICATION_MONITOR);
           Thread.sleep(replicationRecheckInterval);
         } catch (InterruptedException ie) {
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
@@ -3063,15 +3111,6 @@ public class BlockManager {
         }
       }
     }
-    TransactionalRequestHandler requestHandler = new TransactionalRequestHandler(OperationType.REPLICATION_MONITOR) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        computeDatanodeWork();
-        processPendingReplications();
-        return null;
-      }
-    };
   }
 
   /**
@@ -3082,13 +3121,13 @@ public class BlockManager {
    * @return number of blocks scheduled for replication or removal.
    * @throws IOException
    */
-  int computeDatanodeWork() throws IOException, PersistanceException {
+  int computeDatanodeWork(OperationType opType) throws IOException{
     int workFound = 0;
     // Blocks should not be replicated or removed if in safe mode.
     // It's OK to check safe mode here w/o holding lock, in the worst
     // case extra replications will be scheduled, and these will get
     // fixed up later.
-    if (namesystem.isInSafeMode()) {
+    if (isInSafeMode(opType)) {
       return workFound;
     }
 
@@ -3098,17 +3137,35 @@ public class BlockManager {
     final int nodesToProcess = (int) Math.ceil(numlive
             * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100.0);
 
-    workFound = this.computeReplicationWork(blocksToProcess);
+    workFound = this.computeReplicationWork(blocksToProcess, opType);
 
     // Update FSNamesystemMetrics counters
     namesystem.writeLock();
     try {
-      this.updateState();
+      TransactionalRequestHandler updateStateHandler = new TransactionalRequestHandler(opType) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          updateState();
+          return null;
+        }
+      };
+      updateStateHandler.handle();
       this.scheduledReplicationBlocksCount = workFound;
     } finally {
       namesystem.writeUnlock();
     }
-    workFound += this.computeInvalidateWork(nodesToProcess);
+    workFound += this.computeInvalidateWork(nodesToProcess, opType);
     return workFound;
+  }
+
+  private boolean isInSafeMode(OperationType opType) throws IOException {
+    return (Boolean) new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return namesystem.isInSafeMode();
+      }
+    }.handle();
   }
 }
