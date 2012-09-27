@@ -50,9 +50,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.junit.Ignore;
 
 /**
@@ -422,18 +420,10 @@ public class TestBlockReport {
             new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
 
-
-    new TransactionalRequestHandler(OperationType.TEST_BLOCK_REPORT2) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        assertEquals("Wrong number of Corrupted blocks",
-                2, cluster.getNamesystem().getCorruptReplicaBlocks()
-                + cluster.getNamesystem().getPendingReplicationBlocks()
-                + cluster.getNamesystem().getPendingDeletionBlocks());
-        return null;
-      }
-    }.handle();
+    assertEquals("Wrong number of Corrupted blocks",
+            2, cluster.getNamesystem().getCorruptReplicaBlocks()
+            + cluster.getNamesystem().getPendingReplicationBlocks()
+            + cluster.getNamesystem().getPendingDeletionBlocks());
 
     printStats();
 
@@ -649,7 +639,7 @@ public class TestBlockReport {
 
   private void printStats() {
 
-    BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager());
+    BlockManagerTestUtil.updateState(cluster.getNamesystem().getBlockManager(), OperationType.TEST_BLOCK_REPORT);
     if (LOG.isDebugEnabled()) {
       try {
         LOG.debug("Missing " + cluster.getNamesystem().getMissingBlocksCount());

@@ -25,10 +25,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestDFSRename extends junit.framework.TestCase {
 
@@ -39,6 +42,11 @@ public class TestDFSRename extends junit.framework.TestCase {
         @Override
         public Object performTask() throws PersistanceException, IOException {
           return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, Lease.Finder.All, null);
         }
       }.handle();
     } catch (IOException ex) {

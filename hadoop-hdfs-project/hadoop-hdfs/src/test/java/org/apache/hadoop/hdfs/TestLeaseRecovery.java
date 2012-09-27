@@ -29,10 +29,13 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
 
@@ -144,6 +147,11 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
         public Object performTask() throws PersistanceException, IOException {
           MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
           return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, Lease.Finder.All, null);
         }
       }.setParams(cluster);
       

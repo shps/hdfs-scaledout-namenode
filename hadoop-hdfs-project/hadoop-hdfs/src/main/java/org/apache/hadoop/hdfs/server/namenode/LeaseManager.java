@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
@@ -33,12 +32,18 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeaseDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files. This class
@@ -308,47 +313,24 @@ public class LeaseManager {
     @Override
     public void run() {
       for (; fsnamesystem.isRunning();) {
+        fsnamesystem.writeLock();
         try {
-          
-          TransactionalRequestHandler prepareHandler = new TransactionalRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
-
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-              if (!fsnamesystem.isInSafeMode()) {
-                assert fsnamesystem.hasWriteLock();
-                long expiredTime = now() - hardLimit;
-                SortedSet<Lease> sortedLeases = (SortedSet<Lease>) EntityManager.findList(Lease.Finder.ByTimeLimit, expiredTime);
-                return sortedLeases;
+          if (!(Boolean) isInSafeModeHandler.handle()) {
+            SortedSet<Lease> sortedLeases = (SortedSet<Lease>) findExpiredLeaseHandler.handle();
+            if (sortedLeases != null) {
+              for (Lease expiredLease : sortedLeases) {
+                expiredLeaseHandler.setParams(expiredLease.getHolder()).handle();
               }
-              return null;
             }
-          };
-          
-          SortedSet<Lease> sortedLeases = (SortedSet<Lease>) prepareHandler.handleWithWriteLock(fsnamesystem);
-          if (sortedLeases == null) {
-            return;
-          }
-          
-          TransactionalRequestHandler expiredLeaseHandler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
-
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-              String holder = (String) getParams()[0];
-              if (holder != null) {
-                checkLeases(holder);
-              }
-              return null;
-            }
-          };
-          
-          for (Lease expiredLease : sortedLeases) {
-            expiredLeaseHandler.setParams(expiredLease.getHolder()).handleWithWriteLock(fsnamesystem);
           }
         } catch (IOException ex) {
           LOG.error(ex);
+        } finally {
+          fsnamesystem.writeUnlock();
         }
         try {
           Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
+
         } catch (InterruptedException ie) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(name + " is interrupted", ie);
@@ -356,6 +338,55 @@ public class LeaseManager {
         }
       }
     }
+    TransactionalRequestHandler isInSafeModeHandler = new TransactionalRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
+      
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return fsnamesystem.isInSafeMode();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode 
+      }
+    };
+    
+    LightWeightRequestHandler findExpiredLeaseHandler = new LightWeightRequestHandler(OperationType.PREPARE_LEASE_MANAGER_MONITOR) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        long expiredTime = now() - hardLimit;
+        LeaseDataAccess da = (LeaseDataAccess) StorageFactory.getDataAccess(LeaseDataAccess.class);
+        return da.findByTimeLimit(expiredTime);
+      }
+    };
+    
+    TransactionalRequestHandler expiredLeaseHandler = new TransactionalRequestHandler(OperationType.LEASE_MANAGER_MONITOR) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        String holder = (String) getParams()[0];
+        if (holder != null) {
+          checkLeases(holder);
+        }
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        String holder = (String) getParams()[0];
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(TransactionLockManager.INodeLockType.WRITE).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                acquireByLease(fsnamesystem.getFsDirectory().getRootDir());
+      }
+    };
   }
 
   /**

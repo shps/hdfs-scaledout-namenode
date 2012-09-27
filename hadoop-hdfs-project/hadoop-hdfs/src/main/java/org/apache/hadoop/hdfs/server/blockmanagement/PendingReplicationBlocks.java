@@ -21,13 +21,20 @@ import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.PrintWriter;
 import java.sql.Time;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.PendingBlockDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * *************************************************
@@ -93,18 +100,25 @@ class PendingReplicationBlocks {
   /**
    * The total number of blocks that are undergoing replication
    */
-  int size() throws PersistanceException {
-    List<PendingBlockInfo> pendingBlocks = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.All); //TODO[H]: This can be improved.
-    if (pendingBlocks != null) {
-      int count = 0;
-      for (PendingBlockInfo p : pendingBlocks) {
-        if (!isTimedout(p)) {
-          count++;
+  int size(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        PendingBlockDataAccess da = (PendingBlockDataAccess) StorageFactory.getDataAccess(PendingBlockDataAccess.class);
+        Collection<PendingBlockInfo> pendingBlocks = da.findAll(); //TODO[H]: This can be improved.
+        if (pendingBlocks != null) {
+          int count = 0;
+          for (PendingBlockInfo p : pendingBlocks) {
+            if (!isTimedout(p)) {
+              count++;
+            }
+          }
+          return count;
         }
+        return 0;
       }
-      return count;
-    }
-    return 0;
+    }.handle();
   }
 
   private boolean isTimedout(PendingBlockInfo pendingBlock) {
@@ -135,7 +149,7 @@ class PendingReplicationBlocks {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        long timeLimit = now() - timeout;
+        long timeLimit = computeTimeLimit();
         List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
         if (timedoutPendings == null || timedoutPendings.size() <= 0) {
           return null;
@@ -143,8 +157,21 @@ class PendingReplicationBlocks {
 
         return timedoutPendings;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME [H]: Needs validation on pendingblock
+        long timeLimit = computeTimeLimit();
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
+      }
+      
+      private long computeTimeLimit() {
+        return now() - timeout;
+      }
     }.handle();
   }
+  
+  
 
   /**
    * Iterate through all items and print them.

@@ -29,6 +29,21 @@ public class StorageFactory {
   private static ReplicaDataAccess replicaDataAccess;
   private static ReplicaUnderConstruntionDataAccess replicaUnderConstruntionDataAccess;
   private static UnderReplicatedBlockDataAccess underReplicatedBlockDataAccess;
+  private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
+
+  private static void initDataAccessMap() {
+    dataAccessMap.put(blockInfoDataAccess.getClass(), blockInfoDataAccess);
+    dataAccessMap.put(corruptReplicaDataAccess.getClass(), corruptReplicaDataAccess);
+    dataAccessMap.put(excessReplicaDataAccess.getClass(), excessReplicaDataAccess);
+    dataAccessMap.put(inodeDataAccess.getClass(), inodeDataAccess);
+    dataAccessMap.put(invalidateBlockDataAccess.getClass(), invalidateBlockDataAccess);
+    dataAccessMap.put(leaseDataAccess.getClass(), leaseDataAccess);
+    dataAccessMap.put(leasePathDataAccess.getClass(), leasePathDataAccess);
+    dataAccessMap.put(pendingBlockDataAccess.getClass(), pendingBlockDataAccess);
+    dataAccessMap.put(replicaDataAccess.getClass(), replicaDataAccess);
+    dataAccessMap.put(replicaUnderConstruntionDataAccess.getClass(), replicaUnderConstruntionDataAccess);
+    dataAccessMap.put(underReplicatedBlockDataAccess.getClass(), underReplicatedBlockDataAccess);
+  }
 
   public static StorageConnector getConnector() {
     return defaultStorage;
@@ -66,6 +81,8 @@ public class StorageFactory {
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionClusterj();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockClusterj();
     }
+
+    initDataAccessMap();
   }
 
   public static Map<Class, EntityContext> createEntityContexts() {
@@ -89,5 +106,9 @@ public class StorageFactory {
     entityContexts.put(CorruptReplica.class, new CorruptReplicaContext(corruptReplicaDataAccess));
     entityContexts.put(UnderReplicatedBlock.class, new UnderReplicatedBlockContext(underReplicatedBlockDataAccess));
     return entityContexts;
+  }
+
+  public static EntityDataAccess getDataAccess(Class type) {
+    return dataAccessMap.get(type);
   }
 }

@@ -16,10 +16,19 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
+import java.util.Collection;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO;
 
 /**
@@ -42,22 +51,57 @@ class UnderReplicatedBlocks {
   /**
    * Return the total number of under replication blocks
    */
-  synchronized int size() throws PersistanceException {
-    return EntityManager.count(UnderReplicatedBlock.Counter.All);
+  synchronized int size(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
+        Collection result = da.findAll();
+        if (result != null) {
+          return result.size();
+        }
+        return 0;
+      }
+    }.handle();
+//    return EntityManager.count(UnderReplicatedBlock.Counter.All);
   }
 
   /**
    * Return the number of under replication blocks excluding corrupt blocks
    */
-  synchronized int getUnderReplicatedBlockCount() throws PersistanceException {
-    return EntityManager.count(UnderReplicatedBlock.Counter.LessThanLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+  synchronized int getUnderReplicatedBlockCount(TransactionalRequestHandler.OperationType opType) throws IOException {
+    return (Integer) new TransactionalRequestHandler(opType) {
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        throw new UnsupportedOperationException("Not supported yet."); // FIXME implement Finder.LessThanLevel
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.count(UnderReplicatedBlock.Counter.LessThanLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+      }
+    }.handle();
   }
 
   /**
    * Return the number of corrupt blocks
    */
-  synchronized int getCorruptBlockSize() throws PersistanceException {
-    return EntityManager.count(UnderReplicatedBlock.Counter.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+  synchronized int getCorruptBlockSize(TransactionalRequestHandler.OperationType opType) throws IOException {
+    return (Integer) new TransactionalRequestHandler(opType) {
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
+                UnderReplicatedBlock.Finder.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.count(UnderReplicatedBlock.Counter.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+      }
+    }.handle();
   }
 
   /**

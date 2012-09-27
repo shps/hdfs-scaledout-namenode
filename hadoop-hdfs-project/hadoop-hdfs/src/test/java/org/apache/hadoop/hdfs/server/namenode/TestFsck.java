@@ -30,7 +30,6 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 import java.util.regex.Pattern;
-import javax.persistence.TransactionRequiredException;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
@@ -443,6 +443,17 @@ public class TestFsck extends TestCase {
           node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative
           EntityManager.update(node.getBlocks().get(0));
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
+          TransactionLockManager lm = new TransactionLockManager();
+          lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                  TransactionLockManager.INodeLockType.WRITE, new String[]{fileName},
+                  cluster.getNamesystem().dir.rootDir);
+          lm.addBlock(TransactionLockManager.LockType.WRITE);
+          lm.acquire();
         }
       };
       

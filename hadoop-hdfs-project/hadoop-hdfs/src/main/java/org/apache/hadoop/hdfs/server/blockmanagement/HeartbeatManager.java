@@ -29,8 +29,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.util.Daemon;
 
 /**
@@ -189,11 +189,16 @@ class HeartbeatManager implements DatanodeStatistics {
 
   TransactionalRequestHandler safeModeHandler = new TransactionalRequestHandler(OperationType.HEARTBEAT_MONITOR) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return namesystem.isInSafeMode();
-      }
-    };
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      return namesystem.isInSafeMode();
+    }
+
+    @Override
+    public void acquireLock() throws PersistanceException, IOException {
+      // FIXME [H]: lock resources
+    }
+  };
   
   /**
    * Check if there are any expired heartbeats, and if so, whether any blocks

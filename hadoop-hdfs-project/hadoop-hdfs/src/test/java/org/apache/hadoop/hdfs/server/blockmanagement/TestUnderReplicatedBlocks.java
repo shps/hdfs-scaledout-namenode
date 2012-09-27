@@ -27,9 +27,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.eclipse.core.internal.jobs.LockManager;
 
 public class TestUnderReplicatedBlocks extends TestCase {
 
@@ -47,15 +49,24 @@ public class TestUnderReplicatedBlocks extends TestCase {
       // remove one replica from the blocksMap so block becomes under-replicated
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
+      final ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       new TransactionalRequestHandler(OperationType.SET_REPLICA_INCREAMENT) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
-          ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
           DatanodeDescriptor dn = bm.getDatanodes(bm.getStoredBlock(b.getLocalBlock())).get(0);
           bm.addToInvalidates(b.getLocalBlock(), dn);
           bm.removeNode(b.getLocalBlock(), dn);
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager lm = new TransactionLockManager();
+          lm.addINode(TransactionLockManager.INodeLockType.WRITE).
+                  addBlock(TransactionLockManager.LockType.WRITE, b.getBlockId()).
+                  addReplica(TransactionLockManager.LockType.WRITE).
+                  acquireByBlock();
         }
       }.handle();
       // increment this file's replication factor

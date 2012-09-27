@@ -24,11 +24,10 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.*;
 
 /**
@@ -101,6 +100,11 @@ public class TestDatanodeDescriptor extends TestCase {
         EntityManager.remove(removeReplica);
         assertEquals(0, dd.numBlocks());
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        throw new UnsupportedOperationException("Not supported yet.");
       }
     }.handle();
   }

@@ -43,10 +43,12 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 public class TestBlockManager {
@@ -321,16 +323,33 @@ public class TestBlockManager {
    */
   private void fulfillPipeline(final BlockInfo blockInfo,
           final DatanodeDescriptor[] pipeline) throws IOException {
-    new TransactionalRequestHandler(OperationType.FULFILL_PIPELINE) {
+    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.FULFILL_PIPELINE) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        for (int i = 1; i < pipeline.length; i++) {
-          bm.addBlock(pipeline[i], blockInfo, null);
-        }
+        DatanodeDescriptor dnd = (DatanodeDescriptor) getParams()[0];
+        bm.addBlock(dnd, blockInfo, null);
         return null;
       }
-    }.handle();
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, blockInfo.getBlockId()).
+                addReplica(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addPendingBlock(LockType.WRITE).
+                addReplicaUc(LockType.WRITE).
+                addInvalidatedBlock(LockType.READ);
+        lm.acquireByBlock();
+      }
+    };
+    for (int i = 1; i < pipeline.length; i++) {
+      handler.setParams(pipeline[i]).handle();
+    }
   }
 
   private BlockInfo blockOnNodes(final long blkId, final List<DatanodeDescriptor> nodes) {
@@ -344,10 +363,19 @@ public class TestBlockManager {
 
           for (DatanodeDescriptor dn : nodes) {
             IndexedReplica replica = blockInfo.addReplica(dn);
-            if (replica != null)
+            if (replica != null) {
               EntityManager.add(replica);
+            }
           }
           return blockInfo;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager lm = new TransactionLockManager();
+          lm.addBlock(LockType.READ, blkId).
+                  addReplica(LockType.READ);
+          lm.acquire();
         }
       }.handle();
     } catch (IOException ex) {
@@ -402,6 +430,19 @@ public class TestBlockManager {
         System.arraycopy(targets, 0, pipeline, 1, targets.length);
 
         return pipeline;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, block.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
       }
     }.handle();
   }

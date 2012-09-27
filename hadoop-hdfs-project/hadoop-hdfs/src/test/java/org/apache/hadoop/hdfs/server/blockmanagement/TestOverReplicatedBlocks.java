@@ -35,9 +35,10 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 public class TestOverReplicatedBlocks extends TestCase {
 
@@ -110,6 +111,16 @@ public class TestOverReplicatedBlocks extends TestCase {
             // without 4910 the number of live replicas would be 0: block gets lost
             assertEquals(1, bm.countNodes(block.getLocalBlock()).liveReplicas());
             return null;
+          }
+
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            TransactionLockManager lm = new TransactionLockManager();
+            lm.addBlock(TransactionLockManager.LockType.READ, block.getBlockId()).
+                    addReplica(TransactionLockManager.LockType.READ).
+                    addExcess(TransactionLockManager.LockType.READ).
+                    addCorrupt(TransactionLockManager.LockType.READ);
+            lm.acquire();
           }
         }.handleWithWriteLock(namesystem);
       }

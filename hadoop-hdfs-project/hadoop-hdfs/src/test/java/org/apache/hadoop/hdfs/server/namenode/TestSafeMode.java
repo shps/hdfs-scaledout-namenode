@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -81,6 +81,11 @@ public class TestSafeMode {
                   "Out of safe mode after starting datanode.",
                   fs.setSafeMode(SafeModeAction.SAFEMODE_GET));
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO safemode
         }
       }.handle();
     } finally {

@@ -26,8 +26,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -62,6 +62,11 @@ public class TestComputeInvalidateWork extends TestCase {
             }
           }
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO [lock] no lock is required. use ligh weight request handler
         }
       }.handleWithWriteLock(namesystem);
       namesystem.writeLock();

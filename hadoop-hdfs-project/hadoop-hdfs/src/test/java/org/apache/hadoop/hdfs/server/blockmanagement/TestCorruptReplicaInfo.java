@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * This test makes sure that CorruptReplicasMap::numBlocksWithCorruptReplicas
@@ -104,6 +104,11 @@ public class TestCorruptReplicaInfo extends TestCase {
           assertEquals("Number of corrupt blocks not returning correctly", 3, EntityManager.count(CorruptReplica.Counter.All));
           return null;
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO no lock needed
+        }
       }.handle();
 
       new TransactionalRequestHandler(OperationType.TEST_CORRUPT_REPLICA_INFO2) {
@@ -125,6 +130,11 @@ public class TestCorruptReplicaInfo extends TestCase {
           assertEquals("Number of corrupt blocks not returning correctly",
                   0, EntityManager.count(CorruptReplica.Counter.All));
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          throw new UnsupportedOperationException("Not supported yet.");
         }
       }.handle();
 
@@ -151,6 +161,11 @@ public class TestCorruptReplicaInfo extends TestCase {
 //                 Arrays.equals(new long[]{8, 9, 10, 11, 12, 13, 14, 15, 16, 17},
 //                               crm.getCorruptReplicaBlockIds(10, 7L)));
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          throw new UnsupportedOperationException("Not supported yet.");
         }
       }.handle();
 

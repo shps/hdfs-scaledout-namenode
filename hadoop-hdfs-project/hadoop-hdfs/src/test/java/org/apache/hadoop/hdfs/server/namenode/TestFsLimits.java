@@ -38,8 +38,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -78,6 +78,11 @@ public class TestFsLimits {
             FSDirectory dir = (FSDirectory) getParams()[0];
             dir.verifyFsLimits(pathComponents, pos, child);
             return null;
+          }
+
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            throw new UnsupportedOperationException("Not supported yet.");
           }
         }.setParams(this).handle();
       } catch (IOException ex) {

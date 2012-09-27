@@ -134,9 +134,13 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -347,6 +351,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // No lock is required
+      }
     };
     initHandler.handle();
 
@@ -393,6 +402,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
 //      nnrmthread.start();
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME: does this need to acquire lock?
       }
     };
     activateHandler.handleWithWriteLock(this);
@@ -656,6 +670,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         out.close();
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
     };
     metasaveHandler.handleWithWriteLock(this);
   }
@@ -712,6 +732,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeResolveType.ONLY_PATH,
+                INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(LockType.READ).
+                acquire();
+      }
     };
     setPermissionHanlder.handleWithWriteLock(this);
   }
@@ -757,47 +787,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeResolveType.ONLY_PATH,
+                INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(LockType.READ).
+                acquire();
+      }
     };
     setOwnerHandler.handleWithWriteLock(this);
-  }
-
-  /**
-   * Set owner for an existing file.
-   *
-   * @throws IOException
-   */
-  void setOwnerOld(String src, String username, String group)
-          throws AccessControlException, FileNotFoundException, SafeModeException,
-          UnresolvedLinkException, IOException, PersistanceException {
-    HdfsFileStatus resultingStat = null;
-    writeLock();
-    try {
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot set owner for " + src, safeMode);
-      }
-      FSPermissionChecker pc = checkOwner(src);
-      if (!pc.isSuper) {
-        if (username != null && !pc.user.equals(username)) {
-          throw new AccessControlException("Non-super user cannot change owner.");
-        }
-        if (group != null && !pc.containsGroup(group)) {
-          throw new AccessControlException("User does not belong to " + group
-                  + " .");
-        }
-      }
-      dir.setOwner(src, username, group);
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        resultingStat = dir.getFileInfo(src, false);
-      }
-    } finally {
-      writeUnlock();
-    }
-    //getEditLog().logSync();
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(),
-              Server.getRemoteIp(),
-              "setOwner", src, null, resultingStat);
-    }
   }
 
   /**
@@ -834,6 +835,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   "open", src, null, null);
         }
         return ret;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.WRITE, new String[]{src}, getFsDirectory().getRootDir());
+        lm.addBlock(LockType.READ).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addReplicaUc(LockType.READ);
+        lm.acquire();
       }
     };
     return (LocatedBlocks) getBlockLocationsHandler.handle();
@@ -939,6 +952,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           return dir.getFileInfo(target, false);
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        String[] paths = new String[srcs.length + 1];
+        System.arraycopy(srcs, 0, paths, 0, srcs.length);
+        paths[srcs.length] = target;
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.WRITE_ON_PARENT, paths, getFsDirectory().getRootDir());
+        lm.addBlock(LockType.WRITE);
+        lm.acquire();
       }
     };
     HdfsFileStatus resultingStat = (HdfsFileStatus) concatHandler.handleWithWriteLock(this);
@@ -1086,6 +1110,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(TransactionLockManager.LockType.READ).
+                acquire();
+      }
     };
     setTimesHanlder.handleWithWriteLock(this);
   }
@@ -1108,6 +1142,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           return dir.getFileInfo(link, false);
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{link},
+                getFsDirectory().getRootDir()).
+                acquire();
       }
     };
     HdfsFileStatus resultingStat = (HdfsFileStatus) createSymLinkHandler.handleWithWriteLock(this);
@@ -1190,6 +1234,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return isFile;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                acquire();
+      }
     };
     return (Boolean) setReplicationHandler.handleWithWriteLock(this);
   }
@@ -1249,6 +1307,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return dir.getPreferredBlockSize(filename);
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{filename}, getFsDirectory().getRootDir()).
+                acquire();
+      }
     };
     return (Long) getPreferredBlockSizeHandler.handleWithReadLock(this);
   }
@@ -1297,6 +1364,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   "create", src, null, stat);
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+       TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
+                new String[]{src},
+                getFsDirectory().getRootDir()).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                acquire();
       }
     };
     startFileHanlder.handleWithWriteLock(this);
@@ -1473,6 +1557,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         recoverLeaseInternal(inode, src, holder, clientMachine, true);
         return false;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src},
+                getFsDirectory().getRootDir()).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE).
+                acquire();
+      }
     };
     return (Boolean) recoverLeaseHandler.handleWithWriteLock(this);
   }
@@ -1579,6 +1681,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 EnumSet.of(CreateFlag.APPEND),
                 false, blockManager.maxReplication, (long) 0);
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.READ).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                addInvalidatedBlock(TransactionLockManager.LockType.WRITE).
+                acquire();
+      }
     };
     LocatedBlock lb = (LocatedBlock) appendFileHandler.handleWithWriteLock(this);
     //getEditLog().logSync();
@@ -1629,6 +1749,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return getAdditionalBlock(src, clientName, previous, excludedNodes);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addExcess(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                acquire();
       }
     };
     return (LocatedBlock) additionalBlockHanlder.handleWithWriteLock(this);
@@ -1788,6 +1922,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         blockManager.setBlockToken(lb, AccessMode.COPY);
         return lb;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addLease(TransactionLockManager.LockType.READ).
+                acquire();
+      }
     };
     return (LocatedBlock) getAdditionalDatanodeHandler.handleWithReadLock(this);
   }
@@ -1823,6 +1967,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   + b + " is removed from pendingCreates");
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(LockType.WRITE).
+                addLease(TransactionLockManager.LockType.READ).
+                addCorrupt(LockType.WRITE).
+                addReplicaUc(LockType.WRITE).
+                acquire();
       }
     };
     abandonBlockHandler.handleWithWriteLock(this);
@@ -1912,6 +2069,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
 
         return success;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src}, getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                acquire();
       }
     };
     return (Boolean) completeFileHandler.handleWithWriteLock(this);
@@ -2064,6 +2237,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return status;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
     };
     return (Boolean) renameToHandler.handleWithWriteLock(this);
   }
@@ -2134,6 +2313,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
     };
     renameTo2Hanlder.handleWithWriteLock(this);
   }
@@ -2172,6 +2357,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return delete(src, recursive);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src},
+                getFsDirectory().getRootDir()).
+                addLease(TransactionLockManager.LockType.WRITE).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                acquire();
       }
     };
     return (Boolean) deleteHandler.handleWithWriteLock(this);
@@ -2298,10 +2499,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         return dir.getFileInfo(src, resolveLink);
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{src}, getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.READ).
+                acquire();
+      }
     };
     return (HdfsFileStatus) getFileInfoHandler.handleWithReadLock(this);
   }
-
+  
   /**
    * Create all the necessary directories
    */
@@ -2324,6 +2535,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   "mkdirs", src, null, stat);
         }
         return status;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{src},
+                getFsDirectory().getRootDir()).
+                acquire();
       }
     };
     return (Boolean) mkdirsHanlder.handleWithWriteLock(this);
@@ -2379,6 +2600,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return dir.getContentSummary(src);
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{src}, getFsDirectory().getRootDir());
+        tla.addBlock(TransactionLockManager.LockType.READ).
+                acquire();
+      }
     };
     return (ContentSummary) getContentSummaryHandler.handleWithReadLock(this);
   }
@@ -2401,6 +2632,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         dir.setQuota(path, nsQuota, dsQuota);
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.WRITE,
+                new String[]{path}, getFsDirectory().getRootDir()).
+                acquire();
       }
     };
     setQuotaHanlder.handleWithWriteLock(this);
@@ -2428,6 +2668,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         assert pendingFile.isUnderConstruction();
         dir.persistBlocks(src, pendingFile);
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{src}, getFsDirectory().getRootDir()).
+                addBlock(LockType.READ).
+                addLease(TransactionLockManager.LockType.READ).
+                acquire();
       }
     };
     fsyncHandler.handleWithWriteLock(this);
@@ -2743,6 +2994,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         return src;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(INodeLockType.WRITE).
+                addBlock(LockType.WRITE, lastblock.getBlockId()).
+                addLease(LockType.WRITE).
+                addLeasePath(LockType.WRITE).
+                addReplica(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addExcess(LockType.READ).
+                addReplicaUc(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
+                acquire();
+      }
     };
     String src = (String) commitBlockSyncHanlder.handleWithWriteLock(this);
 
@@ -2775,6 +3041,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         leaseManager.renewLease(holder);
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addLease(TransactionLockManager.LockType.WRITE, holder).
+                acquire();
+      }
     };
     renewLeaseHandler.handleWithWriteLock(this);
   }
@@ -2798,7 +3071,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        DirectoryListing dl = null;
         if (isPermissionEnabled) {
           if (dir.isDir(src)) {
             checkPathAccess(src, FsAction.READ_EXECUTE);
@@ -2813,6 +3085,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   "listStatus", src, null, null);
         }
         return dir.getListing(src, startAfter, needLocation);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{src},
+                getFsDirectory().getRootDir()).
+                addBlock(TransactionLockManager.LockType.READ).
+                addReplica(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addReplicaUc(TransactionLockManager.LockType.READ).
+                acquire();
       }
     };
     return (DirectoryListing) getListingHandler.handleWithReadLock(this);
@@ -2852,6 +3139,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           checkSafeMode();
           return null;
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // FIXME lock for safemode
+        }
       }.handle();
     } finally {
       writeUnlock();
@@ -2881,30 +3173,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   DatanodeCommand[] handleHeartbeat(final DatanodeRegistration nodeReg,
           final long capacity, final long dfsUsed, final long remaining, final long blockPoolUsed,
-          final int xceiverCount, final int xmitsInProgress, final int failedVolumes)
-          throws IOException {
-    TransactionalRequestHandler heartbeatHandler = new TransactionalRequestHandler(OperationType.HANDLE_HEARTBEAT) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        final int maxTransfer = (Integer) blockManager.getMaxReplicationStreams()
-                - xmitsInProgress;
-        DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
-                nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
-                xceiverCount, maxTransfer, failedVolumes);
-        if (cmds != null) {
-          return cmds;
-        }
-
-        //check distributed upgrade
-        DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
-        if (cmd != null) {
-          return new DatanodeCommand[]{cmd};
-        }
-        return null;
+          final int xceiverCount, final int xmitsInProgress, final int failedVolumes) throws IOException{
+    readLock();
+    try {
+      final int maxTransfer = (Integer) blockManager.getMaxReplicationStreams()
+              - xmitsInProgress;
+      DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
+              nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
+              xceiverCount, maxTransfer, failedVolumes);
+      if (cmds != null) {
+        return cmds;
       }
-    };
-    return (DatanodeCommand[]) heartbeatHandler.handleWithReadLock(this);
+
+      //check distributed upgrade
+      DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
+      if (cmd != null) {
+        return new DatanodeCommand[]{cmd};
+      }
+      return null;
+    } finally {
+      readUnlock();
+    }
   }
 // TODO:kamal, resource monitor
 //  /**
@@ -2978,22 +3267,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return -1;
     }
     try {
-      TransactionalRequestHandler getMissingBlocksCountHanlder = new TransactionalRequestHandler(OperationType.GET_MISSING_BLOCKS_COUNT) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return getMissingBlocksCountNoTx();
-        }
-      };
-      return (Long) getMissingBlocksCountHanlder.handle();
+      return getMissingBlocksCountInternal(OperationType.GET_MISSING_BLOCKS_COUNT);
     } catch (IOException ex) {
-      LOG.error(ex);
+      LOG.error(ex.getMessage(), ex);
+      return -1;
     }
-    return -1;
   }
-
-  public long getMissingBlocksCountNoTx() throws PersistanceException {
-    return blockManager.getMissingBlocksCount();
+  
+  private long getMissingBlocksCountInternal(OperationType opType) throws IOException
+  {
+    return blockManager.getMissingBlocksCount(opType);
   }
 
   /**
@@ -3007,23 +3290,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#getStats()
    */
   long[] getStats() {
+    final long[] stats = datanodeStatistics.getStats();
+    stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
+    stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
     try {
-      TransactionalRequestHandler getStatusHandler = new TransactionalRequestHandler(OperationType.GET_STATUS) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          final long[] stats = datanodeStatistics.getStats();
-          stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
-          stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
-          stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCountNoTx();
-          return stats;
-        }
-      };
-      return (long[]) getStatusHandler.handle();
+      stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCountInternal(OperationType.GET_STATS);
     } catch (IOException ex) {
-      LOG.error(ex);
-      return null;
+      LOG.error(ex.getMessage(), ex);
+      stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = -1;
     }
+    return stats;
   }
 
   /**
@@ -3118,6 +3394,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getFSImage().saveNamespace();
         LOG.info("New namespace image has been created.");
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode 
       }
     };
     saveNamespaceHandler.handleWithReadLock(this);
@@ -3323,7 +3604,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      *
      * @throws IOException
      */
-    private synchronized void leave(boolean checkForUpgrades) throws IOException, PersistanceException {
+    private synchronized void leave(boolean checkForUpgrades) throws IOException, PersistanceException{
       if (checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
         boolean needUpgrade = false;
@@ -3356,8 +3637,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.info("STATE* Network topology has "
               + nt.getNumOfRacks() + " racks and "
               + nt.getNumOfLeaves() + " datanodes");
-      NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
-              + blockManager.numOfUnderReplicatedBlocks() + " blocks");
+      // TODO [lock] uncomment after fixing safemode's lock
+//      NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
+//              + blockManager.numOfUnderReplicatedBlocks() + " blocks");
     }
 
     /**
@@ -3684,6 +3966,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               leaveSafeMode(true);
               return null;
             }
+
+            @Override
+            public void acquireLock() throws PersistanceException, IOException {
+              // TODO safemode
+            }
           };
           handler.handle();
         } catch (SafeModeException es) { // should never happen
@@ -3716,6 +4003,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         }
         return isInSafeMode();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
       }
     };
     return (Boolean) setSafemodeLeaveHandler.handle();
@@ -3807,6 +4099,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public Object performTask() throws PersistanceException, IOException {
           return getBlocksTotalNoTx();
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, BlockInfo.Finder.All, null); // FIXME: Not feasible
         }
       };
       return (Long) getBlocksTotalHandler.handle();
@@ -3945,6 +4242,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       public Object performTask() throws PersistanceException, IOException {
         return upgradeManager.processUpgradeCommand(comm, true);
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
+      }
     };
     return (UpgradeCommand) upgradeHandler.handle();
   }
@@ -4069,6 +4371,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       public Object performTask() throws PersistanceException, IOException {
         return blockManager.getPendingDeletionBlocksCount();
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
+      }
     };
     return isWritingNN() ? (Long) getPendingDeletionBlocksHandler.handle() : -1;
   }
@@ -4080,6 +4387,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return blockManager.getExcessBlocksCount();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO add read-all to excess replica context
+        throw new UnsupportedOperationException("Not supported yet.");
       }
     };
     return isWritingNN() ? (Long) getExcessBlocksHandler.handle() : -1;
@@ -4098,6 +4411,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public Object performTask() throws PersistanceException, IOException {
           return isInSafeMode() ? "safeMode" : "Operational";
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO safemode
         }
       };
       return (String) getFSStateHandler.handle();
@@ -4235,6 +4553,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //getEditLog().logSync();
         return locatedBlock;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeLockType.READ).
+                addBlock(LockType.READ, block.getBlockId());
+        lm.acquireByBlock();
+      }
     };
     return (LocatedBlock) updateBlockForPipelineHandler.handleWithWriteLock(this);
   }
@@ -4272,6 +4598,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         updatePipelineInternal(clientName, oldBlock, newBlock, newNodes);
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(INodeLockType.WRITE).
+                addBlock(LockType.WRITE, oldBlock.getBlockId()).
+                addReplicaUc(LockType.READ);
+        lm.acquireByBlock();
       }
     };
     updatePipelineHanlder.handleWithWriteLock(this);
@@ -4522,6 +4857,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("list corrupt file blocks returned: " + count);
         return corruptFiles;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME 
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
     };
     return (Collection<CorruptFileBlockInfo>) listCorruptFileBlocksHandler.handleWithReadLock(this);
   }
@@ -4591,6 +4932,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //getEditLog().logSync();
         return token;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
+      }
     };
     return (Token<DelegationTokenIdentifier>) getDelegationTokenHandler.handleWithWriteLock(this);
   }
@@ -4626,6 +4972,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //getEditLog().logSync();
         return expiryTime;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
+      }
     };
     return (Long) renewDelegationTokenHanlder.handleWithWriteLock(this);
   }
@@ -4649,6 +5000,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //getEditLog().logCancelDelegationToken(id);
         //getEditLog().logSync();
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
       }
     };
     cancelDelegationTokenHandler.handleWithWriteLock(this);
@@ -4789,6 +5145,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           return "Safe mode is ON." + getSafeModeTip();
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO safemode
+        }
       };
       return (String) getSafemodeHandler.handle();
     } catch (IOException ex) {
@@ -4840,19 +5201,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // NameNodeMXBean
   public long getNumberOfMissingBlocks() {
-    try {
-      TransactionalRequestHandler missingBlockCountHandler = new TransactionalRequestHandler(OperationType.GET_NUMBER_OF_MISSING_BLOCKS) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return getMissingBlocksCount();
-        }
-      };
-      return (Long) missingBlockCountHandler.handle();
-    } catch (IOException ex) {
-      LOG.error(ex);
-    }
-    return -1;
+    return getMissingBlocksCount();
   }
 
   @Override // NameNodeMXBean

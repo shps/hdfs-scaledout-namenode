@@ -26,9 +26,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
@@ -46,27 +48,37 @@ public class TestPendingReplication extends TestCase {
       StorageFactory.setConfiguration(new HdfsConfiguration());
       StorageFactory.getConnector().formatStorage();
       try {
-        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
+        TransactionalRequestHandler addPendingHandler = new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
-            //
-            // Add 10 blocks to pendingReplications.
-            //
-            for (int i = 0; i < 10; i++) {
-              Block block = new Block(i, i, 0);
-              pendingReplications.add(block, i);
-            }
-
-            assertEquals("Size of pendingReplications ",
-                    10, pendingReplications.size());
+            Block block = (Block) getParams()[0];
+            int replication = (Integer) getParams()[1];
+            pendingReplications.add(block, replication);
             return null;
           }
-        }.handle();
+
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            Block block = (Block) getParams()[0];
+            TransactionLockAcquirer.acquireLock(TransactionLockManager.LockType.WRITE, PendingBlockInfo.Finder.ByPKey, block.getBlockId());
+          }
+        };
+
+        //
+        // Add 10 blocks to pendingReplications.
+        //
+        for (int i = 0; i < 10; i++) {
+          Block block = new Block(i, i, 0);
+          addPendingHandler.setParams(block, i).handle();
+        }
+
+        assertEquals("Size of pendingReplications ",
+                10, pendingReplications.size(OperationType.TEST_PENDING_REPLICATION));
 
         final Block blk = new Block(8, 8, 0);
 
-        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION2) {
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
@@ -81,30 +93,55 @@ public class TestPendingReplication extends TestCase {
               pendingReplications.remove(blk);           // removes all replicas
             }
 
-            assertTrue(pendingReplications.size() == 9);
+
             return null;
           }
-        }.handle();
 
-        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION3) {
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            TransactionLockAcquirer.acquireLock(TransactionLockManager.LockType.WRITE, PendingBlockInfo.Finder.ByPKey, blk);
+          }
+        }.handle();
+        assertTrue(pendingReplications.size(OperationType.TEST_PENDING_REPLICATION) == 9);
+        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
             pendingReplications.add(blk, 8);
-            assertTrue(pendingReplications.size() == 10);
-
-            //
-            // verify that the number of replicas returned
-            // are sane.
-            //
-            for (int i = 0; i < 10; i++) {
-              Block block = new Block(i, i, 0);
-              int numReplicas = pendingReplications.getNumReplicas(block);
-              assertTrue(numReplicas == i);
-            }
             return null;
           }
+
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            TransactionLockAcquirer.acquireLock(TransactionLockManager.LockType.WRITE, PendingBlockInfo.Finder.ByPKey, blk);
+          }
         }.handle();
+
+        assertTrue(pendingReplications.size(OperationType.TEST_PENDING_REPLICATION) == 10);
+
+        TransactionalRequestHandler findPendingHandler = new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            Block block = (Block) getParams()[0];
+            return pendingReplications.getNumReplicas(block);
+          }
+
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            Block block = (Block) getParams()[0];
+            TransactionLockAcquirer.acquireLock(TransactionLockManager.LockType.READ, PendingBlockInfo.Finder.ByPKey, block.getBlockId());
+          }
+        };
+        //
+        // verify that the number of replicas returned
+        // are sane.
+        //
+        for (int i = 0; i < 10; i++) {
+          Block block = new Block(i, i, 0);
+          int numReplicas = (Integer) findPendingHandler.setParams(block).handle();
+          assertTrue(numReplicas == i);
+        }
 
         //
         // verify that nothing has timed out so far
@@ -119,37 +156,31 @@ public class TestPendingReplication extends TestCase {
         } catch (Exception e) {
         }
 
-        new TransactionalRequestHandler(OperationType.TEST_PENDING_REPLICATION4) {
+        for (int i = 10; i < 15; i++) {
+          Block block = new Block(i, i, 0);
+          addPendingHandler.setParams(block, i).handle();
+        }
+        assertTrue(pendingReplications.size(OperationType.TEST_PENDING_REPLICATION) == 15);
 
-          @Override
-          public Object performTask() throws PersistanceException, IOException {
-            for (int i = 10; i < 15; i++) {
-              Block block = new Block(i, i, 0);
-              pendingReplications.add(block, i);
-            }
-            assertTrue(pendingReplications.size() == 15);
-
-            //
-            // Wait for everything to timeout.
-            //
-            int loop = 0;
-            while (pendingReplications.size() > 0) {
-              try {
-                Thread.sleep(1000);
-              } catch (Exception e) {
-              }
-              loop++;
-            }
-            LOG.info("Had to wait for " + loop
-                    + " seconds for the lot to timeout");
-            //
-            // Verify that everything has timed out.
-            //
-            assertEquals("Size of pendingReplications ",
-                    0, pendingReplications.size());
-            return null;
+        //
+        // Wait for everything to timeout.
+        //
+        int loop = 0;
+        while (pendingReplications.size(OperationType.TEST_PENDING_REPLICATION) > 0) {
+          try {
+            Thread.sleep(1000);
+          } catch (Exception e) {
           }
-        }.handle();
+          loop++;
+        }
+        LOG.info("Had to wait for " + loop
+                + " seconds for the lot to timeout");
+        //
+        // Verify that everything has timed out.
+        //
+        assertEquals("Size of pendingReplications ",
+                0, pendingReplications.size(OperationType.TEST_PENDING_REPLICATION));
+
         List<PendingBlockInfo> timedOut = pendingReplications.getTimedOutBlocks(OperationType.TEST_PENDING_REPLICATION4);
         assertTrue(timedOut != null && timedOut.size() == 15);
         for (int i = 0; i < timedOut.size(); i++) {

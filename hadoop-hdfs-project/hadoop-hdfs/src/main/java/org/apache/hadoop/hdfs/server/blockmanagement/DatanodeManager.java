@@ -49,9 +49,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTar
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -275,6 +277,11 @@ public class DatanodeManager {
       public Object performTask() throws PersistanceException, IOException {
         namesystem.checkSafeMode();
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME: [H] lock resources
       }
     }.handle();
   }
@@ -878,7 +885,7 @@ public class DatanodeManager {
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
           final String blockPoolId,
           long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-          int xceiverCount, int maxTransfers, int failedVolumes) throws IOException, PersistanceException {
+          int xceiverCount, int maxTransfers, int failedVolumes) throws IOException{
     synchronized (heartbeatManager) {
       synchronized (datanodeMap) {
         DatanodeDescriptor nodeinfo = null;
@@ -900,15 +907,30 @@ public class DatanodeManager {
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
                 remaining, blockPoolUsed, xceiverCount, failedVolumes);
-
+        
         //check lease recovery
         BlockInfoUnderConstruction[] blocks = nodeinfo.getLeaseRecoveryCommand(Integer.MAX_VALUE);
         if (blocks != null) {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
                   blocks.length);
+          TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.HANDLE_HEARTBEAT) {
+
+            @Override
+            public void acquireLock() throws PersistanceException, IOException {
+              BlockInfoUnderConstruction b = (BlockInfoUnderConstruction) getParams()[0];
+              TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, ReplicaUnderConstruction.Finder.ByBlockId, b.getBlockId());
+            }
+
+            @Override
+            public Object performTask() throws PersistanceException, IOException {
+              BlockInfoUnderConstruction b = (BlockInfoUnderConstruction) getParams()[0];
+              return blockManager.getExpectedDatanodes(b);
+            }
+          };
           for (BlockInfoUnderConstruction b : blocks) {
+            DatanodeDescriptor[] dnds = (DatanodeDescriptor[]) handler.setParams(b).handle();
             brCommand.add(new RecoveringBlock(
-                    new ExtendedBlock(blockPoolId, b), blockManager.getExpectedDatanodes(b), b.getBlockRecoveryId()));
+                    new ExtendedBlock(blockPoolId, b), dnds, b.getBlockRecoveryId()));
           }
           return new DatanodeCommand[]{brCommand};
         }

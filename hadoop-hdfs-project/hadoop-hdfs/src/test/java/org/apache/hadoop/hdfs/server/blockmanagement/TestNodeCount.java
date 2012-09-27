@@ -34,10 +34,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 
 /**
  * Test if live nodes count per node is correct so NN makes right decision for
@@ -121,6 +123,11 @@ public class TestNodeCount extends TestCase {
           }
           return nonExcessDN;
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          throw new UnsupportedOperationException("Not supported yet.");
+        }
       };
       
       DatanodeDescriptor nonExcessDN = (DatanodeDescriptor) handler.handle();
@@ -203,6 +210,16 @@ public class TestNodeCount extends TestCase {
         lastBlock = block;
         lastNum = namesystem.getBlockManager().countNodes(block);
         return lastNum;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager lm = new TransactionLockManager();
+            lm.addBlock(TransactionLockManager.LockType.READ, block.getBlockId()).
+                    addReplica(LockType.READ).
+                    addExcess(LockType.READ).
+                    addCorrupt(LockType.READ);
+            lm.acquire();
         }
       }.handleWithReadLock(namesystem);
     } catch (IOException ex) {

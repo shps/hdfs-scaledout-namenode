@@ -48,9 +48,10 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -72,6 +73,11 @@ class NamenodeJspHelper {
           return "";
         }
         return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // TODO safemode
       }
     };
     return (String) getSafeModeTextHandler.handle();
@@ -324,14 +330,7 @@ class NamenodeJspHelper {
 
       long bpUsed = fsnStats[6];
       float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-      TransactionalRequestHandler generateHealthReportHanlder = new TransactionalRequestHandler(OperationType.GENERATE_HEALTH_REPORT) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return fsn.getBlockManager().getUnderReplicatedNotMissingBlocks();
-        }
-      };
-      int underReplicatedNotMissingBlocks = (Integer) generateHealthReportHanlder.handle();
+      int underReplicatedNotMissingBlocks = fsn.getBlockManager().getUnderReplicatedNotMissingBlocks(OperationType.GENERATE_HEALTH_REPORT);
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
               + "Configured Capacity" + colTxt() + ":" + colTxt()
               + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
@@ -748,6 +747,14 @@ class NamenodeJspHelper {
             public Object performTask() throws PersistanceException, IOException {
               return blockManager.getINode(block);
             }
+
+            @Override
+            public void acquireLock() throws PersistanceException, IOException {
+              TransactionLockManager lm = new TransactionLockManager();
+              lm.addINode(TransactionLockManager.INodeLockType.READ).
+                      addBlock(TransactionLockManager.LockType.READ, block.getBlockId());
+              lm.acquireByBlock();
+            }
           }.handle();
         } catch (IOException e) {
           e.printStackTrace();
@@ -858,6 +865,12 @@ class NamenodeJspHelper {
 
           return null;
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // FIXME operation's logic is not correct
+          throw new UnsupportedOperationException("Not supported yet.");
+        }
       };
       toXMLHandler.handle();
     }
@@ -880,26 +893,27 @@ class NamenodeJspHelper {
     }
 
     public void toXML(final XMLOutputter doc) throws IOException {
+      doc.startTag("corrupt_block_info");
+
+      if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
+        doc.startTag("error");
+        doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
+        doc.endTag();
+      }
+
+      doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
+      doc.pcdata("" + conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+              DFSConfigKeys.DFS_REPLICATION_DEFAULT));
+      doc.endTag();
+
+      doc.startTag("num_missing_blocks");
+      doc.pcdata("" + blockManager.getMissingBlocksCount(OperationType.TO_XML_CORRUPT_BLOCK_INFO));
+      doc.endTag();
+
       TransactionalRequestHandler toXMLHandler = new TransactionalRequestHandler(OperationType.TO_XML_CORRUPT_BLOCK_INFO) {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
-          doc.startTag("corrupt_block_info");
-
-          if (numCorruptBlocks < 0 || numCorruptBlocks > 100) {
-            doc.startTag("error");
-            doc.pcdata("numCorruptBlocks must be >= 0 and <= 100");
-            doc.endTag();
-          }
-
-          doc.startTag(DFSConfigKeys.DFS_REPLICATION_KEY);
-          doc.pcdata("" + conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
-                  DFSConfigKeys.DFS_REPLICATION_DEFAULT));
-          doc.endTag();
-
-          doc.startTag("num_missing_blocks");
-          doc.pcdata("" + blockManager.getMissingBlocksCount());
-          doc.endTag();
 
           doc.startTag("num_corrupt_replica_blocks");
           doc.pcdata("" + blockManager.getCorruptReplicaBlocksCount());
@@ -923,6 +937,12 @@ class NamenodeJspHelper {
           doc.getWriter().flush();
 
           return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // FIXME operation's logic is not correct
+          throw new UnsupportedOperationException("Not supported yet.");
         }
       };
       toXMLHandler.handle();

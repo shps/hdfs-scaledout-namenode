@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -64,10 +65,16 @@ import java.util.logging.Logger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 
@@ -350,8 +357,9 @@ public class BlockManager {
     // Dump contents of neededReplication
     //
     synchronized (neededReplications) {
-      out.println("Metasave: Blocks waiting for replication: "
-              + neededReplications.size());
+      // TODO [lock] 
+//      out.println("Metasave: Blocks waiting for replication: "
+//              + neededReplications.size());
       for (UnderReplicatedBlock urb : EntityManager.findList(UnderReplicatedBlock.Finder.All)) {
         Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
         List<DatanodeDescriptor> containingNodes =
@@ -850,31 +858,56 @@ public class BlockManager {
    * @throws IOException
    */
   void removeBlocksAssociatedTo(final DatanodeDescriptor node, OperationType opType) throws IOException {
-    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()).iterator();
-      }
-    };
-    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
-
-    TransactionalRequestHandler removeBlockHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        Block blockToRemove = (Block) getParams()[0];
-        removeStoredBlock(blockToRemove, node);
-        return null;
-      }
-    };
+    final Iterator<? extends Block> it = findBlocksAssociatedTo(node.getStorageID(), opType);
 
     while (it.hasNext()) {
-      removeBlockHandler.setParams(it.next()).handle();
+      removeBlock(it.next(), node, opType);
     }
 
     node.resetBlocks();
     invalidateBlocks.remove(node.getStorageID(), opType);
+  }
+  
+  private Iterator<? extends Block> findBlocksAssociatedTo(final String sid, OperationType opType) throws IOException {
+    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(BlockInfo.Finder.ByStorageId, sid).iterator();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
+                BlockInfo.Finder.ByStorageId, sid);
+      }
+    };
+    return (Iterator<? extends Block>) findBlocksHandler.handle();
+  }
+  
+  private void removeBlock(final Block b, final DatanodeDescriptor node, OperationType opType) throws IOException
+  {
+    TransactionalRequestHandler removeBlockHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        removeStoredBlock(b, node);
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, UnresolvedPathException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, b.getBlockId()).
+                addReplica(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
+      }
+    };
+    removeBlockHandler.setParams(node).handle();
   }
 
   /**
@@ -929,6 +962,18 @@ public class BlockManager {
         }
         markBlockAsCorrupt(storedBlock, dn);
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE).
+                addReplica(LockType.READ).
+                addExcess(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
       }
     };
     findAndMarkBlockAsCorruptHandler.handleWithWriteLock(namesystem);
@@ -1000,17 +1045,32 @@ public class BlockManager {
     }
   }
 
-  void updateState() throws PersistanceException {
-    pendingReplicationBlocksCount = pendingReplications.size();
-    underReplicatedBlocksCount = neededReplications.size();
-    corruptReplicaBlocksCount = EntityManager.count(CorruptReplica.Counter.All);
+  void updateState(OperationType opType) throws IOException {
+    pendingReplicationBlocksCount = pendingReplications.size(opType);
+    underReplicatedBlocksCount = neededReplications.size(opType);
+    corruptReplicaBlocksCount = countCorruptReplica(opType);
+  }
+  
+  private int countCorruptReplica(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        CorruptReplicaDataAccess da = (CorruptReplicaDataAccess) StorageFactory.getDataAccess(CorruptReplicaDataAccess.class);
+        Collection result = da.findAll();
+        if (result != null) {
+          return result.size();
+        }
+        return 0;
+      }
+    }.handle();
   }
 
   /**
    * Return number of under-replicated but not missing blocks
    */
-  public int getUnderReplicatedNotMissingBlocks() throws PersistanceException {
-    return neededReplications.getUnderReplicatedBlockCount();
+  public int getUnderReplicatedNotMissingBlocks(OperationType opType) throws IOException {
+    return neededReplications.getUnderReplicatedBlockCount(opType);
   }
 
   /**
@@ -1020,15 +1080,8 @@ public class BlockManager {
    * @return total number of block for deletion
    */
   int computeInvalidateWork(int nodesToProcess, OperationType opType) throws IOException{
-    TransactionalRequestHandler getStorageIdsHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return invalidateBlocks.getStorageIDs();
-      }
-    };
     
-    final List<String> nodes = (List<String>) getStorageIdsHandler.handle();
+    final List<String> nodes = getStorageIdsOfIvalidatedBlocks(opType);
     Collections.shuffle(nodes);
 
     nodesToProcess = Math.min(nodes.size(), nodesToProcess);
@@ -1038,6 +1091,23 @@ public class BlockManager {
       blockCnt += invalidateWorkForOneNode(nodes.get(nodeCnt), opType);
     }
     return blockCnt;
+  }
+  
+  private List<String> getStorageIdsOfIvalidatedBlocks(OperationType opType) throws IOException
+  {
+    TransactionalRequestHandler getStorageIdsHandler = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return invalidateBlocks.getStorageIDs();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
+      }
+    };
+    return (List<String>) getStorageIdsHandler.handle();
   }
 
   /**
@@ -1053,28 +1123,59 @@ public class BlockManager {
     // Choose the blocks to be replicated
     List<List<Block>> blocksToReplicate =
             chooseUnderReplicatedBlocks(blocksToProcess, opType);
-
-    TransactionalRequestHandler computeReplicationWorkHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        Block block = (Block) getParams()[0];
-        int priority = (Integer) getParams()[1];
-        return computeReplicationWorkForBlock(block, priority);
-      }
-    };
     // replicate blocks
     int scheduledReplicationCount = 0;
     for (int i = 0; i < blocksToReplicate.size(); i++) {
       for (Block block : blocksToReplicate.get(i)) {
-        if ((Boolean) computeReplicationWorkHandler.setParams(block, i).handle()) {
+        if (computeReplicationWorkForBlock(block, i, opType)) {
           scheduledReplicationCount++;
         }
       }
     }
     return scheduledReplicationCount;
   }
+  
+  private boolean computeReplicationWorkForBlock(final Block b, final int priority, OperationType opType) throws IOException
+  {
+    TransactionalRequestHandler computeReplicationWorkHandler = new TransactionalRequestHandler(opType) {
 
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return computeReplicationWorkForBlock(b, priority);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, b.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
+      }
+    };
+    return (Boolean) computeReplicationWorkHandler.handle();
+  }
+
+  private Collection<UnderReplicatedBlock> getUnderReplicatedBlocks(OperationType opType) throws IOException {
+    TransactionalRequestHandler findAllUrbHander = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return EntityManager.findList(UnderReplicatedBlock.Finder.All);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
+                UnderReplicatedBlock.Finder.All, null);
+      }
+    };
+    return (Collection<UnderReplicatedBlock>) findAllUrbHander.handle();
+  }
   /**
    * Get a list of block lists to be replicated The index of block lists
    * represents the
@@ -1093,19 +1194,12 @@ public class BlockManager {
     namesystem.writeLock();
     try {
       synchronized (neededReplications) {
-        TransactionalRequestHandler findAllUrbHander = new TransactionalRequestHandler(opType) {
-
-          @Override
-          public Object performTask() throws PersistanceException, IOException {
-            return EntityManager.findList(UnderReplicatedBlock.Finder.All);
-          }
-        };
         
 //        if (neededReplications.size() == 0) {
 //          return blocksToReplicate;
 //        }
 
-        Collection<UnderReplicatedBlock> urblocks = (Collection<UnderReplicatedBlock>) findAllUrbHander.handle();
+        Collection<UnderReplicatedBlock> urblocks = getUnderReplicatedBlocks(opType);
         if (urblocks.isEmpty())
           return blocksToReplicate;
         
@@ -1120,30 +1214,6 @@ public class BlockManager {
         // data-nodes or the number of under-replicated blocks whichever is less
         blocksToProcess = Math.min(blocksToProcess, urbSize);
 
-        TransactionalRequestHandler findBlock = new TransactionalRequestHandler(opType) {
-
-          @Override
-          public Object performTask() throws PersistanceException, IOException {
-            UnderReplicatedBlock urb = (UnderReplicatedBlock) getParams()[0];
-            int urbSize = (Integer) getParams()[1];
-            Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
-            int priority = urb.getLevel();
-            if (priority < 0 || priority >= blocksToReplicate.size()) {
-              LOG.warn("Unexpected replication priority: "
-                      + priority + " " + block);
-            } else {
-              if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
-              {
-                neededReplications.remove(new Block(urb.getBlockId()), priority);
-                urbSize--;
-              } else {
-                blocksToReplicate.get(priority).add(block);
-              }
-            }
-            return urbSize;
-          }
-        };
-
         for (int blkCnt = 0; blkCnt < blocksToProcess; blkCnt++, replIndex++) {
           if (!iterator.hasNext()) {
             // start from the beginning
@@ -1156,7 +1226,7 @@ public class BlockManager {
             assert iterator.hasNext() : "neededReplications should not be empty.";
           }
           UnderReplicatedBlock urb = iterator.next();
-          urbSize = (Integer) findBlock.setParams(urb, urbSize).handle();
+          urbSize = findBlock(blocksToReplicate, urb, urbSize, opType);
         } // end for
       } // end synchronized neededReplication
     } finally {
@@ -1164,6 +1234,41 @@ public class BlockManager {
     }
 
     return blocksToReplicate;
+  }
+  
+  private int findBlock(final List<List<Block>> blocksToReplicate,
+          final UnderReplicatedBlock urb, final int urbSize, OperationType opType) throws IOException {
+    TransactionalRequestHandler findBlock = new TransactionalRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
+        int priority = urb.getLevel();
+        if (priority < 0 || priority >= blocksToReplicate.size()) {
+          LOG.warn("Unexpected replication priority: "
+                  + priority + " " + block);
+        } else {
+          if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
+          {
+            neededReplications.remove(new Block(urb.getBlockId()), priority);
+            return urbSize - 1;
+          } else {
+            blocksToReplicate.get(priority).add(block);
+          }
+        }
+        return urbSize;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        UnderReplicatedBlock urb = (UnderReplicatedBlock) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addBlock(LockType.WRITE, urb.getBlockId());
+        lm.addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquire();
+      }
+    };
+    return (Integer) findBlock.setParams(urb, urbSize).handle();
   }
 
   /**
@@ -1325,11 +1430,12 @@ public class BlockManager {
                   "BLOCK* ask "
                   + srcNode.getName() + " to replicate "
                   + block + " to " + targetList);
-          if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug(
-                    "BLOCK* neededReplications = " + neededReplications.size()
-                    + " pendingReplications = " + pendingReplications.size());
-          }
+          // TODO [lock]
+//          if (NameNode.stateChangeLog.isDebugEnabled()) {
+//            NameNode.stateChangeLog.debug(
+//                    "BLOCK* neededReplications = " + neededReplications.size()
+//                    + " pendingReplications = " + pendingReplications.size());
+//          }
         }
       }
     } finally {
@@ -1487,16 +1593,29 @@ public class BlockManager {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-          Block timedOutItem = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
-          NumberReplicas num = countNodes(timedOutItem);
-          if (isNeededReplication(timedOutItem, getReplication(timedOutItem),
-                  num.liveReplicas())) {
-            neededReplications.add(timedOutItem,
-                    num.liveReplicas(),
-                    num.decommissionedReplicas(),
-                    getReplication(timedOutItem));
-          }
-          return null;
+        Block timedOutItem = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
+        NumberReplicas num = countNodes(timedOutItem);
+        if (isNeededReplication(timedOutItem, getReplication(timedOutItem),
+                num.liveReplicas())) {
+          neededReplications.add(timedOutItem,
+                  num.liveReplicas(),
+                  num.decommissionedReplicas(),
+                  getReplication(timedOutItem));
+        }
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
       }
     }.handle();
   }
@@ -1517,6 +1636,36 @@ public class BlockManager {
       this.storedBlock = storedBlock;
       this.reportedState = reportedState;
     }
+  }
+  
+  private boolean prepareProcessReport(final DatanodeDescriptor node, final DatanodeID nodeID,
+          final List<BlockInfo> existingBlocks) throws IOException {
+    TransactionalRequestHandler prepareProcessReportHandler = new TransactionalRequestHandler(OperationType.PREPARE_PROCESS_REPORT) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        // To minimize startup time, we discard any second (or later) block reports
+        // that we receive while still in startup phase.
+        if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
+          NameNode.stateChangeLog.info("BLOCK* processReport: "
+                  + "discarded non-initial block report from " + nodeID.getName()
+                  + " because namenode still in startup phase");
+          return false;
+        }
+
+        if (node.numBlocks() > 0) { // If it's not the first block report of this datanode.
+          existingBlocks.addAll(EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()));
+        }
+
+        return true;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, BlockInfo.Finder.ByStorageId, node.getStorageID());
+      }
+    };
+    return (Boolean) prepareProcessReportHandler.handle();
   }
 
   /**
@@ -1539,28 +1688,8 @@ public class BlockManager {
       }
 
       final List<BlockInfo> existingBlocks = new ArrayList<BlockInfo>(); // The existingblocks is loaded and used if it's not the first block report of the datanode.
-      TransactionalRequestHandler prepareProcessReportHandler = new TransactionalRequestHandler(OperationType.PREPARE_PROCESS_REPORT) {
 
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          // To minimize startup time, we discard any second (or later) block reports
-          // that we receive while still in startup phase.
-          if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
-            NameNode.stateChangeLog.info("BLOCK* processReport: "
-                    + "discarded non-initial block report from " + nodeID.getName()
-                    + " because namenode still in startup phase");
-            return false;
-          }
-
-          if (node.numBlocks() > 0) { // If it's not the first block report of this datanode.
-            existingBlocks.addAll(EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()));
-          }
-
-          return true;
-        }
-      };
-
-      if (!(Boolean) prepareProcessReportHandler.handle()) {
+      if (!prepareProcessReport(node, nodeID, existingBlocks)) {
         return;
       }
 
@@ -1589,6 +1718,7 @@ public class BlockManager {
     }
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = report.getBlockReportIterator();
+    
     TransactionalRequestHandler processReportHandler = new TransactionalRequestHandler(OperationType.PROCESS_REPORT) {
 
       @Override
@@ -1603,13 +1733,29 @@ public class BlockManager {
         }
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        Block iblk = (Block) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, iblk.getBlockId()).
+                addReplica(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addReplicaUc(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addInvalidatedBlock(LockType.READ).
+                addPendingBlock(LockType.READ);
+        lm.acquireByBlock();
+      }
     };
+    
 
     while (itBR.hasNext()) {
       Block iblk = itBR.next();
       ReplicaState iState = itBR.getCurrentReplicaState();
-      processReportHandler.setParams(iblk, iState);
-      processReportHandler.handle();
+      processReportHandler.setParams(iblk, iState).handle();
     }
 
     TransactionalRequestHandler afterReportHandler = new TransactionalRequestHandler(OperationType.AFTER_PROCESS_REPORT) {
@@ -1620,6 +1766,19 @@ public class BlockManager {
         removeStoredBlock(b, node);
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        Block b = (Block) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, b.getBlockId()).
+                addReplica(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
+      }
     };
 
     // collect blocks that have not been reported
@@ -1628,40 +1787,6 @@ public class BlockManager {
       afterReportHandler.handle();
     }
   }
-
-//  private void processReport(final DatanodeDescriptor node,
-//          final BlockListAsLongs report) throws IOException, PersistanceException {
-//    // Normal case:
-//    // Modify the (block-->datanode) map, according to the difference
-//    // between the old and new block report.
-//    //
-//    Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
-//    Collection<Block> toRemove = new LinkedList<Block>();
-//    Collection<Block> toInvalidate = new LinkedList<Block>();
-//    Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
-//    Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-//    reportDiff(node, report, toAdd, toRemove, toInvalidate, toCorrupt, toUC);
-//
-//    // Process the blocks on each queue
-//    for (StatefulBlockInfo b : toUC) {
-//      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
-//    }
-//    for (Block b : toRemove) {
-//      removeStoredBlock(b, node);
-//    }
-//    for (BlockInfo b : toAdd) {
-//      addStoredBlock(b, node, null, true);
-//    }
-//    for (Block b : toInvalidate) {
-//      NameNode.stateChangeLog.info("BLOCK* processReport: block "
-//              + b + " on " + node.getName() + " size " + b.getNumBytes()
-//              + " does not belong to any file.");
-//      addToInvalidates(b, node);
-//    }
-//    for (BlockInfo b : toCorrupt) {
-//      markBlockAsCorrupt(b, node);
-//    }
-//  }
   /**
    * processFirstBlockReport is intended only for processing "initial" block
    * reports, the first block report received from a DN after it registers. It
@@ -1718,6 +1843,22 @@ public class BlockManager {
 
         return null;
       }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        Block b = (Block) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, b.getBlockId()).
+                addReplica(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addReplicaUc(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addInvalidatedBlock(LockType.READ).
+                addPendingBlock(LockType.READ);
+        lm.acquireByBlock();
+      }
     };
 
     while (itBR.hasNext()) {
@@ -1728,42 +1869,6 @@ public class BlockManager {
     }
   }
 
-//  private void reportDiff(DatanodeDescriptor dn,
-//          BlockListAsLongs newReport,
-//          Collection<BlockInfo> toAdd, // add to DatanodeDescriptor
-//          Collection<Block> toRemove, // remove from DatanodeDescriptor
-//          Collection<Block> toInvalidate, // should be removed from DN
-//          Collection<BlockInfo> toCorrupt, // add to corrupt replicas list
-//          Collection<StatefulBlockInfo> toUC) throws IOException, PersistanceException { // add to under-construction list
-//    // place a delimiter in the list which separates blocks 
-//    // that have been reported from those that have not
-//    //BlockInfo delimiter = new BlockInfo(new Block(), 1);
-//    //boolean added = dn.addBlock(delimiter);
-//    //assert added : "Delimiting block cannot be present in the node";
-//    if (newReport == null) {
-//      newReport = new BlockListAsLongs();
-//    }
-//    // scan the report and process newly reported blocks
-//    BlockReportIterator itBR = newReport.getBlockReportIterator();
-//    List<BlockInfo> existingBlocks = (List<BlockInfo>) EntityManager.findList(BlockInfo.Finder.ByStorageId, dn.getStorageID());
-//
-//    while (itBR.hasNext()) {
-//      Block iblk = itBR.next();
-//      ReplicaState iState = itBR.getCurrentReplicaState();
-//      BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
-//              toAdd, toInvalidate, toCorrupt, toUC);
-//
-//      // move block to the head of the list
-//      if (storedBlock != null && storedBlock.hasReplicaIn(dn.getStorageID())) {
-//        existingBlocks.remove(storedBlock);
-//      }
-//    }
-//    // collect blocks that have not been reported
-//    // all of them are next to the delimiter
-//    for (BlockInfo b : existingBlocks) {
-//      toRemove.add(b);
-//    }
-//  }
   /**
    * Process a block replica reported by the data-node. No side effects except
    * adding to the passed-in Collections.
@@ -2575,6 +2680,24 @@ public class BlockManager {
           }
           return null;
         }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          ReceivedDeletedBlockInfo receivedAndDeletedBlock = (ReceivedDeletedBlockInfo) getParams()[0];
+          TransactionLockManager lm = new TransactionLockManager();
+          lm.addINode(TransactionLockManager.INodeLockType.READ).
+                  addBlock(LockType.WRITE, receivedAndDeletedBlock.getBlock().getBlockId()).
+                  addReplica(LockType.WRITE).
+                  addExcess(LockType.WRITE).
+                  addCorrupt(LockType.WRITE).
+                  addUnderReplicatedBlock(LockType.WRITE);
+          if (!receivedAndDeletedBlock.isDeletedBlock()) {
+            lm.addPendingBlock(LockType.WRITE).
+                    addReplicaUc(LockType.WRITE).
+                    addInvalidatedBlock(LockType.READ);
+          }
+          lm.acquireByBlock();
+        }
       };
 
       for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
@@ -2727,14 +2850,8 @@ public class BlockManager {
    */
   void processOverReplicatedBlocksOnReCommission(
           final DatanodeDescriptor srcNode, OperationType opType) throws IOException {
-    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
-      }
-    };
-    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
+    
+    final Iterator<? extends Block> it = findBlocksAssociatedTo(srcNode.getStorageID(), opType);
 
     TransactionalRequestHandler processBlockHandler = new TransactionalRequestHandler(opType) {
 
@@ -2750,6 +2867,20 @@ public class BlockManager {
           processOverReplicatedBlock(block, expectedReplication, null, null);
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        final Block block = (Block) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, block.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
       }
     };
 
@@ -2769,14 +2900,8 @@ public class BlockManager {
     final int[] underReplicatedBlocks = new int[]{0};
     final int[] decommissionOnlyReplicas = new int[]{0};
     final int[] underReplicatedInOpenFiles = new int[]{0};
-    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(BlockInfo.Finder.ByStorageId, srcNode.getStorageID()).iterator();
-      }
-    }; 
-    final Iterator<? extends Block> it = (Iterator<? extends Block>) findBlocksHandler.handle();
+    
+    final Iterator<? extends Block> it = findBlocksAssociatedTo(srcNode.getStorageID(), opType);
     
     TransactionalRequestHandler checkReplicationHandler = new TransactionalRequestHandler(opType) {
 
@@ -2821,6 +2946,20 @@ public class BlockManager {
           }
         }
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        final Block block = (Block) getParams()[0];
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, block.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addPendingBlock(LockType.READ);
+        lm.acquireByBlock();
       }
     };
             
@@ -2959,9 +3098,9 @@ public class BlockManager {
     }
   }
 
-  public long getMissingBlocksCount() throws PersistanceException {
+  public long getMissingBlocksCount(OperationType opType) throws IOException {
     // not locking
-    return this.neededReplications.getCorruptBlockSize();
+    return this.neededReplications.getCorruptBlockSize(opType);
   }
 
   public INodeFile getINode(Block b) throws IOException, PersistanceException {
@@ -3051,8 +3190,13 @@ public class BlockManager {
   /**
    * @return the size of UnderReplicatedBlocks
    */
-  public int numOfUnderReplicatedBlocks() throws PersistanceException {
-    return neededReplications.size();
+  public int numOfUnderReplicatedBlocks(OperationType opType) {
+    try {
+      return neededReplications.size(opType);
+    } catch (IOException ex) {
+      LOG.error(ex.getMessage(), ex);
+      return -1;
+    }
   }
 
   public List<DatanodeDescriptor> getDatanodes(BlockInfo block) throws PersistanceException {
@@ -3142,15 +3286,7 @@ public class BlockManager {
     // Update FSNamesystemMetrics counters
     namesystem.writeLock();
     try {
-      TransactionalRequestHandler updateStateHandler = new TransactionalRequestHandler(opType) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          updateState();
-          return null;
-        }
-      };
-      updateStateHandler.handle();
+      updateState(opType);
       this.scheduledReplicationBlocksCount = workFound;
     } finally {
       namesystem.writeUnlock();
@@ -3165,6 +3301,11 @@ public class BlockManager {
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return namesystem.isInSafeMode();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME [H]: What locks should be acquired for this?
       }
     }.handle();
   }

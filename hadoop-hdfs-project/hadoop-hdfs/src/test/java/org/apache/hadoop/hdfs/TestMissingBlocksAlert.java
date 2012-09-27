@@ -29,9 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -90,14 +88,7 @@ public class TestMissingBlocksAlert extends TestCase {
       assertTrue(dfs.getMissingBlocksCount() == 1);
       assertEquals(4, dfs.getUnderReplicatedBlocksCount());
 
-      new TransactionalRequestHandler(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          assertEquals(3, bm.getUnderReplicatedNotMissingBlocks());
-          return null;
-        }
-      }.handle();
+      assertEquals(3, bm.getUnderReplicatedNotMissingBlocks(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS));
 
 
       // Now verify that it shows up on webui
@@ -120,14 +111,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       //FIXME: race condition happens in the following commented line, check it out
 //      assertEquals(2, dfs.getUnderReplicatedBlocksCount());
-      new TransactionalRequestHandler(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS2) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          assertEquals(2, bm.getUnderReplicatedNotMissingBlocks());
-          return null;
-        }
-      }.handle();
+      assertEquals(2, bm.getUnderReplicatedNotMissingBlocks(OperationType.GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS2));
 
       // and make sure WARNING disappears
       // Now verify that it shows up on webui

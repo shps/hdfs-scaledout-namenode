@@ -37,9 +37,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -139,6 +140,16 @@ public class TestBlockUnderConstruction {
         assertTrue("Block is not in BlocksMap: " + curBlock,
                 ns.getBlockManager().getStoredBlock(curBlock).equals(curBlock));
         return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH, 
+                TransactionLockManager.INodeLockType.READ, 
+                new String[]{file}, cluster.getNamesystem().getFsDirectory().getRootDir());
+        lm.addBlock(TransactionLockManager.LockType.READ);
+        lm.acquire();
       }
     }.handle();
   }

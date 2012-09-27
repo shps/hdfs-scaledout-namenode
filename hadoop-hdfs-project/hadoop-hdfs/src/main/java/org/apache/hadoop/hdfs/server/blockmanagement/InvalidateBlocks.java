@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
@@ -78,28 +80,12 @@ class InvalidateBlocks {
    * Remove a storage from the invalidatesSet
    */
   synchronized void remove(final String storageID, TransactionalRequestHandler.OperationType opType) throws IOException {
-    TransactionalRequestHandler findInvBlocksHandler = new TransactionalRequestHandler(opType) {
 
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, storageID);
-      }
-    };
-
-    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) findInvBlocksHandler.handle();
+    List<InvalidatedBlock> invBlocks = findInvBlocksbyStorageId(storageID, opType);
     if (invBlocks != null) {
-      TransactionalRequestHandler removeInvBlockHandler = new TransactionalRequestHandler(opType) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          InvalidatedBlock invBlock = (InvalidatedBlock) getParams()[0];
-          EntityManager.remove(invBlock);
-          return null;
-        }
-      };
       for (InvalidatedBlock invBlock : invBlocks) {
         if (invBlock != null) {
-          removeInvBlockHandler.setParams(invBlock).handle();
+          removeInvBlock(invBlock, opType);
         }
       }
     }
@@ -190,16 +176,21 @@ class InvalidateBlocks {
     return toInvalidate.size();
   }
   
-  private void removeInvBlock(InvalidatedBlock ib, TransactionalRequestHandler.OperationType opType) throws IOException {
-    new TransactionalRequestHandler(opType) {
+  private void removeInvBlock(final InvalidatedBlock ib, TransactionalRequestHandler.OperationType opType) throws IOException {
+    TransactionalRequestHandler removeInvBlockHandler = new TransactionalRequestHandler(opType) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        InvalidatedBlock ib = (InvalidatedBlock) getParams()[0];
         EntityManager.remove(ib);
         return null;
       }
-    }.setParams(ib).handle();
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // No need to acquire lock
+      }
+    };
+    removeInvBlockHandler.setParams(ib).handle();
   }
   
   private List<InvalidatedBlock> findInvBlocksbyStorageId(final String sid, TransactionalRequestHandler.OperationType opType) throws IOException {
@@ -208,6 +199,11 @@ class InvalidateBlocks {
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, sid);
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.ByStorageId, sid);
       }
     }.handle();
   }

@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,6 +45,12 @@ public class TestLease {
         public Object performTask() throws PersistanceException, IOException {
           return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
           ).getLeaseByPath(src.toString()) != null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // FIXME lease by path
+          throw new UnsupportedOperationException("Not supported yet.");
         }
       }.handle();
     } catch (IOException ex) {

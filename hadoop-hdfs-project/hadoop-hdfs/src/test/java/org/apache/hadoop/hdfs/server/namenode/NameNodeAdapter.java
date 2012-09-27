@@ -24,8 +24,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
@@ -93,6 +93,12 @@ public class NameNodeAdapter {
         NameNode namenode = (NameNode) getParams()[0];
         String path = (String) getParams()[1];
         return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // FIXME Lease by path?
+        throw new UnsupportedOperationException("Not supported yet.");
       }
     }.setParams(namenode, path).handle();
     

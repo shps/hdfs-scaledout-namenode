@@ -24,9 +24,10 @@ import java.util.logging.Logger;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.OperationType;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -52,16 +53,9 @@ public class BlockManagerTestUtil {
   /**
    * Refresh block queue counts on the name-node.
    */
-  public static void updateState(final BlockManager blockManager) {
+  public static void updateState(final BlockManager blockManager, OperationType opType) {
     try {
-      new TransactionalRequestHandler(OperationType.UPDATE_STATE) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          blockManager.updateState();
-          return null;
-        }
-      }.handle();
+      blockManager.updateState(opType);
     } catch (IOException ex) {
       Logger.getLogger(BlockManagerTestUtil.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -81,6 +75,17 @@ public class BlockManagerTestUtil {
         return new int[]{getNumberOfRacks(bm, b),
                   bm.countNodes(b).liveReplicas(),
                   bm.neededReplications.contains(b) ? 1 : 0};
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addBlock(TransactionLockManager.LockType.READ, b.getBlockId()).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.READ).
+                acquire();
       }
     }.handleWithReadLock(namesystem);
   }
