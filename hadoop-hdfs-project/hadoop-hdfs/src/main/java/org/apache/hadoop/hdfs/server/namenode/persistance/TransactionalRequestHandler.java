@@ -20,6 +20,7 @@ public abstract class TransactionalRequestHandler extends RequestHandler{
   @Override
   protected Object run(boolean writeLock, boolean readLock, Namesystem namesystem) throws IOException {
     boolean systemLevelLock = FSNamesystem.systemLevelLock();
+    boolean rowLevelLock = FSNamesystem.rowLevelLock();
     if (systemLevelLock) {
       if (writeLock) {
         namesystem.writeLock();
@@ -43,7 +44,7 @@ public abstract class TransactionalRequestHandler extends RequestHandler{
           NDC.push(opType.name()); // Defines a context for every operation to track them in the logs easily.
 
           EntityManager.begin();
-          if (! systemLevelLock) { 
+          if (rowLevelLock) { 
             acquireLock();
             EntityManager.preventStorageCall();
           }

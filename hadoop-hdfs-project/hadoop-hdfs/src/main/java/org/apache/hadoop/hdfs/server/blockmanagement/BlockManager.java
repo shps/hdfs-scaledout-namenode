@@ -73,7 +73,9 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHand
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ExcessReplicaDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -132,15 +134,22 @@ public class BlockManager {
   /**
    * Used by metrics
    */
-  public long getPendingDeletionBlocksCount() throws PersistanceException {
-    return invalidateBlocks.numBlocks();
+  public long getPendingDeletionBlocksCount(OperationType opType) throws IOException {
+    return invalidateBlocks.numBlocks(opType);
   }
 
   /**
    * Used by metrics
    */
-  public long getExcessBlocksCount() throws PersistanceException {
-    return EntityManager.count(ExcessReplica.Counter.All);
+  public long getExcessBlocksCount(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        ExcessReplicaDataAccess da = (ExcessReplicaDataAccess) StorageFactory.getDataAccess(ExcessReplicaDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
   }
   /**
    * replicationRecheckInterval is how often namenode checks for new replication
@@ -1593,14 +1602,18 @@ public class BlockManager {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        Block timedOutItem = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
-        NumberReplicas num = countNodes(timedOutItem);
-        if (isNeededReplication(timedOutItem, getReplication(timedOutItem),
-                num.liveReplicas())) {
-          neededReplications.add(timedOutItem,
-                  num.liveReplicas(),
-                  num.decommissionedReplicas(),
-                  getReplication(timedOutItem));
+        // [lock]: Validation for pending block
+        PendingBlockInfo pendingBlock = EntityManager.find(PendingBlockInfo.Finder.ByPKey, p.getBlockId());
+        if (pendingBlock != null && PendingReplicationBlocks.isTimedOut(pendingBlock)) {
+          Block timedOutItem = EntityManager.find(BlockInfo.Finder.ById, p.getBlockId());
+          NumberReplicas num = countNodes(timedOutItem);
+          if (isNeededReplication(timedOutItem, getReplication(timedOutItem),
+                  num.liveReplicas())) {
+            neededReplications.add(timedOutItem,
+                    num.liveReplicas(),
+                    num.decommissionedReplicas(),
+                    getReplication(timedOutItem));
+          }
         }
         return null;
       }
@@ -2972,14 +2985,24 @@ public class BlockManager {
     return status[0];
   }
 
-  public int getActiveBlockCount() throws PersistanceException {
+  public int getActiveBlockCount(OperationType opType) throws IOException {
 
-    return EntityManager.count(BlockInfo.Counter.All) - (int) invalidateBlocks.numBlocks();
+    return getTotalBlocksInternal(opType) - invalidateBlocks.numBlocks(opType);
+  }
+  
+  private int getTotalBlocksInternal(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
 
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        BlockInfoDataAccess da = (BlockInfoDataAccess) StorageFactory.getDataAccess(BlockInfoDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
   }
 
-  public int getTotalBlocks() throws PersistanceException {
-    return EntityManager.count(BlockInfo.Counter.All);
+  public int getTotalBlocks(OperationType opType) throws IOException {
+    return getTotalBlocksInternal(opType);
   }
 
   public void removeBlock(Block block) throws IOException, PersistanceException {
@@ -3123,38 +3146,35 @@ public class BlockManager {
     return EntityManager.find(CorruptReplica.Finder.ByPk, blockId, storageId) != null;
   }
 
-  public void removeBlockFromMap(Block block) throws IOException {
-    try {
-      Collection<CorruptReplica> crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, block.getBlockId());
-      for (CorruptReplica r : crs) {
+  public void removeBlockFromMap(Block block) throws IOException, PersistanceException {
+    
+    Collection<CorruptReplica> crs = EntityManager.findList(CorruptReplica.Finder.ByBlockId, block.getBlockId());
+    for (CorruptReplica r : crs) {
+      EntityManager.remove(r);
+    }
+    BlockInfo bi = getStoredBlock(block);
+    if (bi != null) {
+      INodeFile iNode = bi.getINode();
+      if (iNode != null) {
+        iNode.removeBlock(bi);
+      }
+      bi.setINode(null);
+      for (IndexedReplica replica : bi.getReplicas()) {
+        EntityManager.remove(replica);
+      }
+
+      if (bi instanceof BlockInfoUnderConstruction) {
+        for (ReplicaUnderConstruction ruc : ((BlockInfoUnderConstruction) bi).getExpectedReplicas()) {
+          EntityManager.remove(ruc);
+        }
+      }
+      EntityManager.remove(bi);
+
+      // Remove all the replicas for this block
+      Collection<IndexedReplica> replicas = EntityManager.findList(IndexedReplica.Finder.ByBlockId, block.getBlockId());
+      for (IndexedReplica r : replicas) {
         EntityManager.remove(r);
       }
-      BlockInfo bi = getStoredBlock(block);
-      if (bi != null) {
-        INodeFile iNode = bi.getINode();
-        if (iNode != null) {
-          iNode.removeBlock(bi);
-        }
-        bi.setINode(null);
-        for (IndexedReplica replica : bi.getReplicas()) {
-          EntityManager.remove(replica);
-        }
-
-        if (bi instanceof BlockInfoUnderConstruction) {
-          for (ReplicaUnderConstruction ruc : ((BlockInfoUnderConstruction) bi).getExpectedReplicas()) {
-            EntityManager.remove(ruc);
-          }
-        }
-        EntityManager.remove(bi);
-
-        // Remove all the replicas for this block
-        Collection<IndexedReplica> replicas = EntityManager.findList(IndexedReplica.Finder.ByBlockId, block.getBlockId());
-        for (IndexedReplica r : replicas) {
-          EntityManager.remove(r);
-        }
-      }
-    } catch (Exception ex) {
-      Logger.getLogger(BlockManager.class.getName()).log(Level.SEVERE, null, ex);
     }
   }
 

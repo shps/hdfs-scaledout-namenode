@@ -40,7 +40,7 @@ public class TransactionLockAcquirer {
     return false;
   }
 
-  public static <T> Collection<T> acquireLockList(TransactionLockManager.LockType lock, FinderType<T> finder, Object param) throws PersistanceException {
+  public static <T> Collection<T> acquireLockList(TransactionLockManager.LockType lock, FinderType<T> finder, Object... param) throws PersistanceException {
     setLockMode(lock);
     if (param == null) {
       return EntityManager.findList(finder);
@@ -49,7 +49,7 @@ public class TransactionLockAcquirer {
     }
   }
 
-  public static <T> T acquireLock(TransactionLockManager.LockType lock, FinderType<T> finder, Object param) throws PersistanceException {
+  public static <T> T acquireLock(TransactionLockManager.LockType lock, FinderType<T> finder, Object... param) throws PersistanceException {
     setLockMode(lock);
     if (param == null) {
       return null;
@@ -176,7 +176,7 @@ public class TransactionLockAcquirer {
 
   private static INode acquireWriteLockOnRoot() throws PersistanceException {
     EntityManager.writeLock();
-    return EntityManager.find(INode.Finder.ByPKey, 0);
+    return EntityManager.find(INode.Finder.ByPKey, 0L);
   }
 
   private static INode getChildINode(byte[] name, long parentId) throws PersistanceException {

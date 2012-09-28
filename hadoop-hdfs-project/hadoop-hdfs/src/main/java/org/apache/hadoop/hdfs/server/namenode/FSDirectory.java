@@ -388,7 +388,7 @@ public class FSDirectory implements Closeable {
                     block);
             blockInfo.setBlockUCState(BlockUCState.UNDER_CONSTRUCTION);
             for (DatanodeDescriptor dn : targets) {
-                ReplicaUnderConstruction expReplica = blockInfo.addExpectedReplica(dn.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
+                ReplicaUnderConstruction expReplica = blockInfo.addFirstExpectedReplica(dn.getStorageID(), HdfsServerConstants.ReplicaState.RBW);
                 if (expReplica != null) {
                     EntityManager.add(expReplica);
                 }
@@ -2267,5 +2267,10 @@ public class FSDirectory implements Closeable {
     public INode getRootDir()
     {
       return this.rootDir;
+    }
+    
+    public boolean isQuotaEnabled()
+    {
+      return this.quotaEnabled;
     }
 }

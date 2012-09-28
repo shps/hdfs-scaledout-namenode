@@ -89,17 +89,15 @@ class UnderReplicatedBlocks {
    * Return the number of corrupt blocks
    */
   synchronized int getCorruptBlockSize(TransactionalRequestHandler.OperationType opType) throws IOException {
-    return (Integer) new TransactionalRequestHandler(opType) {
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
-                UnderReplicatedBlock.Finder.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
-      }
+    return (Integer) new LightWeightRequestHandler(opType) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.count(UnderReplicatedBlock.Counter.ByLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+        UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
+        Collection result = da.findByLevel(QUEUE_WITH_CORRUPT_BLOCKS);
+        if (result != null)
+          return result.size();
+        return 0;
       }
     }.handle();
   }

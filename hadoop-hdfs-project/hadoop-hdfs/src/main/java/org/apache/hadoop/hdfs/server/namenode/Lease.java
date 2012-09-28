@@ -36,7 +36,7 @@ public class Lease implements Comparable<Lease> {
   }
   private final String holder;
   private long lastUpdate;
-  private Collection<LeasePath> paths = new TreeSet<LeasePath>();
+  private Collection<LeasePath> paths = null;
   private int holderID; // KTHFS
 
   public Lease(String holder, int holderID, long lastUpd) {
@@ -73,6 +73,11 @@ public class Lease implements Comparable<Lease> {
     getPaths().add(lPath);
   }
 
+  public void addFirstPath(LeasePath lPath) {
+    this.paths = new TreeSet<LeasePath>();
+    this.paths.add(lPath);
+  }
+
   /**
    * Does this lease contain any path?
    */
@@ -85,8 +90,12 @@ public class Lease implements Comparable<Lease> {
    */
   @Override
   public String toString() {
+    int size = 0;
+    if (paths != null) {
+      size = paths.size();
+    }
     return "[Lease.  Holder: " + holder
-            + ", pendingcreates: " + paths.size() + "]";
+            + ", pendingcreates: " + size + "]";
   }
 
   /**
@@ -132,7 +141,7 @@ public class Lease implements Comparable<Lease> {
   }
 
   public Collection<LeasePath> getPaths() throws PersistanceException {
-    if (paths.isEmpty()) {
+    if (paths == null) {
       paths = EntityManager.findList(LeasePath.Finder.ByHolderId, holderID);
     }
 

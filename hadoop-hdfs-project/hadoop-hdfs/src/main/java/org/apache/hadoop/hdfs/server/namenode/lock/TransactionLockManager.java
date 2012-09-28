@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -16,6 +17,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -45,6 +47,7 @@ public class TransactionLockManager {
   private LockType leaseLock = null;
   private String leaseParam = null;
   private Collection<Lease> leaseResults = null;
+  private LockType nnLeaseLock = null; // acquire lease for Name-node
   // lease paths
   private LockType lpLock = null;
   // replica
@@ -99,7 +102,10 @@ public class TransactionLockManager {
     List<LeasePath> lPaths = new LinkedList<LeasePath>();
     if (leaseResults != null) {
       for (Lease l : leaseResults) {
-        lPaths.addAll(TransactionLockAcquirer.acquireLockList(lock, LeasePath.Finder.ByHolderId, l.getHolderID()));
+        Collection<LeasePath> result = TransactionLockAcquirer.acquireLockList(lock, LeasePath.Finder.ByHolderId, l.getHolderID());
+        if (!l.getHolder().equals(HdfsServerConstants.NAMENODE_LEASE_HOLDER)) { // We don't need to keep the lps result for namenode-lease. 
+          lPaths.addAll(result);
+        }
       }
     }
 
@@ -139,9 +145,11 @@ public class TransactionLockManager {
     ArrayList<INode> children = new ArrayList<INode>();
     LinkedList<INode> unCheckedDirs = new LinkedList<INode>();
     if (inodes != null) {
-      for (INode dir : inodes) {
-        if (dir instanceof INodeDirectory) {
-          unCheckedDirs.add(dir);
+      for (INode inode : inodes) {
+        if (inode instanceof INodeDirectory) {
+          unCheckedDirs.add(inode);
+        } else {
+          children.add(inode);
         }
       }
     }
@@ -160,15 +168,26 @@ public class TransactionLockManager {
     return children.toArray(inodes);
   }
 
-  private String buildPath(LinkedList<INode> resolvedInodes) {
-    StringBuilder path = new StringBuilder();
+  private String buildPath(String path, int size) {
+    StringBuilder builder = new StringBuilder();
+    byte[][] components = INode.getPathComponents(path);
     String delimiter = "/";
-    path.append(delimiter);
-    for (INode inode : resolvedInodes) {
-      path.append(inode.getName()).append(delimiter);
+    builder.append(delimiter);
+    for (int i = 1; i <= Math.min(components.length, size + 1); i++ )
+    {
+      builder.append(DFSUtil.bytes2String(components[i]));
+      builder.append(delimiter);
     }
 
-    return path.toString();
+    return builder.toString();
+  }
+
+  private Lease acquireNameNodeLease() throws PersistanceException {
+    if (nnLeaseLock != null)
+    {
+      return TransactionLockAcquirer.acquireLock(nnLeaseLock, Lease.Finder.ByPKey, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+    }
+    return null;
   }
 
   public enum LockType {
@@ -244,6 +263,11 @@ public class TransactionLockManager {
 
   public TransactionLockManager addReplica(LockType lock) {
     this.replicaLock = lock;
+    return this;
+  }
+  
+  public TransactionLockManager addNameNodeLease(LockType lock) {
+    this.nnLeaseLock = lock;
     return this;
   }
 
@@ -354,17 +378,24 @@ public class TransactionLockManager {
         break;
       case ONLY_PATH_WITH_UNKNOWN_HEAD:
         for (int i = 0; i < params.length; i++) {
+          // TODO Test this in all different possible scenarios
           String fullPath = params[i];
           LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir);
           int resolvedSize = resolvedInodes.size();
-          String existingPath = buildPath(resolvedInodes);
+          String existingPath = buildPath(fullPath, resolvedSize);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
           resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir);
           if (resolvedSize == resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
-            LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, resolvedInodes.getLast(), fullPath, existingPath);
+            INode baseDir = resolvedInodes.peekLast();
+            if (baseDir == null)
+            {
+              baseDir = rootDir;
+            }
+            LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir, 
+                    fullPath, existingPath);
             resolvedInodes.addAll(rest);
-            inodes[i] = resolvedInodes.getLast();
+            inodes[i] = resolvedInodes.peekLast();
           }
         }
         break;
@@ -473,15 +504,17 @@ public class TransactionLockManager {
     if (inodeResult.length == 0) {
       return; // TODO: something is wrong, it should retry again.
     }
+    leaseResults = new ArrayList<Lease>();
+    Lease nnLease = acquireNameNodeLease(); // NameNode lease is always acquired first.
+    if (nnLease != null) {
+      leaseResults.add(nnLease);
+    }
     Lease lease = TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByPKey, leaseParam);
     if (lease == null) {
       return; // Lease does not exist anymore.
     }
-
-    blockResults = acquireBlockLock(blockLock, null);
-
-    leaseResults = new ArrayList<Lease>();
     leaseResults.add(lease);
+    blockResults = acquireBlockLock(blockLock, null);
 
     List<LeasePath> lpResults = acquireLeasePathsLock(lpLock);
     if (lpResults.size() > rclPaths.size()) {

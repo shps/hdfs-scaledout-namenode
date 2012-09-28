@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -139,10 +141,12 @@ import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -282,6 +286,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private ReentrantReadWriteLock fsLock;
   private NameNode nameNode;
   private static boolean systemLevelLockEnabled = false;
+  private static boolean rowLevelLockEnabled = false;
 
   /**
    * FSNamesystem constructor.
@@ -309,6 +314,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //    nnResourceChecker = new NameNodeResourceChecker(conf);
 //    checkAvailableResources();
     systemLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_DEFAULT);
+    rowLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_DEFAULT);
     StorageFactory.setConfiguration(conf);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
@@ -354,7 +360,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // No lock is required
+        TransactionLockAcquirer.acquireLock(LockType.READ, INode.Finder.ByNameAndParentId, INodeDirectory.ROOT_NAME, -1L);
       }
     };
     initHandler.handle();
@@ -369,6 +375,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   public static boolean systemLevelLock() {
     return systemLevelLockEnabled;
+  }
+  
+  public static boolean rowLevelLock()
+  {
+    return rowLevelLockEnabled;
   }
 
   void activateSecretManager() throws IOException {
@@ -387,29 +398,50 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void activate(final Configuration conf) throws IOException {
 
-    TransactionalRequestHandler activateHandler = new TransactionalRequestHandler(OperationType.ACTIVATE) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        if (isWritingNN()) {
-          setBlockTotal();
-          blockManager.activate(conf);
-          lmthread = new Daemon(leaseManager.new Monitor());
-          lmthread.start();
-          registerMXBean();
+    if (isWritingNN()) {
+      writeLock();
+      try {
+        EntityManager.begin();
+        setBlockTotal();
+        EntityManager.commit();
+        blockManager.activate(conf);
+        lmthread = new Daemon(leaseManager.new Monitor());
+        lmthread.start();
+        registerMXBean();
+      } catch (Exception ex) {
+        try {
+          EntityManager.rollback();
+        } catch (PersistanceException ex1) {
+          LOG.error(ex1);
         }
-//      TODO:kamal, resouce monitor
-//      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
-//      nnrmthread.start();
-        return null;
+        LOG.error(ex);
+      } finally {
+        writeUnlock();
       }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // FIXME: does this need to acquire lock?
-      }
-    };
-    activateHandler.handleWithWriteLock(this);
+    }
+//    TransactionalRequestHandler activateHandler = new TransactionalRequestHandler(OperationType.ACTIVATE) {
+//
+//      @Override
+//      public Object performTask() throws PersistanceException, IOException {
+//        if (isWritingNN()) {
+//          setBlockTotal();
+//          blockManager.activate(conf);
+//          lmthread = new Daemon(leaseManager.new Monitor());
+//          lmthread.start();
+//          registerMXBean();
+//        }
+////      TODO:kamal, resouce monitor
+////      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+////      nnrmthread.start();
+//        return null;
+//      }
+//
+//      @Override
+//      public void acquireLock() throws PersistanceException, IOException {
+//        // FIXME
+//      }
+//    };
+//    activateHandler.handleWithWriteLock(this);
     DefaultMetricsSystem.instance().register(this);
   }
 
@@ -1188,7 +1220,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkAncestorAccess(link, FsAction.WRITE);
     }
     // validate that we have enough inodes.
-    checkFsObjectLimit();
+    checkFsObjectLimit(OperationType.CREATE_SYM_LINK);
 
     // add symbolic link to namespace
     dir.addSymlink(link, target, dirPerms, createParent);
@@ -1358,10 +1390,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         startFileInternal(src, permissions, holder, clientMachine, flag,
                 createParent, replication, blockSize);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-          final HdfsFileStatus stat = dir.getFileInfo(src, false);
-          logAuditEvent(UserGroupInformation.getCurrentUser(),
-                  Server.getRemoteIp(),
-                  "create", src, null, stat);
+          // [lock] commented to avoid getBlock for the newly added inode
+//          final HdfsFileStatus stat = dir.getFileInfo(src, false);
+//          logAuditEvent(UserGroupInformation.getCurrentUser(),
+//                  Server.getRemoteIp(),
+//                  "create", src, null, stat);
         }
         return null;
       }
@@ -1490,7 +1523,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // Now we can add the name to the filesystem. This file has no
         // blocks associated with it.
         //
-        checkFsObjectLimit(); //FIXME the flow shouldnt reach here for TestBLockRecovery
+        checkFsObjectLimit(OperationType.START_FILE); //FIXME the flow shouldnt reach here for TestBLockRecovery
 
         // increment global generation stamp
         long genstamp = nextGenerationStamp();
@@ -1758,6 +1791,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 TransactionLockManager.INodeLockType.WRITE,
                 new String[]{src}, getFsDirectory().getRootDir());
         tla.addBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(LockType.READ).
                 addLease(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.WRITE).
                 addExcess(TransactionLockManager.LockType.WRITE).
@@ -1810,7 +1844,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // have we exceeded the configured limit of fs objects.
-      checkFsObjectLimit();
+      checkFsObjectLimit(OperationType.GET_ADDITIONAL_BLOCK);
 
       INodeFile pendingFile = checkLease(src, clientName);
 
@@ -1975,6 +2009,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
                 new String[]{src}, getFsDirectory().getRootDir()).
+                addReplica(LockType.WRITE).
                 addBlock(LockType.WRITE).
                 addLease(TransactionLockManager.LockType.READ).
                 addCorrupt(LockType.WRITE).
@@ -2143,9 +2178,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DatanodeDescriptor targets[]) throws IOException, PersistanceException {
     assert hasWriteLock();
     Block b = new Block(DFSUtil.getRandom().nextLong(), 0, 0);
-    while (isValidBlock(b)) {
-      b.setBlockId(DFSUtil.getRandom().nextLong());
-    }
+    // FIXME not allowed to check a new bid in the db
+//    while (isValidBlock(b)) {
+//      b.setBlockId(DFSUtil.getRandom().nextLong());
+//    }
     b.setGenerationStamp(getGenerationStamp());
     b = dir.addBlock(src, inodes, b, targets);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
@@ -2581,7 +2617,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // validate that we have enough inodes. This is, at best, a 
     // heuristic because the mkdirs() operation migth need to 
     // create multiple inodes.
-    checkFsObjectLimit();
+    checkFsObjectLimit(OperationType.MKDIRS);
 
     if (!dir.mkdirs(src, permissions, false, now())) {
       throw new IOException("Failed to create directory: " + src);
@@ -2858,14 +2894,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
 
-    // Adjust disk space consumption if required
-    final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();
-    if (diff > 0) {
-      try {
-        String path = leaseManager.findPath(fileINode);
-        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication());
-      } catch (IOException e) {
-        LOG.warn("Unexpected exception while updating disk space.", e);
+    // [lock] the following acquires write-lock through the root.
+    if (getFsDirectory().isQuotaEnabled()) {
+      // Adjust disk space consumption if required
+      final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();
+      if (diff > 0) {
+        try {
+          String path = leaseManager.findPath(fileINode);
+          dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication());
+        } catch (IOException e) {
+          LOG.warn("Unexpected exception while updating disk space.", e);
+        }
       }
     }
   }
@@ -3925,7 +3964,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
-      int activeBlocks = blockManager.getActiveBlockCount();
+      // TODO safemode
+      int activeBlocks = blockManager.getActiveBlockCount(OperationType.SAFE_MODE_MONITOR);
 
       LOG.debug("safeBlocks: " + blockSafe + ", blockTotal: " + blockTotal + ", blocksActive: " + activeBlocks);
       return (blockTotal == activeBlocks)
@@ -4094,27 +4134,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric
   public long getBlocksTotal() {
     try {
-      TransactionalRequestHandler getBlocksTotalHandler = new TransactionalRequestHandler(OperationType.GET_BLOCKS_TOTAL) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return getBlocksTotalNoTx();
-        }
-
-        @Override
-        public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, BlockInfo.Finder.All, null); // FIXME: Not feasible
-        }
-      };
-      return (Long) getBlocksTotalHandler.handle();
+      return getBlocksTotalNoTx(OperationType.GET_BLOCKS_TOTAL);
     } catch (IOException ex) {
       LOG.error(ex);
     }
     return -1;
   }
 
-  public long getBlocksTotalNoTx() throws PersistanceException {
-    return blockManager.getTotalBlocks();
+  public long getBlocksTotalNoTx(OperationType opType) throws IOException {
+    return blockManager.getTotalBlocks(opType);
   }
 
   /**
@@ -4153,7 +4181,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
 
-      return getBlocksTotalNoTx() - numUCBlocks;
+      //TODO safemode
+      return getBlocksTotalNoTx(OperationType.SAFE_MODE_MONITOR) - numUCBlocks;
     } finally {
       readUnlock();
     }
@@ -4308,9 +4337,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Check to see if we have exceeded the limit on the number of inodes.
    */
-  void checkFsObjectLimit() throws IOException, PersistanceException {
+  void checkFsObjectLimit(OperationType opType) throws IOException, PersistanceException {
     if (maxFsObjects != 0
-            && maxFsObjects <= dir.totalInodes() + getBlocksTotalNoTx()) {
+            && maxFsObjects <= dir.totalInodes() + getBlocksTotalNoTx(opType)) {
       throw new IOException("Exceeded the configured number of objects "
               + maxFsObjects + " in the filesystem.");
     }
@@ -4365,37 +4394,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public long getPendingDeletionBlocks() throws IOException {
-    TransactionalRequestHandler getPendingDeletionBlocksHandler = new TransactionalRequestHandler(OperationType.GET_PENDING_DELETION_BLOCKS_COUNT) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return blockManager.getPendingDeletionBlocksCount();
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
-      }
-    };
-    return isWritingNN() ? (Long) getPendingDeletionBlocksHandler.handle() : -1;
+    return isWritingNN() ? (Long) blockManager.getPendingDeletionBlocksCount(OperationType.GET_PENDING_DELETION_BLOCKS_COUNT) : -1;
   }
 
   @Metric
   public long getExcessBlocks() throws IOException {
-    TransactionalRequestHandler getExcessBlocksHandler = new TransactionalRequestHandler(OperationType.GET_EXCESS_BLOCKS_COUNT) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return blockManager.getExcessBlocksCount();
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // TODO add read-all to excess replica context
-        throw new UnsupportedOperationException("Not supported yet.");
-      }
-    };
-    return isWritingNN() ? (Long) getExcessBlocksHandler.handle() : -1;
+    return isWritingNN() ? blockManager.getExcessBlocksCount(OperationType.GET_EXCESS_BLOCKS_COUNT) : -1;
   }
 
   @Metric

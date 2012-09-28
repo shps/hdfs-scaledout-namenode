@@ -30,8 +30,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InvalidateBlockDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * Keeps a Collection for every named machine containing blocks that have
@@ -49,8 +53,16 @@ class InvalidateBlocks {
   /**
    * @return the number of blocks to be invalidated .
    */
-  synchronized long numBlocks() throws PersistanceException {
-    return EntityManager.count(InvalidatedBlock.Counter.All);
+  synchronized int numBlocks(OperationType opType) throws IOException {
+//    return EntityManager.count(InvalidatedBlock.Counter.All);
+    return (Integer) new LightWeightRequestHandler(opType) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        InvalidateBlockDataAccess da = (InvalidateBlockDataAccess) StorageFactory.getDataAccess(InvalidateBlockDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
   }
 
   /**

@@ -32,17 +32,17 @@ public class StorageFactory {
   private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
 
   private static void initDataAccessMap() {
-    dataAccessMap.put(blockInfoDataAccess.getClass(), blockInfoDataAccess);
-    dataAccessMap.put(corruptReplicaDataAccess.getClass(), corruptReplicaDataAccess);
-    dataAccessMap.put(excessReplicaDataAccess.getClass(), excessReplicaDataAccess);
-    dataAccessMap.put(inodeDataAccess.getClass(), inodeDataAccess);
-    dataAccessMap.put(invalidateBlockDataAccess.getClass(), invalidateBlockDataAccess);
-    dataAccessMap.put(leaseDataAccess.getClass(), leaseDataAccess);
-    dataAccessMap.put(leasePathDataAccess.getClass(), leasePathDataAccess);
-    dataAccessMap.put(pendingBlockDataAccess.getClass(), pendingBlockDataAccess);
-    dataAccessMap.put(replicaDataAccess.getClass(), replicaDataAccess);
-    dataAccessMap.put(replicaUnderConstruntionDataAccess.getClass(), replicaUnderConstruntionDataAccess);
-    dataAccessMap.put(underReplicatedBlockDataAccess.getClass(), underReplicatedBlockDataAccess);
+    dataAccessMap.put(blockInfoDataAccess.getClass().getSuperclass(), blockInfoDataAccess);
+    dataAccessMap.put(corruptReplicaDataAccess.getClass().getSuperclass(), corruptReplicaDataAccess);
+    dataAccessMap.put(excessReplicaDataAccess.getClass().getSuperclass(), excessReplicaDataAccess);
+    dataAccessMap.put(inodeDataAccess.getClass().getSuperclass(), inodeDataAccess);
+    dataAccessMap.put(invalidateBlockDataAccess.getClass().getSuperclass(), invalidateBlockDataAccess);
+    dataAccessMap.put(leaseDataAccess.getClass().getSuperclass(), leaseDataAccess);
+    dataAccessMap.put(leasePathDataAccess.getClass().getSuperclass(), leasePathDataAccess);
+    dataAccessMap.put(pendingBlockDataAccess.getClass().getSuperclass(), pendingBlockDataAccess);
+    dataAccessMap.put(replicaDataAccess.getClass().getSuperclass(), replicaDataAccess);
+    dataAccessMap.put(replicaUnderConstruntionDataAccess.getClass().getSuperclass(), replicaUnderConstruntionDataAccess);
+    dataAccessMap.put(underReplicatedBlockDataAccess.getClass().getSuperclass(), underReplicatedBlockDataAccess);
   }
 
   public static StorageConnector getConnector() {

@@ -48,7 +48,8 @@ public class LeaseContext extends EntityContext<Lease> {
     newLeases.put(lease, lease);
     leases.put(lease.getHolder(), lease);
     idToLease.put(lease.getHolderID(), lease);
-    log("added-lease", CacheHitState.NA, new String[]{"holder", lease.getHolder()});
+    log("added-lease", CacheHitState.NA, new String[]{"holder", lease.getHolder(),
+              "hid", String.valueOf(lease.getHolderID())});
   }
 
   @Override

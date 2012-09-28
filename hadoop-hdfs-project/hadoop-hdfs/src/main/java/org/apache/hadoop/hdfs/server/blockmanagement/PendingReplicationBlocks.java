@@ -55,7 +55,7 @@ class PendingReplicationBlocks {
   // a request is timed out.
   //
   //private long timeout = 5 * 60 * 1000;
-  private long timeout = 2 * 60 * 1000;
+  private static long timeout = 2 * 60 * 1000;
 
   PendingReplicationBlocks(long timeoutPeriod) {
     if (timeoutPeriod > 0) {
@@ -145,32 +145,34 @@ class PendingReplicationBlocks {
    * Returns null if no blocks have timed out.
    */
   List<PendingBlockInfo> getTimedOutBlocks(TransactionalRequestHandler.OperationType opType) throws IOException {
-    return (List<PendingBlockInfo>) new TransactionalRequestHandler(opType) {
+    return (List<PendingBlockInfo>) new LightWeightRequestHandler(opType) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        long timeLimit = computeTimeLimit();
-        List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) EntityManager.findList(PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
+        long timeLimit = getTimeLimit();
+        PendingBlockDataAccess da = (PendingBlockDataAccess) StorageFactory.getDataAccess(PendingBlockDataAccess.class);
+        List<PendingBlockInfo> timedoutPendings = (List<PendingBlockInfo>) da.findByTimeLimit(timeLimit);
         if (timedoutPendings == null || timedoutPendings.size() <= 0) {
           return null;
         }
 
         return timedoutPendings;
       }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // FIXME [H]: Needs validation on pendingblock
-        long timeLimit = computeTimeLimit();
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, PendingBlockInfo.Finder.ByTimeLimit, timeLimit);
-      }
-      
-      private long computeTimeLimit() {
-        return now() - timeout;
-      }
     }.handle();
   }
   
+  private static long getTimeLimit()
+  {
+    return now() - timeout;
+  }
+
+  public static boolean isTimedOut(PendingBlockInfo block) {
+    long timeLimit = getTimeLimit();
+    if (block.getTimeStamp() < timeLimit) {
+      return true;
+    }
+    return false;
+  }
   
 
   /**

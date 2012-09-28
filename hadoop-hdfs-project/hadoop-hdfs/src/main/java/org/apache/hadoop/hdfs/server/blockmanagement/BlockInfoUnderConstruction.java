@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -129,6 +130,13 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     ReplicaUnderConstruction replica = new ReplicaUnderConstruction(rState, storageId, getBlockId(), getExpectedReplicas().size());
     getExpectedReplicas().add(replica);
     return replica;
+  }
+
+  public ReplicaUnderConstruction addFirstExpectedReplica(String storageId, ReplicaState rState) throws PersistanceException {
+    if (this.expectedReplicas == null) {
+      this.expectedReplicas = new ArrayList<ReplicaUnderConstruction>();
+    }
+    return addExpectedReplica(storageId, rState);
   }
 
   private boolean hasExpectedReplicaIn(String storageId) throws PersistanceException {

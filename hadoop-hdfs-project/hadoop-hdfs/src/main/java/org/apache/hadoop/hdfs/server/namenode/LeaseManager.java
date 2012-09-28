@@ -128,7 +128,7 @@ public class LeaseManager {
     }
 
     LeasePath lPath = new LeasePath(src, lease.getHolderID());
-    lease.addPath(lPath);
+    lease.addFirstPath(lPath);
     EntityManager.add(lPath);
 
     return lease;
@@ -178,16 +178,19 @@ public class LeaseManager {
     }
 
     Lease newLease = getLease(newHolder);
+    LeasePath lPath = null;
     if (newLease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
       newLease = new Lease(newHolder, holderID, now());
       EntityManager.add(newLease);
+      lPath = new LeasePath(src, newLease.getHolderID());
+      newLease.addFirstPath(lPath); // [lock] First time, so no need to look for lease-paths
     } else {
       renewLease(newLease);
+      lPath = new LeasePath(src, newLease.getHolderID());
+      newLease.addPath(lPath);
     }
     // update lease-paths' holder
-    LeasePath lPath = new LeasePath(src, newLease.getHolderID());
-    newLease.addPath(lPath);
     EntityManager.update(lPath);
 
     return newLease;
@@ -379,6 +382,7 @@ public class LeaseManager {
         tlm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
+                addNameNodeLease(LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.READ).

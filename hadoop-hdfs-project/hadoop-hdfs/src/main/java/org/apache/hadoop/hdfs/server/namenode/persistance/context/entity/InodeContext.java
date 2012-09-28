@@ -89,6 +89,10 @@ public class InodeContext extends EntityContext<INode> {
           log("find-inode-by-name-parentid", CacheHitState.HIT,
                   new String[]{"name", name, "pid", Long.toString(parentId)});
           result = inodesNameParentIndex.get(key);
+        } else if (newInodes.containsKey(parentId)){
+          log("find-inode-by-name-new-parentid", CacheHitState.HIT,
+                  new String[]{"name", name, "pid", Long.toString(parentId)});
+          result = null;
         } else {
           aboutToAccessStorage();
           result = dataAccess.findInodeByNameAndParentId(name, parentId);

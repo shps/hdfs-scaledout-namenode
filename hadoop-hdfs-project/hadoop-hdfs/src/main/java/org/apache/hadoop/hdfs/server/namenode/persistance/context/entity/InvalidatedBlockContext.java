@@ -93,6 +93,13 @@ public class InvalidatedBlockContext extends EntityContext<InvalidatedBlock> {
         long blockId = (Long) params[0];
         String storageId = (String) params[1];
         InvalidatedBlock searchInstance = new InvalidatedBlock(storageId, blockId);
+        if (blockIdToInvBlocks.containsKey(blockId)) { // if inv-blocks are queried by bid but the search-key deos not exist
+          if (!blockIdToInvBlocks.get(blockId).contains(searchInstance)) {
+            log("find-invblock-by-pk-not-exist", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+            return null;
+          }
+        }
+        // otherwise search-key should be the new query or it must be a hit
         if (invBlocks.containsKey(searchInstance)) {
           log("find-invblock-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           return invBlocks.get(searchInstance);

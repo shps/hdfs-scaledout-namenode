@@ -8,6 +8,7 @@ import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.context.StorageCallPreventedException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeasePathDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -116,9 +117,16 @@ public class LeasePathContext extends EntityContext<LeasePath> {
         return result;
       case ByPrefix:
         String prefix = (String) params[0];
-        log("find-lpaths-by-prefix", CacheHitState.NA, new String[]{"prefix", prefix});
-        aboutToAccessStorage();
-        return syncLeasePathInstances(dataAccess.findByPrefix(prefix), false);
+        try {
+          aboutToAccessStorage();
+          result = syncLeasePathInstances(dataAccess.findByPrefix(prefix), false);
+          log("find-lpaths-by-prefix", CacheHitState.LOSS, new String[]{"prefix", prefix, "numOfLps", String.valueOf(result.size())});
+        } catch (StorageCallPreventedException ex) {
+          // This is allowed in querying lease-path by prefix, this is needed in delete operation for example.
+          result = getCachedLpsByPrefix(prefix);
+          log("find-lpaths-by-prefix", CacheHitState.HIT, new String[]{"prefix", prefix, "numOfLps", String.valueOf(result.size())});
+        }
+        return result;
       case All:
         if (allLeasePathsRead) {
           log("find-all-lpaths", CacheHitState.HIT);
@@ -226,5 +234,16 @@ public class LeasePathContext extends EntityContext<LeasePath> {
     }
 
     return finalList;
+  }
+
+  private TreeSet<LeasePath> getCachedLpsByPrefix(String prefix) {
+    TreeSet<LeasePath> hits = new TreeSet<LeasePath>();
+    for (LeasePath lp : leasePaths.values()) {
+      if (lp.getPath().contains(prefix)) {
+        hits.add(lp);
+      }
+    }
+
+    return hits;
   }
 }
