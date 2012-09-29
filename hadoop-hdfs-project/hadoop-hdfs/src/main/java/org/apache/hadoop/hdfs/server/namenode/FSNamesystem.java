@@ -2119,6 +2119,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addCorrupt(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
                 acquire();
       }
     };
@@ -2640,7 +2641,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.READ,
                 new String[]{src}, getFsDirectory().getRootDir());
         tla.addBlock(TransactionLockManager.LockType.READ).
@@ -3046,7 +3047,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addExcess(LockType.READ).
                 addReplicaUc(LockType.WRITE).
                 addUnderReplicatedBlock(LockType.WRITE).
-                acquire();
+                acquireByBlock();
       }
     };
     String src = (String) commitBlockSyncHanlder.handleWithWriteLock(this);

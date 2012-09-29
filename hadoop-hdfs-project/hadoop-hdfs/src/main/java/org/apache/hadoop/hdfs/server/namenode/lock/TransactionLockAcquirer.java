@@ -97,7 +97,7 @@ public class TransactionLockAcquirer {
     }
     
     if (lastComp || !curInode[0].isDirectory()) {
-      return lastComp;
+      return true;
     }
     
     curInode[0] = getChildINode(components[count[0] + 1], curInode[0].getId());
@@ -145,7 +145,6 @@ public class TransactionLockAcquirer {
       } else {
         EntityManager.readLock();
       }
-
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
       if (lastComp)
         break;

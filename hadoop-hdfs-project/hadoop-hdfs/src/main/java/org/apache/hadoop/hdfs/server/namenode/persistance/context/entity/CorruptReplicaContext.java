@@ -15,11 +15,11 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  */
 public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
-  protected Map<String, CorruptReplica> corruptReplicas = new HashMap<String, CorruptReplica>();
+  protected Map<CorruptReplica, CorruptReplica> corruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
   protected Map<Long, List<CorruptReplica>> blockCorruptReplicas = new HashMap<Long, List<CorruptReplica>>();
-  protected Map<String, CorruptReplica> newCorruptReplicas = new HashMap<String, CorruptReplica>();
+  protected Map<CorruptReplica, CorruptReplica> newCorruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
 //  protected Map<String, CorruptReplica> modifiedCorruptReplicas = new HashMap<String, CorruptReplica>();
-  protected Map<String, CorruptReplica> removedCorruptReplicas = new HashMap<String, CorruptReplica>();
+  protected Map<CorruptReplica, CorruptReplica> removedCorruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
   protected boolean allCorruptBlocksRead = false;
   private CorruptReplicaDataAccess dataAccess;
   private int nullCount = 0;
@@ -30,14 +30,14 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void add(CorruptReplica entity) throws PersistanceException {
-    if (removedCorruptReplicas.get(entity.persistanceKey()) != null) {
+    if (removedCorruptReplicas.get(entity) != null) {
       throw new TransactionContextException("Removed corrupt replica passed to be persisted");
     }
-    if (corruptReplicas.containsKey(entity.persistanceKey()) && corruptReplicas.get(entity.persistanceKey()) == null) {
+    if (corruptReplicas.containsKey(entity) && corruptReplicas.get(entity) == null) {
       nullCount--;
     }
-    corruptReplicas.put(entity.persistanceKey(), entity);
-    newCorruptReplicas.put(entity.persistanceKey(), entity);
+    corruptReplicas.put(entity, entity);
+    newCorruptReplicas.put(entity, entity);
     log("added-corrupt", CacheHitState.NA,
             new String[]{"bid", Long.toString(entity.getBlockId()), "sid", entity.getStorageId()});
   }
@@ -82,7 +82,14 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
         Long blockId = (Long) params[0];
         String storageId = (String) params[1];
         CorruptReplica result = null;
-        String searchKey = blockId + storageId;
+        CorruptReplica searchKey = new CorruptReplica(blockId, storageId);
+        // if corrupt replica was queried by bid before and it wasn't found.
+        if (blockCorruptReplicas.containsKey(blockId) && !blockCorruptReplicas.get(blockId).contains(searchKey))
+        {
+          log("find-corrupt-by-pk-not-exist", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          return null;
+        }
+        // otherwise it should exist or it's the first time that we query for it
         if (corruptReplicas.containsKey(searchKey)) {
           log("find-corrupt-by-pk", CacheHitState.HIT, new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = corruptReplicas.get(searchKey);
@@ -145,15 +152,14 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void remove(CorruptReplica entity) throws PersistanceException {
-    String searchKey = entity.persistanceKey();
-    if (!corruptReplicas.containsKey(searchKey)) {
+    if (!corruptReplicas.containsKey(entity)) {
       throw new TransactionContextException("Unattached corrupt replica passed to be removed");
     }
 
-    corruptReplicas.remove(searchKey);
-    newCorruptReplicas.remove(searchKey);
+    corruptReplicas.remove(entity);
+    newCorruptReplicas.remove(entity);
 //    modifiedCorruptReplicas.remove(searchKey);
-    removedCorruptReplicas.put(searchKey, entity);
+    removedCorruptReplicas.put(entity, entity);
     if (blockCorruptReplicas.containsKey(entity.getBlockId())) {
       blockCorruptReplicas.get(entity.getBlockId()).remove(entity);
     }
@@ -182,17 +188,17 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     ArrayList<CorruptReplica> finalList = new ArrayList<CorruptReplica>();
 
     for (CorruptReplica replica : crs) {
-      if (removedCorruptReplicas.containsKey(replica.persistanceKey())) {
+      if (removedCorruptReplicas.containsKey(replica)) {
         continue;
       }
-      if (corruptReplicas.containsKey(replica.persistanceKey())) {
-        if (corruptReplicas.get(replica.persistanceKey()) == null) {
-          corruptReplicas.put(replica.persistanceKey(), replica);
+      if (corruptReplicas.containsKey(replica)) {
+        if (corruptReplicas.get(replica) == null) {
+          corruptReplicas.put(replica, replica);
           nullCount--;
         }
-        finalList.add(corruptReplicas.get(replica.persistanceKey()));
+        finalList.add(corruptReplicas.get(replica));
       } else {
-        corruptReplicas.put(replica.persistanceKey(), replica);
+        corruptReplicas.put(replica, replica);
         finalList.add(replica);
       }
     }

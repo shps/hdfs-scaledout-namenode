@@ -68,10 +68,11 @@ public class INodeDirectory extends INode {
     super(other);
     this.nsCount = other.getNsCount();
     this.diskspace = other.getDsCount();
-    this.children = other.getChildren();
-    for (INode inode : children) {
-      inode.setParent(this);
-    }
+    // [lock] lazy fetch for children
+//    this.children = other.getChildren();
+//    for (INode inode : children) {
+//      inode.setParent(this);
+//    }
   }
 
   public long getNsCount() {

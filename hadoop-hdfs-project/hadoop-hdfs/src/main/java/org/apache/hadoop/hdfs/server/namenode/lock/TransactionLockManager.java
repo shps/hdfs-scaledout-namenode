@@ -172,19 +172,19 @@ public class TransactionLockManager {
     StringBuilder builder = new StringBuilder();
     byte[][] components = INode.getPathComponents(path);
     String delimiter = "/";
-    builder.append(delimiter);
-    for (int i = 1; i <= Math.min(components.length, size + 1); i++ )
-    {
-      builder.append(DFSUtil.bytes2String(components[i]));
+    if (components.length <= 1) {
+      return delimiter; // return only root
+    }    // build path for number of existing path components plus one
+    for (int i = 1; i <= Math.min(components.length - 1, size + 1); i++) {
       builder.append(delimiter);
+      builder.append(DFSUtil.bytes2String(components[i]));
     }
 
     return builder.toString();
   }
 
   private Lease acquireNameNodeLease() throws PersistanceException {
-    if (nnLeaseLock != null)
-    {
+    if (nnLeaseLock != null) {
       return TransactionLockAcquirer.acquireLock(nnLeaseLock, Lease.Finder.ByPKey, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
     }
     return null;
@@ -208,6 +208,7 @@ public class TransactionLockManager {
     , ONLY_PATH_WITH_UNKNOWN_HEAD // resolve a path which some of its path components might not exist
     , PATH_AND_IMMEDIATE_CHILDREN // resolve path and find the given directory's children
     , PATH_AND_ALL_CHILDREN_RECURESIVELY // resolve the given path and find all the children recursively.
+    , FROM_CHILD_TO_ROOT // resolves inode by having an inode as a child through the root
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType,
@@ -221,6 +222,12 @@ public class TransactionLockManager {
 
   public TransactionLockManager addINode(INodeLockType lock) {
     addINode(null, lock, null, null);
+    return this;
+  }
+
+  public TransactionLockManager addINode(INodeResolveType resolveType, INodeLockType lock) {
+    this.inodeResolveType = resolveType;
+    this.inodeLock = lock;
     return this;
   }
 
@@ -265,7 +272,7 @@ public class TransactionLockManager {
     this.replicaLock = lock;
     return this;
   }
-  
+
   public TransactionLockManager addNameNodeLease(LockType lock) {
     this.nnLeaseLock = lock;
     return this;
@@ -388,11 +395,10 @@ public class TransactionLockManager {
           if (resolvedSize == resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
             INode baseDir = resolvedInodes.peekLast();
-            if (baseDir == null)
-            {
+            if (baseDir == null) {
               baseDir = rootDir;
             }
-            LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir, 
+            LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
                     fullPath, existingPath);
             resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.peekLast();

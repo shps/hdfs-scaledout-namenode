@@ -31,7 +31,7 @@ public class CorruptReplica extends Replica {
     super(storageId, blockId);
   }
 
-  public String persistanceKey() {
-    return blockId + storageId;
-  }
+//  public String persistanceKey() {
+//    return blockId + storageId;
+//  }
 }

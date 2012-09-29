@@ -151,7 +151,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, Lease.Finder.All, null);
+          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, Lease.Finder.All);
         }
       }.setParams(cluster);
       
@@ -159,8 +159,6 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     
       assertTrue("Found " + count + " lease, expected 1", count == 1);
       cluster.getNameNodeRpc().setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-    } catch (Exception e) {
-      e.printStackTrace();
     } finally {
       if (cluster != null) {
         cluster.shutdown();

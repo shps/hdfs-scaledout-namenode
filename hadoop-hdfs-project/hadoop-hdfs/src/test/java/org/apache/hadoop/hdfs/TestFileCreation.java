@@ -716,7 +716,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 /**
  * Test that file data becomes available before file is closed.
  */
-  public void testFileCreationSimulated() throws IOException {
+  public void xxxtestFileCreationSimulated() throws IOException {
     simulatedStorage = true;
     xxxtestFileCreation();
     simulatedStorage = false;
