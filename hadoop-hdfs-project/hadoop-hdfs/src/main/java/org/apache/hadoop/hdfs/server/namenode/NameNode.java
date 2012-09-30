@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import java.io.File;
@@ -389,7 +391,13 @@ public class NameNode {
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
-    namesystem.activate(conf);
+    try {
+      namesystem.activate(conf);
+    } catch (StorageException ex) {
+      throw new RuntimeException(ex);
+    } catch (PersistanceException ex) {
+      throw new RuntimeException(ex);
+    }
     startHttpServer(conf);
     rpcServer.start();
     startTrashEmptier(conf);
