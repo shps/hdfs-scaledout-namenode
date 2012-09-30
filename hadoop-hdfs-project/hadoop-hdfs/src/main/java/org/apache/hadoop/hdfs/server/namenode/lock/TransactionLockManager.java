@@ -391,12 +391,12 @@ public class TransactionLockManager {
         for (int i = 0; i < params.length; i++) {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
-          LOG.error("Full Path = " + fullPath);
+//          LOG.error("Full Path = " + fullPath);
           LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir);
           int resolvedSize = resolvedInodes.size();
-          LOG.error("resolved size = " + resolvedSize);
+//          LOG.error("resolved size = " + resolvedSize);
           String existingPath = buildPath(fullPath, resolvedSize);
-          LOG.error("existing path = " + existingPath);
+//          LOG.error("existing path = " + existingPath);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
           resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir);
           if (resolvedSize <= resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
@@ -405,10 +405,10 @@ public class TransactionLockManager {
             if (baseDir == null) {
               baseDir = rootDir;
             }
-            LOG.error("base dir = " + baseDir.getName());
+//            LOG.error("base dir = " + baseDir.getName());
             LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
                     fullPath, existingPath);
-            LOG.error("rest size = " + rest.size());
+//            LOG.error("rest size = " + rest.size());
             resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.peekLast();
           }

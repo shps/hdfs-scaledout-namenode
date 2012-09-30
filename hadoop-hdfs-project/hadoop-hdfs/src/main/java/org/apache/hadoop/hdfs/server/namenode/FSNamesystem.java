@@ -1382,7 +1382,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        LOG.error(src);
+//        LOG.error(src);
         startFileInternal(src, permissions, holder, clientMachine, flag,
                 createParent, replication, blockSize);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
