@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -18,6 +20,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -33,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
  */
 public class TransactionLockManager {
 
+  private final static Log LOG = LogFactory.getLog(TransactionLockManager.class);
   //inode
   private INodeLockType inodeLock = null;
   private INodeResolveType inodeResolveType = null;
@@ -387,19 +391,24 @@ public class TransactionLockManager {
         for (int i = 0; i < params.length; i++) {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
+          LOG.error("Full Path = " + fullPath);
           LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir);
           int resolvedSize = resolvedInodes.size();
+          LOG.error("resolved size = " + resolvedSize);
           String existingPath = buildPath(fullPath, resolvedSize);
+          LOG.error("existing path = " + existingPath);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
           resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir);
-          if (resolvedSize == resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
+          if (resolvedSize <= resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
             INode baseDir = resolvedInodes.peekLast();
             if (baseDir == null) {
               baseDir = rootDir;
             }
+            LOG.error("base dir = " + baseDir.getName());
             LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
                     fullPath, existingPath);
+            LOG.error("rest size = " + rest.size());
             resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.peekLast();
           }

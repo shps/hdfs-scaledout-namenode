@@ -316,8 +316,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     systemLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_DEFAULT);
     rowLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_DEFAULT);
     StorageFactory.setConfiguration(conf);
-    LOG.info(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY + " = " + systemLevelLockEnabled);
-    LOG.info(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY + " = " + rowLevelLockEnabled);
+    LOG.fatal(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY + " = " + systemLevelLockEnabled);
+    LOG.fatal(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY + " = " + rowLevelLockEnabled);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
@@ -1382,6 +1382,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
+        LOG.error(src);
         startFileInternal(src, permissions, holder, clientMachine, flag,
                 createParent, replication, blockSize);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
