@@ -316,6 +316,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     systemLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_DEFAULT);
     rowLevelLockEnabled = conf.getBoolean(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY, DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_DEFAULT);
     StorageFactory.setConfiguration(conf);
+    LOG.info(DFSConfigKeys.DFS_SYSTEM_LEVEL_LOCK_ENABLED_KEY + " = " + systemLevelLockEnabled);
+    LOG.info(DFSConfigKeys.DFS_ROW_LEVEL_LOCK_ENABLED_KEY + " = " + rowLevelLockEnabled);
     LOG.info("DFS_INODE_CACHE_ENABLED=" + DFSConfigKeys.DFS_INODE_CACHE_ENABLED);
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
