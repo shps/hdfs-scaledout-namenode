@@ -130,8 +130,11 @@ public abstract class BlockPlacementPolicy {
                                     List<DatanodeDescriptor> chosenNodes,
                                     HashMap<Node, Node> excludedNodes,
                                     long blocksize) throws PersistanceException {
-    return chooseTarget(srcInode.getFullPathName(), numOfReplicas, writer,
-                        chosenNodes, excludedNodes, blocksize);
+    // [lock] There is no usage for the full path
+     return chooseTarget((String) null, numOfReplicas, writer,
+            chosenNodes, excludedNodes, blocksize);
+//    return chooseTarget(srcInode.getFullPathName(), numOfReplicas, writer,
+//                        chosenNodes, excludedNodes, blocksize);
   }
 
   /**

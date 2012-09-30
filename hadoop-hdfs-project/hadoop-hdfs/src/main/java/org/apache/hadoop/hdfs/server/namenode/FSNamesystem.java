@@ -396,7 +396,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Activate FSNamesystem daemons.
    */
-  void activate(final Configuration conf) throws IOException {
+  void activate(final Configuration conf) throws IOException, StorageException, PersistanceException {
 
     if (isWritingNN()) {
       writeLock();
@@ -408,13 +408,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         lmthread = new Daemon(leaseManager.new Monitor());
         lmthread.start();
         registerMXBean();
-      } catch (Exception ex) {
-        try {
-          EntityManager.rollback();
-        } catch (PersistanceException ex1) {
-          LOG.error(ex1);
-        }
-        LOG.error(ex);
       } finally {
         writeUnlock();
       }
@@ -3613,14 +3606,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @return true if in safe mode
      */
     private synchronized boolean isOn() throws PersistanceException {
-      try {
-        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
-                + "Total num of blocks, active blocks, or "
-                + "total safe blocks don't match.";
-      } catch (IOException e) {
-        System.err.print(StringUtils.stringifyException(e));
-      }
-      return this.reached >= 0;
+      //TODO [lock]
+      return false;
+//      try {
+//        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
+//                + "Total num of blocks, active blocks, or "
+//                + "total safe blocks don't match.";
+//      } catch (IOException e) {
+//        System.err.print(StringUtils.stringifyException(e));
+//      }
+//      return this.reached >= 0;
     }
 
     /**
@@ -4048,6 +4043,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
+//        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
         // TODO safemode
       }
     };

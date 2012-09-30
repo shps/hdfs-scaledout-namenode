@@ -1437,15 +1437,15 @@ public class NNThroughputBenchmark {
 
   public static void main(String[] args) throws Exception {
 //    if (args.length == 0) {
-//      args = new String[8];
+//      args = new String[7];
 //      args[0] = "-op";
 //      args[1] = "open";
 //      args[2] = "-threads";
-//      args[3] = "3";
+//      args[3] = "5";
 //      args[4] = "-files";
 //      args[5] = "1000";
 //      args[6] = "-keepResults";
-//      args[7] = "-useExisting";
+////      args[7] = "-useExisting";
 //    }
     runBenchmark(new HdfsConfiguration(),
             new ArrayList<String>(Arrays.asList(args)));

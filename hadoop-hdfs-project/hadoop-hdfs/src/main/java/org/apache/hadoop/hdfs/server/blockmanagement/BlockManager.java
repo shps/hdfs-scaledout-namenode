@@ -877,18 +877,13 @@ public class BlockManager {
     invalidateBlocks.remove(node.getStorageID(), opType);
   }
   
-  private Iterator<? extends Block> findBlocksAssociatedTo(final String sid, OperationType opType) throws IOException {
-    TransactionalRequestHandler findBlocksHandler = new TransactionalRequestHandler(opType) {
+  private Iterator<? extends Block> findBlocksAssociatedTo(final String sid, final OperationType opType) throws IOException {
+    LightWeightRequestHandler findBlocksHandler = new LightWeightRequestHandler(opType) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(BlockInfo.Finder.ByStorageId, sid).iterator();
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED,
-                BlockInfo.Finder.ByStorageId, sid);
+        BlockInfoDataAccess da = (BlockInfoDataAccess) StorageFactory.getDataAccess(BlockInfoDataAccess.class);
+        return da.findByStorageId(sid).iterator();
       }
     };
     return (Iterator<? extends Block>) findBlocksHandler.handle();
@@ -1505,7 +1500,7 @@ public class BlockManager {
    * @throws IOException
    */
   private DatanodeDescriptor chooseSourceDatanode(
-          Block block,
+          final Block block,
           List<DatanodeDescriptor> containingNodes,
           List<DatanodeDescriptor> nodesContainingLiveReplicas,
           NumberReplicas numReplicas) throws IOException, PersistanceException {
@@ -1520,7 +1515,7 @@ public class BlockManager {
 
     for (DatanodeDescriptor node : dataNodes) {
       Collection<ExcessReplica> excessBlocks =
-              EntityManager.findList(ExcessReplica.Finder.ByStorageId, node.getStorageID());
+              EntityManager.findList(ExcessReplica.Finder.ByBlockId, block.getBlockId());
       if (isItCorruptedReplica(block.getBlockId(), node.getStorageID())) {
         corrupt++;
       } else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
@@ -1653,32 +1648,44 @@ public class BlockManager {
   
   private boolean prepareProcessReport(final DatanodeDescriptor node, final DatanodeID nodeID,
           final List<BlockInfo> existingBlocks) throws IOException {
-    TransactionalRequestHandler prepareProcessReportHandler = new TransactionalRequestHandler(OperationType.PREPARE_PROCESS_REPORT) {
+    // To minimize startup time, we discard any second (or later) block reports
+    // that we receive while still in startup phase.
+    if (isInStartUpSafeMode(OperationType.PREPARE_PROCESS_REPORT) && node.numBlocks() > 0) {
+      NameNode.stateChangeLog.info("BLOCK* processReport: "
+              + "discarded non-initial block report from " + nodeID.getName()
+              + " because namenode still in startup phase");
+      return false;
+    }
+
+    LightWeightRequestHandler findBlocksHandler = new LightWeightRequestHandler(OperationType.PREPARE_PROCESS_REPORT) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        // To minimize startup time, we discard any second (or later) block reports
-        // that we receive while still in startup phase.
-        if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
-          NameNode.stateChangeLog.info("BLOCK* processReport: "
-                  + "discarded non-initial block report from " + nodeID.getName()
-                  + " because namenode still in startup phase");
-          return false;
-        }
-
-        if (node.numBlocks() > 0) { // If it's not the first block report of this datanode.
-          existingBlocks.addAll(EntityManager.findList(BlockInfo.Finder.ByStorageId, node.getStorageID()));
-        }
-
-        return true;
+        BlockInfoDataAccess da = (BlockInfoDataAccess) StorageFactory.getDataAccess(BlockInfoDataAccess.class);
+        return da.findByStorageId(node.getStorageID());
       }
+    };
+
+    if (node.numBlocks() > 0) { // If it's not the first block report of this datanode.
+      existingBlocks.addAll((Collection<BlockInfo>) findBlocksHandler.handle());
+    }
+
+    return true;
+  }
+  
+  private boolean isInStartUpSafeMode(final OperationType opType) throws IOException {
+    return (Boolean) new TransactionalRequestHandler(opType) {
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, BlockInfo.Finder.ByStorageId, node.getStorageID());
+        // safe-mode
       }
-    };
-    return (Boolean) prepareProcessReportHandler.handle();
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return namesystem.isInStartupSafeMode();
+      }
+    }.handle();
   }
 
   /**

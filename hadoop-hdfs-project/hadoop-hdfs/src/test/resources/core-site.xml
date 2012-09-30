@@ -14,6 +14,16 @@
     <value>/tmp</value>
   </property>
   <property>
+    <name>dfs.system.level.lock.enabled</name>
+    <value>false</value>
+    <description>Enables or disables system level lock.</description>
+  </property>
+  <property>
+    <name>dfs.row.level.lock.enabled</name>
+    <value>true</value>
+    <description>Enables or disables row level lock on the storage.</description>
+  </property>
+  <property>
     <name>dfs.storage.type</name>
     <value>clusterj</value>
     <description>storage type could be one of derby-net, derby-em, clusterj or ...</description>

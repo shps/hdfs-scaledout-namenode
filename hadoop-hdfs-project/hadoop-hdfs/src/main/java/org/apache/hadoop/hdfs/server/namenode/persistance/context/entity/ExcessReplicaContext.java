@@ -77,12 +77,17 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
       case ByPKey:
         long blockId = (Long) params[0];
         String storageId = (String) params[1];
-        ExcessReplica searchInstance = new ExcessReplica(storageId, blockId);
-        if (exReplicas.containsKey(searchInstance)) {
+        ExcessReplica searchKey = new ExcessReplica(storageId, blockId);
+        if (blockIdToExReplica.containsKey(blockId) && !blockIdToExReplica.get(blockId).contains(searchKey)) {
+          log("find-excess-by-pk-not-exist", CacheHitState.HIT,
+                  new String[]{"bid", Long.toString(blockId), "sid", storageId});
+          return null;
+        }
+        if (exReplicas.containsKey(searchKey)) {
           log("find-excess-by-pk", CacheHitState.HIT,
                   new String[]{"bid", Long.toString(blockId), "sid", storageId});
-          result = exReplicas.get(searchInstance);
-        } else if (removedExReplica.containsKey(searchInstance)) {
+          result = exReplicas.get(searchKey);
+        } else if (removedExReplica.containsKey(searchKey)) {
           log("find-excess-by-pk-removed-item", CacheHitState.HIT,
                   new String[]{"bid", Long.toString(blockId), "sid", storageId});
           result = null;
