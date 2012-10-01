@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
@@ -279,10 +280,11 @@ public class NNThroughputBenchmark {
       return false;
     }
 
-    void cleanUp() throws IOException {
+    void cleanUp() throws IOException, StorageException {
       nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       if (!keepResults) {
-        nameNodeProto.delete(getBaseDir(), true);
+//        nameNodeProto.delete(getBaseDir(), true);
+        StorageFactory.getConnector().formatStorage();
       }
     }
 
@@ -1436,19 +1438,19 @@ public class NNThroughputBenchmark {
   }
 
   public static void main(String[] args) throws Exception {
-//    if (args.length == 0) {
-//      args = new String[8];
-//      args[0] = "-op";
-//      args[1] = "create";
-//      args[2] = "-threads";
-//      args[3] = "5";
-//      args[4] = "-files";
-//      args[5] = "1000";
-//      args[6] = "-filesPerDir";
-//      args[7] = "100";
-////      args[8] = "-keepResults";
-//////      args[7] = "-useExisting";
-//    }
+    if (args.length == 0) {
+      args = new String[8];
+      args[0] = "-op";
+      args[1] = "create";
+      args[2] = "-threads";
+      args[3] = "100";
+      args[4] = "-files";
+      args[5] = "10000";
+      args[6] = "-filesPerDir";
+      args[7] = "100";
+//      args[8] = "-keepResults";
+////      args[7] = "-useExisting";
+    }
     runBenchmark(new HdfsConfiguration(),
             new ArrayList<String>(Arrays.asList(args)));
   }

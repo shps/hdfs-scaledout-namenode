@@ -126,13 +126,13 @@ public class TransactionLockAcquirer {
 
     int[] count = new int[]{0};
     boolean lastComp = (count[0] == components.length - 1);
-    if (lastComp && (lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT)) // if root is the last directory, we should acquire the write lock over the root
+    if (lastComp) // if root is the last directory, we should acquire the write lock over the root
     {
-      resolvedInodes.add(acquireWriteLockOnRoot());
+      resolvedInodes.add(acquireLockOnRoot(lock));
       return resolvedInodes;
     } else if ((count[0] == components.length - 2) && lock == INodeLockType.WRITE_ON_PARENT) // if Root is the parent
     {
-      curNode[0] = acquireWriteLockOnRoot();
+      curNode[0] = acquireLockOnRoot(lock);
     }
 
     while (count[0] < components.length && curNode[0] != null) {
@@ -173,8 +173,8 @@ public class TransactionLockAcquirer {
     }
   }
 
-  private static INode acquireWriteLockOnRoot() throws PersistanceException {
-    EntityManager.writeLock();
+  private static INode acquireLockOnRoot(INodeLockType lock) throws PersistanceException {
+    lockINode(lock);
     return EntityManager.find(INode.Finder.ByPKey, 0L);
   }
 

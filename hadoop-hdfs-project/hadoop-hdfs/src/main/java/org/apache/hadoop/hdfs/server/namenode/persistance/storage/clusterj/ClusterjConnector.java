@@ -114,6 +114,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
   public boolean formatStorage() {
     Session session = obtainSession();
     Transaction tx = session.currentTransaction();
+    session.setLockMode(LockMode.READ_COMMITTED);
     try {
       tx.begin();
       session.deletePersistentAll(InodeClusterj.InodeDTO.class);

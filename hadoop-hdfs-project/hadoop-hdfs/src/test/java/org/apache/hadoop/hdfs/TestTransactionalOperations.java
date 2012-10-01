@@ -4,15 +4,20 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -602,10 +607,10 @@ public class TestTransactionalOperations {
         // HANDLE_HEARTBEAT
         EntityManager.begin();
         TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, ReplicaUnderConstruction.Finder.ByBlockId, bid);
-        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, UnderReplicatedBlock.Finder.All, null);
-        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, PendingBlockInfo.Finder.All, null);
-        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, BlockInfo.Finder.All, null);
-        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, UnderReplicatedBlock.Finder.All);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, PendingBlockInfo.Finder.All);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, BlockInfo.Finder.All);
+        TransactionLockAcquirer.acquireLockList(TransactionLockManager.LockType.READ_COMMITTED, InvalidatedBlock.Finder.All);
         EntityManager.commit();
 
         // LEASE_MANAGER
@@ -664,6 +669,58 @@ public class TestTransactionalOperations {
               lockedINodes.getLast(), p2.toString(), p1.toString());
       assert lockedINodes != null && lockedINodes.size() == 2; // the other two
       EntityManager.commit();
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  @Test
+  public void testConcurrentWriteLocksOnTheSameRow() throws IOException, InterruptedException, PersistanceException
+  {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      final NamenodeProtocols nameNodeProto = cluster.getNameNodeRpc();
+      final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      int numThreads = 21;
+      Thread[] threads = new Thread[numThreads] ;
+      final CyclicBarrier barrier = new CyclicBarrier(numThreads); 
+      final CountDownLatch latch = new CountDownLatch(numThreads);
+//      Path p1 = new Path("/");
+//      Path p2 = new Path("/ed1/ed2/ed3/ed4");
+//      dfs.mkdirs(p2, FsPermission.getDefault());
+      // create file on the root
+      Runnable fileCreator = new Runnable() {
+
+        @Override
+        public void run() {
+          String name = "/" + Thread.currentThread().getName();
+          try {
+            barrier.await(); // to make all threads starting at the same time
+            nameNodeProto.create(name, FsPermission.getDefault(),
+                    dfs.dfs.clientName,
+                    new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, (short) 2, blockSize);
+            latch.countDown();
+          } catch (Exception ex) {
+            latch.countDown();
+            ex.printStackTrace();
+          }
+        }
+      };
+      for (int i = 0 ; i < numThreads; i++)
+      {
+        threads[i] = new Thread(fileCreator);
+        threads[i].start();
+      }
+      
+      latch.await();
+      String root = "/";
+      System.out.println("root = " + root);
+      DirectoryListing list = nameNodeProto.getListing(root, new byte[]{}, false);
+      int counter = 0;
+      
+      assert list.getPartialListing().length == numThreads; // root must have 100 children
     } finally {
       cluster.shutdown();
     }
