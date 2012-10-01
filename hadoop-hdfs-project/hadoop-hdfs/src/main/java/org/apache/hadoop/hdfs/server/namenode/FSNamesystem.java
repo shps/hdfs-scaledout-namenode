@@ -301,6 +301,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw e;
     }
   }
+  
+  public static boolean isSystemLevelLockEnabled()
+  {
+    return systemLevelLockEnabled;
+  }
 
   /**
    * Initialize FSNamesystem.

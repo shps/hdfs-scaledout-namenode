@@ -100,7 +100,7 @@ public class LeaseManager {
   /**
    * @return the number of leases currently in the system
    */
-  public synchronized int countLease() throws PersistanceException {
+  public int countLease() throws PersistanceException {
     return EntityManager.findList(Lease.Finder.All).size();
   }
 
@@ -110,14 +110,14 @@ public class LeaseManager {
    * @return the number of paths contained in all leases
    *
    */
-  synchronized int countPath() throws PersistanceException {
+  int countPath() throws PersistanceException {
     return EntityManager.count(Lease.Counter.All);
   }
 
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
-  synchronized Lease addLease(String holder, String src) throws PersistanceException {
+  Lease addLease(String holder, String src) throws PersistanceException {
     Lease lease = getLease(holder);
     if (lease == null) {
       int holderID = DFSUtil.getRandom().nextInt();
@@ -137,7 +137,7 @@ public class LeaseManager {
   /**
    * Remove the specified lease and src
    */
-  synchronized void removeLease(Lease lease, LeasePath src) throws PersistanceException {
+  void removeLease(Lease lease, LeasePath src) throws PersistanceException {
     if (lease.removePath(src)) {
       EntityManager.remove(src);
     } else {
@@ -153,7 +153,7 @@ public class LeaseManager {
   /**
    * Remove the lease for the specified holder and src
    */
-  synchronized void removeLease(String holder, String src) throws PersistanceException {
+  void removeLease(String holder, String src) throws PersistanceException {
     Lease lease = getLease(holder);
     if (lease != null) {
       removeLease(lease, new LeasePath(src, lease.getHolderID()));
@@ -163,7 +163,7 @@ public class LeaseManager {
   /**
    * Reassign lease for file src to the new holder.
    */
-  synchronized Lease reassignLease(Lease lease, String src, String newHolder) throws PersistanceException {
+  Lease reassignLease(Lease lease, String src, String newHolder) throws PersistanceException {
     assert newHolder != null : "new lease holder is null";
     if (lease != null) {
       // Removing lease-path souldn't be persisted in entity-manager since we want to add it to another lease.
@@ -199,7 +199,7 @@ public class LeaseManager {
   /**
    * Finds the pathname for the specified pendingFile
    */
-  public synchronized String findPath(INodeFile pendingFile)
+  public String findPath(INodeFile pendingFile)
           throws IOException, PersistanceException {
     assert pendingFile.isUnderConstruction();
     Lease lease = getLease(pendingFile.getClientName());
@@ -226,18 +226,18 @@ public class LeaseManager {
   /**
    * Renew the lease(s) held by the given client
    */
-  synchronized void renewLease(String holder) throws PersistanceException {
+  void renewLease(String holder) throws PersistanceException {
     renewLease(getLease(holder));
   }
 
-  synchronized void renewLease(Lease lease) throws PersistanceException {
+  void renewLease(Lease lease) throws PersistanceException {
     if (lease != null) {
       lease.setLastUpdate(now());
       EntityManager.update(lease);
     }
   }
 
-  synchronized void changeLease(String src, String dst,
+  void changeLease(String src, String dst,
           String overwrite, String replaceBy) throws PersistanceException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".changelease: "
@@ -262,7 +262,7 @@ public class LeaseManager {
     }
   }
 
-  synchronized void removeLeaseWithPrefixPath(String prefix) throws PersistanceException {
+  void removeLeaseWithPrefixPath(String prefix) throws PersistanceException {
     for (Map.Entry<LeasePath, Lease> entry : findLeaseWithPrefixPath(prefix)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
@@ -396,7 +396,7 @@ public class LeaseManager {
   /**
    * Check the leases beginning from the oldest.
    */
-  private synchronized void checkLeases(String holder) throws PersistanceException {
+  private void checkLeases(String holder) throws PersistanceException {
     Lease oldest = EntityManager.find(Lease.Finder.ByPKey, holder);
 
     if (oldest == null) {

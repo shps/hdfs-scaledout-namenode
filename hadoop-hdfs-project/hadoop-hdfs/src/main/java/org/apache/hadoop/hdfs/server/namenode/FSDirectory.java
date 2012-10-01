@@ -83,30 +83,45 @@ public class FSDirectory implements Closeable {
     private Condition cond;
     private boolean quotaEnabled;
 
-    // utility methods to acquire and release read lock and write lock
-    void readLock() {
-        this.dirLock.readLock().lock();
+  // utility methods to acquire and release read lock and write lock
+  void readLock() {
+    if (FSNamesystem.isSystemLevelLockEnabled()) {
+      this.dirLock.readLock().lock();
+    }
+  }
+
+  void readUnlock() {
+    if (FSNamesystem.isSystemLevelLockEnabled()) {
+      this.dirLock.readLock().unlock();
+    }
+  }
+
+  void writeLock() {
+    if (FSNamesystem.isSystemLevelLockEnabled()) {
+      this.dirLock.writeLock().lock();
+    }
+  }
+
+  void writeUnlock() {
+    if (FSNamesystem.isSystemLevelLockEnabled()) {
+      this.dirLock.writeLock().unlock();
+    }
+  }
+
+  boolean hasWriteLock() {
+    if (!FSNamesystem.isSystemLevelLockEnabled()) {
+      return true;
     }
 
-    void readUnlock() {
-        this.dirLock.readLock().unlock();
-    }
+    return this.dirLock.isWriteLockedByCurrentThread();
+  }
 
-    void writeLock() {
-        this.dirLock.writeLock().lock();
+  boolean hasReadLock() {
+    if (!FSNamesystem.isSystemLevelLockEnabled()) {
+      return true;
     }
-
-    void writeUnlock() {
-        this.dirLock.writeLock().unlock();
-    }
-
-    boolean hasWriteLock() {
-        return this.dirLock.isWriteLockedByCurrentThread();
-    }
-
-    boolean hasReadLock() {
-        return this.dirLock.getReadHoldCount() > 0;
-    }
+    return this.dirLock.getReadHoldCount() > 0;
+  }
     /**
      * Caches frequently used file names used in {@link INode} to reuse byte[]
      * objects and reduce heap usage.
