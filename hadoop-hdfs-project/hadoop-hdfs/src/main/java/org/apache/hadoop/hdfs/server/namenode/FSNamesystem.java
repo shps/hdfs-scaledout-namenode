@@ -409,6 +409,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeLock();
       try {
         EntityManager.begin();
+        EntityManager.readCommited();
         setBlockTotal();
         EntityManager.commit();
         blockManager.activate(conf);
