@@ -207,7 +207,9 @@ public class FSDirectory implements Closeable {
         try {
             setReady(true);
             this.nameCache.initialized();
+            if (FSNamesystem.isSystemLevelLockEnabled()) {
             cond.signalAll();
+          }
         } finally {
             writeUnlock();
         }
@@ -235,6 +237,8 @@ public class FSDirectory implements Closeable {
      * Block until the object is ready to be used.
      */
     void waitForReady() {
+      if (FSNamesystem.isSystemLevelLockEnabled())
+      {
         if (!ready) {
             writeLock();
             try {
@@ -248,6 +252,7 @@ public class FSDirectory implements Closeable {
                 writeUnlock();
             }
         }
+      }
     }
 
     /**
