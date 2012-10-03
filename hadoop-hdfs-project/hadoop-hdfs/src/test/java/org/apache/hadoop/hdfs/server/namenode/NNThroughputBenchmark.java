@@ -643,6 +643,7 @@ public class NNThroughputBenchmark {
         LOG.fatal("Cleaning up the storage...");
 //        nameNodeProto.delete(getBaseDir(), true);
         StorageFactory.getConnector().formatStorage();
+        String dilimiter = "/";
         
         long id = 1;
 //        baseDir = "create";
@@ -650,13 +651,16 @@ public class NNThroughputBenchmark {
         // int generatedFileIdx = 0;
         LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
         fileNames = new String[numThreads][];
+        
         for (int idx = 0; idx < numThreads; idx++) {
           baseDir = "create" + idx;
           StorageFileNameGenerator.addINodeDirectory(baseDir, id++, 0);
           int threadOps = opsPerThread[idx];
           fileNames[idx] = new String[threadOps];
           for (int jdx = 0; jdx < threadOps; jdx++) {
-            fileNames[idx][jdx] = nameGenerator.getNextFileName(baseDir + "/ThroughputBench");
+            StringBuilder fileName = new StringBuilder();
+            fileName.append(dilimiter).append(baseDir).append("/NNThroughput").append(jdx);
+            fileNames[idx][jdx] = fileName.toString();
           }
         }
         EntityManager.commit();
@@ -1507,7 +1511,7 @@ public class NNThroughputBenchmark {
       args[0] = "-op";
       args[1] = "create2";
       args[2] = "-threads";
-      args[3] = "10";
+      args[3] = "20";
       args[4] = "-files";
       args[5] = "100";
       args[6] = "-filesPerDir";
