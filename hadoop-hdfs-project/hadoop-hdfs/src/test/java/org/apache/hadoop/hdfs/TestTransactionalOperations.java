@@ -683,13 +683,11 @@ public class TestTransactionalOperations {
     try {
       final NamenodeProtocols nameNodeProto = cluster.getNameNodeRpc();
       final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-      int numThreads = 21;
+      int numThreads = 100;
       Thread[] threads = new Thread[numThreads] ;
       final CyclicBarrier barrier = new CyclicBarrier(numThreads); 
       final CountDownLatch latch = new CountDownLatch(numThreads);
-//      Path p1 = new Path("/");
-//      Path p2 = new Path("/ed1/ed2/ed3/ed4");
-//      dfs.mkdirs(p2, FsPermission.getDefault());
+
       // create file on the root
       Runnable fileCreator = new Runnable() {
 
@@ -718,7 +716,6 @@ public class TestTransactionalOperations {
       String root = "/";
       System.out.println("root = " + root);
       DirectoryListing list = nameNodeProto.getListing(root, new byte[]{}, false);
-      int counter = 0;
       
       assert list.getPartialListing().length == numThreads; // root must have 100 children
     } finally {

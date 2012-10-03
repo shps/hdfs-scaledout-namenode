@@ -85,14 +85,14 @@ public class StorageFileNameGenerator extends FileNameGenerator {
     return fn;
   }
 
-  private void addINodeDirectory(String name, long inodeId, long parentId) throws IOException, PersistanceException {
+  public static void addINodeDirectory(String name, long inodeId, long parentId) throws IOException, PersistanceException {
     PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
     INodeDirectory dir = new INodeDirectory(name, permission);
     addInode(dir, inodeId, parentId);
   }
 
-  private void addInode(INode inode, long inodeId, long parentId) throws PersistanceException {
+  private static void addInode(INode inode, long inodeId, long parentId) throws PersistanceException {
     inode.setId(inodeId);
     inode.setParentId(parentId);
     EntityManager.add(inode);

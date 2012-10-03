@@ -283,6 +283,7 @@ public class NNThroughputBenchmark {
     void cleanUp() throws IOException, StorageException {
       nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       if (!keepResults) {
+        LOG.fatal("Cleaning up the storage...");
 //        nameNodeProto.delete(getBaseDir(), true);
         StorageFactory.getConnector().formatStorage();
       }
@@ -606,6 +607,63 @@ public class NNThroughputBenchmark {
       LOG.info("nrThreads = " + numThreads);
       LOG.info("nrFilesPerDir = " + nameGenerator.getFilesPerDirectory());
       printStats();
+    }
+  }
+  
+  /**
+   * Row-level lock friendly benchmark. This makes each thread to work on it's path and as a result the maximum number of parallelization.
+   */
+  class CreateFileStats2 extends CreateFileStats {
+    
+    static final String OP_CREATE_NAME = "create2";
+    static final String OP_CREATE_USAGE =
+            "-op create2 [-threads T] [-files N] [-filesPerDir P] [-close]";
+    
+    public CreateFileStats2(List<String> args) {
+      super(args);
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      baseDir = "";
+      super.parseArguments(args);
+    }
+
+    @Override
+    String getOpName() {
+      return this.OP_CREATE_NAME;
+    }
+
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      try {
+        assert opsPerThread.length == numThreads : "Error opsPerThread.length";
+        nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+        
+        LOG.fatal("Cleaning up the storage...");
+//        nameNodeProto.delete(getBaseDir(), true);
+        StorageFactory.getConnector().formatStorage();
+        
+        long id = 1;
+//        baseDir = "create";
+        EntityManager.begin();
+        // int generatedFileIdx = 0;
+        LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
+        fileNames = new String[numThreads][];
+        for (int idx = 0; idx < numThreads; idx++) {
+          baseDir = "create" + idx;
+          StorageFileNameGenerator.addINodeDirectory(baseDir, id++, 0);
+          int threadOps = opsPerThread[idx];
+          fileNames[idx] = new String[threadOps];
+          for (int jdx = 0; jdx < threadOps; jdx++) {
+            fileNames[idx][jdx] = nameGenerator.getNextFileName(baseDir + "/ThroughputBench");
+          }
+        }
+        EntityManager.commit();
+      } catch (PersistanceException ex) {
+        Logger.getLogger(NNThroughputBenchmark.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        System.exit(-1);
+      }
     }
   }
 
@@ -1352,6 +1410,7 @@ public class NNThroughputBenchmark {
     System.err.println("Usage: NNThroughputBenchmark"
             + "\n\t" + OperationStatsBase.OP_ALL_USAGE
             + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
+            + " | \n\t" + CreateFileStats2.OP_CREATE_USAGE
             + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
             + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
             + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
@@ -1380,6 +1439,11 @@ public class NNThroughputBenchmark {
     OperationStatsBase opStat = null;
     try {
       bench = new NNThroughputBenchmark(conf);
+      if (runAll || CreateFileStats2.OP_CREATE_NAME.equals(type))
+      {
+        opStat = bench.new CreateFileStats2(args);
+        ops.add(opStat);
+      }
       if (runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
         opStat = bench.new CreateFileStats(args);
         ops.add(opStat);
@@ -1441,13 +1505,13 @@ public class NNThroughputBenchmark {
     if (args.length == 0) {
       args = new String[8];
       args[0] = "-op";
-      args[1] = "create";
+      args[1] = "create2";
       args[2] = "-threads";
-      args[3] = "100";
+      args[3] = "10";
       args[4] = "-files";
-      args[5] = "10000";
+      args[5] = "100";
       args[6] = "-filesPerDir";
-      args[7] = "100";
+      args[7] = "10";
 //      args[8] = "-keepResults";
 ////      args[7] = "-useExisting";
     }
