@@ -46,6 +46,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
       p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
       p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
       p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
+      p.setProperty("com.mysql.clusterj.max.transactions", "1024");
       sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
     }
   }
@@ -56,7 +57,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
    * NOTE: Do not close the session returned by this call or you will die.
    */
   @Override
-  public synchronized Session obtainSession() {
+  public Session obtainSession() {
     long threadId = Thread.currentThread().getId();
 
     if (sessionPool.containsKey(threadId)) {

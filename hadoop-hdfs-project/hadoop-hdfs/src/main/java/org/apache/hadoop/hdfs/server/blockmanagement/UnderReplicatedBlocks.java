@@ -51,7 +51,7 @@ class UnderReplicatedBlocks {
   /**
    * Return the total number of under replication blocks
    */
-  synchronized int size(OperationType opType) throws IOException {
+  int size(OperationType opType) throws IOException {
     return (Integer) new LightWeightRequestHandler(opType) {
 
       @Override
@@ -70,7 +70,7 @@ class UnderReplicatedBlocks {
   /**
    * Return the number of under replication blocks excluding corrupt blocks
    */
-  synchronized int getUnderReplicatedBlockCount(TransactionalRequestHandler.OperationType opType) throws IOException {
+  int getUnderReplicatedBlockCount(TransactionalRequestHandler.OperationType opType) throws IOException {
     return (Integer) new TransactionalRequestHandler(opType) {
 
       @Override
@@ -88,7 +88,7 @@ class UnderReplicatedBlocks {
   /**
    * Return the number of corrupt blocks
    */
-  synchronized int getCorruptBlockSize(TransactionalRequestHandler.OperationType opType) throws IOException {
+  int getCorruptBlockSize(TransactionalRequestHandler.OperationType opType) throws IOException {
     return (Integer) new LightWeightRequestHandler(opType) {
 
       @Override
@@ -105,7 +105,7 @@ class UnderReplicatedBlocks {
   /**
    * Check if a block is in the neededReplication queue
    */
-  synchronized boolean contains(Block block) throws PersistanceException {
+  boolean contains(Block block) throws PersistanceException {
     return EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId()) != null;
   }
 
@@ -144,7 +144,7 @@ class UnderReplicatedBlocks {
    * @param curReplicas current number of replicas of the block
    * @param expectedReplicas expected number of replicas of the block
    */
-  synchronized boolean add(
+  boolean add(
           Block block,
           int curReplicas,
           int decomissionedReplicas,
@@ -180,7 +180,7 @@ class UnderReplicatedBlocks {
   /**
    * remove a block from a under replication queue
    */
-  synchronized boolean remove(Block block,
+  boolean remove(Block block,
           int oldReplicas,
           int decommissionedReplicas,
           int oldExpectedReplicas) throws PersistanceException {
@@ -232,7 +232,7 @@ class UnderReplicatedBlocks {
   /**
    * update the priority level of a block
    */
-  synchronized void update(Block block, int curReplicas,
+  void update(Block block, int curReplicas,
           int decommissionedReplicas,
           int curExpectedReplicas,
           int curReplicasDelta, int expectedReplicasDelta) throws PersistanceException {

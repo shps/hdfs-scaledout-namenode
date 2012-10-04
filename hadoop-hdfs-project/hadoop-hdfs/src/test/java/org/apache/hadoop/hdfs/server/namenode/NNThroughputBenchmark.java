@@ -1509,9 +1509,9 @@ public class NNThroughputBenchmark {
     if (args.length == 0) {
       args = new String[8];
       args[0] = "-op";
-      args[1] = "create2";
+      args[1] = "open";
       args[2] = "-threads";
-      args[3] = "20";
+      args[3] = "10";
       args[4] = "-files";
       args[5] = "100";
       args[6] = "-filesPerDir";

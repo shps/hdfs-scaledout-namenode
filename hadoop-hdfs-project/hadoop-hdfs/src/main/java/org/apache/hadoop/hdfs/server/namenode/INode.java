@@ -192,7 +192,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
             getFsPermission());
   }
 
-  private synchronized void updatePermissionStatus(PermissionStatusFormat f,
+  private void updatePermissionStatus(PermissionStatusFormat f,
           long n) {
     permission = f.combine(n, permission);
   }
