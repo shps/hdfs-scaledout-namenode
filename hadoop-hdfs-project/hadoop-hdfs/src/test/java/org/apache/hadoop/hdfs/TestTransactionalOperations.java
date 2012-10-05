@@ -12,9 +12,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -23,7 +21,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
@@ -634,10 +631,9 @@ public class TestTransactionalOperations {
       cluster.shutdown();
     }
   }
-  
+
   @Test
-  public void testTransactionLockAcquirer() throws IOException, StorageException, UnresolvedPathException, PersistanceException
-  {
+  public void testTransactionLockAcquirer() throws IOException, StorageException, UnresolvedPathException, PersistanceException {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -647,25 +643,25 @@ public class TestTransactionalOperations {
       Path p2 = new Path("/ed1/ed2/ed3/ed4");
       dfs.mkdirs(p2, FsPermission.getDefault());
       assert dfs.exists(p2);
-      
+
       EntityManager.begin();
       // first get write lock on ed2
-      LinkedList<INode> lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE, p1.toString(), 
+      LinkedList<INode> lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE, p1.toString(),
               cluster.getNamesystem().getFsDirectory().getRootDir());
       assert lockedINodes != null;
       assert lockedINodes.size() == 2; // first two path components
-      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE, 
+      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE,
               lockedINodes.getLast(), p2.toString(), p1.toString());
       assert lockedINodes != null && lockedINodes.size() == 2; // the other two
       EntityManager.commit();
-      
+
       EntityManager.begin();
       // The same thing with write on parent
-      lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, p1.toString(), 
+      lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, p1.toString(),
               cluster.getNamesystem().getFsDirectory().getRootDir());
       assert lockedINodes != null;
       assert lockedINodes.size() == 2; // first two path components
-      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, 
+      lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
               lockedINodes.getLast(), p2.toString(), p1.toString());
       assert lockedINodes != null && lockedINodes.size() == 2; // the other two
       EntityManager.commit();
@@ -673,10 +669,9 @@ public class TestTransactionalOperations {
       cluster.shutdown();
     }
   }
-  
+
   @Test
-  public void testConcurrentWriteLocksOnTheSameRow() throws IOException, InterruptedException, PersistanceException
-  {
+  public void testConcurrentWriteLocksOnTheSameRow() throws IOException, InterruptedException, PersistanceException {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, "1");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -684,8 +679,8 @@ public class TestTransactionalOperations {
       final NamenodeProtocols nameNodeProto = cluster.getNameNodeRpc();
       final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
       int numThreads = 100;
-      Thread[] threads = new Thread[numThreads] ;
-      final CyclicBarrier barrier = new CyclicBarrier(numThreads); 
+      Thread[] threads = new Thread[numThreads];
+      final CyclicBarrier barrier = new CyclicBarrier(numThreads);
       final CountDownLatch latch = new CountDownLatch(numThreads);
 
       // create file on the root
@@ -706,22 +701,23 @@ public class TestTransactionalOperations {
           }
         }
       };
-      for (int i = 0 ; i < numThreads; i++)
-      {
+      for (int i = 0; i < numThreads; i++) {
         threads[i] = new Thread(fileCreator);
         threads[i].start();
       }
-      
+
       latch.await();
       String root = "/";
       System.out.println("root = " + root);
       DirectoryListing list = nameNodeProto.getListing(root, new byte[]{}, false);
-      
+
       assert list.getPartialListing().length == numThreads; // root must have 100 children
     } finally {
       cluster.shutdown();
     }
   }
+
+  
 
   //
   // writes specified bytes to file.

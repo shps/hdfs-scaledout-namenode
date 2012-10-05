@@ -3614,7 +3614,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      *
      * @return true if in safe mode
      */
-    private synchronized boolean isOn() throws PersistanceException {
+    private boolean isOn() throws PersistanceException {
       //TODO [lock]
       return false;
 //      try {
