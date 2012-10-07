@@ -37,6 +37,9 @@ public class TestRowLevelLock {
   LinkedList<INode> inodes = null;
   INode root = null; // root
   INode parent = null; // child of root and parent of all files
+  final boolean lockOnRoot = true;
+  final int numSharedDirs = 1; // the number of dirs between root and parent
+  final String middlePrefix = "middle";
 
   public TestRowLevelLock() {
   }
@@ -44,8 +47,8 @@ public class TestRowLevelLock {
   @Before
   public void buildData() throws StorageException {
     inodes = buildDataStructures(files);
-    root = inodes.pollFirst(); // root
-    parent = inodes.pollFirst(); // child of root and parent of all files
+//    root = inodes.pollFirst(); // root
+//    parent = inodes.pollFirst(); // child of root and parent of all files
   }
 
   @Test
@@ -123,9 +126,12 @@ public class TestRowLevelLock {
           connector.readCommitted();
           for (int i = 0; i < files.length; i++) {
             connector.beginTransaction();
-
-            INode readParent = readParent(root, parent);
-            INode readFile = readINode(readParent.getId(), files[i]);
+            
+            if (lockOnRoot)
+            {
+              INode readParent = readParent(root, parent);
+            }
+            INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
             connector.commit();
@@ -159,8 +165,11 @@ public class TestRowLevelLock {
           for (int i = 0; i < files.length; i++) {
             connector.beginTransaction();
 
-            INode readParent = readParent(root, parent);
-            INode readFile = readINode(readParent.getId(), files[i]);
+            if (lockOnRoot)
+            {
+              INode readParent = readParent(root, parent);
+            }
+            INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
             connector.commit();
@@ -193,10 +202,12 @@ public class TestRowLevelLock {
           connector.readLock(); // taking read-lock
           for (int i = 0; i < files.length; i++) {
             connector.beginTransaction();
-
-            INode readParent = readParent(root, parent);
+            if (lockOnRoot)
+            {
+              INode readParent = readParent(root, parent);
+            }
             connector.writeLock(); // taking write-lock
-            INode readFile = readINode(readParent.getId(), files[i]);
+            INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
             connector.commit();
@@ -225,7 +236,13 @@ public class TestRowLevelLock {
   private INode readParent(INode root, INode parent) throws StorageException {
     INode readRoot = readINode(root.getParentId(), root.getName());
     assert readRoot.equals(root);
-    INode readParent = readINode(readRoot.getId(), parent.getName());
+    long pid = readRoot.getId();
+    for (int i = 0; i < numSharedDirs; i++)
+    {
+      INode middle = readINode(pid, middlePrefix + i);
+      pid = middle.getId();
+    }
+    INode readParent = readINode(pid, parent.getName());
     assert readParent.equals(parent);
     return readParent;
   }
@@ -239,14 +256,23 @@ public class TestRowLevelLock {
     Random rand = new Random();
     String prefix = "t";
     LinkedList<INode> inodes = new LinkedList<INode>();
-
-    inodes.add(createInodeFile(0L, "root", -1L));
-    inodes.add(createInodeFile(1L, "row-lock", 0L));
+    root = createInodeFile(0L, "root", -1L);
+    inodes.add(root);
+    int inodeId = 1;
+    long pid = root.getId();
+    for (int i = 0; i < numSharedDirs; i++)
+    {
+      inodes.add(createInodeFile(inodeId, middlePrefix + i, pid));
+      pid = inodeId;
+      inodeId = inodeId + 1;
+    }
+    parent = createInodeFile(inodeId, "parent", pid);
+    inodes.add(parent);
     for (int i = 0; i < files.length; i++) {
       String threadFiles[] = files[i];
       for (int j = 0; j < threadFiles.length; j++) {
         threadFiles[j] = i + prefix + j;
-        inodes.add(createInodeFile(rand.nextLong(), threadFiles[j], 1));
+        inodes.add(createInodeFile(rand.nextLong(), threadFiles[j], parent.getId()));
       }
     }
 

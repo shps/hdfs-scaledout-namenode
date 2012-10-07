@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -217,19 +218,20 @@ public class InodeClusterj extends InodeDataAccess {
     try {
       Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
+      
       QueryDomainType<InodeDTO> dobj = qb.createQueryDefinition(InodeDTO.class);
+      
       Predicate pred1 = dobj.get("name").equal(dobj.param("name"));
       Predicate pred2 = dobj.get("parentId").equal(dobj.param("parentID"));
-
+      
       dobj.where(pred1.and(pred2));
       Query<InodeDTO> query = session.createQuery(dobj);
-
+      
       query.setParameter(
               "name", name);
       query.setParameter(
               "parentID", parentId);
       List<InodeDTO> results = query.getResultList();
-
 
       if (results.size() > 1) {
         throw new StorageException("This parent has two chidlren with the same name");

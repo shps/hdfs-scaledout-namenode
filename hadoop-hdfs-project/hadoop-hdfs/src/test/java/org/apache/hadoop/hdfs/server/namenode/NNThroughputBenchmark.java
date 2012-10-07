@@ -1513,7 +1513,7 @@ public class NNThroughputBenchmark {
       args[2] = "-threads";
       args[3] = "10";
       args[4] = "-files";
-      args[5] = "100";
+      args[5] = "1000";
       args[6] = "-filesPerDir";
       args[7] = "10";
 //      args[8] = "-keepResults";
