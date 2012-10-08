@@ -31,14 +31,14 @@ public class TestRowLevelLock {
 
   final static Log LOG = LogFactory.getLog(TestRowLevelLock.class);
   final int size = 10000;
-  final int numThreads = 20;
+  final int numThreads = 40;
   final int opsPerThread = size / numThreads;
   final String[][] files = new String[numThreads][opsPerThread];
   LinkedList<INode> inodes = null;
   INode root = null; // root
   INode parent = null; // child of root and parent of all files
-  final boolean lockOnRoot = true;
-  final int numSharedDirs = 1; // the number of dirs between root and parent
+  final boolean lockOnRoot = false;
+  final int numSharedDirs = 4; // the number of dirs between root and parent
   final String middlePrefix = "middle";
 
   public TestRowLevelLock() {

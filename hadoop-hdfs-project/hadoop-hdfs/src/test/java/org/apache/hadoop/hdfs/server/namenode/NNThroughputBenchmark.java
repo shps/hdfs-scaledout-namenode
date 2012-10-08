@@ -1511,7 +1511,7 @@ public class NNThroughputBenchmark {
       args[0] = "-op";
       args[1] = "open";
       args[2] = "-threads";
-      args[3] = "10";
+      args[3] = "50";
       args[4] = "-files";
       args[5] = "1000";
       args[6] = "-filesPerDir";

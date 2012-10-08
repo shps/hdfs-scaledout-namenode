@@ -1,10 +1,7 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj;
 
 import com.mysql.clusterj.ClusterJException;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,28 +24,25 @@ public enum ClusterjConnector implements StorageConnector<Session> {
 
   INSTANCE;
   private int NUM_SESSION_FACTORIES;
-  static SessionFactory[] sessionFactory;
-  static Map<Long, Session> sessionPool = new ConcurrentHashMap<Long, Session>();
+  static SessionFactory sessionFactory;
+  static ThreadLocal<Session> sessionPool = new ThreadLocal<Session>();
   static final Log LOG = LogFactory.getLog(ClusterjConnector.class);
 
   @Override
   public void setConfiguration(Configuration conf) {
     if (sessionFactory != null) {
       LOG.warn("SessionFactory is already initialized");
-      return; //[W] workaround to prevent recreation of SessionFactory for the time being
+      return;
     }
     NUM_SESSION_FACTORIES = conf.getInt(DFS_DB_NUM_SESSION_FACTORIES, 3);
-    sessionFactory = new SessionFactory[NUM_SESSION_FACTORIES];
     LOG.info("Database connect string: " + conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
     LOG.info("Database name: " + conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
-    for (int i = 0; i < NUM_SESSION_FACTORIES; i++) {
-      Properties p = new Properties();
-      p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
-      p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
-      p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
-      p.setProperty("com.mysql.clusterj.max.transactions", "1024");
-      sessionFactory[i] = ClusterJHelper.getSessionFactory(p);
-    }
+    Properties p = new Properties();
+    p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
+    p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
+    p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
+    p.setProperty("com.mysql.clusterj.max.transactions", "1024");
+    sessionFactory = ClusterJHelper.getSessionFactory(p);
   }
 
   /*
@@ -58,18 +52,13 @@ public enum ClusterjConnector implements StorageConnector<Session> {
    */
   @Override
   public Session obtainSession() {
-    long threadId = Thread.currentThread().getId();
-
-    if (sessionPool.containsKey(threadId)) {
-      return sessionPool.get(threadId);
-    } else {
-      // Pick a random sessionFactory
-      Random r = new Random();
-      LOG.info("New session object being obtained for threadId:" + threadId + " name:" + Thread.currentThread().getName());
-      Session session = sessionFactory[r.nextInt(NUM_SESSION_FACTORIES)].getSession();
-      sessionPool.put(threadId, session);
-      return session;
+    Session session = sessionPool.get();
+    if (session == null) {
+      LOG.info("New session object being obtained.");
+      session = sessionFactory.getSession();
+      sessionPool.set(session);
     }
+    return session;
   }
 
   /**

@@ -141,7 +141,7 @@
     <dependency>
       <groupId>se.sics.ndb</groupId>
       <artifactId>clusterj-linux32</artifactId>
-      <version>7.2.7</version>
+      <version>7.2.8</version>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
@@ -424,7 +424,7 @@
                 <artifactItem>
                   <groupId>se.sics.ndb</groupId>
                   <artifactId>clusterj-linux32</artifactId>
-                  <version>7.2.7</version>
+                  <version>7.2.8</version>
                   <classifier>${build.type}</classifier>
                   <type>jar</type>
                   <overWrite>false</overWrite>
