@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilePermission;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -609,16 +608,16 @@ public class NNThroughputBenchmark {
       printStats();
     }
   }
-  
+
   /**
    * Row-level lock friendly benchmark. This makes each thread to work on it's path and as a result the maximum number of parallelization.
    */
   class CreateFileStats2 extends CreateFileStats {
-    
+
     static final String OP_CREATE_NAME = "create2";
     static final String OP_CREATE_USAGE =
             "-op create2 [-threads T] [-files N] [-filesPerDir P] [-close]";
-    
+
     public CreateFileStats2(List<String> args) {
       super(args);
     }
@@ -639,36 +638,91 @@ public class NNThroughputBenchmark {
       try {
         assert opsPerThread.length == numThreads : "Error opsPerThread.length";
         nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-        
+
         LOG.fatal("Cleaning up the storage...");
 //        nameNodeProto.delete(getBaseDir(), true);
         StorageFactory.getConnector().formatStorage();
-        String dilimiter = "/";
-        
-        long id = 1;
-//        baseDir = "create";
-        EntityManager.begin();
-        // int generatedFileIdx = 0;
-        LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
-        fileNames = new String[numThreads][];
-        
-        for (int idx = 0; idx < numThreads; idx++) {
-          baseDir = "create" + idx;
-          StorageFileNameGenerator.addINodeDirectory(baseDir, id++, 0);
-          int threadOps = opsPerThread[idx];
-          fileNames[idx] = new String[threadOps];
-          for (int jdx = 0; jdx < threadOps; jdx++) {
-            StringBuilder fileName = new StringBuilder();
-            fileName.append(dilimiter).append(baseDir).append("/NNThroughput").append(jdx);
-            fileNames[idx][jdx] = fileName.toString();
-          }
-        }
-        EntityManager.commit();
+
+        fileNames = NNThroughputBenchmark.generateInputs(opsPerThread, numThreads, numOpsRequired, getOpName(), false, true);
       } catch (PersistanceException ex) {
         Logger.getLogger(NNThroughputBenchmark.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         System.exit(-1);
       }
     }
+  }
+
+  class OpenFileStats2 extends OpenFileStats {
+
+    static final String OP_OPEN_NAME = "open2";
+
+    public OpenFileStats2(List<String> args) {
+      super(args);
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      baseDir = "";
+      super.parseArguments(args);
+    }
+
+    @Override
+    String getOpName() {
+      return this.OP_OPEN_NAME;
+    }
+
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      try {
+        assert opsPerThread.length == numThreads : "Error opsPerThread.length";
+        nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+
+        LOG.fatal("Cleaning up the storage...");
+//        nameNodeProto.delete(getBaseDir(), true);
+        if (!useExisting) {
+          StorageFactory.getConnector().formatStorage();
+        }
+
+        fileNames = NNThroughputBenchmark.generateInputs(opsPerThread, numThreads, numOpsRequired, getOpName(), useExisting, false);
+      } catch (PersistanceException ex) {
+        Logger.getLogger(NNThroughputBenchmark.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        System.exit(-1);
+      }
+    }
+  }
+
+  private static String[][] generateInputs(int[] opsPerThread, int numThreads, int numOpsRequired,
+          String opName, boolean useExisting, boolean create) throws IOException, PersistanceException {
+    String[][] fileNames;
+    String baseDir;
+    String dilimiter = "/";
+    String filePrefix = "NNThroughput";
+
+    long id = 1;
+    EntityManager.begin();
+    LOG.info("Generate " + numOpsRequired + " intputs for " + opName);
+    fileNames = new String[numThreads][];
+    for (int idx = 0; idx < numThreads; idx++) {
+      baseDir = opName + idx;
+      if (create || !useExisting) {
+        StorageFileNameGenerator.addINodeDirectory(baseDir, id, 0);
+      }
+      long pid = id;
+      id++;
+      int threadOps = opsPerThread[idx];
+      fileNames[idx] = new String[threadOps];
+      for (int jdx = 0; jdx < threadOps; jdx++) {
+        StringBuilder fileName = new StringBuilder();
+        StringBuilder path = new StringBuilder();
+        fileName.append(filePrefix).append(jdx);
+        path.append(dilimiter).append(baseDir).append(dilimiter).append(fileName);
+        fileNames[idx][jdx] = path.toString();
+        if (!create && !useExisting) {
+          StorageFileNameGenerator.addINodeFile(fileName.toString(), id++, pid);
+        }
+      }
+    }
+    EntityManager.commit();
+    return fileNames;
   }
 
   /**
@@ -789,7 +843,7 @@ public class NNThroughputBenchmark {
       }
       nameGenerator = new StorageFileNameGenerator(getBaseDir(), nrFilesPerDir, numOpsRequired);
     }
-    
+
     @SuppressWarnings("deprecation")
     @Override
     void generateInputs(int[] opsPerThread) throws IOException {
@@ -828,13 +882,14 @@ public class NNThroughputBenchmark {
         for (int jdx = 0; jdx < threadOps; jdx++) {
           String fileName = null;
           if (storeFiles) {
-            if (fileCounter % filesPerTx == 0)
+            if (fileCounter % filesPerTx == 0) {
               EntityManager.begin();
-            fileName = ((StorageFileNameGenerator) nameGenerator).
-                    getNextStoredFileName(prefix, replication, BLOCK_SIZE, Thread.currentThread().getName());
+            }
+            fileName = ((StorageFileNameGenerator) nameGenerator).getNextStoredFileName(prefix, replication, BLOCK_SIZE, "easy-generators");
             fileCounter++;
-            if (fileCounter % filesPerTx == 0 || fileCounter == numOpsRequired)
+            if (fileCounter % filesPerTx == 0 || fileCounter == numOpsRequired) {
               EntityManager.commit();
+            }
           } else {
             fileName = nameGenerator.getNextFileName(prefix);
           }
@@ -1416,6 +1471,7 @@ public class NNThroughputBenchmark {
             + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
             + " | \n\t" + CreateFileStats2.OP_CREATE_USAGE
             + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
+            + " | \n\t" + OpenFileStats2.OP_OPEN_USAGE
             + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
             + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
             + " | \n\t" + RenameFileStats.OP_RENAME_USAGE
@@ -1443,9 +1499,12 @@ public class NNThroughputBenchmark {
     OperationStatsBase opStat = null;
     try {
       bench = new NNThroughputBenchmark(conf);
-      if (runAll || CreateFileStats2.OP_CREATE_NAME.equals(type))
-      {
+      if (runAll || CreateFileStats2.OP_CREATE_NAME.equals(type)) {
         opStat = bench.new CreateFileStats2(args);
+        ops.add(opStat);
+      }
+      if (runAll || OpenFileStats2.OP_OPEN_NAME.equals(type)) {
+        opStat = bench.new OpenFileStats2(args);
         ops.add(opStat);
       }
       if (runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
@@ -1507,17 +1566,17 @@ public class NNThroughputBenchmark {
 
   public static void main(String[] args) throws Exception {
     if (args.length == 0) {
-      args = new String[8];
+      args = new String[10];
       args[0] = "-op";
-      args[1] = "open";
+      args[1] = "open2";
       args[2] = "-threads";
-      args[3] = "50";
+      args[3] = "20";
       args[4] = "-files";
       args[5] = "1000";
       args[6] = "-filesPerDir";
       args[7] = "10";
-//      args[8] = "-keepResults";
-////      args[7] = "-useExisting";
+      args[8] = "-keepResults";
+      args[9] = "-useExisting";
     }
     runBenchmark(new HdfsConfiguration(),
             new ArrayList<String>(Arrays.asList(args)));

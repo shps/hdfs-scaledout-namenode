@@ -873,7 +873,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager lm = new TransactionLockManager();
-        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.WRITE, new String[]{src}, getFsDirectory().getRootDir());
+        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.READ, new String[]{src}, getFsDirectory().getRootDir());
         lm.addBlock(LockType.READ).
                 addReplica(LockType.READ).
                 addExcess(LockType.READ).

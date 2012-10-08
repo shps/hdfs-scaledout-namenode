@@ -69,7 +69,7 @@ public class StorageFileNameGenerator extends FileNameGenerator {
     long parentId;
     if (newDir) {
       String lastDir = pathComponents[pathComponents.length - 2];
-      parentId = (long) (Math.ceil((double)dirCount / (float)filesPerDirectory) + BASE_PARENT_ID - 1);
+      parentId = (long) (Math.ceil((double) dirCount / (float) filesPerDirectory) + BASE_PARENT_ID - 1);
       addINodeDirectory(lastDir, dirCount + BASE_PARENT_ID, parentId);
     }
 
@@ -92,7 +92,15 @@ public class StorageFileNameGenerator extends FileNameGenerator {
     addInode(dir, inodeId, parentId);
   }
 
-  private static void addInode(INode inode, long inodeId, long parentId) throws PersistanceException {
+  public static void addINodeFile(String fileName, long inodeId, long parentId) throws IOException, PersistanceException {
+    PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
+            UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
+    INodeFile inode = new INodeFile(false, fileName.getBytes(), (short) 1, 0L, 1, permission,
+            "easy-generator", "", new DatanodeID(""));
+    addInode(inode, inodeId, parentId);
+  }
+
+  public static void addInode(INode inode, long inodeId, long parentId) throws PersistanceException {
     inode.setId(inodeId);
     inode.setParentId(parentId);
     EntityManager.add(inode);
