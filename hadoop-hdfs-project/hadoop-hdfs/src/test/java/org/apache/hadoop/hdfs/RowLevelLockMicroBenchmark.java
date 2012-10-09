@@ -306,7 +306,7 @@ public class RowLevelLockMicroBenchmark {
     int size = DEFAULT_SIZE;
     int numThreads = DEFEAULT_NUM_THREADS;
     int numSharedDirs = DEFAULT_NUM_SHARED_DIR;
-    boolean lockOnRoot = false;
+    boolean lockOnRoot = true;
 
     if (args == null || args.length == 0) {
 //      printMenu();
@@ -335,6 +335,9 @@ public class RowLevelLockMicroBenchmark {
         lockOnRoot = Boolean.valueOf(args[9]);
       }
     }
+    
+    System.out.println(String.format("Starting to run operation %s with parameters: \nsize=%d,\nthreads=%d\nsharedDirs=%d\nlockOnRoot=%s",
+            benchMode, size, numThreads, numSharedDirs, Boolean.toString(lockOnRoot)));
     RowLevelLockMicroBenchmark bm = new RowLevelLockMicroBenchmark(size, numThreads, numSharedDirs, lockOnRoot);
 
     if (benchMode.equals(READ_COMMIT)) {
