@@ -328,7 +328,7 @@ public class RowLevelLockMicroBenchmark {
       }
 
       if (args[6].equals("-d")) {
-        numThreads = Integer.valueOf(args[7]);
+        numSharedDirs = Integer.valueOf(args[7]);
       }
 
       if (args[8].equals("-r")) {
