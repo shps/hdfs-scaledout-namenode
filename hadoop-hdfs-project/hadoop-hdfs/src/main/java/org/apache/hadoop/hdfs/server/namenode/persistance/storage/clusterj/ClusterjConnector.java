@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.mysql.clusterj.ClusterJHelper;
+import com.mysql.clusterj.Constants;
 import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
@@ -41,7 +42,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
     p.setProperty("com.mysql.clusterj.connectstring", conf.get(DFS_DB_CONNECTOR_STRING_KEY, DFS_DB_CONNECTOR_STRING_DEFAULT));
     p.setProperty("com.mysql.clusterj.database", conf.get(DFS_DB_DATABASE_KEY, DFS_DB_DATABASE_DEFAULT));
     p.setProperty("com.mysql.clusterj.connection.pool.size", String.valueOf(NUM_SESSION_FACTORIES));
-    p.setProperty("com.mysql.clusterj.max.transactions", "1024");
+    p.setProperty(Constants.PROPERTY_CLUSTER_MAX_TRANSACTIONS, "4");
     sessionFactory = ClusterJHelper.getSessionFactory(p);
   }
 

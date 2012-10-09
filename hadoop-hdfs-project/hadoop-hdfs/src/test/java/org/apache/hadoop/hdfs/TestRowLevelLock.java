@@ -31,13 +31,13 @@ public class TestRowLevelLock {
 
   final static Log LOG = LogFactory.getLog(TestRowLevelLock.class);
   final int size = 10000;
-  final int numThreads = 40;
+  final int numThreads = 100;
   final int opsPerThread = size / numThreads;
   final String[][] files = new String[numThreads][opsPerThread];
   LinkedList<INode> inodes = null;
   INode root = null; // root
   INode parent = null; // child of root and parent of all files
-  final boolean lockOnRoot = false;
+  final boolean lockOnRoot = true;
   final int numSharedDirs = 4; // the number of dirs between root and parent
   final String middlePrefix = "middle";
 
@@ -134,6 +134,7 @@ public class TestRowLevelLock {
             INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
+            Thread.sleep(10); // simulating of getBlockLocation operation process
             connector.commit();
           }
           latch.countDown();
@@ -172,6 +173,7 @@ public class TestRowLevelLock {
             INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
+            Thread.sleep(10); // simulating of getBlockLocation operation process
             connector.commit();
           }
           latch.countDown();
@@ -210,6 +212,7 @@ public class TestRowLevelLock {
             INode readFile = readINode(parent.getId(), files[i]);
             assert readFile != null && readFile.getName().equals(files[i]);
             readBlocks(readFile.getId()); // Just to simulate the way getBlockLocations acquire locks, this will return an empty list.
+            Thread.sleep(10); // simulating of getBlockLocation operation process
             connector.commit();
           }
           latch.countDown();
