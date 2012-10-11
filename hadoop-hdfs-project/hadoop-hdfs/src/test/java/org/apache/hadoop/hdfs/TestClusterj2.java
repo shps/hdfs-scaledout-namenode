@@ -25,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InodeClusterj.InodeDTO;
+//import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InodeClusterj.InodeDTO;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -188,7 +188,7 @@ public class TestClusterj2 {
   }
 
   private void formatDatabase(Session session) {
-    session.deletePersistentAll(InodeDTO.class);
+//    session.deletePersistentAll(InodeDTO.class);
     session.deletePersistentAll(UserDTO.class);
     session.flush();
   }

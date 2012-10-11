@@ -34,11 +34,11 @@
   </property>
   <property>
     <name>dfs.dbconnector.database</name>
-    <value>hooman1</value>
+    <value>hooman</value>
   </property>
   <property>
     <name>dfs.dbconnector.num-session-factories</name>
-    <value>3</value>
+    <value>1</value>
   </property>
   <property>
     <name>dfs.storage.derby.protocol</name>

@@ -38,10 +38,11 @@ public class TestClusterj {
   InodeDTO parent;
   final static Log LOG = LogFactory.getLog(TestRowLevelLock.class);
   final int size = 5000;
-  final int numThreads = 100;
+  final int numThreads = 50;
   final int opsPerThread = size / numThreads;
   final String[][] files = new String[numThreads][opsPerThread];
   final static long sid = 0;
+  private final Random r = new Random();
 
   @BeforeClass
   public static void setupConnection() {
@@ -102,14 +103,15 @@ public class TestClusterj {
           Session session = sessionFactory.getSession();
           session.setLockMode(LockMode.READ_COMMITTED);
           for (int i = 0; i < files.length; i++) {
+            int delay = r.nextInt(500);
+            Thread.sleep(delay);
             session.currentTransaction().begin();
-
+            LOG.fatal("reading " + files[i]);
 //            InodeDTO readParent = readParent(root, parent, session);
 
             InodeDTO readFile = readINode(0, files[i], session);
             assert readFile != null && readFile.getName().equals(files[i]);
             session.currentTransaction().commit();
-            Thread.sleep(10);
           }
           latch.countDown();
         } catch (InterruptedException ex) {

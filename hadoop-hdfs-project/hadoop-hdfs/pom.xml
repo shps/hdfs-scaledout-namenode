@@ -140,8 +140,8 @@
     </dependency>
     <dependency>
       <groupId>se.sics.ndb</groupId>
-      <artifactId>clusterj-linux32</artifactId>
-      <version>7.2.7</version>
+      <artifactId>clusterj</artifactId>
+      <version>7.2.8</version>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
@@ -408,32 +408,6 @@
           <source>1.6</source>
           <target>1.6</target>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>unpack</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>se.sics.ndb</groupId>
-                  <artifactId>clusterj-linux32</artifactId>
-                  <version>7.2.7</version>
-                  <classifier>${build.type}</classifier>
-                  <type>jar</type>
-                  <overWrite>false</overWrite>
-                  <outputDirectory>${project.build.directory}/lib</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

@@ -41,9 +41,11 @@ public class RowLevelLockMicroBenchmark {
   static final String READ_COMMIT = "rc"; // benchmark read-commit
   static final String READ = "r"; // benchmark read-lock
   static final String WRITE = "w"; // benchmark write-lock
-  static final int DEFAULT_SIZE = 1000;
-  static final int DEFEAULT_NUM_THREADS = 10;
-  static final int DEFAULT_NUM_SHARED_DIR = 2;
+  static final int DEFAULT_SIZE = 20000;
+  static final int DEFEAULT_NUM_THREADS = 40;
+  static final int DEFAULT_NUM_SHARED_DIR = 6;
+  static final boolean DEFAULT_LOCK_ON_ROOT = true;
+  static final String DEFAULT_BENCH_MODE = "r";
 
   public RowLevelLockMicroBenchmark(int size, int numThreads, int numSharedDirs,
           boolean lockOnRoot) throws StorageException {
@@ -306,11 +308,11 @@ public class RowLevelLockMicroBenchmark {
     int size = DEFAULT_SIZE;
     int numThreads = DEFEAULT_NUM_THREADS;
     int numSharedDirs = DEFAULT_NUM_SHARED_DIR;
-    boolean lockOnRoot = true;
+    boolean lockOnRoot = DEFAULT_LOCK_ON_ROOT;
 
     if (args == null || args.length == 0) {
 //      printMenu();
-      benchMode = "rc";
+      benchMode = DEFAULT_BENCH_MODE;
     } else {
       // TODO: make it to enter arguments in any order.
       if (args[0].equals("-l")) {
@@ -335,7 +337,7 @@ public class RowLevelLockMicroBenchmark {
         lockOnRoot = Boolean.valueOf(args[9]);
       }
     }
-    
+
     System.out.println(String.format("Starting to run operation %s with parameters: \nsize=%d,\nthreads=%d\nsharedDirs=%d\nlockOnRoot=%s",
             benchMode, size, numThreads, numSharedDirs, Boolean.toString(lockOnRoot)));
     RowLevelLockMicroBenchmark bm = new RowLevelLockMicroBenchmark(size, numThreads, numSharedDirs, lockOnRoot);
