@@ -25,8 +25,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-//import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InodeClusterj.InodeDTO;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -51,14 +49,10 @@ public class TestClusterj2 {
     Properties p = new Properties();
     p.setProperty(Constants.PROPERTY_CLUSTER_CONNECTSTRING, conf.get(DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY));
     p.setProperty(Constants.PROPERTY_CLUSTER_DATABASE, conf.get(DFSConfigKeys.DFS_DB_DATABASE_KEY));
-    p.setProperty(Constants.PROPERTY_CONNECTION_POOL_SIZE, conf.get(DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES));
+//    p.setProperty(Constants.PROPERTY_CONNECTION_POOL_SIZE, conf.get(DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES));
     p.setProperty(Constants.PROPERTY_CLUSTER_MAX_TRANSACTIONS, "1024");
+    LOG.fatal(String.format("Connecting to database %s", p.getProperty(Constants.PROPERTY_CLUSTER_DATABASE)));
     sessionFactory = ClusterJHelper.getSessionFactory(p);
-  }
-
-  @Before
-  public void init() {
-//    
   }
 
   @Test
@@ -98,22 +92,15 @@ public class TestClusterj2 {
       @Override
       public void run() {
         try {
-          LOG.fatal("Thread " + sid + " is starting...");
           barrier.await();
           Session session = sessionFactory.getSession();
           session.setLockMode(LockMode.READ_COMMITTED);
           for (int i = 0; i < userNames.length; i++) {
+            LOG.fatal("Reading " + userNames[i]);
             session.currentTransaction().begin();
             UserDTO user = readUser(userNames[i], session);
             assert user != null && user.getName().equals(userNames[i]);
-//            if (i + 1 < userNames.length) {
-//              UserDTO user2 = readUser(userNames[i + 1], session);
-//              assert user2 != null && user2.getName().equals(userNames[i + 1]);
-//            }
-//            if (i + 2 < userNames.length) {
-//              UserDTO user3 = readUser(userNames[i + 2], session);
-//              assert user3 != null && user3.getName().equals(userNames[i + 2]);
-//            }
+
             session.currentTransaction().commit();
             Thread.sleep(10);
           }
@@ -148,7 +135,7 @@ public class TestClusterj2 {
     List<UserDTO> results = query.getResultList();
 
     if (results.size() > 1) {
-      throw new RuntimeException("This parent has two chidlren with the same name");
+      throw new RuntimeException("Multiple users with the same name and sid.");
     } else if (results.isEmpty()) {
       return null;
     } else {
@@ -162,7 +149,6 @@ public class TestClusterj2 {
     LinkedList<UserDTO> users = new LinkedList<UserDTO>();
     Session session = sessionFactory.getSession();
     formatDatabase(session);
-//    int userId = 1;
     for (int i = 0; i < userNames.length; i++) {
       String threadFiles[] = userNames[i];
       for (int j = 0; j < threadFiles.length; j++) {
@@ -188,7 +174,6 @@ public class TestClusterj2 {
   }
 
   private void formatDatabase(Session session) {
-//    session.deletePersistentAll(InodeDTO.class);
     session.deletePersistentAll(UserDTO.class);
     session.flush();
   }
@@ -214,74 +199,21 @@ public class TestClusterj2 {
 
     void setName(String name);
 
-    ///////////////
-    // marker for InodeDirectory
-    @Column(name = "is_dir")
-    boolean getIsDir();
-
-    void setIsDir(boolean isDir);
-
-    // marker for InodeDirectoryWithQuota
-    @Column(name = "is_dir_with_quota")
-    boolean getIsDirWithQuota();
-
-    void setIsDirWithQuota(boolean isDirWithQuota);
-
-    // Inode
     @Column(name = "modification_time")
     long getModificationTime();
 
     void setModificationTime(long modificationTime);
 
-    // Inode
     @Column(name = "access_time")
     long getATime();
 
     void setATime(long modificationTime);
 
-    
-    @Column(name = "permission")
-    byte[] getPermission();
-
-    void setPermission(byte[] permission);
-
-    // InodeDirectoryWithQuota
-    @Column(name = "nscount")
-    long getNSCount();
-
-    void setNSCount(long nsCount);
-
-    // InodeDirectoryWithQuota
-    @Column(name = "dscount")
-    long getDSCount();
-
-    void setDSCount(long dsCount);
-
-    // InodeDirectoryWithQuota
-    @Column(name = "nsquota")
-    long getNSQuota();
-
-    void setNSQuota(long nsQuota);
-
-    // InodeDirectoryWithQuota
-    @Column(name = "dsquota")
-    long getDSQuota();
-
-    void setDSQuota(long dsQuota);
-
-    //  marker for InodeFileUnderConstruction
-    @Column(name = "is_under_construction")
-    boolean getIsUnderConstruction();
-
-    void setIsUnderConstruction(boolean isUnderConstruction);
-
-    // InodeFileUnderConstruction
     @Column(name = "client_name")
     String getClientName();
 
     void setClientName(String isUnderConstruction);
 
-    // InodeFileUnderConstruction
     @Column(name = "client_machine")
     String getClientMachine();
 
@@ -291,23 +223,5 @@ public class TestClusterj2 {
     String getClientNode();
 
     void setClientNode(String clientNode);
-
-    //  marker for InodeFile
-    @Column(name = "is_closed_file")
-    boolean getIsClosedFile();
-
-    void setIsClosedFile(boolean isClosedFile);
-
-    // InodeFile
-    @Column(name = "header")
-    long getHeader();
-
-    void setHeader(long header);
-
-    //INodeSymlink
-    @Column(name = "symlink")
-    String getSymlink();
-
-    void setSymlink(String symlink);
   }
 }
