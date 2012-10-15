@@ -199,7 +199,7 @@ public class TestFileAppend3 {
 
     //b. Log into one datanode that has one replica of this block.
     //   Find the block file on this datanode and truncate it to zero size.
-    final LocatedBlocks locatedblocks = fs.dfs.getNamenode().getBlockLocations(p.toString(), 0L, len1);
+    final LocatedBlocks locatedblocks = fs.getDefaultDFSClient().getNamenode().getBlockLocations(p.toString(), 0L, len1);
     assertEquals(1, locatedblocks.locatedBlockCount());
     final LocatedBlock lb = locatedblocks.get(0);
     final ExtendedBlock blk = lb.getBlock();
@@ -269,7 +269,7 @@ public class TestFileAppend3 {
     //check block sizes 
     final long len = fs.getFileStatus(pnew).getLen();
 
-    final LocatedBlocks locatedblocks = fs.dfs.getNamenode().getBlockLocations(pnew.toString(), 0L, len);
+    final LocatedBlocks locatedblocks = fs.getDefaultDFSClient().getNamenode().getBlockLocations(pnew.toString(), 0L, len);
     final int numblock = locatedblocks.locatedBlockCount();
     for(int i = 0; i < numblock; i++) {
       final LocatedBlock lb = locatedblocks.get(i);

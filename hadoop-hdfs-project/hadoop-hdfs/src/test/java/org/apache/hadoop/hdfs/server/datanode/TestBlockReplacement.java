@@ -99,8 +99,7 @@ public class TestBlockReplacement extends TestCase {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE/2);
     CONF.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,500);
-    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(REPLICATION_FACTOR)
-                                              .racks(INITIAL_RACKS).build();
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(REPLICATION_FACTOR).racks(INITIAL_RACKS).build();
 
     try {
       cluster.waitActive();
@@ -217,17 +216,20 @@ public class TestBlockReplacement extends TestCase {
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
       assertEquals(1, blocks.size());
       DatanodeInfo[] nodes = blocks.get(0).getLocations();
+      // notDone is 'false' if the block has reached desired replication. Its true if the block hasn't been replicated yet
       notDone = (nodes.length != replFactor);
       if (notDone) {
         LOG.info("Expected replication factor is " + replFactor +
             " but the real replication factor is " + nodes.length );
       } else {
+        // [J] the two lists of data nodes (one retreived from client via namenode and one provided in the method) should be the same
         List<DatanodeInfo> nodeLocations = Arrays.asList(nodes);
+        // It should contain this node, otherwise the block placement was at fault
         for (DatanodeInfo node : includeNodes) {
           if (!nodeLocations.contains(node) ) {
             notDone=true; 
             LOG.info("Block is not located at " + node.getName() );
-            break;
+            break; // break from for loop
           }
         }
       }

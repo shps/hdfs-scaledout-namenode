@@ -145,8 +145,7 @@ public class TestReplaceDatanodeOnFailure {
       
       //Let the slow writer writes a few more seconds
       //Everyone should have written something.
-      //sleepSeconds(5); [JUDE] increasing the sleep time, works
-      sleepSeconds(10);
+      sleepSeconds(5);
 
       //check replication and interrupt.
       for(SlowWriter s : slowwriters) {

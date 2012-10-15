@@ -70,7 +70,17 @@ public class TestSafeMode {
      *
      * @throws IOException
      */
-    @Test
+    /*
+     * [J] This test case cannot be applied to our archictecture because block-metadata is persisted and we do not have to wait for blockSafe count to reach minimum replication
+     The blockSafe count and other counts are now picked from DB and will automatically satisfy safemode constraints
+                          *blockSafe count = total completed blocks
+     Also, blockReports that originally used to increment / decrement these counters are now only sent to one Namenode in roundrobin fashion. 
+     This is done to decrease the load of Namenode operation processing!
+     So because of this, only one of the namenodes would increment the counters and will leave safe mode while others would still be in safe mode
+     * 
+     * Read description on FSNamesystem.SafeModeInfo.incrementSafeBlockCount() for more details
+    */
+    //@Test
     public void testManualSafeMode() throws IOException {
         fs = (DistributedFileSystem) cluster.getFileSystem();
         Path file1 = new Path("/tmp/testManualSafeMode/file1");
@@ -87,6 +97,7 @@ public class TestSafeMode {
         cluster.waitActive();
         dfs = (DistributedFileSystem) cluster.getFileSystem();
 
+        // [J] Not applicable to our architecture. Read above
         assertTrue("No datanode is started. Should be in SafeMode",
                 dfs.setSafeMode(SafeModeAction.SAFEMODE_GET));
 

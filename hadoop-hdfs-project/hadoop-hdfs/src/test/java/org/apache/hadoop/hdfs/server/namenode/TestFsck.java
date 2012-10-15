@@ -49,10 +49,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
@@ -422,7 +418,7 @@ public class TestFsck extends TestCase {
       // bring up a one-node cluster
       Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).build();
-      final String fileName = "/test.txt";
+      String fileName = "/test.txt";
       Path filePath = new Path(fileName);
       FileSystem fs = cluster.getFileSystem();
       
@@ -430,34 +426,13 @@ public class TestFsck extends TestCase {
       DFSTestUtil.createFile(fs, filePath, 1L, (short)1, 1L);
       DFSTestUtil.waitReplication(fs, filePath, (short)1);
       
-      TransactionalRequestHandler handler = new TransactionalRequestHandler(TransactionalRequestHandler.OperationType.GET_INODE) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
-          // intentionally corrupt NN data structure
-          INodeFile node =
-                  (INodeFile) cluster.getNamesystem().dir.rootDir.getNode(fileName,
-                  true);
-          assertEquals(node.getBlocks().size(), 1);
-          node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative
-          EntityManager.update(node.getBlocks().get(0));
-          return null;
-        }
-
-        @Override
-        public void acquireLock() throws PersistanceException, IOException {
-          MiniDFSCluster cluster = (MiniDFSCluster) getParams()[0];
-          TransactionLockManager lm = new TransactionLockManager();
-          lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
-                  TransactionLockManager.INodeLockType.WRITE, new String[]{fileName},
-                  cluster.getNamesystem().dir.rootDir);
-          lm.addBlock(TransactionLockManager.LockType.WRITE);
-          lm.acquire();
-        }
-      };
+      // intentionally corrupt NN data structure
+      INodeFile node = 
+        (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(fileName,
+                                                               true);
+      assertEquals(node.getBlocks().size(), 1);
+      node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative
       
-      handler.setParams(cluster).handleWithWriteLock(cluster.getNamesystem());
       // run fsck and expect a failure with -1 as the error code
       String outStr = runFsck(conf, -1, true, fileName);
       LOG.info(outStr);

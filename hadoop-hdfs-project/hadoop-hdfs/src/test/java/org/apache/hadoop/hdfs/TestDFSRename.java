@@ -1,58 +1,36 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+
 
 public class TestDFSRename extends junit.framework.TestCase {
 
-  static int countLease(final MiniDFSCluster cluster) {
-    try {
-      return (Integer) new TransactionalRequestHandler(OperationType.COUNT_LEASE_DFS_RENAME) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
-        }
-
-        @Override
-        public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, Lease.Finder.All, null);
-        }
-      }.handle();
-    } catch (IOException ex) {
-      Logger.getLogger(TestDFSRename.class.getName()).log(Level.SEVERE, null, ex);
-      return -1;
-    }
+  static int countLease(MiniDFSCluster cluster) {
+    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
   final Path dir = new Path("/test/rename/");
 
@@ -71,10 +49,14 @@ public class TestDFSRename extends junit.framework.TestCase {
 
   public void testRename() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(4).numDataNodes(2).build();
     try {
       FileSystem fs = cluster.getFileSystem();
       assertTrue(fs.mkdirs(dir));
+
+      // Stop the leader namenode.
+      cluster.getNameNode(0).stop();
+
       { //test lease
         Path a = new Path(dir, "a");
         Path aa = new Path(dir, "aa");
@@ -100,7 +82,8 @@ public class TestDFSRename extends junit.framework.TestCase {
         //should not have any lease
         assertEquals(0, countLease(cluster));
       }
-      { // test non-existent destination
+      {
+        // test non-existent destination
         Path dstPath = new Path("/c/d");
         assertFalse(fs.exists(dstPath));
         assertFalse(fs.rename(dir, dstPath));
@@ -134,6 +117,8 @@ public class TestDFSRename extends junit.framework.TestCase {
         assertTrue(fs.rename(src, new Path("/a/b/c/")));
       }
       {
+        // Stop the leader namenode.
+        cluster.getNameNode(1).stop();
         // Create:                              /user/a+b/dir1
         // Add file1 to dir1 :         /user/a+b/dir1/file1
         // Create:                              /user/dir2/
@@ -157,8 +142,15 @@ public class TestDFSRename extends junit.framework.TestCase {
         assertFalse(fs.exists(dir1));           // user/a+b/dir1 was deleted via rename
 
       }
-      fs.delete(dir, true);
-    } finally {
+      // Stop the leader namenode.
+      cluster.getNameNode(2).stop();
+      assertTrue(fs.delete(dir, true));
+    }
+    catch (Exception ex) {
+      ex.printStackTrace();
+      fail();
+    }
+    finally {
       if (cluster != null) {
         cluster.shutdown();
       }

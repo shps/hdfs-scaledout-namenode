@@ -55,7 +55,7 @@ public class TestCorruptFilesJsp  {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       // datanode sends block reports
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1).build();
        cluster.waitActive();
 
       FileSystem fs = cluster.getFileSystem();
@@ -84,20 +84,16 @@ public class TestCorruptFilesJsp  {
       for (int idx = 0; idx < filepaths.length - 1; idx++) {
         ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, filepaths[idx]);
         assertTrue(TestDatanodeBlockScanner.corruptReplica(blk, 0));
-
+        
         // read the file so that the corrupt block is reported to NN
         FSDataInputStream in = fs.open(filepaths[idx]);
-        try { 
+        try {
           in.readFully(new byte[FILE_SIZE]);
         } catch (ChecksumException ignored) { // checksum error is expected.
         }
-
         in.close();
       }
 
-      // FIXME: [H]: The following assertion fails because the namenode receives the reportBadBlock of all blocks with latency.
-      // However this should not happen sicne the call of reportBadBlock should be synchronized.
-      
       // verify if all corrupt files were reported to NN
       badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("Expecting 3 corrupt files, but got " + badFiles.size(), badFiles.size() == 3);

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
 
+import java.util.List;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.token.Token;
 
 /** Utilities for security tests */
@@ -31,15 +33,17 @@ public class SecurityTestUtil {
    */
   public static boolean isBlockTokenExpired(Token<BlockTokenIdentifier> token)
       throws IOException {
-    return BlockTokenSecretManager.isTokenExpired(token);
+    return BlockTokenSecretManagerNN.isTokenExpired(token);
   }
 
   /**
    * set access token lifetime.
+   * // [J] This is a configuration change and needs to be applied in all namenodes
    */
-  public static void setBlockTokenLifetime(BlockTokenSecretManager handler,
+  public static void setBlockTokenLifetime(List<BlockTokenSecretManagerNN> handlers,
       long tokenLifetime) {
-    handler.setTokenLifetime(tokenLifetime);
+    for(BlockTokenSecretManagerNN handler : handlers) {
+      handler.setTokenLifetime(tokenLifetime);
+    }
   }
-
 }

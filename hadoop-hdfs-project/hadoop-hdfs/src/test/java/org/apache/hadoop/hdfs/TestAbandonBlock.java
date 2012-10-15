@@ -47,7 +47,7 @@ public class TestAbandonBlock {
 
   @Before
   public void setUp() throws Exception {
-    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
+    cluster = new MiniDFSCluster.Builder(CONF).numNameNodes(1).numDataNodes(2).build();
     fs = cluster.getFileSystem();
     cluster.waitActive();
   }
@@ -93,6 +93,7 @@ public class TestAbandonBlock {
     FSDataOutputStream fout = fs.create(new Path(src), true, 4096, (short)2, 1024 * 1024);
     for (int i = 0; i < 1024; i++) {
       fout.writeByte(123);
+      System.out.println("---"+i);
     }
 
     // Shutdown one datanode, causing the block abandonment.

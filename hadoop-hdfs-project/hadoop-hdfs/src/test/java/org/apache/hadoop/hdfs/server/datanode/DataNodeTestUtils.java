@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
+import org.apache.hadoop.hdfs.server.datanode.DataNode.NamenodeService;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -53,11 +53,11 @@ public class DataNodeTestUtils {
       NamespaceInfo nsifno, String bpid, DatanodeProtocol nn) 
   throws IOException {
     // setup the right BPOS..
-    BPOfferService [] bposs = dn.getAllBpOs();
+    NamenodeService [] bposs = dn.getAllBpOs();
     if(bposs.length<0) {
       throw new IOException("Datanode wasn't initializes with at least one NN");
     }
-    for(BPOfferService bpos : bposs) {
+    for(NamenodeService bpos : bposs) {
       bpos.setNamespaceInfo(nsifno);
 
       dn.setBPNamenode(bpid, nn);

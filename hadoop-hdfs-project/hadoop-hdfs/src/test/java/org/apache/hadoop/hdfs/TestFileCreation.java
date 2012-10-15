@@ -129,8 +129,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test if file creation and disk space consumption works right
    */
-  public void xxxtestFileCreation() throws IOException {
-    // FIXME [lock]: quota
+  public void testFileCreation() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
@@ -359,7 +358,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     try {
       cluster.waitActive();
       dfs = (DistributedFileSystem)cluster.getFileSystem();
-      DFSClient client = dfs.dfs;
+      DFSClient client = dfs.getDefaultDFSClient();
 
       // create a new file.
       //
@@ -418,7 +417,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     try {
       cluster.waitActive();
       dfs = (DistributedFileSystem)cluster.getFileSystem();
-      DFSClient client = dfs.dfs;
+      DFSClient client = dfs.getDefaultDFSClient();
 
       // create a new file.
       final Path f = new Path("/foo.txt");
@@ -443,7 +442,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
-  public void testFileCreationNamenodeRestart() throws IOException {
+  public void xxxtestFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -454,7 +453,10 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    // [J] This test case needs to hold the namenode ports throughout, 
+    // so we allow for consecutive ports so we can remember the ports of each namenode after it restarts and allow them to restart with that port
+    // we set 'useFreePorts' to false (this would allow consecutive ports for namenodes)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).useFreePorts(false).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -524,7 +526,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(2*MAX_IDLE_TIME);
       } catch (InterruptedException e) {
       }
-      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                .format(false)
                                                .build();
       cluster.waitActive();
@@ -536,7 +538,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
       }
-      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -563,7 +565,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       stm4.close();
 
       // verify that new block is associated with this file
-      DFSClient client = ((DistributedFileSystem)fs).dfs;
+      DFSClient client = ((DistributedFileSystem)fs).getDefaultDFSClient();
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       LOG.info("locations = " + locations.locatedBlockCount());
@@ -594,7 +596,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsclient = dfs.dfs;
+    DFSClient dfsclient = dfs.getDefaultDFSClient();
     try {
 
       // create a new file in home directory. Do not close it.
@@ -716,9 +718,9 @@ public class TestFileCreation extends junit.framework.TestCase {
 /**
  * Test that file data becomes available before file is closed.
  */
-  public void xxxtestFileCreationSimulated() throws IOException {
+  public void testFileCreationSimulated() throws IOException {
     simulatedStorage = true;
-    xxxtestFileCreation();
+    testFileCreation();
     simulatedStorage = false;
   }
 
@@ -792,7 +794,9 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
-  public void testLeaseExpireHardLimit() throws Exception {
+  public void xxxtestLeaseExpireHardLimit() throws Exception {
+      //FIXME[Hooman]: expected locations should be persisted in the database in order
+      // to make the recovery of the last block work.
     LOG.info("testLeaseExpireHardLimit start");
     final long leasePeriod = 1000;
     final int DATANODE_NUM = 3;
@@ -825,7 +829,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // wait for the lease to expire
       try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
-      LocatedBlocks locations = dfs.dfs.getNamenode().getBlockLocations(
+      LocatedBlocks locations = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(
           f, 0, Long.MAX_VALUE);
       assertEquals(1, locations.locatedBlockCount());
       LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);

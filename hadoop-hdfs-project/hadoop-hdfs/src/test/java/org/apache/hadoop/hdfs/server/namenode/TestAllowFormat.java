@@ -100,7 +100,9 @@ public class TestAllowFormat {
   }
 
    /**
-   * start MiniDFScluster, try formatting with different settings
+   * start MiniDFScluster, try formatting with different settings.
+   * [J] This test case focuses on formatting of a single namenode without automatically creating the namenode directories.
+   * 'manageDataDfsDirs' check in MiniDFSCluster.createNamenode() won't work here and for testing multiple namenode architecture, this is needed
    * @throws IOException
    * @throws InterruptedException 
    */
@@ -112,8 +114,9 @@ public class TestAllowFormat {
     NameNode nn;
     // 1. Create a new cluster and format DFS
     config.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
-    cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false)
+    cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false) // [J] requirement for this test case
                                                 .manageNameDfsDirs(false)
+                                                .numNameNodes(1)  // [J] see explanation above
                                                 .build();
     cluster.waitActive();
     assertNotNull(cluster);

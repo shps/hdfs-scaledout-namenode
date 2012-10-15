@@ -29,8 +29,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.BlockMissingException;
 
 public class TestBlockMissingException extends TestCase {
   final static Log LOG = LogFactory.getLog("org.apache.hadoop.hdfs.TestBlockMissing");
@@ -57,7 +60,8 @@ public class TestBlockMissingException extends TestCase {
 
       // extract block locations from File system. Wait till file is closed.
       LocatedBlocks locations = null;
-      locations = fileSys.dfs.getNamenode().getBlockLocations(file1.toString(), 0, numBlocks * blockSize);
+      //locations = fileSys.dfs.getNamenode().getBlockLocations(file1.toString(), 0, numBlocks * blockSize);
+      locations = fileSys.getDefaultDFSClient().getNamenode().getBlockLocations(file1.toString(), 0, numBlocks * blockSize);
       
       // remove block of file
       LOG.info("Remove first block of file");

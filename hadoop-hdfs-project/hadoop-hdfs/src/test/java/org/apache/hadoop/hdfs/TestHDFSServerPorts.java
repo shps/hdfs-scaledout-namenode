@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -103,6 +104,8 @@ public class TestHDFSServerPorts extends TestCase {
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         fileAsURI(new File(hdfsDir, "name1")).toString());
     FileSystem.setDefaultUri(config, "hdfs://" + THIS_HOST);
+    DBConnector.setConfiguration(config);
+    
     if (withService) {
       NameNode.setServiceAddress(config, THIS_HOST);      
     }

@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -190,6 +191,7 @@ public class TestBlocksWithNotEnoughRacks {
   @Test
   public void testCorruptBlockRereplicatedAcrossRacks() throws Exception {
     Configuration conf = getConf();
+
     short REPLICATION_FACTOR = 2;
     int fileLen = 512;
     final Path filePath = new Path("/testFile");
@@ -211,13 +213,16 @@ public class TestBlocksWithNotEnoughRacks {
 
       // Corrupt a replica of the block
       int dnToCorrupt = DFSTestUtil.firstDnWithBlock(cluster, b);
+      // [J] Sometimes it never corrupts the file because of the use of RandomAccessFile.java object
+      // If the test case fails, this will be the reason
+      // Fixed: Uses FileWriter object to corrupt the file instead of RandomAccessFile
       assertTrue(MiniDFSCluster.corruptReplica(dnToCorrupt, b));
 
       // Restart the datanode so blocks are re-scanned, and the corrupt
       // block is detected.
       cluster.restartDataNode(dnToCorrupt);
 
-      // Wait for the namenode to notice the corrupt replica
+      // *Wait for the namenode to notice the corrupt replica
       DFSTestUtil.waitCorruptReplicas(fs, ns, filePath, b, 1);
 
       // The rack policy is still respected

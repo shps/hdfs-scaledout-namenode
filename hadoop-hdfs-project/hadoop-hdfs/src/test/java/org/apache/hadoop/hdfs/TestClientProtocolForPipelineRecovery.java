@@ -25,7 +25,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.Test;
@@ -89,7 +91,8 @@ public class TestClientProtocolForPipelineRecovery {
         }
 
         // test non-lease holder
-        DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
+        //DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
+        DFSClient dfs = ((DistributedFileSystem)fileSys).getDefaultDFSClient();
         try {
           namenode.updateBlockForPipeline(firstBlock, "test" + dfs.clientName);
           Assert.fail("Cannot get a new GS for a non lease holder");
