@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -111,6 +113,62 @@ public class DFSInputStream extends FSInputStream {
     openInfo();
   }
 
+//    /** [http://grepcode.com/file/repo1.maven.org/maven2/com.ning/metrics.serialization-all/2.0.0-pre2/org/apache/hadoop/hdfs/DFSClient.java#DFSClient.DFSInputStream.openInfo%28%29]
+//     * Grab the open-file info from namenode
+//     */
+//    synchronized void openInfo() throws IOException {
+//      LocatedBlocks newInfo = callGetBlockLocations(namenode, src, 0, prefetchSize);
+//      if (newInfo == null) {
+//        throw new FileNotFoundException("File does not exist: " + src);
+//      }
+//
+//      // I think this check is not correct. A file could have been appended to
+//      // between two calls to openInfo().
+//      if (locatedBlocks != null && !locatedBlocks.isUnderConstruction() &&
+//          !newInfo.isUnderConstruction()) {
+//        Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();
+//        Iterator<LocatedBlock> newIter = newInfo.getLocatedBlocks().iterator();
+//        while (oldIter.hasNext() && newIter.hasNext()) {
+//          if (! oldIter.next().getBlock().equals(newIter.next().getBlock())) {
+//            throw new IOException("Blocklist for " + src + " has changed!");
+//          }
+//        }
+//      }
+//
+//      // if the file is under construction, then fetch size of last block
+//      // from datanode.
+//      if (newInfo.isUnderConstruction() && newInfo.locatedBlockCount() > 0) {
+//        LocatedBlock last = newInfo.get(newInfo.locatedBlockCount()-1);
+//        boolean lastBlockInFile = (last.getStartOffset() + 
+//                                   last.getBlockSize() == 
+//                                   newInfo.getFileLength()); 
+//        if (lastBlockInFile && last.getLocations().length > 0) {
+//          ClientDatanodeProtocol primary =  null;
+//          DatanodeInfo primaryNode = last.getLocations()[0];
+//          try {
+//            primary = DFSUtil.createClientDatanodeProtocolProxy(primaryNode, conf, DFSClient.this.socketTimeout, last.getBlock(), last.getBlockToken());
+//            Block newBlock = primary.getBlockInfo(last.getBlock());
+//            long newBlockSize = newBlock.getNumBytes();
+//            long delta = newBlockSize - last.getBlockSize();
+//            // if the size of the block on the datanode is different
+//            // from what the NN knows about, the datanode wins!
+//            last.getBlock().setNumBytes(newBlockSize);
+//            long newlength = newInfo.getFileLength() + delta;
+//            newInfo.setFileLength(newlength);
+//            LOG.debug("DFSClient setting last block " + last + 
+//                      " to length " + newBlockSize +
+//                      " filesize is now " + newInfo.getFileLength());
+//          } catch (IOException e) {
+//            LOG.debug("DFSClient file " + src + 
+//                      " is being concurrently append to" +
+//                      " but datanode " + primaryNode.getHostName() +
+//                      " probably does not have block " + last.getBlock());
+//          }
+//        }
+//      }
+//      this.locatedBlocks = newInfo;
+//      this.currentNode = null;
+//    }
   /**
    * Grab the open-file info from namenode
    */
@@ -134,7 +192,8 @@ public class DFSInputStream extends FSInputStream {
     }
     locatedBlocks = newInfo;
     lastBlockBeingWrittenLength = 0;
-    if (!locatedBlocks.isLastBlockComplete()) {
+    if(locatedBlocks.isUnderConstruction() && locatedBlocks.locatedBlockCount() > 0) {
+    //if (!locatedBlocks.isLastBlockComplete()) {
       final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
       
       if (last != null) {
@@ -162,12 +221,12 @@ public class DFSInputStream extends FSInputStream {
         datanode, dfsClient.conf, dfsClient.getConf().socketTimeout, locatedblock);
         
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
-        
         if (n >= 0) {
           return n;
         }
       }
       catch(IOException ioe) {
+        ioe.printStackTrace();
         if (ioe instanceof RemoteException &&
           (((RemoteException) ioe).unwrapRemoteException() instanceof
             ReplicaNotFoundException)) {

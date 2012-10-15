@@ -73,8 +73,7 @@ class LeaseRenewer {
   static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;
 
   /** Get a {@link LeaseRenewer} instance */
-  static LeaseRenewer getInstance(final String authority,
-      final UserGroupInformation ugi, final DFSClient dfsc) throws IOException {
+  static LeaseRenewer getInstance(final String authority, final UserGroupInformation ugi, final DFSClient dfsc) throws IOException {
     final LeaseRenewer r = Factory.INSTANCE.get(authority, ugi);
     r.addClient(dfsc);
     return r;
@@ -85,6 +84,8 @@ class LeaseRenewer {
    * among {@link DFSClient} instances
    * so that there is only one renewer per authority per user.
    */
+  //                                                                                                                                                                                                                                                                                                                                                                                                                          FACTORY CLASS
+  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private static class Factory {
     private static final Factory INSTANCE = new Factory();
 
@@ -133,8 +134,7 @@ class LeaseRenewer {
     private final Map<Key, LeaseRenewer> renewers = new HashMap<Key, LeaseRenewer>();
 
     /** Get a renewer. */
-    private synchronized LeaseRenewer get(final String authority,
-        final UserGroupInformation ugi) {
+    private synchronized LeaseRenewer get(final String authority, final UserGroupInformation ugi) {
       final Key k = new Key(authority, ugi);
       LeaseRenewer r = renewers.get(k);
       if (r == null) {
@@ -155,9 +155,10 @@ class LeaseRenewer {
       }
     }
   }
+  //                                                                                                                                                                                                                                                                                                                                                                                                                          FACTORY CLASS END
+  // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  private final String clienNamePostfix = DFSUtil.getRandom().nextInt()
-      + "_" + Thread.currentThread().getId();
+  private final String clienNamePostfix = DFSUtil.getRandom().nextInt()+ "_" + Thread.currentThread().getId();
 
   /** The time in milliseconds that the map became empty. */
   private long emptyTime = Long.MAX_VALUE;
@@ -195,6 +196,7 @@ class LeaseRenewer {
    */
   private final String instantiationTrace;
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private LeaseRenewer(Factory.Key factorykey) {
     this.factorykey = factorykey;
     unsyncSetGraceSleepPeriod(LEASE_RENEWER_GRACE_DEFAULT);
@@ -208,16 +210,19 @@ class LeaseRenewer {
   }
 
   /** @return the renewal time in milliseconds. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized long getRenewalTime() {
     return renewal;
   }
 
   /** @return the client name for the given id. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   String getClientName(final String id) {
     return "DFSClient_" + id + "_" + clienNamePostfix;
   }
 
   /** Add a client. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized void addClient(final DFSClient dfsc) {
     for(DFSClient c : dfsclients) {
       if (c == dfsc) {
@@ -237,6 +242,7 @@ class LeaseRenewer {
     }
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized boolean clientsRunning() {
     for(Iterator<DFSClient> i = dfsclients.iterator(); i.hasNext(); ) {
       if (!i.next().isClientRunning()) {
@@ -246,15 +252,18 @@ class LeaseRenewer {
     return !dfsclients.isEmpty();
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized long getSleepPeriod() {
     return sleepPeriod;    
   }
 
   /** Set the grace period and adjust the sleep period accordingly. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   synchronized void setGraceSleepPeriod(final long gracePeriod) {
     unsyncSetGraceSleepPeriod(gracePeriod);
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private void unsyncSetGraceSleepPeriod(final long gracePeriod) {
     if (gracePeriod < 100L) {
       throw new HadoopIllegalArgumentException(gracePeriod
@@ -267,27 +276,31 @@ class LeaseRenewer {
   }
 
   /** Is the daemon running? */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   synchronized boolean isRunning() {
     return daemon != null && daemon.isAlive();
   }
   
   /** Used only by tests */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   synchronized String getDaemonName() {
     return daemon.getName();
   }
 
   /** Is the empty period longer than the grace period? */  
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized boolean isRenewerExpired() {
     return emptyTime != Long.MAX_VALUE
         && System.currentTimeMillis() - emptyTime > gracePeriod;
   }
 
-  synchronized void put(final String src, final DFSOutputStream out,
-      final DFSClient dfsc) {
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  synchronized void put(final String src, final DFSOutputStream out, final DFSClient dfsc) {
     if (dfsc.isClientRunning()) {
       if (!isRunning() || isRenewerExpired()) {
         //start a new deamon with a new id.
         final int id = ++currentId;
+        /*********************************************************************/
         daemon = new Daemon(new Runnable() {
           @Override
           public void run() {
@@ -301,23 +314,26 @@ class LeaseRenewer {
             } finally {
               synchronized(LeaseRenewer.this) {
                 Factory.INSTANCE.remove(LeaseRenewer.this);
-              }
-            }
-          }
+              } // end synchronized
+            } // end finally
+          } // end run
           
           @Override
           public String toString() {
             return String.valueOf(LeaseRenewer.this);
           }
         });
+        /*********************************************************************/
         daemon.start();
       }
+      // attach the file to the client
       dfsc.putFileBeingWritten(src, out);
       emptyTime = Long.MAX_VALUE;
     }
   }
 
   /** Close a file. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   void closeFile(final String src, final DFSClient dfsc) {
     dfsc.removeFileBeingWritten(src);
 
@@ -337,6 +353,7 @@ class LeaseRenewer {
   }
 
   /** Close the given client. */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   synchronized void closeClient(final DFSClient dfsc) {
     dfsclients.remove(dfsc);
     if (dfsclients.isEmpty()) {
@@ -365,6 +382,7 @@ class LeaseRenewer {
     }
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   void interruptAndJoin() throws InterruptedException {
     Daemon daemonCopy = null;
     synchronized (this) {
@@ -382,6 +400,7 @@ class LeaseRenewer {
     }
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private void renew() throws IOException {
     final List<DFSClient> copies;
     synchronized(this) {
@@ -409,6 +428,7 @@ class LeaseRenewer {
    * Periodically check in with the namenode and renew all the leases
    * when the lease period is half over.
    */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private void run(final int id) throws InterruptedException {
     for(long lastRenewed = System.currentTimeMillis();
         clientsRunning() && !Thread.interrupted();
@@ -443,6 +463,7 @@ class LeaseRenewer {
   }
 
   @Override
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public String toString() {
     String s = getClass().getSimpleName() + ":" + factorykey;
     if (LOG.isTraceEnabled()) {
@@ -453,6 +474,7 @@ class LeaseRenewer {
   }
 
   /** Get the names of all clients */
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private synchronized String clientsString() {
     if (dfsclients.isEmpty()) {
       return "[]";

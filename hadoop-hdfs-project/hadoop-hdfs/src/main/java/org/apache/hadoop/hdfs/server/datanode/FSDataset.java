@@ -1167,6 +1167,7 @@ public class FSDataset implements FSDatasetInterface {
       DataNode.LOG.info("FSDataset added volume - "
           + storage.getStorageDir(idx).getCurrentDir());
     }
+    
     volumeMap = new ReplicasMap(this);
 
     BlockVolumeChoosingPolicy blockChooserImpl =
@@ -1981,8 +1982,7 @@ public class FSDataset implements FSDatasetInterface {
 
   /** Does the block exist and have the given state? */
   private boolean isValid(final ExtendedBlock b, final ReplicaState state) {
-    final ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
-        b.getLocalBlock());
+    final ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
     return replicaInfo != null
         && replicaInfo.getState() == state
         && replicaInfo.getBlockFile().exists();
@@ -2544,10 +2544,10 @@ public class FSDataset implements FSDatasetInterface {
   }
 
   @Override // FSDatasetInterface
+  // https://issues.apache.org/jira/browse/HDFS-3436
   public synchronized long getReplicaVisibleLength(final ExtendedBlock block)
   throws IOException {
-    final Replica replica = getReplicaInfo(block.getBlockPoolId(), 
-        block.getBlockId());
+    final Replica replica = getReplicaInfo(block.getBlockPoolId(), block.getBlockId());
     if (replica.getGenerationStamp() < block.getGenerationStamp()) {
       throw new IOException(
           "replica.getGenerationStamp() < block.getGenerationStamp(), block="

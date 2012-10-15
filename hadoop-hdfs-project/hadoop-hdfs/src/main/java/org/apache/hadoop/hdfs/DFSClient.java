@@ -32,8 +32,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.net.SocketFactory;
 
@@ -253,9 +251,10 @@ public class DFSClient implements java.io.Closeable {
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-    final String authority = nameNodeAddr == null? "null":
-        nameNodeAddr.getHostName() + ":" + nameNodeAddr.getPort();
-    this.leaserenewer = LeaseRenewer.getInstance(authority, ugi, this);
+    //final String authority = nameNodeAddr == null? "null": nameNodeAddr.getHostName() + ":" + nameNodeAddr.getPort();
+    // [J] This would be unique for all clients in the cluster. This uniqness is required for 'lease-renewers' single instance for all the clients connected to this cluster
+    final String authorities = conf.get(DFSConfigKeys.DFS_NAMENODES_RPC_ADDRESS_KEY) == null? "null" : conf.get(DFSConfigKeys.DFS_NAMENODES_RPC_ADDRESS_KEY);
+    this.leaserenewer = LeaseRenewer.getInstance(authorities, ugi, this);
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     if (nameNodeAddr != null && rpcNamenode == null) {

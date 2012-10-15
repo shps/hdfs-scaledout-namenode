@@ -132,7 +132,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
          *   Its used by the Namenode Upgrade Manager (see @UpgradeManagerNamenode)
          * 
          */
-        upgradeManager.completeUpgrade();
+        upgradeManager.completeUpgrade(false); // isTransactional = false ... not really used by datanode functionality
       }
     } catch(IOException e) {
       DataNode.LOG.error("Exception in completeUpgrade", e);
