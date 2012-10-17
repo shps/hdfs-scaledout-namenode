@@ -901,6 +901,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     InetSocketAddress ipAddr = iter.next();
     String ip_port = ipAddr.getAddress().getHostAddress()+":"+ipAddr.getPort();
+
+    // TODO - if i am the leader and I am in safe-mode, then send the block reports
+    // only to me - these are the initial block reports needed to leave safe mode.
+//    if (nn.isInSafeMode() && nn.isLeader()) {
+//        ip_port = // my ip-port
+//    }
+    
     return ip_port;
   }
 

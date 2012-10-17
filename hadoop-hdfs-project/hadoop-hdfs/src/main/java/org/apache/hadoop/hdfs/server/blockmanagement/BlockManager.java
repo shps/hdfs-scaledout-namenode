@@ -2839,11 +2839,7 @@ public class BlockManager {
       }
 
     }
-
-    // FIXME: When datanode restarts, it is assigned with another port and identified as a new replica (which is false)
-    //                  and then its added to triplets as another replica (duplicate)
     return live;
-    //return live/2; // (temporary fix) remove this when bug is fixed
   }
 
   private void logBlockReplicationInfo(Block block, DatanodeDescriptor srcNode,
