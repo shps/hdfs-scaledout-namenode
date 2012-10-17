@@ -863,4 +863,45 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void ping() throws IOException {
 
   }
+
+  /**
+   * //DatanodeProtocol
+   * The datanodes periodically asks the leader namenode for the list of actively running namenodes
+   */
+  @Override
+  public ActiveNamenodeList sendActiveNamenodes() throws IOException {
+    return new ActiveNamenodeList(nn.getLeaderAlgo().selectAll());
+  }
+
+  /**
+   * The BPOfferService that corresponds to the leader Namenode asks it which 'namenode' to send the block reports to
+   * This is a feature added to do load balancing of block reports among namenodes
+   */
+  @Override
+  public String getNextNamenodeToSendBlockReport() throws IOException {
+    // Use the modulo to roundrobin b/w namenodes
+    nnIndex++;
+    Collection<InetSocketAddress> totalNamenodes = nn.getLeaderAlgo().selectAll().values();
+    nnIndex = nnIndex % totalNamenodes.size();
+    Iterator<InetSocketAddress> iter = totalNamenodes.iterator();
+    int count = nnIndex;
+    while(iter.hasNext()) {
+      if(count == 0) {
+        break;
+      }
+      else {
+        // skip this namenode
+        iter.next();
+        count--;
+      }
+    }
+    // Convert to string format to be passed over RPC
+    if(!iter.hasNext()) {
+      throw new IOException("Something went wrong [nnIndex: "+nnIndex+", size: "+totalNamenodes.size()+", count: "+count+"]. Expecting namenode entry");
+    }
+    InetSocketAddress ipAddr = iter.next();
+    String ip_port = ipAddr.getAddress().getHostAddress()+":"+ipAddr.getPort();
+    return ip_port;
+  }
+
 }
