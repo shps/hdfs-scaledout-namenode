@@ -185,7 +185,8 @@ public class TestClientReportBadBlock {
           } else {
             dfsClientReadFileFromPosition(filePath);
           }
-        LocatedBlocks blocks = dfs.dfs.getNamenode(). getBlockLocations(filePath.toString(), 0, Long.MAX_VALUE);
+        //LocatedBlocks blocks = dfs.dfs.getNamenode(). getBlockLocations(filePath.toString(), 0, Long.MAX_VALUE);
+          LocatedBlocks blocks = dfs.getDefaultDFSClient().getNamenode(). getBlockLocations(filePath.toString(), 0, Long.MAX_VALUE);
         replicaCount = blocks.get(0).getLocations().length;
       }
       verifyFirstBlockCorrupted(filePath, false);
@@ -205,7 +206,8 @@ public class TestClientReportBadBlock {
     DFSTestUtil.createFile(dfs, filePath, BLOCK_SIZE, repl, 0);
     DFSTestUtil.waitReplication(dfs, filePath, repl);
     // Locate the file blocks by asking name node
-    final LocatedBlocks locatedblocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toString(), 0L, BLOCK_SIZE);
+    //final LocatedBlocks locatedblocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toString(), 0L, BLOCK_SIZE);
+    final LocatedBlocks locatedblocks = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(filePath.toString(), 0L, BLOCK_SIZE);
     Assert.assertEquals(repl, locatedblocks.get(0).getLocations().length);
     // The file only has one block
     LocatedBlock lblock = locatedblocks.get(0);
@@ -228,7 +230,8 @@ public class TestClientReportBadBlock {
   private void verifyFirstBlockCorrupted(Path filePath, boolean isCorrupted)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    final LocatedBlocks locatedBlocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
+    //final LocatedBlocks locatedBlocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
+    final LocatedBlocks locatedBlocks = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
     final LocatedBlock firstLocatedBlock = locatedBlocks.get(0);
     Assert.assertEquals(isCorrupted, firstLocatedBlock.isCorrupt());
   }
@@ -240,7 +243,8 @@ public class TestClientReportBadBlock {
   private void verifyCorruptedBlockCount(Path filePath, int expectedReplicas)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    final LocatedBlocks lBlocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
+    //final LocatedBlocks lBlocks = dfs.dfs.getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
+    final LocatedBlocks lBlocks = dfs.getDefaultDFSClient().getNamenode().getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
     // we expect only the first block of the file is used for this test
     LocatedBlock firstLocatedBlock = lBlocks.get(0);
     Assert.assertEquals(expectedReplicas,
@@ -252,7 +256,8 @@ public class TestClientReportBadBlock {
    */
   private void dfsClientReadFile(Path corruptedFile) throws IOException,
       UnresolvedLinkException {
-    DFSInputStream in = dfs.dfs.open(corruptedFile.toUri().getPath());
+    //DFSInputStream in = dfs.dfs.open(corruptedFile.toUri().getPath());
+    DFSInputStream in = dfs.getDefaultDFSClient().open(corruptedFile.toUri().getPath());
     byte[] buf = new byte[buffersize];
     int nRead = 0; // total number of bytes read
     
@@ -274,7 +279,8 @@ public class TestClientReportBadBlock {
    */
   private void dfsClientReadFileFromPosition(Path corruptedFile)
       throws UnresolvedLinkException, IOException {
-    DFSInputStream in = dfs.dfs.open(corruptedFile.toUri().getPath());
+    //DFSInputStream in = dfs.dfs.open(corruptedFile.toUri().getPath());
+    DFSInputStream in = dfs.getDefaultDFSClient().open(corruptedFile.toUri().getPath());
     byte[] buf = new byte[buffersize];
     int startPosition = 2;
     int nRead = 0; // total number of bytes read

@@ -20,9 +20,10 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
 
+import java.net.InetSocketAddress;
+import java.util.SortedMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -175,4 +176,16 @@ public interface DatanodeProtocol extends VersionedProtocol {
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
       ) throws IOException;
+
+/**
+ * The datanodes periodically asks the leader namenode for the list of actively running namenodes
+ */
+public ActiveNamenodeList sendActiveNamenodes() throws IOException;
+
+  /**
+   * The BPOfferService that corresponds to the leader Namenode asks it which 'namenode' to send the block reports to
+   * This is a feature added to do load balancing of block reports among namenodes
+   */
+public String getNextNamenodeToSendBlockReport() throws IOException;
+
 }

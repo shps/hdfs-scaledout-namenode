@@ -18,45 +18,22 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestLease {
-  static boolean hasLease(final MiniDFSCluster cluster, final Path src) {
-    try {
-      return (Boolean) new TransactionalRequestHandler(OperationType.HAS_LEASE) {
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
-          ).getLeaseByPath(src.toString()) != null;
-        }
-
-        @Override
-        public void acquireLock() throws PersistanceException, IOException {
-          // FIXME lease by path
-          throw new UnsupportedOperationException("Not supported yet.");
-        }
-      }.handle();
-    } catch (IOException ex) {
-      Logger.getLogger(TestLease.class.getName()).log(Level.SEVERE, null, ex);
-      return false;
-    }
+  static boolean hasLease(MiniDFSCluster cluster, Path src) {
+    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
+        ).getLeaseByPath(src.toString()) != null;
   }
   
   final Path dir = new Path("/test/lease/");

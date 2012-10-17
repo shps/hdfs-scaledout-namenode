@@ -236,7 +236,7 @@ public class TestReplication extends TestCase {
     }
   }
   
-  public void xtestReplicationSimulatedStorag() throws IOException {
+  public void testReplicationSimulatedStorag() throws IOException {
     runReplication(true);
   }
   
@@ -286,7 +286,6 @@ public class TestReplication extends TestCase {
       } catch (InterruptedException ignored) {}
     }
   }
-  
   
   /* This test makes sure that NameNode retries all the available blocks 
    * for under replicated blocks. 

@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 import org.junit.Test;
 import junit.framework.Assert;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation
@@ -36,7 +35,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 public class TestNameNodeMXBean {
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
 
     try {

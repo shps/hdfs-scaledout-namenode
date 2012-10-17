@@ -169,7 +169,7 @@ public class TestListFilesInFileContext {
   }
 
   /** Test when input patch has a symbolic links as its children */
-  @Test
+  //@Test
   public void testSymbolicLinks() throws IOException {
     writeFile(fc, FILE1, FILE_LEN);
     writeFile(fc, FILE2, FILE_LEN);

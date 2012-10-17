@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
+import org.apache.hadoop.hdfs.server.datanode.DataNode.NamenodeService;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -58,7 +58,7 @@ public class TestDataNodeMultipleRegistrations {
   @Test
   public void test2NNRegistration() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
-        .wNameNodePort(9928).build();
+        .nameNodePort(9928).build();
     try {
       cluster.waitActive();
       NameNode nn1 = cluster.getNameNode(0);
@@ -91,17 +91,17 @@ public class TestDataNodeMultipleRegistrations {
       // number of volumes should be 2 - [data1, data2]
       assertEquals("number of volumes is wrong", 2, volInfos.size());
 
-      for (BPOfferService bpos : dn.getAllBpOs()) {
+      for (NamenodeService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name + "; sid="
             + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
       }
 
-      BPOfferService bpos1 = dn.getAllBpOs()[0];
-      BPOfferService bpos2 = dn.getAllBpOs()[1];
+      NamenodeService bpos1 = dn.getAllBpOs()[0];
+      NamenodeService bpos2 = dn.getAllBpOs()[1];
 
       // The order of bpos is not guaranteed, so fix the order
       if (bpos1.nnAddr.equals(nn2.getNameNodeAddress())) {
-        BPOfferService tmp = bpos1;
+        NamenodeService tmp = bpos1;
         bpos1 = bpos2;
         bpos2 = tmp;
       }
@@ -131,7 +131,7 @@ public class TestDataNodeMultipleRegistrations {
   @Test
   public void testFedSingleNN() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .wNameNodePort(9927).build();
+        .nameNodePort(9927).build();
     try {
       NameNode nn1 = cluster.getNameNode();
       assertNotNull("cannot create nn1", nn1);
@@ -153,13 +153,13 @@ public class TestDataNodeMultipleRegistrations {
       // number of volumes should be 2 - [data1, data2]
       assertEquals("number of volumes is wrong", 2, volInfos.size());
 
-      for (BPOfferService bpos : dn.getAllBpOs()) {
+      for (NamenodeService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name + "; sid="
             + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
       }
 
       // try block report
-      BPOfferService bpos1 = dn.getAllBpOs()[0];
+      NamenodeService bpos1 = dn.getAllBpOs()[0];
       bpos1.lastBlockReport = 0;
       bpos1.blockReport();
 
@@ -169,7 +169,7 @@ public class TestDataNodeMultipleRegistrations {
       assertEquals("wrong cid", dn.getClusterId(), cid1);
       cluster.shutdown();
       
-      // Ensure all the BPOfferService threads are shutdown
+      // Ensure all the NamenodeService threads are shutdown
       assertEquals(0, dn.getAllBpOs().length);
       cluster = null;
     } finally {
@@ -182,12 +182,12 @@ public class TestDataNodeMultipleRegistrations {
   @Test
   public void testClusterIdMismatch() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    wNameNodePort(9928).build();
+    nameNodePort(9928).build();
     try {
       cluster.waitActive();
 
       DataNode dn = cluster.getDataNodes().get(0);
-      BPOfferService [] bposs = dn.getAllBpOs(); 
+      NamenodeService [] bposs = dn.getAllBpOs(); 
       LOG.info("dn bpos len (should be 2):" + bposs.length);
       Assert.assertEquals("should've registered with two namenodes", bposs.length,2);
       
@@ -218,7 +218,7 @@ public class TestDataNodeMultipleRegistrations {
     Configuration conf = new HdfsConfiguration();
     // start Federated cluster and add a node.
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    wNameNodePort(9928).build();
+    nameNodePort(9928).build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
     
@@ -230,7 +230,7 @@ public class TestDataNodeMultipleRegistrations {
     // 2. start with Federation flag set
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).federation(true).
-    wNameNodePort(9928).build();
+    nameNodePort(9928).build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
     

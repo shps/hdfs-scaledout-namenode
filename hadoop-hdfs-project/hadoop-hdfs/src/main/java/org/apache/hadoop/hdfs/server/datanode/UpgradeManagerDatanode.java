@@ -134,7 +134,12 @@ class UpgradeManagerDatanode extends UpgradeManager {
         + "The upgrade object is not defined.");
   }
 
-  public synchronized void completeUpgrade() throws IOException {
+  /**
+   * @param isTransactional is not used here in the Datanode functionality as they have no contact to NDB
+   *                    This variable is just needed by the abstract function of this super class. 
+   *                    Its used by the Namenode Upgrade Manager (see @UpgradeManagerNamenode)
+   */
+  public synchronized void completeUpgrade(boolean isTransactional) throws IOException {
     assert currentUpgrades != null : 
       "UpgradeManagerDatanode.currentUpgrades is null.";
     UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();

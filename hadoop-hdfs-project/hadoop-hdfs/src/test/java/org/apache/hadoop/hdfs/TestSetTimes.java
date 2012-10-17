@@ -163,7 +163,7 @@ public class TestSetTimes extends TestCase {
       // shutdown cluster and restart
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster.Builder(conf).wNameNodePort(nnport)
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
                                                 .build();
       cluster.waitActive();

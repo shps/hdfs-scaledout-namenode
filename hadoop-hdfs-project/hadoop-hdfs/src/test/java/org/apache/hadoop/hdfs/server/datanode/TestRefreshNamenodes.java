@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
+import org.apache.hadoop.hdfs.server.datanode.DataNode.NamenodeService;
 import org.junit.Test;
 
 /**
@@ -46,7 +46,7 @@ public class TestRefreshNamenodes {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
       cluster = new MiniDFSCluster.Builder(conf).federation(true).
-          numNameNodes(1).wNameNodePort(nnPort1).build();
+          numNameNodes(1).nameNodePort(nnPort1).build();
 
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().length);
@@ -59,8 +59,8 @@ public class TestRefreshNamenodes {
 
       cluster.addNameNode(conf, nnPort4);
 
-      BPOfferService[] bpoList = dn.getAllBpOs();
-      // Ensure a BPOfferService in the datanodes corresponds to
+      NamenodeService[] bpoList = dn.getAllBpOs();
+      // Ensure a NamenodeService in the datanodes corresponds to
       // a namenode in the cluster
       for (int i = 0; i < 4; i++) {
         InetSocketAddress addr = cluster.getNameNode(i).getNameNodeAddress();

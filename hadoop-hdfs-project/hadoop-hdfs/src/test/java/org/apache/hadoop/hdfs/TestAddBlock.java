@@ -55,7 +55,8 @@ public class TestAddBlock {
 
         cluster.waitActive();
         dfs = (DistributedFileSystem) cluster.getFileSystem();
-        DFSClient client = dfs.dfs;
+        //DFSClient client = dfs.dfs;
+        DFSClient client = dfs.getDefaultDFSClient();
         // create a new file.
         //
         Path file1 = new Path("/hooman.dat");

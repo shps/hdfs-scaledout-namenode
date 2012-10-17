@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
@@ -34,7 +32,6 @@ import org.apache.hadoop.ipc.Server;
  * This is a utility class to expose NameNode functionality for unit tests.
  */
 public class NameNodeAdapter {
-
   /**
    * Get the namesystem from the namenode
    */
@@ -46,35 +43,42 @@ public class NameNodeAdapter {
    * Get block locations within the specified range.
    */
   public static LocatedBlocks getBlockLocations(NameNode namenode,
-          String src, long offset, long length) throws IOException {
-    return namenode.getNamesystem().getBlockLocations(
-            src, offset, length, false, true);
-  }
+      String src, long offset, long length) throws IOException {
 
+    INode [] inodesOnPath = namenode.getNamesystem().dir.getExistingPathINodes(src);
+    if(!namenode.getNamesystem().dir.isValidINodeFile(inodesOnPath[inodesOnPath.length-1])) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    INodeFile inode = (INodeFile) inodesOnPath[inodesOnPath.length-1];
+
+    return namenode.getNamesystem().getBlockLocations(src, inodesOnPath, inode,
+                                                      offset, length, false, true, false);
+  }
+  
   /**
    * Get the internal RPC server instance.
    * @return rpc server
    */
   public static Server getRpcServer(NameNode namenode) {
-    return ((NameNodeRpcServer) namenode.getRpcServer()).server;
+    return ((NameNodeRpcServer)namenode.getRpcServer()).server;
   }
 
   public static DelegationTokenSecretManager getDtSecretManager(
-          final FSNamesystem ns) {
+      final FSNamesystem ns) {
     return ns.getDelegationTokenSecretManager();
   }
 
   public static DatanodeCommand[] sendHeartBeat(DatanodeRegistration nodeReg,
-          DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
-    return namesystem.handleHeartbeat(nodeReg, dd.getCapacity(),
-            dd.getDfsUsed(), dd.getRemaining(), dd.getBlockPoolUsed(), 0, 0, 0);
+      DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
+    return namesystem.handleHeartbeat(nodeReg, dd.getCapacity(), 
+        dd.getDfsUsed(), dd.getRemaining(), dd.getBlockPoolUsed(), 0, 0, 0);
   }
 
   public static boolean setReplication(final FSNamesystem ns,
-          final String src, final short replication) throws IOException {
+      final String src, final short replication) throws IOException {
     return ns.setReplication(src, replication);
   }
-
+  
   public static LeaseManager getLeaseManager(final FSNamesystem ns) {
     return ns.leaseManager;
   }
@@ -85,31 +89,15 @@ public class NameNodeAdapter {
     namesystem.lmthread.interrupt();
   }
 
-  public static String getLeaseHolderForPath(NameNode namenode, String path) throws PersistanceException, IOException {
-    Object result = new TransactionalRequestHandler(OperationType.GET_LEASE_BY_PATH) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        NameNode namenode = (NameNode) getParams()[0];
-        String path = (String) getParams()[1];
-        return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // FIXME Lease by path?
-        throw new UnsupportedOperationException("Not supported yet.");
-      }
-    }.setParams(namenode, path).handle();
-    
-    return (String) result;
+  public static String getLeaseHolderForPath(NameNode namenode, String path) {
+    return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
   }
 
   /**
    * Return the datanode descriptor for the given datanode.
    */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
-          DatanodeID id) throws IOException {
+      DatanodeID id) throws IOException {
     ns.readLock();
     try {
       return ns.getBlockManager().getDatanodeManager().getDatanode(id);

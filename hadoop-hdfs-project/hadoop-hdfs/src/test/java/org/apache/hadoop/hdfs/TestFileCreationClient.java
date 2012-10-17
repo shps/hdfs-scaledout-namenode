@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.EOFException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -53,12 +54,15 @@ public class TestFileCreationClient extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, REPLICATION);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).numDataNodes(REPLICATION).build();
 
     try {
       final FileSystem fs = cluster.getFileSystem();
       final Path dir = new Path("/wrwelkj");
-      
+      // [J] Avoiding race condition where all writers try to create the directory 'wrwelkj'
+      // TODO: Should handle race condition and retry!
+      fs.mkdirs(dir);
+
       SlowWriter[] slowwriters = new SlowWriter[10];
       for(int i = 0; i < slowwriters.length; i++) {
         slowwriters[i] = new SlowWriter(fs, new Path(dir, "file" + i));
@@ -69,14 +73,15 @@ public class TestFileCreationClient extends junit.framework.TestCase {
           slowwriters[i].start();
         }
 
-        Thread.sleep(1000);                       // let writers get started
+        // Wait till each thread has a chance to create a file and write something
+        Thread.sleep(10000);  
 
         //stop a datanode, it should have least recover.
         cluster.stopDataNode(AppendTestUtil.nextInt(REPLICATION));
         
         //let the slow writer writes a few more seconds
         LOG.info("Wait a few seconds");
-        Thread.sleep(5000);
+        Thread.sleep(100);
       }
       finally {
         for(int i = 0; i < slowwriters.length; i++) {
@@ -100,8 +105,18 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         FSDataInputStream in = null;
         try {
           in = fs.open(slowwriters[i].filepath);
-          for(int j = 0, x; (x = in.read()) != -1; j++) {
-            assertEquals(j, x);
+          int j=0, x=0;
+          boolean eof = false;
+          //for(int j = 0, x; (x = in.read()) != -1; j++) {
+          while(!eof) {
+            try {
+              x=in.readInt();
+              assertEquals(j, x);
+              j++;
+            }
+            catch(EOFException ex) {
+              eof = true; // finished reading file
+            }
           }
         }
         finally {
@@ -131,7 +146,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         out = fs.create(filepath);
         for(; running; i++) {
           LOG.info(getName() + " writes " + i);
-          out.write(i);
+          out.writeInt(i);
           out.hflush();
           sleep(100);
         }

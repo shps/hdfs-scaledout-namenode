@@ -405,8 +405,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
         new BufferedInputStream(NetUtils.getInputStream(sock), 
                                 bufferSize));
     
-    BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
-        vintPrefixed(in));
+    BlockOpResponseProto status = BlockOpResponseProto.parseFrom(vintPrefixed(in));
     checkSuccess(status, sock, block, file);
     DataChecksum checksum = DataChecksum.newDataChecksum( in );
     //Warning when we get CHECKSUM_NULL?

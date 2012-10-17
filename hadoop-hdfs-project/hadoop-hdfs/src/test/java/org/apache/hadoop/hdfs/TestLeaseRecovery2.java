@@ -86,7 +86,7 @@ public class TestLeaseRecovery2 {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
+    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1).numDataNodes(5).build();
     cluster.waitActive();
     dfs = (DistributedFileSystem)cluster.getFileSystem();
   }
@@ -115,7 +115,6 @@ public class TestLeaseRecovery2 {
     // set the soft limit to be 1 second so that the
     // namenode triggers lease recovery on next attempt to write-for-open.
     cluster.setLeasePeriod(SHORT_LEASE_PERIOD, LONG_LEASE_PERIOD);
-
     recoverLeaseUsingCreate(filepath);
     verifyFile(dfs, filepath, actual, size);
 
@@ -156,7 +155,7 @@ public class TestLeaseRecovery2 {
     Path filepath = new Path(filestr);
     FSDataOutputStream stm = dfs.create(filepath, true, BUF_SIZE,
       REPLICATION_NUM, BLOCK_SIZE);
-    assertTrue(dfs.dfs.exists(filestr));
+    assertTrue(dfs.getDefaultDFSClient().exists(filestr));
 
     AppendTestUtil.LOG.info("size=" + size);
     stm.write(buffer, 0, size);
@@ -167,7 +166,7 @@ public class TestLeaseRecovery2 {
 
     if (triggerLeaseRenewerInterrupt) {
       AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-      dfs.dfs.leaserenewer.interruptAndJoin();
+      dfs.getDefaultDFSClient().leaserenewer.interruptAndJoin();
     }
     return filepath;
   }
@@ -199,7 +198,7 @@ public class TestLeaseRecovery2 {
     for(int i = 0; i < 10 && !done; i++) {
       AppendTestUtil.LOG.info("i=" + i);
       try {
-        dfs2.create(filepath, false, BUF_SIZE, (short)1, BLOCK_SIZE);
+          dfs2.create(filepath, false, BUF_SIZE, (short)1, BLOCK_SIZE);
         fail("Creation of an existing file should never succeed.");
       } catch (IOException ioe) {
         final String message = ioe.getMessage();
@@ -251,7 +250,7 @@ public class TestLeaseRecovery2 {
    * 
    * @throws Exception
    */
-  @Test
+  @Test 
   public void testHardLeaseRecovery() throws Exception {
     //create a file
     String filestr = "/hardLeaseRecovery";
@@ -259,7 +258,7 @@ public class TestLeaseRecovery2 {
     Path filepath = new Path(filestr);
     FSDataOutputStream stm = dfs.create(filepath, true,
         BUF_SIZE, REPLICATION_NUM, BLOCK_SIZE);
-    assertTrue(dfs.dfs.exists(filestr));
+    assertTrue(dfs.getDefaultDFSClient().exists(filestr));
 
     // write bytes into the file.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
@@ -272,7 +271,7 @@ public class TestLeaseRecovery2 {
     
     // kill the lease renewal thread
     AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-    dfs.dfs.leaserenewer.interruptAndJoin();
+    dfs.getDefaultDFSClient().leaserenewer.interruptAndJoin();
 
     // set the hard limit to be 1 second 
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
@@ -281,16 +280,16 @@ public class TestLeaseRecovery2 {
     LocatedBlocks locatedBlocks;
     do {
       Thread.sleep(SHORT_LEASE_PERIOD);
-      locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
+      locatedBlocks = DFSClient.callGetBlockLocations(dfs.getDefaultDFSClient().namenode,
         filestr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());
     assertEquals(size, locatedBlocks.getFileLength());
 
-    // make sure that the writer thread gets killed
+    // make sure that the writer (client) thread gets killed
     try {
       stm.write('b');
       stm.close();
-      fail("Writer thread should have been killed");
+      fail("Writer (client)  thread should have been killed");
     } catch (IOException e) {
       e.printStackTrace();
     }      
@@ -327,7 +326,7 @@ public class TestLeaseRecovery2 {
     Path filepath = new Path(filestr);
     FSDataOutputStream stm = dfs.create(filepath, true,
         BUF_SIZE, REPLICATION_NUM, BLOCK_SIZE);
-    assertTrue(dfs.dfs.exists(filestr));
+    assertTrue(dfs.getDefaultDFSClient().exists(filestr));
 
     // write random number of bytes into it.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
@@ -338,7 +337,7 @@ public class TestLeaseRecovery2 {
     AppendTestUtil.LOG.info("hflush");
     stm.hflush();
     AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-    dfs.dfs.leaserenewer.interruptAndJoin();
+    dfs.getDefaultDFSClient().leaserenewer.interruptAndJoin();
 
     // set the soft limit to be 1 second so that the
     // namenode triggers lease recovery on next attempt to write-for-open.
@@ -421,7 +420,7 @@ public class TestLeaseRecovery2 {
     Path filePath = new Path(fileStr);
     FSDataOutputStream stm = dfs.create(filePath, true,
         BUF_SIZE, REPLICATION_NUM, BLOCK_SIZE);
-    assertTrue(dfs.dfs.exists(fileStr));
+    assertTrue(dfs.getDefaultDFSClient().exists(fileStr));
 
     // write bytes into the file.
     int size = AppendTestUtil.nextInt(FILE_SIZE);
@@ -448,7 +447,7 @@ public class TestLeaseRecovery2 {
     
     // kill the lease renewal thread
     AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
-    dfs.dfs.leaserenewer.interruptAndJoin();
+    dfs.getDefaultDFSClient().leaserenewer.interruptAndJoin();
     
     // Make sure the DNs don't send a heartbeat for a while, so the blocks
     // won't actually get completed during lease recovery.
@@ -460,11 +459,14 @@ public class TestLeaseRecovery2 {
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
     
     // Make sure lease recovery begins.
-    Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
+    // [J] for some reason, it just takes a longer time for the lease manager to detect this. Increasing the sleep interval by 10
+    Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 10);
+    //Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
     
     assertEquals("lease holder should now be the NN", HdfsServerConstants.NAMENODE_LEASE_HOLDER,
         NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), fileStr));
     
+    // In case of multiple namenodes, we kill the leader and a new namenode will be elected the leader and it will start the lease monitor
     cluster.restartNameNode(false);
     
     assertEquals("lease holder should still be the NN after restart",
@@ -472,6 +474,9 @@ public class TestLeaseRecovery2 {
         NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), fileStr));
     
     // Let the DNs send heartbeats again.
+    // [J] By setting the heartbeats on, the namenode is able to send BlockLeaseRecoveryCommands to the datanodes.
+    // These lease recovery commands contains the set of blocks that need to be replicated at the datanode
+    // This is initiated from LeaseManager.checkLeases()==>fsNamesystem.internalReleaseLease()==>lastBlock.initializeBlockRecovery()
     for (DataNode dn : cluster.getDataNodes()) {
       DataNodeAdapter.setHeartbeatsDisabledForTests(dn, false);
     }
@@ -485,7 +490,7 @@ public class TestLeaseRecovery2 {
     LocatedBlocks locatedBlocks;
     do {
       Thread.sleep(SHORT_LEASE_PERIOD);
-      locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
+      locatedBlocks = DFSClient.callGetBlockLocations(dfs.getDefaultDFSClient().namenode,
         fileStr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());  
     assertEquals(size, locatedBlocks.getFileLength());

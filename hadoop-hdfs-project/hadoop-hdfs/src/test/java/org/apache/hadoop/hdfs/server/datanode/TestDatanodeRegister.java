@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.AbstractList;
 
 import static org.junit.Assert.fail;
@@ -38,7 +39,7 @@ public class TestDatanodeRegister {
   public static final Log LOG = LogFactory.getLog(TestDatanodeRegister.class);
   @Test
   public void testDataNodeRegister() throws Exception {
-    DataNode.BPOfferService myMockBPOS = mock(DataNode.BPOfferService.class);
+    DataNode.NamenodeService myMockBPOS = mock(DataNode.NamenodeService.class);
     doCallRealMethod().when(myMockBPOS).register();
     myMockBPOS.bpRegistration = mock(DatanodeRegistration.class);
     when(myMockBPOS.bpRegistration.getStorageID()).thenReturn("myTestStorageID");
@@ -49,6 +50,7 @@ public class TestDatanodeRegister {
     when(fakeDNProt.versionRequest()).thenReturn(fakeNSInfo);
     doCallRealMethod().when(myMockBPOS).setNameNode(fakeDNProt);
     myMockBPOS.setNameNode( fakeDNProt );
+    
     try {   
       myMockBPOS.register();
       fail("register() did not throw exception! " +

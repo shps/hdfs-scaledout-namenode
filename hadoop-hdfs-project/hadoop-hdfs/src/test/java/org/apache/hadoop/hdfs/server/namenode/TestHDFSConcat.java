@@ -39,12 +39,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestHDFSConcat {
@@ -94,9 +94,7 @@ public class TestHDFSConcat {
    * @throws IOException
    */
   @Test
-  @Ignore
   public void testConcat() throws IOException, InterruptedException {
-    // FIXME [lock]: 
     final int numFiles = 10;
     long fileLen = blockSize*3;
     HdfsFileStatus fStatus;
@@ -135,7 +133,6 @@ public class TestHDFSConcat {
       stm.close();
     }
     
-    
     // check permissions -try the operation with the "wrong" user
     final UserGroupInformation user1 = UserGroupInformation.createUserForTesting(
         "theDoctor", new String[] { "tardis" });
@@ -161,6 +158,7 @@ public class TestHDFSConcat {
 //    assertEquals(cBefore.getFileCount(), cAfter.getFileCount()+files.length);
     
     // verify other stuff
+    // file ength and total block count of individual files combined
     long totalLen = trgLen;
     long totalBlocks = trgBlocks;
     for(i=0; i<files.length; i++) {
@@ -169,17 +167,19 @@ public class TestHDFSConcat {
     }
     LOG.info("total len=" + totalLen + "; totalBlocks=" + totalBlocks);
     
-    
+    // file's length and total blocks of the target file
     fStatus = nn.getFileInfo(trg);
     trgLen  = fStatus.getLen(); // new length
     
+    LocatedBlocks trgBlockLocs = nn.getBlockLocations(trg, 0, trgLen);
+    trgBlocks = trgBlockLocs.locatedBlockCount();
+
     // read the resulting file
     stm = dfs.open(trgPath);
     byte[] byteFileConcat = new byte[(int)trgLen];
     stm.readFully(0, byteFileConcat);
     stm.close();
     
-    trgBlocks = nn.getBlockLocations(trg, 0, trgLen).locatedBlockCount();
     
     //verifications
     // 1. number of blocks
@@ -271,7 +271,7 @@ public class TestHDFSConcat {
       if(mismatch)
         break;
     }
-    assertFalse("File content of concatenated file is different", mismatch);
+    assertFalse("File content of concatenated file is different at byte index ["+(idx-1)+"] and total concat bytes of target file["+concat.length+"] where as total bytes of individual files: "+(bytes[0].length*bytes.length), mismatch);
   }
 
   // test case when final block is not of a full length

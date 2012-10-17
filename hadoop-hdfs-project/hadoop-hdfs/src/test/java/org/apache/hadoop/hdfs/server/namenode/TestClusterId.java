@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -86,6 +87,7 @@ public class TestClusterId {
     Configuration config = new Configuration();
     
     config.set(DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
+    DBConnector.setConfiguration(config);
 
     // 1. should format without cluster id
     //StartupOption.FORMAT.setClusterId("");

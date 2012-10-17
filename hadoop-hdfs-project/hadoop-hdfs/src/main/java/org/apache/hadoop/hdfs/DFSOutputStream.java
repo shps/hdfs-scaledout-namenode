@@ -835,12 +835,14 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       //transfer replica
       final DatanodeInfo src = d == 0? nodes[1]: nodes[d - 1];
       final DatanodeInfo[] targets = {nodes[d]};
+      
       transfer(src, targets, lb.getBlockToken());
     }
 
     private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
         final Token<BlockTokenIdentifier> blockToken) throws IOException {
-      //transfer replica to the new datanode
+      
+     //transfer replica to the new datanode
       Socket sock = null;
       DataOutputStream out = null;
       DataInputStream in = null;
@@ -857,8 +859,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
         //ack
         in = new DataInputStream(NetUtils.getInputStream(sock));
-        BlockOpResponseProto response =
-          BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
+        BlockOpResponseProto response = BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
         if (SUCCESS != response.getStatus()) {
           throw new IOException("Failed to add a datanode");
         }

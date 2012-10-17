@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -65,10 +66,10 @@ public class AppendTestUtil {
   static long seed = -1;
 
   static int nextInt() {return RANDOM.get().nextInt();}
-  static int nextInt(int n) {return RANDOM.get().nextInt(n);}
+  public static int nextInt(int n) {return RANDOM.get().nextInt(n);}
   static int nextLong() {return RANDOM.get().nextInt();}
 
-  public static byte[] randomBytes(long seed, int size) {
+  static byte[] randomBytes(long seed, int size) {
     LOG.info("seed=" + seed + ", size=" + size);
     final byte[] b = new byte[size];
     final Random rand = new Random(seed);
@@ -152,11 +153,28 @@ public class AppendTestUtil {
    *  the specified byte[] buffer's content
    *  @throws IOException an exception might be thrown
    */
+//  public static void checkFullFile(FileSystem fs, Path name, int len,
+//                            final byte[] compareContent, String message) throws IOException {
+//    FSDataInputStream stm = fs.open(name);
+//    byte[] actual = new byte[len];
+//    //stm.readFully(0, actual);
+//    int i =0;
+//    while(true) {
+//      try {
+//      actual[i++] = stm.readByte();
+//      }
+//      catch(EOFException ex) {
+//        break;
+//      }
+//    }
+//    checkData(actual, 0, compareContent, message);
+//    stm.close();
+//  }
   public static void checkFullFile(FileSystem fs, Path name, int len,
                             final byte[] compareContent, String message) throws IOException {
     FSDataInputStream stm = fs.open(name);
     byte[] actual = new byte[len];
-    stm.readFully(0, actual);
+    stm.readFully(0, actual);   // [J] gets error: java.io.EOFException: End of file reached before reading fully.
     checkData(actual, 0, compareContent, message);
     stm.close();
   }

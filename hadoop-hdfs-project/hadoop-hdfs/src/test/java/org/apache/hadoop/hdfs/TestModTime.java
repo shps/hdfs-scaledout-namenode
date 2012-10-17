@@ -75,8 +75,7 @@ public class TestModTime extends TestCase {
   /**
    * Tests modification time in DFS.
    */
-  public void xxxtestModTime() throws IOException {
-    // FIXME [lock]: 
+  public void testModTime() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -185,6 +184,6 @@ public class TestModTime extends TestCase {
   }
 
   public static void main(String[] args) throws Exception {
-    new TestModTime().xxxtestModTime();
+    new TestModTime().testModTime();
   }
 }

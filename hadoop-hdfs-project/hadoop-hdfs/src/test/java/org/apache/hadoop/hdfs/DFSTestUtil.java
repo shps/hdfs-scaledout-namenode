@@ -63,7 +63,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -71,11 +70,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -317,43 +311,28 @@ public class DFSTestUtil {
    * Keep accessing the given file until the namenode reports that the
    * given block in the file contains the given number of corrupt replicas.
    */
-  public static void waitCorruptReplicas(final FileSystem fs, final FSNamesystem ns,
-          final Path file, final ExtendedBlock b, final int corruptRepls)
-          throws IOException, TimeoutException, PersistanceException {
+  public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
+      Path file, ExtendedBlock b, int corruptRepls)
+      throws IOException, TimeoutException {
+    int count = 0;
     final int ATTEMPTS = 50;
-    new TransactionalRequestHandler(OperationType.WAIT_CORRUPT_REPLICAS) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        int count = 0;
-        int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
-        while (repls != corruptRepls && count < ATTEMPTS) {
-          try {
-            IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
-                    512, true);
-          } catch (IOException e) {
-            // Swallow exceptions
-          }
-          LOG.info("Waiting for " + corruptRepls + " corrupt replicas");
-          repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
-          count++;
-        }
-        if (count == ATTEMPTS) {
-          try {
-            throw new TimeoutException("Timed out waiting for corrupt replicas."
-                    + " Waiting for " + corruptRepls + ", but only found " + repls);
-          } catch (TimeoutException ex) {
-            throw new IOException(ex);
-          }
-        }
-        return null;
+    int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+    while (repls != corruptRepls && count < ATTEMPTS) {
+      try {
+        // Client will try to read the file and would probably report corrupted blocks to the NN if there are any
+        IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
+            512, true);
+      } catch (IOException e) {
+        // Swallow exceptions
       }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ, CorruptReplica.Finder.ByBlockId, b.getBlockId());
-      }
-    }.handle();
+      LOG.info("Waiting for "+corruptRepls+" corrupt replicas");
+      repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+      count++;
+    }
+    if (count == ATTEMPTS) {
+      throw new TimeoutException("Timed out waiting for corrupt replicas."
+          + " Waiting for "+corruptRepls+", but only found "+repls);
+    }
   }
 
   /*
@@ -512,7 +491,7 @@ public class DFSTestUtil {
           good = false;
           try {
             LOG.info("Waiting for replication factor to drain");
-            Thread.sleep(100);
+            Thread.sleep(500);
           } catch (InterruptedException e) {} 
           break;
         }
@@ -523,6 +502,43 @@ public class DFSTestUtil {
       }
     } while(!good);
   }
+  
+  /** wait for the file's replication to be done */
+  public static void waitReplicationWithTimeout(FileSystem fs, Path fileName, 
+      short replFactor, long timeout)  throws IOException, TimeoutException {
+    boolean good;
+    long initTime = System.currentTimeMillis();
+    do {
+      good = true;
+      BlockLocation locs[] = fs.getFileBlockLocations(
+        fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
+      for (int j = 0; j < locs.length; j++) {
+        String[] hostnames = locs[j].getNames();
+        if (hostnames.length != replFactor) {
+          String hostNameList = "";
+          for (String h : hostnames) hostNameList += h + " ";
+          LOG.info("Block " + j + " of file " + fileName 
+              + " has replication factor " + hostnames.length + "; locations "
+              + hostNameList);
+          good = false;
+          try {
+            LOG.info("Waiting for replication factor to drain");
+            Thread.sleep(500);
+          } catch (InterruptedException e) {} 
+          break;
+        }
+      }
+      if (good) {
+        LOG.info("All blocks of file " + fileName
+            + " verified to have replication factor " + replFactor);
+      }
+      
+      if(System.currentTimeMillis() - initTime > timeout) {
+        throw new TimeoutException("Waiting for replication timed out.");
+      }
+    } while(!good);
+  }
+
   
   /** delete directory and everything underneath it.*/
   public void cleanup(FileSystem fs, String topdir) throws IOException {

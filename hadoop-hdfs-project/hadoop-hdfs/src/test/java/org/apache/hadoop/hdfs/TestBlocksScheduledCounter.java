@@ -36,8 +36,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 public class TestBlocksScheduledCounter extends TestCase {
 
   public void testBlocksScheduledCounter() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
-                                               .build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
 
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -51,8 +50,7 @@ public class TestBlocksScheduledCounter extends TestCase {
     ((DFSOutputStream)(out.getWrappedStream())).hflush();
     
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
-    final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
-        ).getDatanodeManager();
+    final DatanodeManager dm = cluster.getNamesystem().getBlockManager().getDatanodeManager();
     dm.fetchDatanodes(dnList, dnList, false);
     DatanodeDescriptor dn = dnList.get(0);
     

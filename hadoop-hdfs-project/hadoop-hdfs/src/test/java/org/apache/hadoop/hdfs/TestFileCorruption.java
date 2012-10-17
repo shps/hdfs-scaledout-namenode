@@ -87,8 +87,13 @@ public class TestFileCorruption extends TestCase {
   }
 
   /** check if local FS can handle corrupted blocks properly */
-  public void xxxtestLocalFileCorruption() throws Exception {
+  public void testLocalFileCorruption() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    // test.build.data = build/test/data  [https://issues.apache.org/jira/browse/HADOOP-5916]
+    if(System.getProperty("test.build.data") == null) {
+      System.setProperty("test.build.data", "build/test/data");
+    }
+    
     Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
     FileSystem fs = FileSystem.getLocal(conf);
     DataOutputStream dos = fs.create(file);
@@ -105,6 +110,7 @@ public class TestFileCorruption extends TestCase {
       dis.readByte();
     } catch (ChecksumException ignore) {
       //expect this exception but let any NPE get thrown
+      System.out.println("Exception was expcted. Exception:"+ignore.getMessage());
     }
     fs.delete(file, true);
   }

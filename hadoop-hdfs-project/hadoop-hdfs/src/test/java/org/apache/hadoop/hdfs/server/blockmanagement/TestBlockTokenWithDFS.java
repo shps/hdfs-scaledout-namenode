@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.EOFException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -25,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.SecurityTestUtil;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
@@ -65,13 +68,26 @@ public class TestBlockTokenWithDFS {
   private static final String FILE_TO_READ = "/fileToRead.dat";
   private static final String FILE_TO_WRITE = "/fileToWrite.dat";
   private static final String FILE_TO_APPEND = "/fileToAppend.dat";
-  private final byte[] rawData = new byte[FILE_SIZE];
+  private /*final*/ byte[] rawData = new byte[FILE_SIZE];
 
   {
     ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
     Random r = new Random();
     r.nextBytes(rawData);
+    
+    // need to get atleast 2048 bytes via String data
+//    StringBuilder data = new StringBuilder();
+//    // completes 2028
+//    for(int i=1; i<=78; i++) {
+//      data.append("abcdefghijklmnopqrstuvwxyz");
+//    }
+//  // need 20 more bytes to fill it up
+//  data.append("abcdefghijklmnopqrst");
+//  System.out.println("total bytes: "+data.toString().getBytes().length);
+//  rawData = data.toString().getBytes();
+  
   }
+  
 
   private void createFile(FileSystem fs, Path filename) throws IOException {
     FSDataOutputStream out = fs.create(filename);
@@ -85,11 +101,15 @@ public class TestBlockTokenWithDFS {
     int totalRead = 0;
     int nRead = 0;
     try {
+      System.out.println("**Reading file via FSDataInputStream...");
+      // arguments of in.read(buffer, offset, length)  // reads up to 'length' bytes
       while ((nRead = in.read(toRead, totalRead, toRead.length - totalRead)) > 0) {
         totalRead += nRead;
       }
-    } catch (IOException e) {
-    	e.printStackTrace(System.err);
+    }
+    catch (IOException e) {
+      System.out.println("**checkFile1 resulted in error. Exception: "+e.getMessage());
+      e.printStackTrace(System.err);
       return false;
     }
     assertEquals("Cannot read file.", toRead.length, totalRead);
@@ -110,12 +130,12 @@ public class TestBlockTokenWithDFS {
 
   private boolean checkFile(byte[] fileToCheck) {
     if (fileToCheck.length != rawData.length) {
-    	System.err.println("[thesis] W: fileToCheck.length != rawData.length");
+    	System.err.println("[thesis] W: fileToCheck.length ["+fileToCheck.length+"] != rawData.length ["+rawData.length+"]");
       return false;
     }
     for (int i = 0; i < fileToCheck.length; i++) {
       if (fileToCheck[i] != rawData[i]) {
-    	  System.err.println("[thesis] W: fileToCheck[i] != rawData[i]");
+        System.err.println("[thesis] W: fileToCheck["+i+"] != rawData["+i+"]");
         return false;
       }
     }
@@ -125,8 +145,7 @@ public class TestBlockTokenWithDFS {
   // creates a file and returns a descriptor for writing to it
   private static FSDataOutputStream writeFile(FileSystem fileSys, Path name,
       short repl, long blockSize) throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt("io.file.buffer.size", 4096), repl, blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf().getInt("io.file.buffer.size", 4096), repl, blockSize);
     return stm;
   }
 
@@ -152,6 +171,7 @@ public class TestBlockTokenWithDFS {
 
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {
+        ex.printStackTrace();
         assertFalse("OP_READ_BLOCK: access token is invalid, "
             + "when it is expected to be valid", shouldSucceed);
         return;
@@ -189,6 +209,22 @@ public class TestBlockTokenWithDFS {
   }
 
   /**
+   * Gets all BlockTokenSecretManagerNN corresponding to all NNs in the system
+   * Needed in order to apply configuration changes in tests
+   * These configurations need to be applied in all namenodes for all BlockTokenSecretManagerNNs
+   */
+  public List<BlockTokenSecretManagerNN> getBlockTokenSecretManagers(MiniDFSCluster cluster) {
+    List<BlockTokenSecretManagerNN> secretManagers = new ArrayList<BlockTokenSecretManagerNN>();
+    for(int i=0; i<cluster.getNumNameNodes(); i++) {
+      final NameNode nn = cluster.getNameNode(i);
+      final BlockManager bm = nn.getNamesystem().getBlockManager();
+      final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
+      secretManagers.add(sm);
+    }
+    return secretManagers;
+  }
+  
+  /**
    * testing that APPEND operation can handle token expiration when
    * re-establishing pipeline is needed
    */
@@ -203,12 +239,16 @@ public class TestBlockTokenWithDFS {
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
-      final NameNode nn = cluster.getNameNode();
-      final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
-      
+      // [J] configuration changes - setting short token life time!
+      // Needs to be applied in all namnodes
+      List<BlockTokenSecretManagerNN> blockTokenSecretManagers = getBlockTokenSecretManagers(cluster);
+      //final NameNode nn = cluster.getNameNode();
+      //final BlockManager bm = nn.getNamesystem().getBlockManager();
+      //final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
+
       // set a short token lifetime (1 second)
-      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      SecurityTestUtil.setBlockTokenLifetime(blockTokenSecretManagers, 1000L);
+      //SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
       Path fileToAppend = new Path(FILE_TO_APPEND);
       FileSystem fs = cluster.getFileSystem();
 
@@ -219,7 +259,7 @@ public class TestBlockTokenWithDFS {
       stm.close();
       // open the file again for append
       stm = fs.append(fileToAppend);
-      int mid = rawData.length - 1;
+      int mid = rawData.length - 1;   // writing all bytes except for the last byte
       stm.write(rawData, 1, mid - 1);
       stm.hflush();
 
@@ -231,15 +271,18 @@ public class TestBlockTokenWithDFS {
         try {
           Thread.sleep(10);
         } catch (InterruptedException ignored) {
-        }
+        } 
       }
 
       // remove a datanode to force re-establishing pipeline
+      System.out.println("**Stopping datanode ["+cluster.getDataNodes().get(0).getMachineName() +"]");
       cluster.stopDataNode(0);
       // append the rest of the file
+      System.out.println("**remaining bytes to write ["+(rawData.length-mid)+"], current.pos: "+mid);
       stm.write(rawData, mid, rawData.length - mid);
       stm.close();
-      // check if append is successful
+      // check if   append is successful
+        System.out.println("**Verifying file by reading");
       FSDataInputStream in5 = fs.open(fileToAppend);
       assertTrue(checkFile1(in5));
     } finally {
@@ -252,6 +295,8 @@ public class TestBlockTokenWithDFS {
   /**
    * testing that WRITE operation can handle token expiration when
    * re-establishing pipeline is needed
+   * 
+   * Thhis test case is designed for Single-Namenode architecture
    */
   @Test
   public void testWrite() throws Exception {
@@ -264,12 +309,16 @@ public class TestBlockTokenWithDFS {
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
-      final NameNode nn = cluster.getNameNode();
-      final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
-      
+      // [J] configuration changes - setting short token life time!
+      // Needs to be applied in all namnodes
+      List<BlockTokenSecretManagerNN> blockTokenSecretManagers = getBlockTokenSecretManagers(cluster);
+      //final NameNode nn = cluster.getNameNode();
+      //final BlockManager bm = nn.getNamesystem().getBlockManager();
+      //final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
+
       // set a short token lifetime (1 second)
-      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      SecurityTestUtil.setBlockTokenLifetime(blockTokenSecretManagers, 1000L);
+      //SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
       Path fileToWrite = new Path(FILE_TO_WRITE);
       FileSystem fs = cluster.getFileSystem();
 
@@ -317,13 +366,18 @@ public class TestBlockTokenWithDFS {
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
-      final NameNode nn = cluster.getNameNode();
-      final NamenodeProtocols nnProto = nn.getRpcServer();
-      final BlockManager bm = nn.getNamesystem().getBlockManager();
-      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
+      // [J] configuration changes - setting short token life time!
+      // Needs to be applied in all namnodes
+      List<BlockTokenSecretManagerNN> blockTokenSecretManagers = getBlockTokenSecretManagers(cluster);
+      //final NameNode nn = cluster.getNameNode();
+      //final NamenodeProtocols nnProto = nn.getRpcServer();
+      //final BlockManager bm = nn.getNamesystem().getBlockManager();
+      //final BlockTokenSecretManagerNN sm = bm.getBlockTokenSecretManager();
 
-      // set a short token lifetime (1 second) initially
-      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      // set a short token lifetime (1 second)
+      SecurityTestUtil.setBlockTokenLifetime(blockTokenSecretManagers, 1000L);
+      //SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      final NamenodeProtocols nnProto = cluster.getNameNode().getRpcServer();
 
       Path fileToRead = new Path(FILE_TO_READ);
       FileSystem fs = cluster.getFileSystem();
@@ -334,9 +388,11 @@ public class TestBlockTokenWithDFS {
        */
 
       // read using blockSeekTo(). Acquired tokens are cached in in1
+      System.out.println("**Reading file[1] '"+fileToRead+"'");
       FSDataInputStream in1 = fs.open(fileToRead);
       assertTrue(checkFile1(in1));
       // read using blockSeekTo(). Acquired tokens are cached in in2
+      System.out.println("**Reading file[2] '"+fileToRead+"'");
       FSDataInputStream in2 = fs.open(fileToRead);
       assertTrue(checkFile1(in2));
       // read using fetchBlockByteRange(). Acquired tokens are cached in in3
@@ -347,8 +403,7 @@ public class TestBlockTokenWithDFS {
        * testing READ interface on DN using a BlockReader
        */
 
-      new DFSClient(new InetSocketAddress("localhost",
-          cluster.getNameNodePort()), conf);
+      new DFSClient(new InetSocketAddress("localhost",cluster.getNameNodePort()), conf);
       List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
           FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
       LocatedBlock lblock = locatedBlocks.get(0); // first block
@@ -378,27 +433,28 @@ public class TestBlockTokenWithDFS {
       // read should fail
       tryRead(conf, lblock, false);
       // use a valid new token
-      lblock.setBlockToken(sm.generateToken(lblock.getBlock(),
-              EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+      // [J] lblock.setBlockToken(sm.generateToken(lblock.getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+      lblock.setBlockToken(blockTokenSecretManagers.get(0).generateToken(lblock.getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
       // read should succeed
       tryRead(conf, lblock, true);
       // use a token with wrong blockID
       ExtendedBlock wrongBlock = new ExtendedBlock(lblock.getBlock()
           .getBlockPoolId(), lblock.getBlock().getBlockId() + 1);
-      lblock.setBlockToken(sm.generateToken(wrongBlock,
-          EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+      //lblock.setBlockToken(sm.generateToken(wrongBlock, EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+      lblock.setBlockToken(blockTokenSecretManagers.get(0).generateToken(wrongBlock, EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
       // read should fail
       tryRead(conf, lblock, false);
       // use a token with wrong access modes
-      lblock.setBlockToken(sm.generateToken(lblock.getBlock(),
-          EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE,
-                     BlockTokenSecretManager.AccessMode.COPY,
-                     BlockTokenSecretManager.AccessMode.REPLACE)));
+      //lblock.setBlockToken(sm.generateToken(lblock.getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE, BlockTokenSecretManager.AccessMode.COPY, BlockTokenSecretManager.AccessMode.REPLACE)));
+      lblock.setBlockToken(blockTokenSecretManagers.get(0).generateToken(lblock.getBlock(), 
+                                                                         EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE, 
+                                                                                    BlockTokenSecretManager.AccessMode.COPY, 
+                                                                                    BlockTokenSecretManager.AccessMode.REPLACE)));
       // read should fail
       tryRead(conf, lblock, false);
 
       // set a long token lifetime for future tokens
-      SecurityTestUtil.setBlockTokenLifetime(sm, 600 * 1000L);
+      SecurityTestUtil.setBlockTokenLifetime(blockTokenSecretManagers, 600 * 1000L);
 
       /*
        * testing that when cached tokens are expired, DFSClient will re-fetch
@@ -443,8 +499,9 @@ public class TestBlockTokenWithDFS {
       assertTrue(cluster.restartDataNodes(true));
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
-      cluster.shutdownNameNode(0);
-
+      //cluster.shutdownNameNode(0);
+      cluster.shutdownNameNodes();
+      
       // confirm tokens cached in in1 are still valid
       lblocks = DFSTestUtil.getAllBlocks(in1);
       for (LocatedBlock blk : lblocks) {
@@ -471,17 +528,28 @@ public class TestBlockTokenWithDFS {
       // verify fetchBlockByteRange() still works (forced to use cached tokens)
       assertTrue(checkFile2(in3));
 
-      /*
+      /*------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
        * testing that when namenode is restarted, cached tokens should still
        * work and there is no need to fetch new tokens from namenode. Like the
        * previous test, this test should also run while namenode is down. The
        * setup for this test depends on the previous test.
+       * 
+       * The DFSInputStream holds the cached tokens before the NN went down. 
+       * These tokens were also exported to the DNs so it should have it with them as well
+       * So the client can communicate with these cached tokens to read blocks from DNs
        */
 
       // restart the namenode and then shut it down for test
-      cluster.restartNameNode(0);
-      cluster.shutdownNameNode(0);
+      //cluster.restartNameNode(0);
+      //cluster.shutdownNameNode(0);
+      System.out.println("**About to restart all namenodes. DNs register and get new keys and cache them...");
+      cluster.restartAllNameNodes(false);
+      cluster.waitActive();
+      cluster.waitClusterUp();
+      System.out.println("**About to shutdown all namenodes. DNs should still have keys...");
+      cluster.shutdownNameNodes();
 
+      System.out.println("**All namenodes have been shutdown with keys...");
       // verify blockSeekTo() still works (forced to use cached tokens)
       in1.seek(0);
       assertTrue(checkFile1(in1));
@@ -496,16 +564,22 @@ public class TestBlockTokenWithDFS {
        * first, followed by datanodes), DFSClient can't access DN without
        * re-fetching tokens and is able to re-fetch tokens transparently. The
        * setup of this test depends on the previous test.
+       * 
+       * [J] Incase of multiple namenode architecture, for this test case, we need to shut down all namenodes
        */
 
       // restore the cluster and restart the datanodes for test
-      cluster.restartNameNode(0);
+      //cluster.restartNameNode(0);
+      cluster.restartAllNameNodes(false);
+      cluster.waitActive();
+      cluster.isClusterUp();
       assertTrue(cluster.restartDataNodes(true));
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
       // shutdown namenode so that DFSClient can't get new tokens from namenode
-      cluster.shutdownNameNode(0);
+      //cluster.shutdownNameNode(0);
+      cluster.shutdownNameNodes();
 
       // verify blockSeekTo() fails (cached tokens become invalid)
       in1.seek(0);
@@ -514,7 +588,10 @@ public class TestBlockTokenWithDFS {
       assertFalse(checkFile2(in3));
 
       // restart the namenode to allow DFSClient to re-fetch tokens
-      cluster.restartNameNode(0);
+      //cluster.restartNameNode(0);
+      cluster.restartAllNameNodes(false);
+      cluster.waitActive();
+      
       // verify blockSeekTo() works again (by transparently re-fetching
       // tokens from namenode)
       in1.seek(0);

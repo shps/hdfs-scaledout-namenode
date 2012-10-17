@@ -19,6 +19,6 @@ package org.apache.hadoop.hdfs;
 
 public class TestFileCreationNamenodeRestart extends junit.framework.TestCase {
   public void testFileCreationNamenodeRestart() throws Exception {
-    new TestFileCreation().testFileCreationNamenodeRestart();
+    new TestFileCreation().xxxtestFileCreationNamenodeRestart();
   }
 }

@@ -41,6 +41,19 @@ import junit.framework.TestCase;
 
 /**
  * This test verifies that block verification occurs on the datanode
+ * 
+ * A little theory about Datanode block scanning:
+ * -----------------------------------------------------
+ * Each DataNode runs a block scanner that periodically scans its block replicas and verifies that stored checksums match the block data. 
+ * In each scan period, the block scanner adjusts the read bandwidth in order to complete the verification in a configurable period. 
+ * If a client reads a complete block and checksum verification succeeds, it informs the DataNode. The DataNode treats it as a verification of the replica.
+ * 
+ * Each DataNode has an in-memory scanning list ordered by the replica's verification time. 
+ * Whenever a read client or a block scanner detects a corrupt block, it notifies the NameNode. 
+ * The NameNode marks the replica as corrupt, but does not schedule deletion of the replica immediately. Instead, it starts to replicate a good copy of the block. 
+ * Only when the good replica count reaches the replication factor of the block the corrupt replica is scheduled to be removed. 
+ * This policy aims to preserve data as long as possible. So even if all replicas of a block are corrupt, the policy allows the user to retrieve its data from the corrupt replicas.
+ * 
  */
 public class TestDatanodeBlockScanner extends TestCase {
   
@@ -69,12 +82,14 @@ public class TestDatanodeBlockScanner extends TestCase {
                           Path file, int blocksValidated, 
                           long newTime, long timeout) 
   throws IOException, TimeoutException {
+    // Connecting to the datanode
     URL url = new URL("http://localhost:" + infoPort +
                       "/blockScannerReport?listblocks");
     long lastWarnTime = System.currentTimeMillis();
     if (newTime <= 0) newTime = 1L;
     long verificationTime = 0;
     
+    // Asking for block info from namenode
     String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
     long failtime = (timeout <= 0) ? Long.MAX_VALUE 
         : System.currentTimeMillis() + timeout;
@@ -85,6 +100,7 @@ public class TestDatanodeBlockScanner extends TestCase {
             + verificationTime + ", requested verification time > " 
             + newTime);
       }
+      // Getting response from datanode
       String response = DFSTestUtil.urlGet(url);
       if(blocksValidated >= 0) {
         for(Matcher matcher = pattern_blockVerify.matcher(response); matcher.find();) {
@@ -163,6 +179,9 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
 
   public static boolean corruptReplica(ExtendedBlock blk, int replica) throws IOException {
+    return MiniDFSCluster.corruptReplicaUsingRAF(replica, blk);
+  }
+  public static boolean corruptReplicaNormal(ExtendedBlock blk, int replica) throws IOException {
     return MiniDFSCluster.corruptReplica(replica, blk);
   }
 
@@ -261,11 +280,12 @@ public class TestDatanodeBlockScanner extends TestCase {
 
     // Wait until block is replicated to numReplicas
     DFSTestUtil.waitReplication(fs, file1, numReplicas);
+    
 
     // Corrupt numCorruptReplicas replicas of block 
     int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
     for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
-      if (corruptReplica(block, i)) {
+      if (corruptReplicaNormal(block, i)) {
         corruptReplicasDNIDs[j++] = i;
         LOG.info("successfully corrupted block " + block + " on node " 
                  + i + " " + cluster.getDataNodes().get(i).getSelfAddr());
@@ -281,21 +301,28 @@ public class TestDatanodeBlockScanner extends TestCase {
       LOG.info("restarting node with corrupt replica: position " 
           + i + " node " + corruptReplicasDNIDs[i] + " " 
           + cluster.getDataNodes().get(corruptReplicasDNIDs[i]).getSelfAddr());
+      
       cluster.restartDataNode(corruptReplicasDNIDs[i]);
     }
 
     // Loop until all corrupt replicas are reported
-    DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, 
+    // Uses client to open the file and hence would detect bad blocks and report to NN [NamenodeRPC.reportBadBlocks()]
+    // Once marked as corrupt, it will be put to the InvalidatedList so that it can be replicated soon via the ReplicationMonitor
+    // It will also be put to the CorruptReplica list
+    // If it fails here, then either we din't corrupt the block properly OR the client wasn't able to detect the corrupt block
+    // *Usually this test fails because the client doesn't report or detects bad blocks and in the below function, the NUMBER OF ATTEMPTS exceeds to wait for corrupt replicas
+     DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, 
         block, numCorruptReplicas);
     
     // Loop until the block recovers after replication
+     // Replication Monitor should detect the block needs replication and will try to replicate it to some DataNode [BlockManager.computeReplicationForBlock()]
+     // If it fails here, the replication monitor wasn't able to find the corrupt block in the UnderReplicated List
     DFSTestUtil.waitReplication(fs, file1, numReplicas);
     assertFalse(DFSTestUtil.allBlockReplicasCorrupt(cluster, file1, 0));
 
     // Make sure the corrupt replica is invalidated and removed from
     // corruptReplicasMap
-    DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, 
-        block, 0);
+    DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, block, 0);
     cluster.shutdown();
   }
   

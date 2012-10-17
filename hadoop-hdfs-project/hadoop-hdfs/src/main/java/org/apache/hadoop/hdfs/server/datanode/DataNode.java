@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -81,6 +82,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManagerNN;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -96,6 +98,7 @@ import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
+import org.apache.hadoop.hdfs.server.protocol.ActiveNamenodeList;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -202,31 +205,41 @@ public class DataNode extends Configured
   }
   
   /**
-   * Manages he BPOfferService objects for the data node.
-   * Creation, removal, starting, stopping, shutdown on BPOfferService
+   * Manages he NamenodeService objects for the data node.
+   * Creation, removal, starting, stopping, shutdown on NamenodeService
    * objects must be done via APIs in this class.
    */
+  //                                                                                                                                                                                                                                                                                                                                                                                                                       START NamenodeServiceManager
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   @InterfaceAudience.Private
-  class BlockPoolManager {
-    private final Map<String, BPOfferService> bpMapping;
-    private final Map<InetSocketAddress, BPOfferService> nameNodeThreads;
+  class NamenodeServiceManager {
+    //private final Map<String, NamenodeService> bpMapping;
+    private final Map<InetSocketAddress, NamenodeService> nameNodeThreads;
  
     //This lock is used only to ensure exclusion of refreshNamenodes
     private final Object refreshNamenodesLock = new Object();
     
-    BlockPoolManager(Configuration conf)
+   /**
+   * The NamenodeService that corresponds to the leader Namenode asks it which 'namenode' to send the block reports to
+   * This is a feature added to do load balancing of block reports among namenodes
+   */
+    private volatile InetSocketAddress nextNamenodeForBlockReports = null;
+    private Random random = new Random();
+    
+    NamenodeServiceManager(Configuration conf)
         throws IOException {
-      bpMapping = new HashMap<String, BPOfferService>();
-      nameNodeThreads = new HashMap<InetSocketAddress, BPOfferService>();
-  
+      //bpMapping = new HashMap<String, NamenodeService>();
+      nameNodeThreads = new HashMap<InetSocketAddress, NamenodeService>();
+      
+      // [J] It will connect to the default namenode address (who might or might not be selected as the leader)
       List<InetSocketAddress> isas = DFSUtil.getNNServiceRpcAddresses(conf);
       for(InetSocketAddress isa : isas) {
-        BPOfferService bpos = new BPOfferService(isa);
+        NamenodeService bpos = new NamenodeService(isa);
         nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
       }
     }
     
-    synchronized void addBlockPool(BPOfferService t) {
+    synchronized void addBlockPool(NamenodeService t) {
       if (nameNodeThreads.get(t.getNNSocketAddress()) == null) {
         throw new IllegalArgumentException(
             "Unknown BPOfferService thread for namenode address:"
@@ -235,40 +248,51 @@ public class DataNode extends Configured
       if (t.getBlockPoolId() == null) {
         throw new IllegalArgumentException("Null blockpool id");
       }
-      bpMapping.put(t.getBlockPoolId(), t);
+      String key = formatBPMappingKey(t.getBlockPoolId(), t.getNNSocketAddress());
+      //bpMapping.put(key, t);
+      //bpMapping.put(t.getBlockPoolId(), t);
     }
     
     /**
-     * Returns the array of BPOfferService objects. 
-     * Caution: The BPOfferService returned could be shutdown any time.
+     * Returns the array of NamenodeService objects. 
+     * Caution: The NamenodeService returned could be shutdown any time.
      */
-    synchronized BPOfferService[] getAllNamenodeThreads() {
-      BPOfferService[] bposArray = new BPOfferService[nameNodeThreads.values()
+    synchronized NamenodeService[] getAllNamenodeThreads() {
+      NamenodeService[] bposArray = new NamenodeService[nameNodeThreads.values()
           .size()];
       return nameNodeThreads.values().toArray(bposArray);
     }
     
-    synchronized BPOfferService get(InetSocketAddress addr) {
+    synchronized NamenodeService get(InetSocketAddress addr) {
       return nameNodeThreads.get(addr);
     }
     
-    synchronized BPOfferService get(String bpid) {
-      return bpMapping.get(bpid);
+    //synchronized NamenodeService get(String bpid, InetSocketAddress nnAddr) {
+    synchronized NamenodeService get(String bpid) {
+      //String key = formatBPMappingKey(bpid, nnAddr);
+      //return bpMapping.get(key);
+      //return bpMapping.get(bpid);
+      NamenodeService[] namenodeServices = nameNodeThreads.values().toArray(new NamenodeService[0]);
+      int nnIndex = random.nextInt(namenodeServices.length);
+      return namenodeServices[nnIndex];
     }
     
-    synchronized void remove(BPOfferService t) {
+    synchronized void remove(NamenodeService t) {
       nameNodeThreads.remove(t.getNNSocketAddress());
-      bpMapping.remove(t.getBlockPoolId());
+      
+      //String key = formatBPMappingKey(t.getBlockPoolId(), t.getNNSocketAddress());
+      //bpMapping.remove(key);
+      //bpMapping.remove(t.getBlockPoolId());
     }
     
     void shutDownAll() throws InterruptedException {
-      BPOfferService[] bposArray = this.getAllNamenodeThreads();
+      NamenodeService[] bposArray = this.getAllNamenodeThreads();
       
-      for (BPOfferService bpos : bposArray) {
+      for (NamenodeService bpos : bposArray) {
         bpos.stop(); //interrupts the threads
       }
       //now join
-      for (BPOfferService bpos : bposArray) {
+      for (NamenodeService bpos : bposArray) {
         bpos.join();
       }
     }
@@ -278,7 +302,7 @@ public class DataNode extends Configured
         UserGroupInformation.getLoginUser().doAs(
             new PrivilegedExceptionAction<Object>() {
               public Object run() throws Exception {
-                for (BPOfferService bpos : nameNodeThreads.values()) {
+                for (NamenodeService bpos : nameNodeThreads.values()) {
                   bpos.start();
                 }
                 return null;
@@ -292,7 +316,7 @@ public class DataNode extends Configured
     }
     
     void joinAll() throws InterruptedException {
-      for (BPOfferService bpos: this.getAllNamenodeThreads()) {
+      for (NamenodeService bpos: this.getAllNamenodeThreads()) {
         bpos.join();
       }
     }
@@ -301,34 +325,37 @@ public class DataNode extends Configured
         throws IOException, InterruptedException {
       LOG.info("Refresh request received for nameservices: "
           + conf.get(DFS_FEDERATION_NAMESERVICES));
-      List<InetSocketAddress> newAddresses = 
-        DFSUtil.getNNServiceRpcAddresses(conf);
-      List<BPOfferService> toShutdown = new ArrayList<BPOfferService>();
+      List<InetSocketAddress> newAddresses = DFSUtil.getNNServiceRpcAddresses(conf);
+      refreshNamenodes(newAddresses);
+    }
+    void refreshNamenodes(Collection <InetSocketAddress> addresses)
+        throws IOException, InterruptedException {
+      List<NamenodeService> toShutdown = new ArrayList<NamenodeService>();
       List<InetSocketAddress> toStart = new ArrayList<InetSocketAddress>();
       synchronized (refreshNamenodesLock) {
         synchronized (this) {
           for (InetSocketAddress nnaddr : nameNodeThreads.keySet()) {
-            if (!(newAddresses.contains(nnaddr))) {
+            if (!(addresses.contains(nnaddr))) {
               toShutdown.add(nameNodeThreads.get(nnaddr));
             }
           }
-          for (InetSocketAddress nnaddr : newAddresses) {
+          for (InetSocketAddress nnaddr : addresses) {
             if (!(nameNodeThreads.containsKey(nnaddr))) {
               toStart.add(nnaddr);
             }
           }
 
           for (InetSocketAddress nnaddr : toStart) {
-            BPOfferService bpos = new BPOfferService(nnaddr);
+            NamenodeService bpos = new NamenodeService(nnaddr);
             nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
           }
 
-          for (BPOfferService bpos : toShutdown) {
+          for (NamenodeService bpos : toShutdown) {
             remove(bpos);
           }
         }
 
-        for (BPOfferService bpos : toShutdown) {
+        for (NamenodeService bpos : toShutdown) {
           bpos.stop();
           bpos.join();
         }
@@ -336,10 +363,29 @@ public class DataNode extends Configured
         startAll();
       }
     }
+    
+    String formatInetSocketAddressToIpPort(InetSocketAddress socketAddr) {
+      String nnIpAddr = socketAddr.getAddress().getHostAddress()+socketAddr.getPort();
+      return nnIpAddr;
+    }
+    
+    String formatBPMappingKey(String bpId, InetSocketAddress addr) {
+      String ip_port = formatInetSocketAddressToIpPort(addr);
+      return bpId +"|"+ip_port;
+    }
+    
+    public synchronized void setNextNamenodeForBlockReports(InetSocketAddress ipAddr) {
+      nextNamenodeForBlockReports = ipAddr;
+    }
+    
+    public synchronized InetSocketAddress getNextNamenodeForBlockReports() {
+      return nextNamenodeForBlockReports;
+    }
   }
-  
+  //                                                                                                                                                                                                                                                                                                                                                                                                                       END NamenodeServiceManager
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   volatile boolean shouldRun = true;
-  private BlockPoolManager blockPoolManager;
+  private NamenodeServiceManager blockPoolManager;
   public volatile FSDatasetInterface data = null;
   private String clusterId = null;
 
@@ -350,7 +396,7 @@ public class DataNode extends Configured
   long blockReportInterval;
   boolean resetBlockReportTime = true;
   long deleteReportInterval;
-  long lastDeletedReport = 0;
+  //long lastDeletedReport = 0;
   long initialBlockReportDelay = DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT * 1000L;
   long heartBeatInterval;
   private boolean heartbeatsDisabledForTests = false;
@@ -360,6 +406,7 @@ public class DataNode extends Configured
   private InetSocketAddress selfAddr;
   
   private volatile String hostName; // Host name of this datanode
+  private volatile String name; // Ip:port of this datanode
   
   private static String dnThreadName;
   int socketTimeout;
@@ -382,6 +429,9 @@ public class DataNode extends Configured
   private SecureResources secureResources = null;
   private AbstractList<File> dataDirs;
   private Configuration conf;
+  private final LinkedList<ReceivedDeletedBlockInfo> receivedAndDeletedBlockList = new LinkedList<ReceivedDeletedBlockInfo>();
+  private /*volatile*/ int pendingReceivedRequests = 0;
+  private boolean isBlockTokenInitialized = false;
 
   /**
    * Create the DataNode given a configuration and an array of dataDirs.
@@ -403,6 +453,8 @@ public class DataNode extends Configured
 
     try {
       hostName = getHostName(conf);
+      // will be set on registration with namenode
+      name = "";
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
       shutdown();
@@ -636,30 +688,30 @@ public class DataNode extends Configured
     this.threadGroup.setDaemon(true); // auto destroy when empty
   }
   
-  // calls specific to BP
+    // calls specific to BP
   protected void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
-    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
+    NamenodeService bpos = blockPoolManager.get(block.getBlockPoolId());
     if(bpos != null) {
       bpos.notifyNamenodeReceivedBlock(block, delHint); 
     } else {
-      LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
+      LOG.warn("Cannot find NamenodeService for reporting block received for bpid="
           + block.getBlockPoolId());
     }
   }
   
   // calls specific to BP
   protected void notifyNamenodeDeletedBlock(ExtendedBlock block) {
-    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
+    NamenodeService bpos = blockPoolManager.get(block.getBlockPoolId());
     if (bpos != null) {
       bpos.notifyNamenodeDeletedBlock(block);
     } else {
-      LOG.warn("Cannot find BPOfferService for reporting block deleted for bpid="
+      LOG.warn("Cannot find NamenodeService for reporting block deleted for bpid="
           + block.getBlockPoolId());
     }
   }
   
   public void reportBadBlocks(ExtendedBlock block) throws IOException{
-    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
+    NamenodeService bpos = blockPoolManager.get(block.getBlockPoolId());
     if(bpos == null || bpos.bpNamenode == null) {
       throw new IOException("cannot locate OfferService thread for bp="+block.getBlockPoolId());
     }
@@ -671,7 +723,36 @@ public class DataNode extends Configured
       boolean heartbeatsDisabledForTests) {
     this.heartbeatsDisabledForTests = heartbeatsDisabledForTests;
   }
+
+  /**
+   * verifies if the given address is a leader namenode recoginzed by the datanode
+   */
+  public boolean isLeader(InetSocketAddress addr) {
+    NamenodeService [] nnServices = getAllBpOs();
+    for(NamenodeService service : nnServices) {
+      if(service.getNNSocketAddress().equals(addr)) {
+         return service.isLeader(addr);
+      }
+    }
+    return false;
+  }
   
+  /**
+   * returns the currently assigned namenode leader
+   */
+  public InetSocketAddress getLeader() {
+    NamenodeService [] nnServices = getAllBpOs();
+    for(NamenodeService service : nnServices) {
+      if(service.isLeader(service.getNNSocketAddress())) {
+         return service.getNNSocketAddress();
+      }
+    }
+    
+    return null;
+  }
+  
+  //                                                                                                                                                                                                                                                                                                                                                                                                                                 START NamenodeService
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   /**
    * A thread per namenode to perform:
    * <ul>
@@ -682,28 +763,29 @@ public class DataNode extends Configured
    * </ul>
    */
   @InterfaceAudience.Private
-  class BPOfferService implements Runnable {
+  class NamenodeService implements Runnable {
     final InetSocketAddress nnAddr;
     DatanodeRegistration bpRegistration;
     NamespaceInfo bpNSInfo;
     long lastBlockReport = 0;
-    private Thread bpThread;
+    private Thread nsThread;
     private DatanodeProtocol bpNamenode;
     private String blockPoolId;
     private long lastHeartbeat = 0;
     private volatile boolean initialized = false;
-    private final LinkedList<ReceivedDeletedBlockInfo> receivedAndDeletedBlockList 
-      = new LinkedList<ReceivedDeletedBlockInfo>();
-    private volatile int pendingReceivedRequests = 0;
     private volatile boolean shouldServiceRun = true;
-    private boolean isBlockTokenInitialized = false;
+    //private boolean isBlockTokenInitialized = false;
     UpgradeManagerDatanode upgradeManager = null;
+    private long lastDeletedReport = 0;
+    //private final LinkedList<ReceivedDeletedBlockInfo> receivedAndDeletedBlockList  = new LinkedList<ReceivedDeletedBlockInfo>();
+    //private volatile int pendingReceivedRequests = 0;
+    
 
-    BPOfferService(InetSocketAddress isa) {
+    NamenodeService(InetSocketAddress isa) {
       this.bpRegistration = new DatanodeRegistration(getMachineName());
       bpRegistration.setInfoPort(infoServer.getPort());
       bpRegistration.setIpcPort(getIpcPort());
-      this.nnAddr = isa;
+      this.nnAddr = isa; 
     }
 
     /**
@@ -716,7 +798,7 @@ public class DataNode extends Configured
     }
     
     public boolean isAlive() {
-      return shouldServiceRun && bpThread.isAlive();
+      return shouldServiceRun && nsThread.isAlive();
     }
     
     public String getBlockPoolId() {
@@ -737,6 +819,21 @@ public class DataNode extends Configured
         bpNamenode = dnProtocol;
     }
 
+    void refreshNamenodes(Collection<InetSocketAddress> activeNns) throws IOException, InterruptedException {
+      // Gets a diff of the new list with the old list
+      // shutsdown nn service threads which are not in the new list but in the old list
+      //  starts up nn service threads which are in the new list but not in the old list
+      blockPoolManager.refreshNamenodes(activeNns);
+    }
+    
+    boolean isLeader(InetSocketAddress leaderAddr) {
+      if (nnAddr.equals(leaderAddr)) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
     private NamespaceInfo handshake() throws IOException {
       NamespaceInfo nsInfo = new NamespaceInfo();
       while (shouldRun && shouldServiceRun) {
@@ -803,6 +900,51 @@ public class DataNode extends Configured
       initPeriodicScanners(conf);
     }
     
+    /**
+     * Connects to a new namenode when a previous namenode failed
+     */
+//    void doFailOver(Configuration conf) 
+//    throws IOException {
+//      
+//      InetSocketAddress leaderAddr = activeNamenodes.get(activeNamenodes.firstKey());
+//
+//      // We should have the same leader on top of the list that had crashed
+//      // Switch to its successor (the next lowest id)
+//      if(leaderAddr.equals(nnAddr)) {
+//        // Switch to the next namenode in list
+//        activeNamenodes.remove(activeNamenodes.firstKey());
+//        leaderAddr = activeNamenodes.get(activeNamenodes.firstKey());
+//      }
+//      // Set the namenode address to the newly elected leader
+//      nnAddr = leaderAddr;
+//      
+//      // get NN proxy
+//      DatanodeProtocol dnp = 
+//        (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
+//            DatanodeProtocol.versionID, nnAddr, conf);
+//      
+//      // setup with the new namenode
+//      setNameNode(dnp);
+//
+//      // handshake with NN
+//      NamespaceInfo nsInfo = handshake();
+//      setNamespaceInfo(nsInfo);
+//      synchronized(DataNode.this) {
+//        // we do not allow namenode from different cluster to register
+//        if(clusterId != null && !clusterId.equals(nsInfo.clusterID)) {
+//          throw new IOException(
+//              "cannot register with the namenode because clusterid do not match:"
+//              + " nn=" + nsInfo.getBlockPoolID() + "; nn cid=" + nsInfo.clusterID + 
+//              ";dn cid=" + clusterId);
+//        }
+//
+//        setClusterId(nsInfo.clusterID);
+//      }
+//      
+//      // Register with the new namenode
+//      register();
+//    }
+    
     void setupBPStorage() throws IOException {
       StartupOption startOpt = getStartupOption(conf);
       assert startOpt != null : "Startup option must be set.";
@@ -821,7 +963,7 @@ public class DataNode extends Configured
         // read storage info, lock data dirs and transition fs state if necessary          
         storage.recoverTransitionRead(DataNode.this, blockPoolId, bpNSInfo,
             dataDirs, startOpt);
-        LOG.info("setting up storage: nsid=" + storage.namespaceID + ";bpid="
+        LOG.info("setting up storage["+getStorageId()+"]: nsid=" + storage.namespaceID + ";bpid="
             + blockPoolId + ";lv=" + storage.layoutVersion + ";nsInfo="
             + bpNSInfo);
 
@@ -829,6 +971,7 @@ public class DataNode extends Configured
         bpRegistration.setStorageInfo(storage.getBPStorage(blockPoolId));
         initFsDataSet(conf, dataDirs);
       }
+      LOG.info("Adding block pool ["+blockPoolId+"], DN ["+getStorageId()+"], NN ["+nnAddr+"]");
       data.addBlockPool(blockPoolId, conf);
     }
 
@@ -879,20 +1022,20 @@ public class DataNode extends Configured
           //
           // Send newly-received and deleted blockids to namenode
           //
-          receivedAndDeletedBlockArray = receivedAndDeletedBlockList
-              .toArray(new ReceivedDeletedBlockInfo[numBlocks]);
+          receivedAndDeletedBlockArray = receivedAndDeletedBlockList.toArray(new ReceivedDeletedBlockInfo[numBlocks]);
         }
-      }
-      if (receivedAndDeletedBlockArray != null) {
-        bpNamenode.blockReceivedAndDeleted(bpRegistration, blockPoolId,
-            receivedAndDeletedBlockArray);
-        synchronized (receivedAndDeletedBlockList) {
+
+        if (receivedAndDeletedBlockArray != null) {
+          bpNamenode.blockReceivedAndDeleted(bpRegistration, blockPoolId,
+                                             receivedAndDeletedBlockArray);
+          //synchronized (receivedAndDeletedBlockList) {
           for (int i = 0; i < receivedAndDeletedBlockArray.length; i++) {
             receivedAndDeletedBlockList.remove(receivedAndDeletedBlockArray[i]);
           }
           pendingReceivedRequests -= currentReceivedRequestsCounter;
-        }
-      }
+          //}
+        }// end if
+      }//end synchronization
     }
 
     /*
@@ -906,11 +1049,11 @@ public class DataNode extends Configured
             : "delHint is null");
       }
 
-      if (!block.getBlockPoolId().equals(blockPoolId)) {
-        LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
-            + blockPoolId);
-        return;
-      }
+//      if (!block.getBlockPoolId().equals(blockPoolId)) {
+//        LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
+//            + blockPoolId);
+//        return;
+//      }
 
       synchronized (receivedAndDeletedBlockList) {
         receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
@@ -925,19 +1068,81 @@ public class DataNode extends Configured
         throw new IllegalArgumentException("Block is null");
       }
 
-      if (!block.getBlockPoolId().equals(blockPoolId)) {
-        LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
-            + blockPoolId);
-        return;
-      }
+//      if (!block.getBlockPoolId().equals(blockPoolId)) {
+//        LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
+//            + blockPoolId);
+//        return;
+//      }
 
       synchronized (receivedAndDeletedBlockList) {
-        receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
-            .getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT));
+        receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block.getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT));
+        pendingReceivedRequests++;
       }
     }
 
+    /**
+     * Gets the list of actively running namenodes at present
+     * @throws IOException
+     */
+    ActiveNamenodeList getActiveNamenodes() throws IOException {
+      return bpNamenode.sendActiveNamenodes();
+    }
 
+    /**
+     * The NamenodeService that corresponds to the leader Namenode asks it which 'namenode' to send the block reports to
+     * This is a feature added to do load balancing of block reports among namenodes
+     */
+    InetSocketAddress getNextNamenodeToSendBlockReport() throws IOException {
+      
+      String nextNamenode = "";
+      // send block report if timer has expired.
+      long startTime = now();
+      if (startTime - lastBlockReport > blockReportInterval) {
+        
+        nextNamenode = bpNamenode.getNextNamenodeToSendBlockReport();
+        LOG.info("Requested for the next namenode to send block report to. Next namenode:"+nextNamenode);
+        return NetUtils.createSocketAddr(nextNamenode);
+      }
+      // Maybe the time interval has not expired yet
+      return null;
+    }
+    
+    /**
+     * determines whether its responsible for sending block reports
+     * @param nextNamenode - The next namenode to send block reports to
+     */
+    void blockReport(InetSocketAddress nextNamenode) throws IOException {
+      // only send if it is serving this namenode
+      long startTime = now();
+      if (startTime - lastBlockReport > blockReportInterval) {
+
+        if (nextNamenode != null && nnAddr.equals(nextNamenode)) {
+          // reset to null so it won't send block report again but when its interval starts again
+          blockPoolManager.setNextNamenodeForBlockReports(null);
+          // This datanode NamenodeService thread is responsible for sending block reports to the namenode its in communication with
+          DatanodeCommand cmd = blockReport();
+          processCommand(cmd);
+        }
+
+        // If we have sent the first block report, then wait a random
+        // time before we start the periodic block reports.
+        if (resetBlockReportTime) {
+          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int) (blockReportInterval));
+          resetBlockReportTime = false;
+        }
+        else {
+          /* say the last block report was at 8:20:14. The current report
+           * should have started around 9:20:14 (default 1 hour interval).
+           * If current time is :
+           *   1) normal like 9:20:18, next report should be at 10:20:14
+           *   2) unexpected like 11:35:43, next report should be at 12:20:14
+           */
+          lastBlockReport += (now() - lastBlockReport)
+                             / blockReportInterval * blockReportInterval;
+        }
+      }
+    }
+     
     /**
      * Report the list blocks to the Namenode
      * @throws IOException
@@ -945,45 +1150,76 @@ public class DataNode extends Configured
     DatanodeCommand blockReport() throws IOException {
       // send block report if timer has expired.
       DatanodeCommand cmd = null;
-      long startTime = now();
-      if (startTime - lastBlockReport > blockReportInterval) {
 
-        // Create block report
-        long brCreateStartTime = now();
-        BlockListAsLongs bReport = data.getBlockReport(blockPoolId);
+      // Create block report
+      long brCreateStartTime = now();
+      BlockListAsLongs bReport = data.getBlockReport(blockPoolId);
 
-        // Send block report
-        long brSendStartTime = now();
+      // Send block report
+      LOG.info("DN ["+getStorageId()+"] sending block report to ["+nnAddr+"]. Total blocks: ["+bReport.getNumberOfBlocks()+"]");
+      long brSendStartTime = now();
         cmd = bpNamenode.blockReport(bpRegistration, blockPoolId, bReport
-            .getBlockListAsLongs());
+          .getBlockListAsLongs());
 
-        // Log the block report processing stats from Datanode perspective
-        long brSendCost = now() - brSendStartTime;
-        long brCreateCost = brSendStartTime - brCreateStartTime;
-        metrics.addBlockReport(brSendCost);
-        LOG.info("BlockReport of " + bReport.getNumberOfBlocks()
-            + " blocks took " + brCreateCost + " msec to generate and "
-            + brSendCost + " msecs for RPC and NN processing");
+      // Log the block report processing stats from Datanode perspective
+      long brSendCost = now() - brSendStartTime;
+      long brCreateCost = brSendStartTime - brCreateStartTime;
+      metrics.addBlockReport(brSendCost);
+      LOG.info("BlockReport [From:"+getStorageId()+", To:"+nnAddr.getAddress().getHostAddress()+":"+nnAddr.getPort()+"] of " + bReport.getNumberOfBlocks()
+          + " blocks took " + brCreateCost + " msec to generate and "
+          + brSendCost + " msecs for RPC and NN processing");
 
-        // If we have sent the first block report, then wait a random
-        // time before we start the periodic block reports.
-        if (resetBlockReportTime) {
-          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(blockReportInterval));
-          resetBlockReportTime = false;
-        } else {
-          /* say the last block report was at 8:20:14. The current report
-           * should have started around 9:20:14 (default 1 hour interval).
-           * If current time is :
-           *   1) normal like 9:20:18, next report should be at 10:20:14
-           *   2) unexpected like 11:35:43, next report should be at 12:20:14
-           */
-          lastBlockReport += (now() - lastBlockReport) /
-          blockReportInterval * blockReportInterval;
-        }
-        LOG.info("sent block report, processed command:" + cmd);
-      }
+      LOG.info("sent block report, processed command:" + cmd);
       return cmd;
     }
+
+    /**
+     * Report the list blocks to the Namenode
+     * @throws IOException
+     */
+//    [J] Modified block reporting to allow DNs to report to NNs in round-robin fashion
+//    DatanodeCommand blockReport() throws IOException {
+//      // send block report if timer has expired.
+//      DatanodeCommand cmd = null;
+//      long startTime = now();
+//      if (startTime - lastBlockReport > blockReportInterval) {
+//        
+//        // Create block report
+//        long brCreateStartTime = now();
+//        BlockListAsLongs bReport = data.getBlockReport(blockPoolId);
+//
+//        // Send block report
+//        long brSendStartTime = now();
+//        cmd = bpNamenode.blockReport(bpRegistration, blockPoolId, bReport
+//            .getBlockListAsLongs());
+//
+//        // Log the block report processing stats from Datanode perspective
+//        long brSendCost = now() - brSendStartTime;
+//        long brCreateCost = brSendStartTime - brCreateStartTime;
+//        metrics.addBlockReport(brSendCost);
+//        LOG.info("BlockReport of " + bReport.getNumberOfBlocks()
+//            + " blocks took " + brCreateCost + " msec to generate and "
+//            + brSendCost + " msecs for RPC and NN processing");
+//
+//        // If we have sent the first block report, then wait a random
+//        // time before we start the periodic block reports.
+//        if (resetBlockReportTime) {
+//          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(blockReportInterval));
+//          resetBlockReportTime = false;
+//        } else {
+//          /* say the last block report was at 8:20:14. The current report
+//           * should have started around 9:20:14 (default 1 hour interval).
+//           * If current time is :
+//           *   1) normal like 9:20:18, next report should be at 10:20:14
+//           *   2) unexpected like 11:35:43, next report should be at 12:20:14
+//           */
+//          lastBlockReport += (now() - lastBlockReport) /
+//          blockReportInterval * blockReportInterval;
+//        }
+//        LOG.info("sent block report, processed command:" + cmd);
+//      }
+//      return cmd;
+//    }
     
     
     DatanodeCommand [] sendHeartBeat() throws IOException {
@@ -998,28 +1234,28 @@ public class DataNode extends Configured
     
     //This must be called only by blockPoolManager
     void start() {
-      if ((bpThread != null) && (bpThread.isAlive())) {
+      if ((nsThread != null) && (nsThread.isAlive())) {
         //Thread is started already
         return;
       }
-      bpThread = new Thread(this, dnThreadName);
-      bpThread.setDaemon(true); // needed for JUnit testing
-      bpThread.start();
+      nsThread = new Thread(this, dnThreadName);
+      nsThread.setDaemon(true); // needed for JUnit testing
+      nsThread.start();
     }
     
     //This must be called only by blockPoolManager.
     void stop() {
       shouldServiceRun = false;
-      if (bpThread != null) {
-          bpThread.interrupt();
+      if (nsThread != null) {
+          nsThread.interrupt();
       }
     }
     
     //This must be called only by blockPoolManager
     void join() {
       try {
-        if (bpThread != null) {
-          bpThread.join();
+        if (nsThread != null) {
+          nsThread.join();
         }
       } catch (InterruptedException ie) { }
     }
@@ -1033,16 +1269,22 @@ public class DataNode extends Configured
       blockPoolManager.remove(this);
       shouldServiceRun = false;
       RPC.stopProxy(bpNamenode);
-      if (blockScanner != null) {
-        blockScanner.removeBlockPool(this.getBlockPoolId());
-      }
-    
-      if (data != null) { 
-        data.shutdownBlockPool(this.getBlockPoolId());
-      }
 
-      if (storage != null) {
-        storage.removeBlockPoolStorage(this.getBlockPoolId());
+      // [J]Since all namenode service threads share the same block pool id, each of the below maps will have a single blockPoolId 'key' 
+      // Deleting the blockPoolId key would shutdown all the other namenode service threads
+      // So we only remove it if the last service thread is shutting down/dead/crashed
+      if(blockPoolManager.getAllNamenodeThreads().length == 0) {
+        if (blockScanner != null) {
+          blockScanner.removeBlockPool(this.getBlockPoolId());
+        }
+
+        if (data != null) { 
+          data.shutdownBlockPool(this.getBlockPoolId());
+        }
+
+        if (storage != null) {
+          storage.removeBlockPoolStorage(this.getBlockPoolId());
+        }
       }
     }
 
@@ -1051,12 +1293,13 @@ public class DataNode extends Configured
      * forever calling remote NameNode functions.
      */
     private void offerService() throws Exception {
-      LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
+      LOG.info("[storageId: "+getStorageId()+"] For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
           + deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
           + blockReportInterval + "msec" + " Initial delay: "
           + initialBlockReportDelay + "msec" + "; heartBeatInterval="
           + heartBeatInterval);
 
+      InetSocketAddress leaderAddr=null;
       //
       // Now loop for a long time....
       //
@@ -1068,6 +1311,13 @@ public class DataNode extends Configured
           // Every so often, send heartbeat or block-report
           //
           if (startTime - lastHeartbeat > heartBeatInterval) {
+            
+            // Get the list of active namenodes for failover
+            ActiveNamenodeList nnlistCmd = getActiveNamenodes();
+            LOG.debug("List of namenodes: "+nnlistCmd);
+            leaderAddr = nnlistCmd.getNamenodes().get(nnlistCmd.getNamenodes().firstKey());
+            refreshNamenodes(nnlistCmd.getNamenodes().values());
+
             //
             // All heartbeat messages include following info:
             // -- Datanode name
@@ -1079,23 +1329,59 @@ public class DataNode extends Configured
             if (!heartbeatsDisabledForTests) {
               DatanodeCommand[] cmds = sendHeartBeat();
               metrics.addHeartbeat(now() - startTime);
-              if (!processCommand(cmds))
-                continue;
-            }
-          }
-          if (pendingReceivedRequests > 0
-              || (startTime - lastDeletedReport > deleteReportInterval)) {
-            reportReceivedDeletedBlocks();
-            lastDeletedReport = startTime;
+             if (!processCommand(cmds))
+              continue;
+           }
           }
 
-          DatanodeCommand cmd = blockReport();
-          processCommand(cmd);
+          /*
+           * A little background info. about block receive and delete notification to namenode:
+          Received and deleted blocks are stored in a shared list and all NN threads of this DN will put these blocks in this list
+          the (nameservice) thread that first sends the notifications form this list will have the chance to notify namenode of these blocks
+          it then empties the list
+          the next thread wanting to send the notifications would find nothing in it and will skip
+
+           * Why not allowing just the leader nn thread to send notifications, while other nn threads just put these blocks in the list?:
+          We don't allow 'only' the leader thread to send notifications because while a file is being written continuously, it waits for all previous blocks to be replicated,
+          the namenode can only come to know about the replications of previous blocks via these block notifications from datanodes, 
+          so if another namenode thread receives a block, it will add it to the shared list, but it will have to wait for sometime till the leader-nn-thread reports this notification to the namenode
+          and hence the client would also need to wait for this notification to happen at the namenode so that the namenode will know the block has minimal replication and then the client can send the next block
+          If the waiting time is too much, then an exception will be thrown 'NotReplicatedYet'... the client again retries to get additional block and probably that time the block is notified by the leader thread
+          then the namenode knows it has enough replication for the previous block and can now allow client to write the next block.
+
+           *  If all nn threads at dn report the notification, would there be a problem?
+           No!, because the first nn thread to report these notifications would empty the list while other nn threads wanting to do it would wait (it is a synchronized operation)
+           Once the nn thread has sent all the notifications, the next nn thread won't find any blocks to notify and will skip.
+           This is a queue based approach
+           * 
+           */
+          if(isLeader(leaderAddr)) {
+            if (pendingReceivedRequests > 0 || (startTime - lastDeletedReport > deleteReportInterval)) {
+              reportReceivedDeletedBlocks();
+              lastDeletedReport = startTime;
+            }
+          }
 
           // Now safe to start scanning the block pool
           if (blockScanner != null) {
             blockScanner.addBlockPool(this.blockPoolId);
           }
+
+          // Ask the leader namenode which is the next namenode to send block reports to
+          if(isLeader(leaderAddr)) {
+            blockPoolManager.setNextNamenodeForBlockReports(getNextNamenodeToSendBlockReport());
+          }
+          
+          // Determines which namenode to send block reports to
+          // This is provided by the leader
+          blockReport(blockPoolManager.getNextNamenodeForBlockReports());
+          
+          /** [J] Modified block reporting to allow DNs to report to NNs in round-robin fashion
+          DatanodeCommand cmd = blockReport();
+          if(isLeader(leaderAddr)) {
+            processCommand(cmd);
+          }
+          */
 
           //
           // There is no work to do;  sleep until hearbeat timer elapses, 
@@ -1110,9 +1396,10 @@ public class DataNode extends Configured
               } catch (InterruptedException ie) {
                 LOG.warn("BPOfferService for block pool="
                     + this.getBlockPoolId() + " received exception:" + ie);
-              }
-            }
+              }// catch interruptedException
+            } // wait time if-else
           } // synchronized
+        
         } catch(RemoteException re) {
           String reClass = re.getClassName();
           if (UnregisteredNodeException.class.getName().equals(reClass) ||
@@ -1132,6 +1419,7 @@ public class DataNode extends Configured
         } catch (IOException e) {
           LOG.warn("IOException in offerService", e);
         }
+       
       } // while (shouldRun && shouldServiceRun)
     } // offerService
 
@@ -1148,7 +1436,7 @@ public class DataNode extends Configured
      * @throws IOException
      */
     void register() throws IOException {
-      LOG.info("in register: sid=" + bpRegistration.getStorageID() + ";SI="
+      LOG.info("**in register with namenode: ["+nnAddr+"]: sid=" + bpRegistration.getStorageID() + ";SI="
           + bpRegistration.storageInfo); 
 
       // build and layout versions should match
@@ -1174,12 +1462,13 @@ public class DataNode extends Configured
         try {
           // Use returned registration from namenode with updated machine name.
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
-
+          
           LOG.info("bpReg after =" + bpRegistration.storageInfo + 
               ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
 
-          NetUtils.getHostname();
-          hostName = bpRegistration.getHost();
+          // [J] why do we need to reset this? We can reset the ip instead
+          //hostName = bpRegistration.getHost();
+          name = bpRegistration.getName();
           break;
         } catch(SocketTimeoutException e) {  // namenode is busy
           LOG.info("Problem connecting to server: " + nnAddr);
@@ -1212,17 +1501,18 @@ public class DataNode extends Configured
               + blockKeyUpdateInterval / (60 * 1000)
               + " min(s), tokenLifetime=" + blockTokenLifetime / (60 * 1000)
               + " min(s)");
-          final BlockTokenSecretManager secretMgr = 
-            new BlockTokenSecretManager(false, 0, blockTokenLifetime);
+          final BlockTokenSecretManager secretMgr = new BlockTokenSecretManager(false, 0, blockTokenLifetime);
           blockPoolTokenSecretManager.addBlockPool(blockPoolId, secretMgr);
         }
         isBlockTokenInitialized = true;
       }
 
       if (isBlockTokenEnabled) {
-        blockPoolTokenSecretManager.setKeys(blockPoolId,
-            bpRegistration.exportedKeys);
-        bpRegistration.exportedKeys = ExportedBlockKeys.DUMMY_KEYS;
+          // Store keys of the leader namenode
+          //if(isLeader(nnAddr)) {
+            blockPoolTokenSecretManager.setKeys(blockPoolId,bpRegistration.exportedKeys);
+            bpRegistration.exportedKeys = ExportedBlockKeys.DUMMY_KEYS;
+          //}
       }
 
       LOG.info("in register:" + ";bpDNR="+bpRegistration.storageInfo);
@@ -1242,20 +1532,22 @@ public class DataNode extends Configured
      */
     @Override
     public void run() {
-      LOG.info(bpRegistration + "In BPOfferService.run, data = " + data
-          + ";bp=" + blockPoolId);
+      LOG.info(bpRegistration + "**In BPOfferService.run, data = " + data
+          + ";bp=" + blockPoolId +", nnAddr: "+nnAddr);
 
       try {
         // init stuff
         try {
           // setup storage
-          setupBP(conf, dataDirs);
+            setupBP(conf, dataDirs);
           register();
+          LOG.info("**Registration completed for storageId: "+getStorageId()+": Namenode: "+this.nnAddr.getAddress().getHostAddress()+":"+this.nnAddr.getPort()+", bpid: "+this.blockPoolId+", namespaceId: "+this.bpNSInfo.namespaceID);
         } catch (IOException ioe) {
           // Initial handshake, storage recovery or registration failed
-          // End BPOfferService thread
+          // End NamenodeService thread
+          ioe.printStackTrace();
           LOG.fatal(bpRegistration + " initialization failed for block pool "
-              + blockPoolId, ioe);
+              + blockPoolId + ", *nnAddr: "+nnAddr, ioe);
           return;
         }
 
@@ -1263,24 +1555,28 @@ public class DataNode extends Configured
         
         while (shouldRun && shouldServiceRun) {
           try {
+            LOG.info("Registration successful for: "+bpRegistration + "In BPOfferService.run, data = " + data
+          + ";bp=" + blockPoolId +", nnAddr: "+nnAddr);
             startDistributedUpgradeIfNeeded();
             offerService();
           } catch (Exception ex) {
-            LOG.error("Exception in BPOfferService", ex);
+            LOG.error("Exception in BPOfferService" + ",*DN["+getMachineName()+"], *nnAddr: "+nnAddr, ex);
             if (shouldRun && shouldServiceRun) {
               try {
                 Thread.sleep(5000);
               } catch (InterruptedException ie) {
                 LOG.warn("Received exception", ie);
               }
-            }
-          }
-        }
-      } catch (Throwable ex) {
-        LOG.warn("Unexpected exception", ex);
-      } finally {
+            }// end if
+          }//catch Exception
+        } // end while
+      } 
+      catch (Throwable ex) { // Runtime exception (un recoverable)
+        LOG.warn("Unexpected exception" + ", DN["+getMachineName()+"],t*nnAddr: "+nnAddr, ex);
+      } 
+      finally {
         LOG.warn(bpRegistration + " ending block pool service for: " 
-            + blockPoolId);
+            + blockPoolId + ", *nnAddr: "+nnAddr);
         cleanUp();
       }
     }
@@ -1367,8 +1663,7 @@ public class DataNode extends Configured
       case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
         LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
         if (isBlockTokenEnabled) {
-          blockPoolTokenSecretManager.setKeys(blockPoolId, 
-              ((KeyUpdateCommand) cmd).getExportedKeys());
+          blockPoolTokenSecretManager.setKeys(blockPoolId, ((KeyUpdateCommand) cmd).getExportedKeys());
         }
         break;
       case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
@@ -1414,7 +1709,8 @@ public class DataNode extends Configured
       return;
     }
   }
-
+  //                                                                                                                                                                                                                                                                                                                                                                                                                                   END NamenodeService
+  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   /**
    * This method starts the data node with the specified conf.
    * 
@@ -1453,10 +1749,10 @@ public class DataNode extends Configured
 
     metrics = DataNodeMetrics.create(conf, getMachineName());
 
-    blockPoolManager = new BlockPoolManager(conf);
+    blockPoolManager = new NamenodeServiceManager(conf);
   }
   
-  BPOfferService[] getAllBpOs() {
+  NamenodeService[] getAllBpOs() {
     return blockPoolManager.getAllNamenodeThreads();
   }
   
@@ -1525,6 +1821,15 @@ public class DataNode extends Configured
   public String getMachineName() {
     return hostName + ":" + getPort();
   }
+
+  /** 
+   * Get ip:port with ip set to Datanode host ip and port set to the
+   * port {@link DataXceiver} is serving. This is given after registration from datanode
+   * @return host:port string
+   */
+  public String getRegisteredName() {
+    return name;
+  }
   
   public int getIpcPort() {
     return ipcServer.getListenerAddress().getPort();
@@ -1538,7 +1843,7 @@ public class DataNode extends Configured
    */
   DatanodeRegistration getDNRegistrationForBP(String bpid) 
   throws IOException {
-    BPOfferService bpos = blockPoolManager.get(bpid);
+    NamenodeService bpos = blockPoolManager.get(bpid);
     if(bpos==null || bpos.bpRegistration==null) {
       throw new IOException("cannot find BPOfferService for bpid="+bpid);
     }
@@ -1552,8 +1857,8 @@ public class DataNode extends Configured
    * @throws IOException 
    */
   DatanodeRegistration getDNRegistrationByMachineName(String mName) {
-    BPOfferService [] bposArray = blockPoolManager.getAllNamenodeThreads();
-    for (BPOfferService bpos : bposArray) {
+    NamenodeService [] bposArray = blockPoolManager.getAllNamenodeThreads();
+    for (NamenodeService bpos : bposArray) {
       if(bpos.bpRegistration.getName().equals(mName))
         return bpos.bpRegistration;
     }
@@ -1598,7 +1903,7 @@ public class DataNode extends Configured
    * @return namenode address corresponding to the bpid
    */
   public InetSocketAddress getNameNodeAddr(String bpid) {
-    BPOfferService bp = blockPoolManager.get(bpid);
+    NamenodeService bp = blockPoolManager.get(bpid);
     if (bp != null) {
       return bp.getNNSocketAddress();
     }
@@ -1768,7 +2073,7 @@ public class DataNode extends Configured
     metrics.incrVolumeFailures();
 
     //inform NameNodes
-    for(BPOfferService bpos: blockPoolManager.getAllNamenodeThreads()) {
+    for(NamenodeService bpos: blockPoolManager.getAllNamenodeThreads()) {
       DatanodeProtocol nn = bpos.bpNamenode;
       try {
         nn.errorReport(bpos.bpRegistration, dpError, errMsgr);
@@ -1792,7 +2097,7 @@ public class DataNode extends Configured
   }
     
   UpgradeManagerDatanode getUpgradeManagerDatanode(String bpid) {
-    BPOfferService bpos = blockPoolManager.get(bpid);
+    NamenodeService bpos = blockPoolManager.get(bpid);
     if(bpos==null) {
       return null;
     }
@@ -1971,7 +2276,7 @@ public class DataNode extends Configured
       this.targets = targets;
       this.b = b;
       this.stage = stage;
-      BPOfferService bpos = blockPoolManager.get(b.getBlockPoolId());
+      NamenodeService bpos = blockPoolManager.get(b.getBlockPoolId());
       bpReg = bpos.bpRegistration;
       this.clientname = clientname;
     }
@@ -2066,17 +2371,25 @@ public class DataNode extends Configured
    */
   void closeBlock(ExtendedBlock block, String delHint) {
     metrics.incrBlocksWritten();
-    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
-    if(bpos != null) {
-      bpos.notifyNamenodeReceivedBlock(block, delHint);
-    } else {
-      LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
-          + block.getBlockPoolId());
-    }
+    notifyNamenodeReceivedBlock(block, delHint);
+
     if (blockScanner != null) {
       blockScanner.addBlock(block);
     }
   }
+  //  void closeBlock(ExtendedBlock block, String delHint) {
+//    metrics.incrBlocksWritten();
+//    NamenodeService bpos = blockPoolManager.get(block.getBlockPoolId());
+//    if(bpos != null) {
+//      bpos.notifyNamenodeReceivedBlock(block, delHint);
+//    } else {
+//      LOG.warn("Cannot find NamenodeService for reporting block received for bpid="
+//          + block.getBlockPoolId());
+//    }
+//    if (blockScanner != null) {
+//      blockScanner.addBlock(block);
+//    }
+//  }
 
   /** Start a single datanode daemon and wait for it to finish.
    *  If this thread is specifically interrupted, it will stop waiting.
@@ -2094,7 +2407,7 @@ public class DataNode extends Configured
    * A data node is considered to be up if one of the bp services is up
    */
   public boolean isDatanodeUp() {
-    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+    for (NamenodeService bp : blockPoolManager.getAllNamenodeThreads()) {
       if (bp.isAlive()) {
         return true;
       }
@@ -2164,6 +2477,8 @@ public class DataNode extends Configured
   public static DataNode createDataNode(String args[], Configuration conf,
       SecureResources resources) throws IOException {
     DataNode dn = instantiateDataNode(args, conf, resources);
+    
+    // Till here, the NamenodeServiceManager and NamenodeService threads are initialized to communicate with their Namenodes
     if (dn != null) {
       dn.runDatanodeDaemon();
     }
@@ -2292,7 +2607,7 @@ public class DataNode extends Configured
    * the block report at the next heartbeat.
    */
   public void scheduleAllBlockReport(long delay) {
-    for(BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+    for(NamenodeService bpos : blockPoolManager.getAllNamenodeThreads()) {
       bpos.scheduleBlockReport(delay);
     }
   }
@@ -2433,7 +2748,7 @@ public class DataNode extends Configured
     //check generation stamps
     for(DatanodeID id : datanodeids) {
       try {
-        BPOfferService bpos = blockPoolManager.get(blookPoolId);
+        NamenodeService bpos = blockPoolManager.get(blookPoolId);
         DatanodeRegistration bpReg = bpos.bpRegistration;
         InterDatanodeProtocol datanode = bpReg.equals(id)?
             this: DataNode.createInterDataNodeProtocolProxy(id, getConf(),
@@ -2473,7 +2788,7 @@ public class DataNode extends Configured
    * @throws IOException
    */
   public DatanodeProtocol getBPNamenode(String bpid) throws IOException {
-    BPOfferService bpos = blockPoolManager.get(bpid);
+    NamenodeService bpos = blockPoolManager.get(bpid);
     if(bpos == null || bpos.bpNamenode == null) {
       throw new IOException("cannot find a namnode proxy for bpid=" + bpid);
     }
@@ -2481,10 +2796,10 @@ public class DataNode extends Configured
   }
 
   /**
-   * To be used by tests only to set a mock namenode in BPOfferService
+   * To be used by tests only to set a mock namenode in NamenodeService
    */
   void setBPNamenode(String bpid, DatanodeProtocol namenode) {
-    BPOfferService bp = blockPoolManager.get(bpid);
+    NamenodeService bp = blockPoolManager.get(bpid);
     if (bp != null) {
       bp.setNameNode(namenode);
     }
@@ -2621,8 +2936,7 @@ public class DataNode extends Configured
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
       if (tokenIds.size() != 1) {
-        throw new IOException("Can't continue since none or more than one "
-            + "BlockTokenIdentifier is found.");
+        throw new IOException("Can't continue since none or more than one BlockTokenIdentifier is found [tokens:"+tokenIds.size()+", user: "+UserGroupInformation.getCurrentUser()+"].");
       }
       for (TokenIdentifier tokenId : tokenIds) {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
@@ -2644,7 +2958,60 @@ public class DataNode extends Configured
    * @param targets
    * @param client
    */
+   // [J] Bug report: Old code below
+  // https://issues.apache.org/jira/browse/HDFS-3436
   void transferReplicaForPipelineRecovery(final ExtendedBlock b,
+      final DatanodeInfo[] targets, final String client) throws IOException {
+    final long storedGS;
+    final long visible;
+    final BlockConstructionStage stage;
+
+    //get replica information
+    synchronized(data) {
+      Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
+         b.getBlockId());
+      if (null == storedBlock) {
+        throw new IOException(b + " not found in datanode.");
+      }
+      storedGS = storedBlock.getGenerationStamp();
+      if (storedGS < b.getGenerationStamp()) {
+        throw new IOException(storedGS
+            + " = storedGS < b.getGenerationStamp(), b=" + b);
+      }
+      // Update the genstamp with storedGS
+      b.setGenerationStamp(storedGS);
+
+      if (data.isValidRbw(b)) {
+        stage = BlockConstructionStage.TRANSFER_RBW;
+      } else if (data.isValidBlock(b)) {
+        stage = BlockConstructionStage.TRANSFER_FINALIZED;
+      } else {
+        final String r = data.getReplicaString(b.getBlockPoolId(), b.getBlockId());
+        throw new IOException(b + " is neither a RBW nor a Finalized, r=" + r);
+      }
+
+//      storedGS = data.getStoredBlock(b.getBlockPoolId(),
+//          b.getBlockId()).getGenerationStamp();
+//      if (storedGS < b.getGenerationStamp()) {
+//        throw new IOException(
+//            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);        
+//      }
+      visible = data.getReplicaVisibleLength(b);
+    }
+
+//    //set storedGS and visible length
+//    b.setGenerationStamp(storedGS);
+    //set visible length
+    b.setNumBytes(visible);
+
+    if (targets.length > 0) {
+      new DataTransfer(targets, b, stage, client).run();
+    }
+  }
+  
+   // [J] Bug report: Changed above
+  // https://issues.apache.org/jira/browse/HDFS-3436
+  void transferReplicaForPipelineRecovery_old(final ExtendedBlock b,
       final DatanodeInfo[] targets, final String client) throws IOException {
     final long storedGS;
     final long visible;
@@ -2665,7 +3032,7 @@ public class DataNode extends Configured
           b.getBlockId()).getGenerationStamp();
       if (storedGS < b.getGenerationStamp()) {
         throw new IOException(
-            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);        
+            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);
       }
       visible = data.getReplicaVisibleLength(b);
     }
@@ -2713,8 +3080,8 @@ public class DataNode extends Configured
   @Override // DataNodeMXBean
   public String getNamenodeAddresses() {
     final Map<String, String> info = new HashMap<String, String>();
-    for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
-      if (bpos != null && bpos.bpThread != null) {
+    for (NamenodeService bpos : blockPoolManager.getAllNamenodeThreads()) {
+      if (bpos != null && bpos.nsThread != null) {
         info.put(bpos.getNNSocketAddress().getHostName(), bpos.blockPoolId);
       }
     }
@@ -2779,19 +3146,19 @@ public class DataNode extends Configured
 
   /**
    * @param addr rpc address of the namenode
-   * @return true - if BPOfferService corresponding to the namenode is alive
+   * @return true - if NamenodeService corresponding to the namenode is alive
    */
   public boolean isBPServiceAlive(InetSocketAddress addr) {
-    BPOfferService bp = blockPoolManager.get(addr);
+    NamenodeService bp = blockPoolManager.get(addr);
     return bp != null ? bp.isAlive() : false;
   }
   
   /**
    * @param bpid block pool Id
-   * @return true - if BPOfferService thread is alive
+   * @return true - if NamenodeService thread is alive
    */
   public boolean isBPServiceAlive(String bpid) {
-    BPOfferService bp = blockPoolManager.get(bpid);
+    NamenodeService bp = blockPoolManager.get(bpid);
     return bp != null ? bp.isAlive() : false;
   }
 
@@ -2802,7 +3169,7 @@ public class DataNode extends Configured
    * @return true - if the data node is fully started
    */
   public boolean isDatanodeFullyStarted() {
-    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+    for (NamenodeService bp : blockPoolManager.getAllNamenodeThreads()) {
       if (!bp.initialized() || !bp.isAlive()) {
         return false;
       }
@@ -2812,8 +3179,13 @@ public class DataNode extends Configured
   
   /** Methods used by fault injection tests */
   public DatanodeID getDatanodeId() {
+    return new DatanodeID(getRegisteredName(), getStorageId(),
+        infoServer.getPort(), getIpcPort());
+    /* [J]
     return new DatanodeID(getMachineName(), getStorageId(),
         infoServer.getPort(), getIpcPort());
+     * 
+     */
   }
 
   /**

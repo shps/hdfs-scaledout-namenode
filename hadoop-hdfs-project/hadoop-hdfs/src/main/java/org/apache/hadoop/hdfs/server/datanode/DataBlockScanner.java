@@ -31,14 +31,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
+import org.apache.hadoop.hdfs.server.datanode.DataNode.NamenodeService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
  * block pool a {@link BlockPoolSliceScanner} is created which runs in a separate
- * thread to scan the blocks for that block pool. When a {@link BPOfferService}
+ * thread to scan the blocks for that block pool. When a {@link NamenodeService}
  * becomes alive or dies, blockPoolScannerMap in this class is updated.
  */
 @InterfaceAudience.Private
@@ -50,7 +50,7 @@ public class DataBlockScanner implements Runnable {
   
   /**
    * Map to find the BlockPoolScanner for a given block pool id. This is updated
-   * when a BPOfferService becomes alive or dies.
+   * when a NamenodeService becomes alive or dies.
    */
   private final TreeMap<String, BlockPoolSliceScanner> blockPoolScannerMap = 
     new TreeMap<String, BlockPoolSliceScanner>();
@@ -85,7 +85,7 @@ public class DataBlockScanner implements Runnable {
         continue;
       }
       currentBpId = bpScanner.getBlockPoolId();
-      // If BPOfferService for this pool is not alive, don't process it
+      // If NamenodeService for this pool is not alive, don't process it
       if (!datanode.isBPServiceAlive(currentBpId)) {
         LOG.warn("Block Pool " + currentBpId + " is not alive");
         // Remove in case BP service died abruptly without proper shutdown
@@ -103,8 +103,9 @@ public class DataBlockScanner implements Runnable {
       um = datanode.getUpgradeManagerDatanode(bpid);
     
     while ((um != null && ! um.isUpgradeCompleted())
-        || (getBlockPoolSetSize() < datanode.getAllBpOs().length)
-        || (getBlockPoolSetSize() < 1)) {
+       /* || (getBlockPoolSetSize() < datanode.getAllBpOs().length)//[J] In our architecture, the blockpool size will always be 1 and all namenode service threads correspond to one blockpool Id
+        || (getBlockPoolSetSize() < 1)*/
+            || (getBlockPoolSetSize() !=1)) {   // [J] Block pool size should be equals to 1
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
