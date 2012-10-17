@@ -26,4 +26,7 @@ public abstract class UnderReplicatedBlockDataAccess extends EntityDataAccess {
   public abstract void prepare(Collection<UnderReplicatedBlock> removed, Collection<UnderReplicatedBlock> newed, Collection<UnderReplicatedBlock> modified) throws StorageException;
 
   public abstract void removeAll() throws StorageException;
+
+  public abstract int countAll() throws StorageException;
+
 }

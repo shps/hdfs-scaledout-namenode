@@ -78,6 +78,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
 
   @Override
   public int countAll() throws StorageException {
+      // TODO - Change to use MySQL Server
     return findAllBlocks().size();
   }
 
@@ -136,8 +137,8 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
   }
 
   @Override
-  public List<BlockInfo> findAllBlocks() throws StorageException {
-    try {
+  public List<BlockInfo> findAllBlocks() throws StorageException {     
+      try {
       Session session = connector.obtainSession();
       QueryBuilder qb = session.getQueryBuilder();
       QueryDomainType<BlockInfoDTO> dobj = qb.createQueryDefinition(BlockInfoDTO.class);

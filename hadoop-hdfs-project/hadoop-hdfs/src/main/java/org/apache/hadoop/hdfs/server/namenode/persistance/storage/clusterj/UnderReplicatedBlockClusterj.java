@@ -89,6 +89,12 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
     return blocks;
   }
 
+  
+  public int countAll() {
+      // TODO - use MySQL Server to get block count
+      return 0; 
+  }
+  
   @Override
   public List<UnderReplicatedBlock> findAll() throws StorageException {
     try {

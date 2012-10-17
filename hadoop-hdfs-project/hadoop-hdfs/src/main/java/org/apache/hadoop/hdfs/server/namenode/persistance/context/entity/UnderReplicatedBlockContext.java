@@ -53,6 +53,7 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     allUrBlocksRead = false;
   }
 
+
   @Override
   public int count(CounterType counter, Object... params) throws PersistanceException {
     UnderReplicatedBlock.Counter urCounter = (UnderReplicatedBlock.Counter) counter;
@@ -60,7 +61,10 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     switch (urCounter) {
       case All:
         log("count-all-urblocks");
-        return findList(UnderReplicatedBlock.Finder.All).size();
+        // TODO - use a cache here...
+        
+          return dataAccess.countAll();
+//        return findList(UnderReplicatedBlock.Finder.All).size();
       case ByLevel:
         Integer level = (Integer) params[0];
         if (allUrBlocksRead) {

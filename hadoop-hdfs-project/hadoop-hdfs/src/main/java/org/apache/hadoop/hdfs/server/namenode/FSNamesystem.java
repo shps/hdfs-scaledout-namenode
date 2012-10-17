@@ -3615,16 +3615,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @return true if in safe mode
      */
     private boolean isOn() throws PersistanceException {
-      //TODO [lock]
-      return false;
-//      try {
-//        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
-//                + "Total num of blocks, active blocks, or "
-//                + "total safe blocks don't match.";
-//      } catch (IOException e) {
-//        System.err.print(StringUtils.stringifyException(e));
-//      }
-//      return this.reached >= 0;
+      try {
+        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
+                + "Total num of blocks, active blocks, or "
+                + "total safe blocks don't match.";
+      } catch (IOException e) {
+        System.err.print(StringUtils.stringifyException(e));
+      }
+      return this.reached >= 0;
     }
 
     /**
@@ -3649,6 +3647,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @throws IOException
      */
     private synchronized void leave(boolean checkForUpgrades) throws IOException, PersistanceException{
+        
+        // TODO - update leader_v2 table to change this node's safe_mode state to false.
+        
       if (checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
         boolean needUpgrade = false;
@@ -4201,6 +4202,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void enterSafeMode(boolean resourcesLow) throws IOException, PersistanceException {
     writeLock();
+    
     try {
       // Ensure that any concurrent operations have been fully synced
       // before entering safe mode. This ensures that the FSImage
@@ -4208,6 +4210,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //getEditLog().logSyncAll();
       if (!isInSafeMode()) {
         safeMode = new SafeModeInfo(resourcesLow);
+        // TODO - update leader_v2 table to change this node's safe_mode state to true.
         return;
       }
       if (resourcesLow) {

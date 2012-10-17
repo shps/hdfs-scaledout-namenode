@@ -2303,6 +2303,13 @@ public class BlockManager {
 
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     neededReplications.clear();
+    // TODO - if a namenode recovers or starts, it will execute this code.
+    // TODO - if the blocks are already validated and the cluster is 'working'
+    // we can skip this code. That is, check the leader table for a single working
+    // nameNode and if yes, skip the code.
+    // But think carefully about how to implement this.
+    // Ideally recovering nodes would each choose a range of blocks and process them
+    // in parallel.
     for (BlockInfo block : EntityManager.findList(BlockInfo.Finder.All)) {
       INodeFile fileINode = block.getINode();
       if (fileINode == null) {

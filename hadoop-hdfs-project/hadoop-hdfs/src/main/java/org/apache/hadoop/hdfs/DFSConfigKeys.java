@@ -301,4 +301,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY = "dfs.writenamenodes.rpc-address";
   public static final String  DFS_READ_NAMENODES_RPC_ADDRESS_KEY = "dfs.readnamenodes.rpc-address";
   public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
+
+  public static final String  DFS_MYSL_SERVERS = "dfs.mysql.servers";
 }
