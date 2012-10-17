@@ -30,4 +30,6 @@ public interface StorageConnector<T> {
   public void writeLock();
   
   public void readCommitted();
+  
+  public void setPartitionKey(Class className, Object key);
 }

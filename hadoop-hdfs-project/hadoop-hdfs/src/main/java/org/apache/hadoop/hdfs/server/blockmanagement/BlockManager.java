@@ -1711,8 +1711,9 @@ public class BlockManager {
 
       if (!prepareProcessReport(node, nodeID, existingBlocks)) {
         return;
-      }
-
+      }      
+      
+      
       if (node.numBlocks() == 0) {
         // The first block report can be processed a lot more efficiently than
         // ordinary block reports.  This shortens restart times.
@@ -1830,7 +1831,8 @@ public class BlockManager {
     TransactionalRequestHandler processFirstBlockReportHandler = new TransactionalRequestHandler(OperationType.PROCESS_FIRST_BLOCK_REPORT) {
 
       @Override
-      public Object performTask() throws PersistanceException, IOException {
+      public Object performTask() throws PersistanceException, IOException {          
+          
         Block iblk = (Block) getParams()[0];
         ReplicaState reportedState = (ReplicaState) getParams()[1];
 
@@ -1838,8 +1840,7 @@ public class BlockManager {
         // If block does not belong to any file, we are done.
         if (storedBlock == null) {
           return null;
-        }
-
+        }        
         // If block is corrupt, mark it and continue to next block.
         BlockUCState ucState = storedBlock.getBlockUCState();
         if (isReplicaCorrupt(iblk, reportedState, storedBlock, ucState, node)) {

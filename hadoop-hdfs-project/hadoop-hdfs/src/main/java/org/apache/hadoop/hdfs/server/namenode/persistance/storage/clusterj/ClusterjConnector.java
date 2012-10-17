@@ -156,4 +156,10 @@ public enum ClusterjConnector implements StorageConnector<Session> {
     Session session = obtainSession();
     session.setLockMode(LockMode.READ_COMMITTED);
   }
+  
+  @Override
+  public void setPartitionKey(Class className, Object key) {
+    Session session = obtainSession();
+    session.setPartitionKey(className, key);
+  }
 }

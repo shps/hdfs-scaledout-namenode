@@ -90,6 +90,10 @@ public class EntityManager {
     EntityContext.setLockMode(EntityContext.LockMode.READ_COMMITTED);
     connector.readCommitted();
   }
+  
+  public static void setPartitionKey(Class name, Object key) {
+    connector.setPartitionKey(name, key);
+  }
 
   /**
    * Clears transaction context's in-memory data

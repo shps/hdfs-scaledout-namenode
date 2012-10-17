@@ -149,6 +149,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
     }
   }
 
+  // TODO - set the Partition KEY before calling this operation
   @Override
   public List<BlockInfo> findByStorageId(String storageId) throws StorageException {
     try {
@@ -159,9 +160,9 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
       dobj.where(dobj.get("storageId").equal(dobj.param("param")));
       Query<ReplicaClusterj.ReplicaDTO> query = session.createQuery(dobj);
       query.setParameter("param", storageId);
-      List<ReplicaClusterj.ReplicaDTO> triplets = query.getResultList();
+      List<ReplicaClusterj.ReplicaDTO> replicas = query.getResultList();
 
-      for (ReplicaClusterj.ReplicaDTO t : triplets) {
+      for (ReplicaClusterj.ReplicaDTO t : replicas) {
         ret.add(findById(t.getBlockId()));
       }
       return ret;

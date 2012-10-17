@@ -140,7 +140,7 @@
     </dependency>
     <dependency>
       <groupId>se.sics.ndb</groupId>
-      <artifactId>clusterj-linux64</artifactId>
+      <artifactId>clusterj</artifactId>
       <version>7.1.15a</version>
     </dependency>
     <dependency>
