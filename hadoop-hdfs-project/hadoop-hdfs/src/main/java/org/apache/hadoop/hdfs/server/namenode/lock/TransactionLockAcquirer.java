@@ -77,6 +77,7 @@ public class TransactionLockAcquirer {
     return resolved;
   }
 
+  // This code is based on FSDirectory code for resolving the path.
   private static boolean getNextChild(INode[] curInode, byte[][] components,
           int[] count, LinkedList<INode> resolvedInodes, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
     boolean lastComp = (count[0] == components.length - 1);
@@ -137,22 +138,27 @@ public class TransactionLockAcquirer {
 
     while (count[0] < components.length && curNode[0] != null) {
 
+        // TODO - memcached - primary key lookup for the row.
       if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count[0] + 1 == components.length - 1))
               || (lock == INodeLockType.WRITE_ON_PARENT && (count[0] + 1 == components.length - 2))) {
         EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
-      } else if (lock == INodeLockType.READ_COMMITED) {
-        EntityManager.readCommited();
-      } else {
+      } else if (lock == INodeLockType.READ) {
         EntityManager.readLock();
+      } else {
+        EntityManager.readCommited();
       }
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
       if (lastComp)
         break;
     }
+    
+    // TODO - put invalidated cache values in memcached.
 
     return resolvedInodes;
   }
 
+  // TODO - use this method when there's a hit in memcached
+  // Jude's verification function
   public static INode acquireINodeLockById(INodeLockType lock, long id) throws PersistanceException {
     lockINode(lock);
     return EntityManager.find(INode.Finder.ByPKey, id);
@@ -179,6 +185,7 @@ public class TransactionLockAcquirer {
   }
 
   private static INode getChildINode(byte[] name, long parentId) throws PersistanceException {
+      // TODO - Memcache success check - do primary key instead.
     return EntityManager.find(INode.Finder.ByNameAndParentId,
             DFSUtil.bytes2String(name), parentId);
   }

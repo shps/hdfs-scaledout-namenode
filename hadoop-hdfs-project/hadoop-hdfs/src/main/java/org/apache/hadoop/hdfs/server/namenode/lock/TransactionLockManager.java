@@ -372,11 +372,14 @@ public class TransactionLockManager {
   private INode[] acquireInodeLocks(INodeResolveType resType, INodeLockType lock, String... params) throws UnresolvedPathException, PersistanceException {
     INode[] inodes = new INode[params.length];
     switch (resType) {
-      case ONLY_PATH:
-      case PATH_AND_IMMEDIATE_CHILDREN:
+      case ONLY_PATH: // Only use memcached for this case.
+      case PATH_AND_IMMEDIATE_CHILDREN: // Memcached not applicable for delete of a dir (and its children)
       case PATH_AND_ALL_CHILDREN_RECURESIVELY:
         for (int i = 0; i < params.length; i++) {
-          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir);
+            // TODO - MemcacheD Lookup of path
+            // On
+          LinkedList<INode> resolvedInodes = 
+                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir);
           if (resolvedInodes.size() > 0) {
             inodes[i] = resolvedInodes.peekLast();
           }
@@ -387,7 +390,9 @@ public class TransactionLockManager {
           inodes = findChildrenRecursively(inodes);
         }
         break;
-      case ONLY_PATH_WITH_UNKNOWN_HEAD:
+          // e.g. mkdir -d /opt/long/path which creates subdirs.
+          // That is, the HEAD and some ancestor inodes might not exist yet.
+      case ONLY_PATH_WITH_UNKNOWN_HEAD: // Can try and use memcached for this case.
         for (int i = 0; i < params.length; i++) {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
