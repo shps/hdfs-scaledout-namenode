@@ -528,6 +528,11 @@ public class NNStorage extends Storage implements Closeable {
   private int newNamespaceID() {
     int newID = 0;
     while(newID == 0)
+        // XXX Jude - This number should be the same for all the data nodes.
+        // Hack is to set a fixed number here.
+        // Proper soln is to start transaction, check if number in DB, if yes - done,
+        // else generate-num, insert into DB, commit.
+        // Create 1 table with 1 row to store the version.
       newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
     return newID;
   }
@@ -907,6 +912,7 @@ public class NNStorage extends Storage implements Closeable {
    * @return new clusterID
    */ 
   public static String newClusterID() {
+      // TODO Jude - Take this from NDB - if it is not there, generate it.
     return "CID-" + UUID.randomUUID().toString();
   }
 

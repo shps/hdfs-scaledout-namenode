@@ -259,9 +259,7 @@ public class DFSUtil {
    * @param blocks a LocatedBlocks
    * @return an array of BlockLocations
    */
-  
-  //TODO: This method has useful information regarding the stateless implementation. 
-  
+    
   public static BlockLocation[] locatedBlocks2Locations(LocatedBlocks blocks) {
     if (blocks == null) {
       return new BlockLocation[0];
