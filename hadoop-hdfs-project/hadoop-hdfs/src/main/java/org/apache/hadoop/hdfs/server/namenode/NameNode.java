@@ -214,7 +214,6 @@ public class NameNode {
     return getAddress(addr);
   }
 
-  //TODO:kamal, add for reading NN
   public static InetSocketAddress getAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
     return getAddress(filesystemURI);
@@ -222,7 +221,6 @@ public class NameNode {
 
 
   /**
-   * TODO:Kamal, reading NN
    * TODO:FEDERATION
    * @param filesystemURI
    * @return address of file system

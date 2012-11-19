@@ -75,7 +75,7 @@ class UnderReplicatedBlocks {
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        throw new UnsupportedOperationException("Not supported yet."); // FIXME implement Finder.LessThanLevel
+        throw new UnsupportedOperationException("Not supported yet."); // FIXME Hooman: implement Finder.LessThanLevel
       }
 
       @Override

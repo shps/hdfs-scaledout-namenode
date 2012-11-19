@@ -54,7 +54,7 @@ import se.sics.clusterj.PendingReplicationBlockTable;
  * allow multiple simultaneous connections to exist, and the read/write locks in
  * FSNamesystem and FSDirectory will make sure this stays safe. *
  */
-public class DBConnector { //TODO: [W] the methods and variables in this class should not be static
+public class DBConnector { 
 
   private static int NUM_SESSION_FACTORIES;
   static SessionFactory[] sessionFactory;

@@ -2873,7 +2873,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (newHolder == null) {
       return lease;
     }
-    logReassignLease(lease.getHolder(), src, newHolder); //FIXME remove KAMAL?
+    //logReassignLease(lease.getHolder(), src, newHolder); 
     return reassignLeaseInternal(lease, src, newHolder, pendingFile);
   }
 
@@ -3441,7 +3441,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // TODO safemode 
+        // TODO HOOMAN safemode 
       }
     };
     saveNamespaceHandler.handleWithReadLock(this);
@@ -3649,7 +3649,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized void leave(boolean checkForUpgrades) throws IOException, PersistanceException{
         
-        // TODO - update leader_v2 table to change this node's safe_mode state to false.
+        // TODO HOOMAN - update leader_v2 table to change this node's safe_mode state to false.
         
       if (checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
@@ -3683,7 +3683,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.info("STATE* Network topology has "
               + nt.getNumOfRacks() + " racks and "
               + nt.getNumOfLeaves() + " datanodes");
-      // TODO [lock] uncomment after fixing safemode's lock
+      // TODO HOOMAN [lock] uncomment after fixing safemode's lock
 //      NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
 //              + blockManager.numOfUnderReplicatedBlocks() + " blocks");
     }
@@ -3964,6 +3964,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * called only in assert.
      */
     private boolean isConsistent() throws IOException, PersistanceException {
+      // TODO Jude: remove writer / reader checks
       if (!isWritingNN()) {
         return true;
       }
@@ -3971,7 +3972,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
-      // TODO safemode
+      // TODO HOOMAN:  get back safemode stuff (previously it was commented out and skipped)
       int activeBlocks = blockManager.getActiveBlockCount(OperationType.SAFE_MODE_MONITOR);
 
       LOG.debug("safeBlocks: " + blockSafe + ", blockTotal: " + blockTotal + ", blocksActive: " + activeBlocks);
@@ -4016,7 +4017,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-              // TODO safemode
+              // TODO HOOMAN safemode
             }
           };
           handler.handle();
@@ -4055,7 +4056,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
 //        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
-        // TODO safemode
+        // TODO HOOMAN safemode??
       }
     };
     return (Boolean) setSafemodeLeaveHandler.handle();
@@ -4189,7 +4190,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
 
-      //TODO safemode
+      //TODO HOOMAN safemode
       return getBlocksTotalNoTx(OperationType.SAFE_MODE_MONITOR) - numUCBlocks;
     } finally {
       readUnlock();
@@ -4211,7 +4212,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //getEditLog().logSyncAll();
       if (!isInSafeMode()) {
         safeMode = new SafeModeInfo(resourcesLow);
-        // TODO - update leader_v2 table to change this node's safe_mode state to true.
+        // TODO HOOMAN - update leader_v2 table to change this node's safe_mode state to true.
         return;
       }
       if (resourcesLow) {

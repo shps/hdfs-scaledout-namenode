@@ -711,7 +711,6 @@ public class DistributedFileSystem extends FileSystem {
    */
   public long getUnderReplicatedBlocksCount() throws IOException {
     //return dfs.getUnderReplicatedBlocksCount();
-    // TODO: Pesis under-replicated blocks and then switch this to reader nn
     return nnSelector.getNextNamenode().getUnderReplicatedBlocksCount();
   }
 
@@ -722,7 +721,6 @@ public class DistributedFileSystem extends FileSystem {
    */
   public long getCorruptBlocksCount() throws IOException {
     //return dfs.getCorruptBlocksCount();
-    // TODO: Pesis corrupt blocks and then switch this to reader nn
     return nnSelector.getNextNamenode().getCorruptBlocksCount();
   }
 
@@ -733,7 +731,6 @@ public class DistributedFileSystem extends FileSystem {
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
           throws IOException {
     //return new CorruptFileBlockIterator(dfs, path);
-    // TODO: Pesis corrupt blocks and then switch this to reader nn
     return new CorruptFileBlockIterator(nnSelector.getNextNamenode(), path);
   }
 

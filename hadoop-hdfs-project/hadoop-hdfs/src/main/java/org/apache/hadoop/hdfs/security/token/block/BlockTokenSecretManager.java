@@ -107,8 +107,8 @@ public class BlockTokenSecretManager extends
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
-    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
+    allKeys.put(currentKey.getKeyId(), currentKey); //TODO Jude: send to NDB
+    allKeys.put(nextKey.getKeyId(), nextKey); //TODO Jude: send to NDB
   }
 
   /** Export block keys, only to be used in master mode */
@@ -118,12 +118,12 @@ public class BlockTokenSecretManager extends
     if (LOG.isDebugEnabled())
       LOG.debug("Exporting access keys");
     return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime,
-        currentKey, allKeys.values().toArray(new BlockKey[0])); //TODO: fetch from NDB
+        currentKey, allKeys.values().toArray(new BlockKey[0])); //TODO Jude: fetch from NDB
   }
 
   private synchronized void removeExpiredKeys() {
     long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO: fetch from NDB
+    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet() //TODO Jude: fetch from NDB
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, BlockKey> e = it.next();
       if (e.getValue().getExpiryDate() < now) {
@@ -171,18 +171,18 @@ public class BlockTokenSecretManager extends
     LOG.info("Updating block keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
-    allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO: send to NDB
+    allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(), //TODO Jude: send to NDB
         System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
         currentKey.getKey()));
     // update the estimated expiry date of new currentKey
     currentKey = new BlockKey(nextKey.getKeyId(), System.currentTimeMillis()
         + 2 * keyUpdateInterval + tokenLifetime, nextKey.getKey());
-    allKeys.put(currentKey.getKeyId(), currentKey); //TODO: send to NDB
+    allKeys.put(currentKey.getKeyId(), currentKey); //TODO Jude: send to NDB
     // generate a new nextKey
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3 
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    allKeys.put(nextKey.getKeyId(), nextKey); //TODO: send to NDB
+    allKeys.put(nextKey.getKeyId(), nextKey); //TODO Jude: send to NDB
     return true;
   }
 
@@ -326,7 +326,7 @@ public class BlockTokenSecretManager extends
     
     BlockKey key = null;
     synchronized (this) {
-      key = allKeys.get(identifier.getKeyId()); //TODO: get from NDB
+      key = allKeys.get(identifier.getKeyId()); //TODO Jude: get from NDB
     }
     if (key == null) {
       throw new InvalidToken("Can't re-compute password for "
