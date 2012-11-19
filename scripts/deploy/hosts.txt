@@ -1,0 +1,10 @@
+cloud1.sics.se kthfs
+cloud2.sics.se kthfs
+cloud3.sics.se kthfs
+cloud4.sics.se kthfs
+cloud5.sics.se kthfs
+cloud6.sics.se kthfs
+cloud7.sics.se kthfs
+cloud16.sics.se kthfs
+cloud17.sics.se kthfs
+cloud18.sics.se kthfs
