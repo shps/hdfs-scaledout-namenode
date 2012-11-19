@@ -259,6 +259,7 @@ public class NameNode {
     return role.equals(that);
   }
   
+  // TODO Jude - we no longer have READER and WRITER
   boolean isWritingNN() {
       return role.equals(NamenodeRole.WRITER);
   }
@@ -387,6 +388,9 @@ public class NameNode {
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
+      
+      // XXX Jude - start the leader election algortihm somewhere here.
+      
     if ((isRole(NamenodeRole.READER) || isRole(NamenodeRole.WRITER))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();

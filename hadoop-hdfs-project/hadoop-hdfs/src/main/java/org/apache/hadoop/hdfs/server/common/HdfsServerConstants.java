@@ -65,11 +65,7 @@ public final class HdfsServerConstants {
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
       switch(this) {
-//  TODO:Kamal, remove if backup role removal is alright
-//      case BACKUP: 
-//        return NamenodeRole.BACKUP;
-//      case CHECKPOINT: 
-//        return NamenodeRole.CHECKPOINT;
+//  TODO: Jude - copy new LEADER, Non-Leader roles here.
       case READER: 
         return NamenodeRole.READER;
       default:
@@ -100,9 +96,7 @@ public final class HdfsServerConstants {
 //      NAMENODE("Name Node");
     READER ("Reader Node"),
     WRITER("Writer Node");
-//  TODO:Kamal, remove if backup role removal is alright
-//    BACKUP    ("Backup Node"),
-//    CHECKPOINT("Checkpoint Node");
+//  TODO: Jude - copy new LEADER, Non-Leader roles here.
 
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}

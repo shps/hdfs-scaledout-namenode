@@ -180,6 +180,9 @@ public static void setDefaultLock() {
     Transaction tx = session.currentTransaction();
     try {
       tx.begin();
+      /* TODO Jude - Add new Entries for Jude's new tables (Leaders, Counters,
+      DatanodeInfo, DelegationKey, Leader
+       */       
       session.deletePersistentAll(LeaderTable.class);
       session.deletePersistentAll(INodeTableSimple.class);
       session.deletePersistentAll(BlockInfoTable.class);
