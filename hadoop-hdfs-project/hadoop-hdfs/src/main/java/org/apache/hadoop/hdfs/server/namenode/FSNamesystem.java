@@ -372,8 +372,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     initHandler.handle();
 
     if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
-      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
-      cache.putRoot(this.dir.rootDir); //added for magic cache
+//      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
+//      cache.putRoot(this.dir.rootDir); //added for magic cache
+        // TODO - JUDE Integrate Memcachd
     }
 
     this.safeMode = new SafeModeInfo(conf);
