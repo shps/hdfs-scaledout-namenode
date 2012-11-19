@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import java.io.File;
@@ -37,16 +35,16 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -147,6 +145,11 @@ public class NameNode {
   
   private NameNodeRpcServer rpcServer;
   
+  /*Id of the Namenode*/
+  private long id = LeaderElection.LEADER_INITIALIZATION_ID;
+  
+  protected LeaderElection leaderAlgo;
+  
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
@@ -160,6 +163,13 @@ public class NameNode {
    */
   public FSNamesystem getNamesystem() {
     return namesystem;
+  }
+
+  /** Return the {@link LeaderElection} object.
+   * @return {@link LeaderElection} object.
+   */
+  public LeaderElection getLeaderAlgo() {
+    return leaderAlgo;
   }
 
   public NamenodeProtocols getRpcServer() {
@@ -259,8 +269,8 @@ public class NameNode {
     return role.equals(that);
   }
   
-  boolean isWritingNN() {
-      return role.equals(NamenodeRole.WRITER);
+  public boolean isLeader() {
+      return role.equals(NamenodeRole.LEADER);
   }
 
   /**
@@ -329,15 +339,21 @@ public class NameNode {
    * 
    * @param conf the configuration
    */
-  protected void initialize(Configuration conf) throws IOException {
+  protected void initialize(Configuration conf) throws IOException, StorageException, PersistanceException {
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
+
+    // Setting the configuration for DBConnector
+    DBConnector.setConfiguration(conf);
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
-    
+
+    // Initialize the leader election algorithm (only once rpc server is created)
+    leaderAlgo = new LeaderElection(conf, this);
+    leaderAlgo.initialize();
     try {
       validateConfigurationSettings(conf);
     } catch (IOException e) {
@@ -346,6 +362,8 @@ public class NameNode {
     }
 
     activate(conf);
+
+
     LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
       LOG.info(getRole() + " service server is up at: " + rpcServer.getServiceRpcAddress()); 
@@ -386,18 +404,12 @@ public class NameNode {
   /**
    * Activate name-node servers and threads.
    */
-  void activate(Configuration conf) throws IOException {
-    if ((isRole(NamenodeRole.READER) || isRole(NamenodeRole.WRITER))
+  void activate(Configuration conf) throws IOException, StorageException, PersistanceException {
+    if ((isRole(NamenodeRole.LEADER) || isRole(NamenodeRole.SECONDARY))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
-    try {
-      namesystem.activate(conf);
-    } catch (StorageException ex) {
-      throw new RuntimeException(ex);
-    } catch (PersistanceException ex) {
-      throw new RuntimeException(ex);
-    }
+    namesystem.activate(conf);
     startHttpServer(conf);
     rpcServer.start();
     startTrashEmptier(conf);
@@ -458,11 +470,11 @@ public class NameNode {
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf, NamenodeRole.WRITER);
+    this(conf, NamenodeRole.SECONDARY);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
-      throws IOException { 
+      throws IOException, StorageException, PersistanceException { 
 	      	
     this.role = role;
     try {
@@ -503,8 +515,12 @@ public class NameNode {
         }
       }
     }
+    
+// TODO [Jude]: Commented only for throughput benchmarking! Some configuration problem with cloud18 and cloud16    
     try {
       if (httpServer != null) httpServer.stop();
+      
+      System.out.println("Stopped");
     } catch (Exception e) {
       LOG.error("Exception while stopping httpserver", e);
     }
@@ -514,6 +530,7 @@ public class NameNode {
     if (metrics != null) {
       metrics.shutdown();
     }
+
     if (namesystem != null) {
       namesystem.shutdown();
     }
@@ -526,7 +543,7 @@ public class NameNode {
   /**
    * Is the cluster currently in safe mode?
    */
-  public boolean isInSafeMode() throws PersistanceException {
+  public boolean isInSafeMode() {
     return namesystem.isInSafeMode();
   }
 
@@ -600,24 +617,29 @@ public class NameNode {
           return true;
         }
       }
+      
+      // clear cache
+      if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+        MemcacheForINode cache = MemcacheForINode.getInstance();
+        cache.setConfiguration(conf);
+        //cache.clear();
+      }
     }
 
     // if clusterID is not provided - see if you can find the current one
     String clusterId = StartupOption.FORMAT.getClusterId();
     if(clusterId == null || clusterId.equals("")) {
+      //Get the clusterId from config
+      clusterId = NNStorage.newClusterID();
+    }
+    /*
+    if(clusterId == null || clusterId.equals("")) {
       //Generate a new cluster id
       clusterId = NNStorage.newClusterID();
     }
+     * 
+     */
     LOG.info("Formatting using clusterid: " + clusterId);
-    
-    // Format storage
-    StorageFactory.setConfiguration(conf);
-    StorageConnector connector = StorageFactory.getConnector();
-    try {
-      assert (connector.formatStorage());
-    } catch (StorageException ex) {
-      LOG.error(ex.getMessage(), ex);
-    }
     
     FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
@@ -677,10 +699,6 @@ public class NameNode {
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
-      } else if (StartupOption.READER.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.READER;
-      } else if (StartupOption.WRITER.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.WRITER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
         // might be followed by two args
@@ -747,6 +765,10 @@ public class NameNode {
       printUsage();
       return null;
     }
+    
+    // Set the DB configuration parameters
+    DBConnector.setConfiguration(conf);
+
     setStartupOption(conf, startOpt);
 
     switch (startOpt) {
@@ -763,13 +785,10 @@ public class NameNode {
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case READER:
-        DefaultMetricsSystem.initialize("Reading NameNode");
-        return new NameNode(conf, NamenodeRole.READER);
 //TODO:kamal, backup node      case BACKUP:      
       default:
-        DefaultMetricsSystem.initialize("Writing NameNode");
-        return new NameNode(conf, NamenodeRole.WRITER);
+        DefaultMetricsSystem.initialize("NameNode");
+        return new NameNode(conf, NamenodeRole.SECONDARY);
     }
   }
 
@@ -803,15 +822,30 @@ public class NameNode {
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
     }
   }
-    
-
+  
+  /**
+   * Returns the id of this namenode
+   */
+  public long getId() {
+    return id;
+  }
+  /**
+   * Sets a new id incase of crash
+   */
+  void setId(long value) {
+    id = value;
+  }
+  
+  /**
+   * Set the role for Namenode
+   */
+synchronized void setRole(NamenodeRole role) {
+  this.role = role;
+}
   /**
    */
   public static void main(String argv[]) throws Exception {
     try {
-    	
-   
-    	
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
       if (namenode != null)
