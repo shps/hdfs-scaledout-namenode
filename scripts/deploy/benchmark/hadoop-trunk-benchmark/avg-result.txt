@@ -1,0 +1,5 @@
+#NrFiles	NrThreads	NrFilesPerDir	Operations	AvgElapsedTime	AvgOpsPerSec	AverageTimeofOp
+1000		10		500		1000		74		14475.06000	0
+
+1000		20		500		1000		100		10539.46000	1
+
