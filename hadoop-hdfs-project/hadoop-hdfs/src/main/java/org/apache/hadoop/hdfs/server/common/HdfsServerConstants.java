@@ -95,9 +95,6 @@ public final class HdfsServerConstants {
   static public enum NamenodeRole {
       LEADER("Leader Node"),
       SECONDARY("Secondary Node");
-//  TODO:Kamal, remove if backup role removal is alright
-//    BACKUP    ("Backup Node"),
-//    CHECKPOINT("Checkpoint Node");
 
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}

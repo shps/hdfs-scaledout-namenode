@@ -102,20 +102,21 @@ DROP TABLE IF EXISTS `data_node_info`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `data_node_info` (
-  `storageId` varchar(128) NOT NULL,
+  `storage_id` varchar(128) NOT NULL,
   `hostname` varchar(25) NOT NULL,
-  `localPort` int(11) NOT NULL,
-  `infoPort` int(11) NOT NULL,
-  `ipcPort` int(11) NOT NULL,
+  `local_port` int(11) NOT NULL,
+  `info_port` int(11) NOT NULL,
+  `ipc_port` int(11) NOT NULL,
   `status` int(11) DEFAULT '0',
   `location` varchar(25) DEFAULT NULL,
   `host` varchar(25) DEFAULT NULL,
-  `numblocks` int(11) DEFAULT '0',
-  `currBlocksScheduled` int(11) DEFAULT '0',
-  `prevBlocksScheduled` int(11) DEFAULT '0',
-  `lastBlocksScheduledRollTime` bigint(20) DEFAULT '0',
-  PRIMARY KEY (`storageId`)
-) ENGINE=ndbcluster DEFAULT CHARSET=latin1;
+  `num_blocks` int(11) DEFAULT '0',
+  `curr_blocks_scheduled` int(11) DEFAULT '0',
+  `prev_blocks_scheduled` int(11) DEFAULT '0',
+  `last_blocks_scheduled_roll_time` bigint(20) DEFAULT '0',
+  PRIMARY KEY (`storage_id`)
+) ENGINE=ndbcluster DEFAULT CHARSET=latin1
+/*!50100 PARTITION BY KEY (storage_id) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -135,11 +136,11 @@ DROP TABLE IF EXISTS `delegation_key`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `delegation_key` (
-  `keyId` int(11) NOT NULL,
-  `expiryDate` bigint(20) DEFAULT NULL,
-  `keyBytes` varbinary(128) DEFAULT NULL,
-  `keyType` smallint(6) DEFAULT NULL,
-  PRIMARY KEY (`keyId`)
+  `key_id` int(11) NOT NULL,
+  `expiry_date` bigint(20) DEFAULT NULL,
+  `key_bytes` varbinary(128) DEFAULT NULL,
+  `key_type` smallint(6) DEFAULT NULL,
+  PRIMARY KEY (`key_id`)
 ) ENGINE=ndbcluster DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -347,31 +348,6 @@ LOCK TABLES `pending_blocks` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `replica_under_constructions`
---
-
-DROP TABLE IF EXISTS `replica_under_constructions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `replica_under_constructions` (
-  `block_id` bigint(20) NOT NULL,
-  `storage_id` varchar(128) NOT NULL,
-  `state` int(11) DEFAULT NULL,
-  `replica_index` int(11) NOT NULL,
-  PRIMARY KEY (`block_id`,`storage_id`)
-) ENGINE=ndbcluster DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `replica_under_constructions`
---
-
-LOCK TABLES `replica_under_constructions` WRITE;
-/*!40000 ALTER TABLE `replica_under_constructions` DISABLE KEYS */;
-/*!40000 ALTER TABLE `replica_under_constructions` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `replicas`
 --
 
@@ -395,6 +371,31 @@ CREATE TABLE `replicas` (
 LOCK TABLES `replicas` WRITE;
 /*!40000 ALTER TABLE `replicas` DISABLE KEYS */;
 /*!40000 ALTER TABLE `replicas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `replicas_under_construction`
+--
+
+DROP TABLE IF EXISTS `replicas_under_construction`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `replicas_under_construction` (
+  `block_id` bigint(20) NOT NULL,
+  `storage_id` varchar(128) NOT NULL,
+  `state` int(11) DEFAULT NULL,
+  `replica_index` int(11) NOT NULL,
+  PRIMARY KEY (`block_id`,`storage_id`)
+) ENGINE=ndbcluster DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `replicas_under_construction`
+--
+
+LOCK TABLES `replicas_under_construction` WRITE;
+/*!40000 ALTER TABLE `replicas_under_construction` DISABLE KEYS */;
+/*!40000 ALTER TABLE `replicas_under_construction` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -459,4 +460,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2012-11-20 15:37:10
+-- Dump completed on 2012-11-20 16:21:46
