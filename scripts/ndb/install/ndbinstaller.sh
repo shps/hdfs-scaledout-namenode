@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/bash 
+#-xv
 
 ###################################################################################################
 #                                                                                                 #
@@ -45,11 +46,11 @@ RELEASE=""
 
 MYSQL_VERSION_MAJOR="7"
 MYSQL_VERSION_MINOR="2"
-MYSQL_VERSION_REV="5"
+MYSQL_VERSION_REV="8"
 
 NDB_VERSION_MAJOR="7"
 NDB_VERSION_MINOR="2"
-NDB_VERSION_REV="5"
+NDB_VERSION_REV="8"
 
 VERSION_PREFIX="mysql-cluster-gpl-"
 #VERSION_PREFIX=""
@@ -90,6 +91,9 @@ MYSQL_BINARIES_DIR=
 NDB_LOGS_DIR=
 MYSQL_NUM=mysql_1
 NDB_DATA_DIR=
+NDBD_BIN=
+NDBD_PROG=ndbmtd
+#NDBD_PROG=ndbd
 
 ###################################################################################################
 # NDB Data Node hostnames
@@ -132,20 +136,20 @@ fi
 
 # The 'M' is appended to DataMemory and IndexMemory sizes later in script
 DATA_MEMORY=80
-INDEX_MEMORY=18
+INDEX_MEMORY=
 
 # Extra config.ini default values
 STRING_MEMORY=25
 MAX_NO_OF_TABLES=4096
 MAX_NO_OF_ORDERED_INDEXES=2048
 MAX_NO_OF_UNIQUE_HASH_INDEXES=4096
-MAX_NO_OF_ATTRIBUTES=24576
+MAX_NO_OF_ATTRIBUTES=65536
 MAX_NO_OF_CONCURRENT_SCANS=256
 
 
 # Redo Log file Default Size
 NUM_FRAGMENT_LOGFILES=6
-FRAGMENT_LOGFILE_SIZE=256M
+FRAGMENT_LOGFILE_SIZE=64M
 
 # Default Number of Replicas
 NUM_REPLICAS=2
@@ -153,11 +157,13 @@ NUM_REPLICAS=2
 # Default hostname for Mgm Server
 MGM_HOST=$LOCALHOST
 
+MYSQL_HOST=$LOCALHOST
+
 # Disk write b/w used for checkpoints
-DISK_CHECKPOINT_SPEED=10
+DISK_CHECKPOINT_SPEED=1
 
 # Disk write b/w for checkpoints when restarting a node
-DISK_CHECKPOINT_SPEED_IN_RESTART=100
+DISK_CHECKPOINT_SPEED_IN_RESTART=10
 
 # Disk Buffer used when writing checkpoints
 DISK_SYNC_SIZE=4
@@ -167,7 +173,7 @@ REDO_BUFFER=32
 
 # This parameter states the maximum time that is permitted to lapse 
 # between operations in the same transaction before the transaction is aborted.
-TRANSACTION_INACTIVE_TIMEOUT=2000
+TRANSACTION_INACTIVE_TIMEOUT=10000
 
 # Time for master to ping all ndbds
 TIME_BETWEEN_GLOBAL_CHECKPOINTS=1000
@@ -227,12 +233,15 @@ MGM_PORT_NOT_SET=1
 PARAM_DEFAULT_INSTALL_NDB_DIR=0
 PARAM_DEFAULT_INSTALL_MYSQL_DIR=0
 PARAM_DEFAULT_MYSQL_SETTINGS=0
+MYSQL_HOST_NOT_SET=1
+CLEAN_INSTALL_DIR=0
+SKIP_DOWNLOAD_MGM_SSH_KEY=0
 
 ########################################################
 # Script Internal Configuration Params                 #
 ########################################################
 
-LOCALHOST="localhost" #127.0.0.1
+LOCALHOST="127.0.0.1"
 
 
 # Default values for user install actions
@@ -249,6 +258,7 @@ INSTALL_BINARIES=1
 REMOVE_EXPANDED_BINARIES_AFTER_INSTALL=0
 START_WITH_SSH=0
 ADD_MYSQLD=0
+NUM_CORES=8
 
 # failure codes returned by script
 SUCCESS=0
@@ -267,11 +277,12 @@ NO_DAEMON=
 NO_DAEMON_LAUNCH=
 
 # Script names
-INIT_START=init-start-cluster
-NORMAL_START=start-noinit-cluster
+INIT_START=init-cluster
+NORMAL_START=start-cluster-with-recovery
 CLUSTER_START=node.sh
 NDBD_INIT=init-start-ndbd
-NDBD_START=start-noinit-ndbd
+NDBD_START=start-noinit-ndbd 
+NDBD_STOP=stop-ndbd 
 CLUSTER_SHUTDOWN=shutdown-cluster.sh
 MGM_CLIENT_START=mgm-client.sh
 ROLLING_RESTART=rolling-restart
@@ -307,6 +318,8 @@ HTTP_USER=
 HTTP_PASS=
 PROXY=
 
+NON_INTERACT=0
+
 # Script-Internal Installation Variables
 NDB_NUM=
 FINISHED_INSTALLDIRS=0
@@ -322,6 +335,10 @@ MYSQL_BINARIES_INSTALLED=
 MYSQLD_STARTER=
 MYSQLD_STOPPER=
 LINUX_DISTRIBTUION=
+NDBD_BIN=
+NDBD_PROG=ndbmtd
+#NDBD_PROG=ndbd
+
 
 # Install action options
 #INSTALL_COMPILE=0
@@ -909,7 +926,7 @@ SKIP_MYSQLDS=0
 
 while [ \$# -gt 0 ]; do
   case \"\$1\" in
-    -h|--help)
+    -h|--help|-help)
               echo \"usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] [ -s|--skip-mysqlds ]\"
 	      echo \"\"
 	      echo \"connectstring is set to $CONNECTSTRING\"
@@ -939,7 +956,7 @@ GET_CONNECTSTRING="
 MGM_CONN=$CONNECTSTRING
 while [ \$# -gt 0 ]; do
   case \"\$1\" in
-    -h|--help)
+    -h|--help|-help)
               echo \"usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] \"
 	      echo \"\"
 	      echo \"connectstring is set to $CONNECTSTRING\"
@@ -968,7 +985,7 @@ PARAMS=
 EXEC=
 while [ \$# -gt 0 ]; do
   case \"\$1\" in
-    -h|--help)
+    -h|--help|-help)
               echo \"usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] ] [ -e [command] ] \"
 	      echo \"\"
 	      echo \"Default connectstring parameter = $CONNECTSTRING\"
@@ -1094,16 +1111,20 @@ enter_string()
 
 clear_screen()
 {
- echo "" $ECHO_OUT
- echo "Press ENTER to continue" $ECHO_OUT
- read cont < /dev/tty
+ if [ $NON_INTERACT -eq 0 ] ; then
+   echo "" $ECHO_OUT
+   echo "Press ENTER to continue" $ECHO_OUT
+   read cont < /dev/tty
+ fi 
  clear
 }
 
 clear_screen_no_skipline()
 {
- echo "Press ENTER to continue" $ECHO_OUT
- read cont < /dev/tty
+ if [ $NON_INTERACT -eq 0 ] ; then
+    echo "Press ENTER to continue" $ECHO_OUT
+    read cont < /dev/tty
+ fi 
  clear
 }
 
@@ -1234,8 +1255,12 @@ while [ $FINISHED_INSTALLDIRS -eq 0 ] ; do
 
  if [ "$5" != "1" ] ; then
  echo -n "Do you agree to install in the above path?"
- entry_ok "The $3 files will be installed to directory:\n $FULL_DIR/$4\n\nIn a later step of this installation, you will be able to create a shorter directory name using a symbolic link to the $3 directory.\n\nDo you agree to install in the above path?\n"
-
+ if [ $NON_INTERACT -eq 0 ] ; then
+     entry_ok "The $3 files will be installed to directory:\n $FULL_DIR/$4\n\nIn a later step of this installation, you will be able to create a shorter directory name using a symbolic link to the $3 directory.\n\nDo you agree to install in the above path?\n"
+ else 
+     echo "Installing in default directory.\n"
+     eval false  # Non-zero exit status to take default installation path
+ fi
   if [ $? -eq 0 ] ; then
     echo "" $ECHO_OUT
     echo "Enter the complete installation path. Do not use ~/ in the path!" $ECHO_OUT
@@ -1270,6 +1295,7 @@ while [ $FINISHED_INSTALLDIRS -eq 0 ] ; do
   if [ "$TO_UPDATE" = "mysql" ] ; then
       MYSQL_INSTALL_DIR=$INSTALL_DIR 
       MYSQL_BINARIES_DIR=$FULL_DIR
+      NDBD_BIN=$MYSQL_BINARIES_DIR/bin/$NDBD_PROG
   fi
 
   TO_UPDATE=${WHICH_INSTALL:0:3}
@@ -1292,11 +1318,14 @@ while [ $FINISHED_INSTALLDIRS -eq 0 ] ; do
        echo "" $ECHO_OUT
        echo "Directory : $INSTALL_DIR" $ECHO_OUT
        echo -n "Create this directory?" $ECHO_OUT
-       entry_ok "Directory does not exist: \n $INSTALL_DIR \n It is recommended that you create it."
-
+       if [ $NON_INTERACT -eq 0 ] ; then
+         entry_ok "Directory does not exist: \n $INSTALL_DIR \n It is recommended that you create it."
+       else 
+          eval false  # Non-zero exit status to take default installation path
+       fi
        if [ $? -eq 1 ] ; then
 	    FINISHED_INSTALLDIRS=1
-            mkdir $INSTALL_DIR
+            mkdir -p $INSTALL_DIR
             if [ $? -ne 0 ] ; then
               mkdir_error $INSTALL_DIR
             fi
@@ -1304,7 +1333,7 @@ while [ $FINISHED_INSTALLDIRS -eq 0 ] ; do
             FINISHED_INSTALLDIRS=0
        fi
       else
-            mkdir $INSTALL_DIR
+            mkdir -p $INSTALL_DIR
             if [ $? -ne 0 ] ; then
               mkdir_error $INSTALL_DIR
             fi
@@ -1330,9 +1359,13 @@ while [ $FINISHED_INSTALLDIRS -eq 0 ] ; do
        else
 	   echo -n "Delete the contents of this directory and do a clean install?" $ECHO_OUT
        fi
-       entry_ok "=========================================================\n" $FULL_DIR $DELETE_DIR_HELP
-
-       if [ $? -eq 1 ] ; then
+       if [ $NON_INTERACT -eq 0 ] ; then
+         entry_ok "=========================================================\n" $FULL_DIR $DELETE_DIR_HELP
+       else 
+         eval false  # Non-zero exit status to take default installation path
+       fi
+ 
+       if [ $? -eq 1 ] || [ $CLEAN_INSTALL_DIR -eq 1 ] ; then
              rm -rf $FULL_DIR
   	     if [ $? -ne 0 ] ; then
   		echo "" $ECHO_OUT
@@ -1390,12 +1423,11 @@ basedir         = $MYSQL_BINARIES_DIR
 datadir         = $MYSQL_DATA_DIR
 port            = $MYSQL_PORT
 socket          = $MYSQL_SOCK
-
-pid-file        = $MYSQL_PID
+bind-address    = $MYSQL_HOST
 
 # use NDB storage engine and make NDB the default table type
 ndbcluster
-#default-table-type=ndb
+default-storage-engine = ndbcluster
 ndb-cluster-connection-pool=2
 
 #################################################
@@ -1405,16 +1437,16 @@ ndb-cluster-connection-pool=2
 ndb-use-exact-count=0
 
 # flush the adaptive-send buffer immediately 
-ndb-force-send=1
+ndb-force-send=0
 
 # allow indexes to be used on ndb nodes (rather than joins performed in MySQL Server)
 engine-condition-pushdown=1
 
 # use the cluster connection pool to reduce cluster connection setup time
-ndb-cluster-connection-pool=1
+ndb-cluster-connection-pool=4
 
 # Log more data at MySQL Server about ndb
-ndb-extra-logging=1
+ndb-extra-logging=0
 
 # for autoincrement, size of prefetching 
 ndb-autoincrement-prefetch-sz=256
@@ -1423,8 +1455,8 @@ ndb-autoincrement-prefetch-sz=256
 # Other [mysqld] params
 #################################################
 
-# do not include innodb engine (for easier installation)
-$SKIP_INNODB
+# do not include innodb engine 
+#$SKIP_INNODB
 
 # replication settings go here
 $SERVER_ID
@@ -1491,6 +1523,12 @@ echo "
 #
 
 [NDBD DEFAULT]
+#Used by ndbmdmt to determine the number of LQH threads
+MaxNoOfExecutionThreads=$NUM_CORES
+
+#More flexible than MaxNoOfExecutionThreads
+#Threadconfig=main={cpubind=0},ldm={count=8,cpubind=1,2,3,4,13,14,15,16},io={count=4,cpubind=5,6,17,18},rep={cpubind=7},recv={count=2,cpubind=8,19}
+
 #The number of copies of the data stored on different nodes in the cluster
 NoOfReplicas=$NUM_REPLICAS
 
@@ -1499,9 +1537,6 @@ DataMemory=$DATA_MEMORY
 
 #The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
 IndexMemory=$INDEX_MEMORY
-
-#If you have lots of tables (>1000), then you may get 'Error 773' and need to increase this (25 would be reasonable)
-StringMemory=$STRING_MEMORY
 
 #The amount of disk space (NoOfFragmentLogFiles * 64MB) used to store the Redo Log (used for node recovery)
 NoOfFragmentLogFiles=$NUM_FRAGMENT_LOGFILES
@@ -1525,46 +1560,52 @@ RedoBuffer=$REDO_BUFFER
 TransactionInactiveTimeout=$TRANSACTION_INACTIVE_TIMEOUT
 
 #Time in ms between global checkpoint groups are flushed from memory to disk
-TimeBetweenGlobalCheckpoints=$TIME_BETWEEN_GLOBAL_CHECKPOINTS
+#TimeBetweenGlobalCheckpoints=$TIME_BETWEEN_GLOBAL_CHECKPOINTS
 
 #Time in ms between local checkpoints of memory to local disk. Increase this if system is highly loaded to improve node restart times.
-TimeBetweenLocalCheckpoints=$TIME_BETWEEN_LOCAL_CHECKPOINTS
+#TimeBetweenLocalCheckpoints=$TIME_BETWEEN_LOCAL_CHECKPOINTS
 
 #Time in ms between replication events sent up from cluster
-TimeBetweenEpochs=$TIME_BETWEEN_EPOCHS
-TimeBetweenEpochsTimeout=32000
+#TimeBetweenEpochs=$TIME_BETWEEN_EPOCHS
+#TimeBetweenEpochsTimeout=32000
 
 #Heartbeating
-HeartbeatIntervalDbDb=1500
-HeartbeatIntervalDbApi=1500
+#HeartbeatIntervalDbDb=1500
+#HeartbeatIntervalDbApi=1500
 
 #Represents the number of seconds between memory usage reports written to the cluster log
-MemReportFrequency=$MEMORY_REPORT_FREQUENCY
-LogLevelStartup=15
-LogLevelShutdown=15
-LogLevelCheckpoint=8
-LogLevelNodeRestart=15
+#MemReportFrequency=$MEMORY_REPORT_FREQUENCY
+#LogLevelStartup=15
+#LogLevelShutdown=15
+#LogLevelCheckpoint=8
+#LogLevelNodeRestart=15
 
 #Disk Data
-SharedGlobalMemory=20M
-DiskPageBufferMemory=64M
-BatchSizePerLocalScan=512
+#SharedGlobalMemory=20M
+#DiskPageBufferMemory=64M
+#BatchSizePerLocalScan=512
 
 #This prevents ndbd processes and DB memory from being swapped out to disk
-LockPagesInMainMemory=$LOCK_PAGES_IN_MAIN_MEMORY
+#LockPagesInMainMemory=$LOCK_PAGES_IN_MAIN_MEMORY
+
+#If you have lots of tables (>1000), then you may get 'Error 773' and need to increase this (25 would be reasonable)
+#StringMemory=$STRING_MEMORY
 
 #
 # TRANSACTION PARAMETERS
 #
 
 #The number of transaction records available at each data node. Increase this if you have a higher number of concurrent transactions
-MaxNoOfConcurrentTransactions=4096
+#MaxNoOfConcurrentTransactions=4096
+MaxNoOfConcurrentTransactions=32768
 
 #The number of operation records available at each data node. Increase this if you have a higher number of concurrent operations
-MaxNoOfConcurrentOperations=100000
+#MaxNoOfConcurrentOperations=100000
+MaxNoOfConcurrentOperations=200000
 
 #The number of operation records available at each data node for queries that use a hash index. Increase this if you have a higher number of concurrent operations
-MaxNoOfConcurrentIndexOperations=16384
+#MaxNoOfConcurrentIndexOperations=16384
+MaxNoOfConcurrentIndexOperations=65536
 
 
 #
@@ -1572,22 +1613,22 @@ MaxNoOfConcurrentIndexOperations=16384
 #
 
 # Max number of parallel scans. Max value is 500.
-MaxNoOfConcurrentScans=$MAX_NO_OF_CONCURRENT_SCANS
+#MaxNoOfConcurrentScans=$MAX_NO_OF_CONCURRENT_SCANS
 
 #Note: 'alter table' requires 3 times the number of attributes that are in the original table. 
 MaxNoOfAttributes=$MAX_NO_OF_ATTRIBUTES
 
 #A table is required not just for a table, but also for every unique hash index and every ordered index. Maximum value is 20320, minimum is 8.
-MaxNoOfTables=$MAX_NO_OF_TABLES
+#MaxNoOfTables=$MAX_NO_OF_TABLES
 
 #Each ordered index requires 10KB of memory.
-MaxNoOfOrderedIndexes=$MAX_NO_OF_ORDERED_INDEXES
+#MaxNoOfOrderedIndexes=$MAX_NO_OF_ORDERED_INDEXES
 
 #Each unique hash index requires 15KB of memory.
-MaxNoOfUniqueHashIndexes=$MAX_NO_OF_UNIQUE_HASH_INDEXES
+#MaxNoOfUniqueHashIndexes=$MAX_NO_OF_UNIQUE_HASH_INDEXES
 
 #Replication, unique index operations, backups and order index operations require trigger objects.
-MaxNoOfTriggers=768
+#MaxNoOfTriggers=768
 
 # 
 #Backup Parameters
@@ -1598,19 +1639,19 @@ MaxNoOfTriggers=768
 #
 
 #Increase if slow disk subsystem when making a backup. 
-BackupDataBufferSize=2M
+#BackupDataBufferSize=2M
 
 #Increase if slow disk subsystem when making a backup. 
-BackupLogBufferSize=2M
+#BackupLogBufferSize=2M
 
 #Default size of msgs written to disk. This value must be less than or equal to BackupMaxWriteSize.
-BackupWriteSize=32000
+#BackupWriteSize=32000
 
-#Max size of msgs written to disk. This value must be greater than or equal to than BackupMaxWriteSize.
+#Max size of msgs written to disk. This value must be greater than or equal to than BackupWriteSize.
 BackupMaxWriteSize=1M
 
 #Frequency of Backups
-BackupReportFrequency=$BACKUP_REPORT_FREQUENCY
+#BackupReportFrequency=$BACKUP_REPORT_FREQUENCY
 
 TimeBetweenWatchdogCheckInitial=60000
 #
@@ -1627,7 +1668,7 @@ TimeBetweenWatchdogCheckInitial=60000
 #SchedulerSpinTimer=0
 
 #Whether a ndbd process should halt or be restarted if there is an error in it.
-StopOnError=true
+#StopOnError=true
 
 #where disk-based user data will be used for the cluster
 Diskless=false
@@ -1789,7 +1830,6 @@ make_start_cluster_script()
    echo "Too few parameters to script." $ECHO_OUT
    exit -1
   fi
-  
   NUM_TO_START=$1
   START_TYPE=
   INIT=
@@ -1824,8 +1864,9 @@ really_start()
       ;;
    esac
 }
-really_start
-
+if [ \$SKIP_USER_CHECK -eq 0 ] ; then
+ really_start
+fi
       "
       
   elif [ "$2" = "noinit" ] ; then
@@ -1846,7 +1887,7 @@ really_start
  
 if [ $ROOTUSER -eq 0 ] ; then
 # > filename 2>&1 is the same as &> filename
- LOGGING="> $NDB_LOGS_DIR/mgmd-stdout-1.log 2>&1 > /dev/null"
+ LOGGING="> $NDB_LOGS_DIR/mgmd-stdout-1.log 2>&1"
 fi
   
 test_userid
@@ -1858,14 +1899,22 @@ echo "#!/bin/sh
 
 SKIP_NDBDS=0
 SKIP_MYSQLDS=0
+SKIP_USER_CHECK=0
 
 while [ \$# -gt 0 ]; do
   case \"\$1\" in
-    -h|--help)
-              echo \"usage: <prog> [ --skip-ndbds ] [ --skip-mysqlds ]\"
+    -h|--help|-help)
+              echo \"usage: <prog> [--skip-ndbds (do not start data nodes)] [--skip-mysqlds (do not start mysql servers)] [-sc (delete old configurations)] [-f skip user check]\"
 	      echo \"\"
 	      echo \"connectstring is set to $CONNECTSTRING\"
 	      exit 0 
+	      ;;
+    -f|--force)
+              SKIP_USER_CHECK=1
+	      ;;
+    -sc)
+              echo \"Deleting old configurations from /$NDB_DIR/$MGM_DATADIR/\"
+              rm -rf ../$NDB_DIR/$MGM_DATADIR/*
 	      ;;
     --skip-ndbds)
               SKIP_NDBDS=1
@@ -1889,26 +1938,7 @@ $CHECK_ON_STARTUP
 echo \"Cluster Startup may take a few minutes.\"  
 
 
-#echo \"Caching ssh password in ssh-agent:\"
-#ssh-add
-#if [ \$? -ne 0 ] ; then
-#   echo \"Starting ssh-agent..\"
-#   ssh-agent bash
-#
-#   if [ \$? -eq 0 ] ; then
-#     echo \"ssh-agent started.\"
-#     ssh-add
-#     if [ \$? -ne 0 ] ; then
-#       echo \"Problem caching your ssh-password using 'ssh-add'.\"
-#       echo \"Do you have 'ssh-agent' and 'ssh-add' installed? \"
-#       echo \"\"
-#     fi
-#   else
-#     echo \"Problem starting ssh-agent - you will be asked for your password when starting all remote processes.\"
-#   fi
-#fi
-
-echo \"Truncating the cluster log file: ${NDB_LOGS_DIR}/${CLUSTER_LOG_FILENAME}"
+echo \"Truncating the cluster log file: ${NDB_LOGS_DIR}/${CLUSTER_LOG_FILENAME}\"
 rm $NDB_LOGS_DIR/$CLUSTER_LOG_FILENAME 
 
 echo \"Starting the Management Server .....\"
@@ -1919,8 +1949,10 @@ else
     SIZE_CL=0
 fi
 
+#remove memory of old configurations
+#echo "If you want to remove warnings for incompatible configuration changes, run 'rm -rf ../$NDB_DIR/$MGM_DATADIR/*'"
 
-$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/ndb_data --reload $LOGGING $NO_DAEMON_LAUNCH 
+$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/$MGM_DATADIR --reload $LOGGING $NO_DAEMON_LAUNCH 
 
 if [ \$? -ne 0 ] ; then
   echo \"Problem starting the Management Server.\"
@@ -1979,11 +2011,11 @@ done
 
 sleep 1
 
-" > $NDB_DIR/scripts/${START_TYPE}-${1}${CLUSTER_START} $ECHO_OUT
+" > $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
   
   if [ $? -ne 0 ] ; then
    echo "" $ECHO_OUT
-   echo "Failure: could not create file $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}node.sh" $ECHO_OUT
+   echo "Failure: could not create file $NDB_DIR/scripts/${START_TYPE}.sh" $ECHO_OUT
    exit_error
   fi
 
@@ -1993,22 +2025,22 @@ sleep 1
 
      NODEID=`expr ${COUNT} + 1`
      if [ $ROOTUSER -eq 0 ] && [ $DISTRIBUTED -eq 0 ] ; then
-	 LOGGING="> ${NDB_LOGS_DIR}/ndb-stdout-${NODEID}.log 2>&1 > /dev/null"
+	 LOGGING="> ${NDB_LOGS_DIR}/ndb-stdout-${NODEID}.log 2>&1"
      fi
      if [ $DISTRIBUTED -eq 0 ] ; then
 
        echo "
 
 if [ \$SKIP_NDBDS -eq 0 ] ; then
-   if [ ! -e $MYSQL_BINARIES_DIR/bin/ndbd ] ; then
-      echo \"Error: could not find file: $MYSQL_BINARIES_DIR/bin/ndbd\"
+   if [ ! -e $NDBD_BIN ] ; then
+      echo \"Error: could not find file: $NDBD_BIN\"
       exit 3
    fi
 
 
   echo \"Starting Data Node ${NODEID} on Localhost.\"
 
-  $MYSQL_BINARIES_DIR/bin/ndbd -c $CONNECTSTRING --ndb-nodeid=${NODEID} $INIT $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
+  $NDBD_BIN -c $CONNECTSTRING --ndb-nodeid=${NODEID} $INIT $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
 
   if [ \$? -ne 0 ] ; then
     echo \"Problem starting a Data Node.\"
@@ -2023,7 +2055,8 @@ else
 
 fi
 
-sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
+sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
+#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
      else
 
@@ -2048,8 +2081,8 @@ else
   echo \"Skipping starting ndbd.\"
 fi
 
-sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
-      # no-init
+sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
+#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 	     else
 		 echo "
 
@@ -2063,8 +2096,9 @@ if [ \$? -ne 0 ] ; then
   echo \"$NDB_LOGS_DIR\"
   echo \"$NDB_DIR/data_dir/${NODEID}\"
 fi
+sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
+#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
-sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 	     fi
 	 fi
       fi
@@ -2092,7 +2126,8 @@ sleep 1
 $NDB_DIR/scripts/$MGM_CLIENT_START -e show
 
 exit 0
-" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
+" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
+#" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
 fi
 
@@ -2141,8 +2176,8 @@ make_start_mysqlds_script
 
 make_start_cluster_script 2 "init" $LOCALHOST
 make_start_cluster_script 2 "noinit" $LOCALHOST
-make_start_cluster_script 4 "init" $LOCALHOST
-make_start_cluster_script 4 "noinit" $LOCALHOST
+#make_start_cluster_script 4 "init" $LOCALHOST
+#make_start_cluster_script 4 "noinit" $LOCALHOST
 
 }
 
@@ -2197,13 +2232,25 @@ writeable_scripts_dir
 
 NODE_STARTER="$NDB_DIR/scripts/${NDBD_INIT}-${NODEID}.sh"
 NODE_INITER="$NDB_DIR/scripts/${NDBD_START}-${NODEID}.sh"
+NODE_STOPPER="$NDB_DIR/scripts/${NDBD_STOP}-${NODEID}.sh" 
 
 if [ $ROOTUSER -eq 0 ] ; then
- LOGGING="> ${NDB_LOGS_DIR}/ndb-stdout-${NODEID}.log 2>&1 > /dev/null"
+ LOGGING="> ${NDB_LOGS_DIR}/ndb-stdout-${NODEID}.log 2>&1"
 fi
 
 test_userid
 get_connectstring
+
+echo "#!/bin/sh
+ID=${NODEID}
+WATCHDOG=\`cat ../../logs/ndb_\${ID}.pid\`
+PID=\`expr \$PID + 1\`
+echo \"Killing process-id \$PID and \$WATCHDOG ...\\n\" >> ../../logs/ndb_\${ID}_out.log
+echo \"Killing process-id \$PID and \$WATCHDOG ...\\n\" 
+kill \$WATCHDOG
+kill \$PID
+exit 0" > $NODE_STOPPER $ECHO_OUT
+
 
 echo "#!/bin/sh 
 
@@ -2214,8 +2261,9 @@ $GET_CONNECTSTRING
 echo \"Starting Data Node ${NODEID}.\"
 echo \"\"
 
-$MYSQL_BINARIES_DIR/bin/ndbd -c \$MGM_CONN --initial --ndb-nodeid=${NODEID} $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
-
+$NDBD_BIN -c \$MGM_CONN --initial --ndb-nodeid=${NODEID} $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
+RES=\`echo \$?\`
+exit $RES
 "  > $NODE_STARTER $ECHO_OUT
 
 if [ $? -ne 0 ] ; then
@@ -2232,8 +2280,9 @@ $GET_CONNECTSTRING
 
 echo \"Starting Data Node ${NODEID}.\"
 
-$MYSQL_BINARIES_DIR/bin/ndbd -c \$MGM_CONN --ndb-nodeid=${NODEID} $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
-
+$NDBD_BIN -c \$MGM_CONN --ndb-nodeid=${NODEID} $NO_DAEMON $LOGGING $NO_DAEMON_LAUNCH
+RES=\`echo \$?\`
+exit \$RES
 "  > $NODE_INITER $ECHO_OUT
 
 if [ $? -ne 0 ] ; then
@@ -2256,13 +2305,25 @@ make_start_mgmd()
 writeable_scripts_dir
 
 MGMD_START=$NDB_DIR/scripts/mgm-server-start-${1}node.sh
+MGMD_STOP=$NDB_DIR/scripts/mgm-server-stop-${1}node.sh
 
 if [ $ROOTUSER -eq 0 ] ; then
- LOGGING="> ${NDB_LOGS_DIR}/mgmd-stdout-${1}.log 2>&1 > /dev/null"
+ LOGGING="> ${NDB_LOGS_DIR}/mgmd-stdout-${1}.log 2>&1"
+# > /dev/null"
 fi
 
 test_userid
 already_running
+
+echo "#!/bin/sh
+ID=${MGMD_ID}
+PID=\`cat ../../logs/ndb_\${ID}.pid\`
+echo \"Killing mgm server with process-id \$PID \" >> ../../logs/ndb_\${ID}_out.log
+echo \"\"
+echo \"Killing mgm server with process-id \$PID \" 
+kill \$PID
+exit \$?" > $MGMD_STOP $ECHO_OUT
+
 
 echo "#!/bin/sh 
 
@@ -2275,15 +2336,15 @@ if [ ! -e $MYSQL_BINARIES_DIR/bin/ndb_mgmd ] ; then
   exit 3
 fi
 
-$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f  $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/ndb_data $LOGGING $NO_DAEMON_LAUNCH
-
-if [ \$? -ne 0 ] ; then
+$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f  $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/mgmd${1} --reload $LOGGING $NO_DAEMON_LAUNCH
+RES=\`echo \$?\`
+if [ \$RES -ne 0 ] ; then
     echo \"\"
-    echo \"Error when starting the management server: $?.\"
+    echo \"Error when starting the management server: \$?.\"
     echo \"\"
     exit 2
 fi
-
+exit \$RES
 "  > $MGMD_START $ECHO_OUT
 
 if [ $? -ne 0 ] ; then
@@ -2316,7 +2377,19 @@ echo "#!/bin/sh
 
 $TEST_USERID  
 
-$MYSQL_BINARIES_DIR/bin/mysqld --defaults-file=$MY_CNF > $NDB_LOGS_DIR/mysql-stdout-$1.log 2>&1 > /dev/null &
+echo \"Test if a mysql server is already running on this host.\"
+
+MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-7.2.8/scripts/util/get-mysqld-$1-socket.sh\`
+$MYSQL_BINARIES_DIR/bin/mysqladmin -S \$MYSQL_SOCKET -s -u root ping 
+# Don't redirect error, as this will give a '0' return result &> /dev/null
+if [ \$? -eq 0 ] ; then
+ echo \"A MySQL Server is already running at socket $MYSQL_SOCKET. Not starting another MySQL Server at this socket.\"
+ exit 1
+fi
+
+$MYSQL_BINARIES_DIR/bin/mysqld --defaults-file=$MY_CNF 1> $NDB_LOGS_DIR/mysql-stdout-$1.log 2>&1 &
+RES=\`echo \$?\`
+exit \$RES
 "  > $MYSQLD_STARTER $ECHO_OUT
 
 if [ $? -ne 0 ] ; then
@@ -2329,9 +2402,12 @@ echo "#!/bin/sh
 
 $TEST_USERID  
 
-PORT=\`$CHANGE_PORT_SCRIPT\`
 
-$MYSQL_BINARIES_DIR/bin/mysqladmin -h $MYSQL_HOST --protocol=tcp --port=\$PORT -u root shutdown
+MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-7.2.8/scripts/util/get-mysqld-$1-socket.sh\`
+$MYSQL_BINARIES_DIR/bin/mysqladmin -S \$MYSQL_SOCKET -u root --wait=30 shutdown
+
+RES=\`echo \$?\`
+exit \$RES
 "  > $MYSQLD_STOPPER $ECHO_OUT
 
 
@@ -2397,10 +2473,11 @@ fi
 ##########################################################################################
 # Function to generate script for starting a mysql client
 ##########################################################################################
-# $1 = mysqld number
-make_start_mysql_client() 
+# $1 = mysqld number make_start_mysql_client() 
+make_start_mysql_client()
 {
 START_MY_CLIENT=$NDB_DIR/scripts/mysql-client-$1.sh
+ADD_USER_SCRIPT=$NDB_DIR/scripts/add-mysql-user.sh
 
 writeable_scripts_dir
 
@@ -2408,17 +2485,32 @@ echo "#!/bin/sh
 
 if [ \"\$1\" = \"-h\" ] ; then
    echo \"Usage: mysql-client-$1.sh [-s] [database_name]\"
-   echo \"[-s] connects the mysql client using a socket, instead of tcp protocol.\"
+   echo \"[-S] connects the mysql client using a socket, instead of tcp protocol.\"
+   echo \"[-e] executes and SQL statement and the client then exits.\"
    exit 0
 fi
-
-if [ \"\$1\" = \"-s\" ] ; then
+SOCKET=0
+if [ \"\$1\" = \"-S\" ] ; then
     shift
+    SOCKET=1
+fi
+
+EXECUTE_SQL=0
+if [ \"\$1\" = \"-e\" ] ; then
+    shift
+    EXECUTE_SQL=1
+fi
+
+if [ \$SOCKET -eq 1 ] ; then
     MYSQL_SOCKET=\`$CHANGE_SOCKET_SCRIPT\`
-    $MYSQL_BINARIES_DIR/bin/mysql -u root -S \$MYSQL_SOCKET \$@
+   if [ \$EXECUTE_SQL -eq 1 ] ; then
+    $MYSQL_BINARIES_DIR/bin/mysql -u root -S \$MYSQL_SOCKET -e \"\$@\"
+   else
+    $MYSQL_BINARIES_DIR/bin/mysql -u root -S \$MYSQL_SOCKET 
+   fi
 else
     PORT=\`$CHANGE_PORT_SCRIPT\`
-    $MYSQL_BINARIES_DIR/bin/mysql -u root --protocol=tcp -h $MYSQL_HOST --port=\$PORT \$@
+    $MYSQL_BINARIES_DIR/bin/mysql -u root --protocol=tcp -h $MYSQL_HOST --port=\$PORT \$EXECUTE_SQL
 fi
 
 "  > $START_MY_CLIENT $ECHO_OUT
@@ -2430,6 +2522,27 @@ if [ $? -ne 0 ] ; then
 fi
 
 chmod +x $START_MY_CLIENT
+
+
+echo "#!/bin/sh
+if [ \$# -ne 2 ] ; then
+echo \"Usage: <prog> username password\"
+exit 1
+fi
+
+COMMAND=\"\\\"GRANT ALL PRIVILEGES ON \\\*.\\\* to '\$1'@'%' IDENTIFIED BY '\$2'\\\"\"
+./mysql-client-1.sh -S -e \$COMMAND
+
+exit \$?
+"  > $ADD_USER_SCRIPT $ECHO_OUT
+
+if [ $? -ne 0 ] ; then
+ echo "" $ECHO_OUT
+ echo "Failure: could not create file $NDB_DIR/scripts/$ADD_USER_SCRIPT" $ECHO_OUT
+ exit_error
+fi
+
+chmod +x $ADD_USER_SCRIPT
 
 }
 
@@ -2450,7 +2563,7 @@ MGMD_STARTED_STRING="Node $MGMD_ID: Node $MGMD_ID Connected"
 echo "#!/bin/sh
 
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
    echo \"\"
    echo \"Usage: prog_name [restart-timeout default=$NDBD_RESTART_TIMEOUT]\"
    echo \"\"
@@ -2524,7 +2637,7 @@ fi
 
    N=$1
    while [ $N -ne 0 ] ; do
-      NDB_STARTED_STRING="Node $N: Started"
+      NDB_STARTED_STRING="Node $N: Start phase 101 completed"
 echo "
    echo \"Restarting Data Node $N...\"
    $MYSQL_BINARIES_DIR/bin/ndb_mgm -c $CONNECTSTRING -e \"$N restart\"
@@ -2624,7 +2737,7 @@ usage()
 }
 
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
       usage
       exit 0
       ;;      
@@ -2684,7 +2797,7 @@ echo "#!/bin/sh
 BACKUP_DIR=\"$NDB_DIR/backup/\"
 
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
    echo \"\"
    echo \"Usage: prog_name [-d BACKUP-DIR \(default=$NDB_DIR/backup\)]\"
    echo \"\"
@@ -2727,7 +2840,7 @@ BACKUP_ID=1
 NDB_DATA_DIR=\"$NDB_DIR/ndb_data\"
 
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
          echo \"\"
          echo \"Usage: prog_name [-b ID \(default=1\)] [-d BACKUP-DIR \(default=$NDB_DIR/backup\)]\"
          echo \"\"
@@ -2854,7 +2967,7 @@ BACKUPID=
 
 while [ \$# -gt 0 ]; do
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
       usage
       exit 0
       ;;      
@@ -2915,7 +3028,7 @@ usage()
 NUM_LINES=20
 
   case \$1 in
-    \"-h\"|\"--help\")
+    \"-h\"|\"--help\"|\"-help\")
       usage
       exit 0
       ;;      
@@ -3080,7 +3193,7 @@ case \"\$1\" in
   reload)
     restart
     ;;
-  -h|--help)
+  -h|--help|-help)
     echo \"\"
     echo \"usage: <prog> start|stop|restart\"
     echo \"\"
@@ -3174,7 +3287,8 @@ start_stop_restart
 
 MGMD_INIT="ndb_mgmd-1"
 CONFIG_INI="$NDB_DIR/config-${NUM_NODES}node.ini"
-LOGGING="> $NDB_LOGS_DIR/mgmd-stdout-1.log 2>&1 > /dev/null"
+LOGGING="> $NDB_LOGS_DIR/mgmd-stdout-1.log 2>&1"
+# > /dev/null"
 
 echo "#!/bin/bash
 #
@@ -3218,7 +3332,8 @@ make_initd_ndbd()
 start_stop_restart
 
 NDBD_INIT="ndb_node-$NODEID"
-LOGGING="> $NDB_LOGS_DIR/ndb_$NODEID_out.log 2>&1 > /dev/null"
+LOGGING="> $NDB_LOGS_DIR/ndb_$NODEID_out.log 2>&1"
+# > /dev/null"
 
 echo "#!/bin/bash
 #
@@ -3237,7 +3352,7 @@ echo "#!/bin/bash
 ### END INIT INFO
 
 # Variables
-prog=\"$MYSQL_BINARIES_DIR/bin/ndbd\"
+prog=\"$NDBD_BIN\"
 
 START_PROG=\"\$prog -c $CONNECTSTRING --ndb-nodeid=${NODEID} $LOGGING &\"
 STOP_PROG=\"$MYSQL_BINARIES_DIR/bin/ndb_mgm -c ${CONNECTSTRING} -e \\\"$NODEID stop\\\"\"
@@ -3389,32 +3504,32 @@ while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
     -a|--arch)
 	      shift
 	      case "$1" in
-	         i386)
-		      CPU="pentium-max" # i386
-		      ;;
 		 amd64|AMD64)
 		      CPU="x86_64"
-		      #CPU="amd64-max" # "x86_64"
 		      ;;
-		  x86_64)
-		      CPU="pentium64-debug-max"
-		      ;;
-		  ia64|IA64)
-		      CPU="compile-ia64-debug-max"
-		      ;;
-		 powerpc|POWERPC)
-		      CPU="ppc-max"
-		      ;;
+		 # x86_64)
+		 #     CPU="x86_64" 
+		 #     ;;
+		 # ia64|IA64)
+		 #     CPU="ia64"
+		 #     ;;
+		 #powerpc|POWERPC)
+		 #     CPU="ppc-max"
+		 #     ;;
 		 mac|MAC)
 		      PLATFORM="mac"
 		      CPU="darwin-mwcc"
 		      ;;
               esac
 	      ;;
-    --add-mysql)
+    -my|--add-mysql)
 	      ADD_MYSQLD=1
 	      ;;
-    -h|--help)
+    -nc|--num-cores)
+	      shift
+	      NUM_CORES=$1
+	      ;;
+    -h|--help|-help)
 	      echo "" $ECHO_OUT
 	      echo "You can install MySQL Cluster as 'root' or normal user." $ECHO_OUT
 	      echo "Install as 'root' to install to system directories [/usr/local/mysql/]." $ECHO_OUT
@@ -3424,15 +3539,17 @@ while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
 #	      echo "" $ECHO_OUT
 #              echo "usage: [sudo] $SCRIPTNAME [ -d|--debug]" $ECHO_OUT
               echo "usage: [sudo] ./$SCRIPTNAME "
-	      echo " [-a|--arch i686|amd64|x86_64|powerpc]"
+	      echo " [-a|--arch amd64|powerpc]"
 	      echo "                  select processor architecture"
-	      echo " [-add-mysql]     when installing a Mgm Server, also install a MySQL Server"
 	      echo " [-c|--default-config]"
 	      echo "                  generate a config.ini file with default parameters"
+	      echo " [-cl|--clean]    clean the install directory when installing"
 	      echo " [-d|--ndbd-hostname hostname]"
 	      echo "                  ndbd hostname with node-id generated using order" $ECHO_OUT
 	      echo "                  in which they are specified in command line, e.g.,"
 	      echo "                  -d myhost-1 -d myhost-2 have node-id 1 and 2 respectively"
+	      echo " [-dm|--data-memory)]"
+	      echo "                  size of data memory"
 	      echo " [-h|--help]      help for ndbinstaller.sh" $ECHO_OUT
 	      echo " [-i|--install-action localhost|local-mysql|mgm|ndbd|remote-mysql] " $ECHO_OUT
 	      echo "                 'localhost' installs a localhost cluster"
@@ -3442,28 +3559,43 @@ while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
 	      echo "                 'remote-mysql' installs a mysqld on different host to MgmServer"
 	      echo "                  You need to have localhost set to '127.0.0.1' in /etc/hosts "
 	      echo " [-id ID]         node-id for ndbd during install-action 'ndbd'" $ECHO_OUT
+	      echo " [-im|--index-memory)]"
+	      echo "                  size of index memory"
 	      echo " [-k|--keygen]    force generation of a new SSH public key during install" $ECHO_OUT
+	      echo " [-sk|--skip-mgm-pk]"
+	      echo "                  Skip downloading the mgm server's public key" 
 	      echo " [-m|--ndb_mgmd HOSTNAME] "
 	      echo "                  set the hostname for the NDB Management Server"
-              echo " [-p|--ndb_mgmd-port PORT_NUM] "
-	      echo "                  set the port number for the NDB Management Server"
-	      echo "                  (default $DEFAULT_MGM_PORT)"
-	      echo " [-n|--num-nodes NUMBER_NODES]"
-	      echo "                  help for ndbinstaller.sh" $ECHO_OUT
-	      echo " [--default-ndb-dir]"
-	      echo "                  accept the default installation directory for NDB:"
-	      echo "                  user-level default dir: ~/.mysql/ndb"
-	      echo "                  root installation default dir: /var/lib/mysql-cluster/ndb"
-	      echo " [--default-mysql-dir]"
+	      echo " [-md|--default-mysql-dir]"
 	      echo "                  accept the default installation directory for MySQL Server:"
 	      echo "                  user-level default dir: ~/.mysql/ndb/mysql_[NUM]"
 	      echo "                  root default dir: /var/lib/mysql-cluster/ndb/mysql_[NUM]"
-	      echo " [--default-mysql-settings]"
+	      echo " [-mh|--mysql-host HOSTNAME] "
+	      echo "                  set the hostname for the MySQL Server"
+	      echo " [-ms|--default-mysql-settings]"
 	      echo "                  accept the default settings (in my.cnf) for the MySQL Server"
+	      echo " [-my|-add-mysql]     when installing a Mgm Server, also install a MySQL Server"
+	      echo " [-n|--num-nodes NUMBER_NODES]"
+	      echo "                  help for ndbinstaller.sh" $ECHO_OUT
+	      echo " [-nd|--default-ndb-dir]"
+	      echo "                  accept the default installation directory for NDB:"
+	      echo "                  user-level default dir: ~/.mysql/ndb"
+	      echo "                  root installation default dir: /var/lib/mysql-cluster/ndb"
+	      echo " [-ni|--non-interactive)]"
+	      echo "                  skip license/terms acceptance and all confirmation screens."
+              echo " [-p|--ndb_mgmd-port PORT_NUM] "
+	      echo "                  set the port number for the NDB Management Server"
+	      echo "                  (default $DEFAULT_MGM_PORT)"
+	      echo " [--proxy URL]"
+	      echo "                  set the Http Proxy address for downloading MySQL Binaries "
+              echo " [--proxy-user]"
+              echo "                  set the Http Proxy username or downloading MySQL Binaries "
+              echo " [--proxy-pass]"
+	      echo "                  set the Http Proxy password for downloading MySQL Binaries "
 	      echo " [-u|--username USERNAME]"
-	      echo "                  set the username for install of MgmServer/DataNode/MySQL " $ECHO_OUT
-	      echo " [-v|--version]   version information for ndbinstaller.sh" $ECHO_OUT
-	      echo "" $ECHO_OUT
+	      echo "                  set the username for install of MgmServer/DataNode/MySQL "
+	      echo " [-v|--version]   version information for ndbinstaller.sh" 
+	      echo "" 
 	      exit 3
               break ;;
 
@@ -3497,8 +3629,16 @@ while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
     -k|--keygen)  # generate a ssh-key, even if one already exists
 	      FORCE_GENERATE_SSH_KEY=1
 	      ;;
+    -sk|--skip-mgm-pk)
+	      SKIP_DOWNLOAD_MGM_SSH_KEY=1
+	      ;;
     --debug) # enable debugging
               DEBUG=1
+	      ;;
+    -mh|--mysql-host)
+	      shift
+	      MYSQL_HOST=$1
+	      MYSQL_HOST_NOT_SET=0
 	      ;;
     -m|--ndb_mgmd)
 	      shift
@@ -3528,19 +3668,45 @@ while [ $# -gt 0 ]; do    # Until you run out of parameters . . .
     -c|--default-config)
 	      PARAM_CONFIG_DEFAULT=1
 	      ;;
-    --default-ndb-dir)
+    -cl|--clean)
+	      CLEAN_INSTALL_DIR=1
+	      ;;
+    -nd|--default-ndb-dir)
 	      PARAM_DEFAULT_INSTALL_NDB_DIR=1
 	      ;;
-    --default-mysql-dir)
+    -md|--default-mysql-dir)
 	      PARAM_DEFAULT_INSTALL_MYSQL_DIR=1
 	      ;;
-    --default-mysql-settings)
+    -ms|--default-mysql-settings)
 	      PARAM_DEFAULT_MYSQL_SETTINGS=1
 	      ;;
     -u|--username)
 	      shift
 	      PARAM_USERNAME=1
 	      USERNAME=$1
+	      ;;
+    -dm|--data-memory)
+	      shift
+	      DATA_MEMORY=$1
+	      ;;
+    -im|--index-memory)
+	      shift
+	      INDEX_MEMORY=$1
+	      ;;
+    -ni|--non-interactive)
+	      NON_INTERACT=1
+	      ;;
+    --proxy)
+	      shift
+	      HTTP_PROXY=$1
+	      ;;
+    --proxy-user)
+	      shift
+	      HTTP_USER=$1
+	      ;;
+    --proxy-pass)
+	      shift
+	      HTTP_PASS=$1
 	      ;;
     -v|--version) 
 	      echo "" $ECHO_OUT    
@@ -3660,6 +3826,8 @@ installed_progs()
     #LIB=libncurses
     #is_installed_lib $LIB
 
+    #LIB=libaio1
+    #is_installed_lib $LIB
 
 #    PROG=flex
 #    is_installed_prog $PROG
@@ -3711,11 +3879,12 @@ check_userid()
   ROOTUSER=0
   
   # Check if user is root
-  USERID=`id | sed -e 's/\).*//; s/^.*\(//;'`
+  USERID=`id | sed -e 's/).*//; s/^.*(//;'`
   if [ "X$USERID" = "Xroot" ]; then
     ROOTUSER=1
     MYSQL_BASE_DIR=/usr/local
   else
+    echo "USER!!!!"
     HOMEDIR=`(cd ; pwd)`
     MYSQL_BASE_DIR=$HOMEDIR/.mysql
     NDB_INSTALL_DIR=$HOMEDIR/.mysql
@@ -3735,40 +3904,17 @@ select_cpu()
         echo "Select the computer architecture for this host: " $ECHO_OUT
 	echo "(All management nodes and data nodes must run the same version of MySQL)" $ECHO_OUT
 	echo "" $ECHO_OUT
-	echo "(1) i386" $ECHO_OUT
+	echo "(1) X86_64" $ECHO_OUT
+	echo "(2) MAC" $ECHO_OUT
 	echo "" $ECHO_OUT
-	echo "(2) AMD64" $ECHO_OUT
-	echo "" $ECHO_OUT
-	#echo "(3) Pentium 64" $ECHO_OUT
-	#echo "" $ECHO_OUT
-	echo "(3) IA64" $ECHO_OUT
-	echo "" $ECHO_OUT
-	echo "(4) Mac (darwin)" $ECHO_OUT
-	echo "" $ECHO_OUT
-	echo "(5) powerpc" $ECHO_OUT
-	echo "" $ECHO_OUT
-	printf 'Please enter your choice '1', '2', '3','4','5','6', or 'h' \(help\) :  '
+	printf 'Please enter your choice '1','2', or 'h' \(help\) :  '
         read ACCEPT
 
         case $ACCEPT in
           1)
-            CPU="pentium-max" 
+            CPU="x86_64"
             ;;
           2)
-            CPU="x86_64"
-            #CPU="amd64-max"
-            ;;
-          #3)
-          #  CPU="pentium64-debug-max"
-          #  ;;
-          3)
-            CPU="ia64-debug-max"
-            ;;
-
-          4)
-            CPU="darwin-mwcc"
-            ;;
-          5)
             CPU="powerpc"
             ;;
           h | H)
@@ -3810,6 +3956,7 @@ VERSION="${VERSION_PREFIX}${MYSQL_VERSION_MAJOR}.${MYSQL_VERSION_MINOR}.${MYSQL_
   MYSQL_BINARIES_INSTALLED=".mysql_binaries_installed_"${VERSION}
 
   MYSQL_BINARIES_DIR=$MYSQL_BASE_DIR/$VERSION
+  NDBD_BIN=$MYSQL_BINARIES_DIR/bin/$NDBD_PROG
   NDB_DIR=$NDB_INSTALL_DIR/$NDB_VERSION
 }
 
@@ -3826,9 +3973,9 @@ splash_screen()
   echo "This program installs MySQL Server and NDB Storage Engine (MySQL Cluster)," $ECHO_OUT
   echo "Copyright(C) MySQL AB."  $ECHO_OUT
   echo "" $ECHO_OUT
-  echo "REQUIREMENTS: openssh-server, libncurses-dev, automake, autoconf, libtool, make, gcc, g++" $ECHO_OUT
-  echo "Installation (ubuntu/debian): apt-get install openssh-server build-essential automake autoconf gcc g++ libtool libncurses5-dev" $ECHO_OUT
-  echo "" $ECHO_OUT
+  #echo "REQUIREMENTS: openssh-server, libncurses-dev, automake, autoconf, libtool, make, gcc, g++" $ECHO_OUT
+  #echo "Installation (ubuntu/debian): apt-get install openssh-server build-essential automake autoconf gcc g++ libtool libncurses5-dev" $ECHO_OUT
+  #echo "" $ECHO_OUT
   if [ $ROOTUSER -eq 1 ] ; then
     echo "You are running the Installer as a root user." $ECHO_OUT
     echo "This will install MySQL and NDB by default to: /var/lib/ndb/" $ECHO_OUT
@@ -3869,7 +4016,6 @@ display_license()
   echo "" $ECHO_OUT
   printf 'Do you accept these terms and conditions? [ yes or no ] '
 }
-#display_license
   
 accept_license () 
   {
@@ -4051,10 +4197,11 @@ select_mysql_installation()
    if [ "$install_num" = "$count" ] ; then
 #       MYSQL_BINARIES_DIR=`dirname $install`
        MYSQL_BINARIES_DIR="$install"
+       NDBD_BIN=$MYSQL_BINARIES_DIR/bin/$NDBD_PROG
    fi
-
  done
-      
+     
+ NDBD_BIN=$MYSQL_BINARIES_DIR/bin/$NDBD_PROG
  echo "binary dir = $MYSQL_BINARIES_DIR"
 }
 
@@ -4168,8 +4315,13 @@ check_for_mysql_binaries()
 
       echo "" $ECHO_OUT
       echo -n "Use existing binaries for this installation?" $ECHO_OUT
-      entry_ok $USE_BINARIES_HELP
-
+      if [ $NON_INTERACT -eq 0 ] ; then
+         entry_ok $USE_BINARIES_HELP
+      else 
+         eval true  # Zero exit status to download new binaries
+      fi
+ 
+ 
       if [ $? -eq 1 ] ; then
   	INSTALL_BINARIES=0
 
@@ -4190,7 +4342,9 @@ check_for_mysql_binaries()
   	  exit_error
         fi
       fi  
+     NDBD_BIN="$MYSQL_BINARIES_DIR/bin/$NDBD_PROG"
 
+     NDBD_BIN=$MYSQL_BINARIES_DIR/bin/$NDBD_PROG
      clear_screen
   fi 
 }
@@ -4212,39 +4366,40 @@ install_binaries()
       echo "$CWD/$VERSION.tar.gz file not found" $ECHO_OUT
       echo "" $ECHO_OUT
 
-      echo "Will now try to use 'wget' program to download the MySQL binaries." $ECHO_OUT
-      echo -n "Do you need to go through a web proxy to access the Internet?" $ECHO_OUT
-      entry_ok
+      if [ $NON_INTERACT -eq 0 ] ; then 
+          echo "Will now try to use 'wget' program to download the MySQL binaries." $ECHO_OUT
+          echo -n "Do you need to go through a web proxy to access the Internet?" $ECHO_OUT
+          entry_ok
 
-      if [ $? -eq 1 ] ; then 
-	  HTTP_PROXY=$http_proxy
-	  if [ "$HTTP_PROXY" = "" ] ; then
-	      echo "" $ECHO_OUT
-	      echo "You need to set the environment variable 'http_proxy' to contain" $ECHO_OUT
-	      echo "the URL of the proxy server for 'wget' to download the binaries." $ECHO_OUT
-	      echo "" $ECHO_OUT
-	      echo "Set the 'http_proxy' env variable and run this installer script again:" $ECHO_OUT
-	      echo "bash>export http_proxy=myproxyserver:port" $ECHO_OUT
-	      echo "csh>setenv http_proxy myproxyserver:port" $ECHO_OUT
-	      exit_error
+	  if [ $? -eq 1 ] ; then 
+	      HTTP_PROXY=$http_proxy
+	      if [ "$HTTP_PROXY" = "" ] ; then
+		  echo "" $ECHO_OUT
+		  echo "You need to set the environment variable 'http_proxy' to contain" $ECHO_OUT
+		  echo "the URL of the proxy server for 'wget' to download the binaries." $ECHO_OUT
+		  echo "" $ECHO_OUT
+		  echo "Set the 'http_proxy' env variable and run this installer script again:" $ECHO_OUT
+		  echo "bash>export http_proxy=myproxyserver:port" $ECHO_OUT
+		  echo "csh>setenv http_proxy myproxyserver:port" $ECHO_OUT
+		  exit_error
+	      fi
+	      HTTP_USER=$http_user
+	      if [ "$HTTP_USER" = "" ] ; then
+		  echo "" $ECHO_OUT
+		  echo "Enter the username for the proxy server:" $ECHO_OUT
+		  read ACCEPT
+		  HTTP_USER=$ACCEPT
+              fi
+	      HTTP_PASS=$http_pass
+	      if [ "$HTTP_PASS" = "" ] ; then
+		  echo "" $ECHO_OUT
+		  echo "Enter the password for the proxy server:" $ECHO_OUT
+		  read ACCEPT
+		  HTTP_PASS=$ACCEPT
+              fi
+	      PROXY="--proxy $HTTP_PROXY"
 	  fi
-	  HTTP_USER=$http_user
-	  if [ "$HTTP_USER" = "" ] ; then
-            echo "" $ECHO_OUT
-            echo "Enter the username for the proxy server:" $ECHO_OUT
-            read ACCEPT
-	    HTTP_USER=$ACCEPT
-          fi
-	  HTTP_PASS=$http_pass
-	  if [ "$HTTP_PASS" = "" ] ; then
-            echo "" $ECHO_OUT
-            echo "Enter the password for the proxy server:" $ECHO_OUT
-            read ACCEPT
-	    HTTP_PASS=$ACCEPT
-          fi
-	  PROXY="--proxy"
       fi
-
       echo ""
 
       download_binaries
@@ -4307,7 +4462,11 @@ get_ndb_dir()
       echo "$NDB_DIR" $ECHO_OUT
       echo "" $ECHO_OUT
       echo -n "Is the above directory the correct directory for \$NDB_HOME?" $ECHO_OUT
-      entry_ok "\$NDB_HOME is the directory where you installed the existing MySQL Data directory." 
+      if [ $NON_INTERACT -eq 0 ] ; then
+         entry_ok "\$NDB_HOME is the directory where you installed the existing MySQL Data directory." 
+      else 
+         eval false
+      fi
       if [ $? -eq 0 ] ; then
   	echo "Enter the directory where NDB is installed \(\$NDB_HOME\): " $ECHO_OUT
   	read dir
@@ -4392,71 +4551,78 @@ build_and_move_binaries()
 
  if [ $MOVE_BINARIES -eq 1 ] ; then
 
-	 echo "" $ECHO_OUT
-	 echo "The downloaded source files will now be built using autotools and automake." $ECHO_OUT
-	 echo "" $ECHO_OUT
-	 cd $VERSION
-	 if [ $? -ne 0 ] ; then
-	     echo "" $ECHO_OUT
-	     echo "There appeared to be a problem when changing directory to the sources just downloaded." $ECHO_OUT
-	     exit_error
-	 fi
-	 
-	 clear_screen
-
-	 BUILD/compile-${CPU} --prefix=$MYSQL_BINARIES_DIR
+	 #echo "" $ECHO_OUT
+	 #echo "The downloaded source files will now be built using autotools and automake." $ECHO_OUT
+	 #echo "" $ECHO_OUT
+#	 cd $VERSION
+#	 if [ $? -ne 0 ] ; then
+	     #echo "" $ECHO_OUT
+	     #echo "There appeared to be a problem when changing directory to the sources just downloaded." $ECHO_OUT
+	     #exit_error
+	 #fi
+	 #clear_screen
+	 #BUILD/compile-${CPU} --prefix=$MYSQL_BINARIES_DIR
 
 #         ./configure --with-plugins=ndbcluster,clusterj,openjpa  --with-extra-charsets=all --with-ssl --prefix=$MYSQL_BINARIES_DIR --with-unix-socket-path=$MYSQL_SOCK --with-ndb-docs 
 #         make
 
-	 if [ $? -ne 0 ] ; then
-	     cd ..
-	     rm -rf $VERSION
-	     echo "" $ECHO_OUT
-	     echo "" $ECHO_OUT
-	     echo "There appeared to be a problem when  running 'make' on the MySQL Cluster binaries." $ECHO_OUT
-	     echo ""
-	     echo "To build MySQL Cluster, you need to have the following programs installed:" $ECHO_OUT
-	     echo "automake, autoconf, make, gcc, g++, libtool" $ECHO_OUT
-	     echo "For debian/ubuntu run: "
-	     echo "  apt-get install build-essential automake autoconf g++ libtool flex bison" $ECHO_OUT
-	     echo "" $ECHO_OUT
-	     exit_error
-         fi
+	 #if [ $? -ne 0 ] ; then
+	 #    cd ..
+	 #    rm -rf $VERSION
+	 #    echo "" $ECHO_OUT
+	 #    echo "" $ECHO_OUT
+	 #    echo "There appeared to be a problem when  running 'make' on the MySQL Cluster binaries." $ECHO_OUT
+	 #    echo ""
+	 #    echo "To build MySQL Cluster, you need to have the following programs installed:" $ECHO_OUT
+	     #echo "automake, autoconf, make, gcc, g++, libtool" $ECHO_OUT
+	     #echo "For debian/ubuntu run: "
+	     #echo "  apt-get install build-essential automake autoconf g++ libtool flex bison" $ECHO_OUT
+	     #echo "" $ECHO_OUT
+	     #exit_error
+         #fi
   
-	 make install
-	 if [ $? -ne 0 ] ; then
-	     echo "" $ECHO_OUT
-	     echo "There appeared to be a problem when running 'make install' on the MySQL Cluster binaries." $ECHO_OUT
-	     echo "" $ECHO_OUT
-	     echo "You should exit now using ctrl-c." $ECHO_OUT
-	     echo "If you continue your installation, your version of cluster may not work correctly." $ECHO_OUT	     
-         fi
-	 cd ..
+	 #make install
+	 #if [ $? -ne 0 ] ; then
+	 #    echo "" $ECHO_OUT
+	 #    echo "There appeared to be a problem when running 'make install' on the MySQL Cluster binaries." $ECHO_OUT
+	     #echo "" $ECHO_OUT
+	     #echo "You should exit now using ctrl-c." $ECHO_OUT
+	     #echo "If you continue your installation, your version of cluster may not work correctly." $ECHO_OUT	     
+         #fi
+	 #cd ..
 
-	 if [ $REMOVE_EXPANDED_BINARIES_AFTER_INSTALL -eq 1 ] ; then
-	     rm -rf $VERSION
-	     if [ $? -ne 0 ] ; then
-		 exit_error
-	     fi
-	 fi
+	 #if [ $REMOVE_EXPANDED_BINARIES_AFTER_INSTALL -eq 1 ] ; then
+	     #rm -rf $VERSION
+	     #if [ $? -ne 0 ] ; then
+	#	 exit_error
+	     #fi
+	 #fi
 
     #create a file that is used by subsequent runs to find existing installations
-	 touch $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}"
-	 if [ $? -ne 0 ] ; then
-	     exit_error "Could write a file to $MYSQL_BINARIES_DIR" $ECHO_OUT
-	 fi
-  
-	 echo "MySQL binaries installed to: " $ECHO_OUT
-
+         test -e $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}" 
+         if [ $? -ne 0 ] ; then
+           `cp -r ${VERSION}/* ${MYSQL_BINARIES_DIR}`
+	    touch $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}"
+	    if [ $? -ne 0 ] ; then
+	       exit_error "Could write a file to $MYSQL_BINARIES_DIR" $ECHO_OUT
+	    fi
+	    echo "MySQL binaries installed in: $MYSQL_BINARIES_DIR" $ECHO_OUT
+         else 
+	    echo "MySQL binaries already installed in : $MYSQL_BINARIES_DIR" $ECHO_OUT
+         fi 
 else # move_binaries != 0
   echo "MySQL binaries already installed in: " $ECHO_OUT
     #create a file that is used by subsequent runs to find existing installations
-	 touch $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}"
-	 if [ $? -ne 0 ] ; then
-	     exit_error "Could write a file to $MYSQL_BINARIES_DIR" $ECHO_OUT
-	 fi
-    `cp -r ${VERSION}/* ${MYSQL_BINARIES_DIR}`
+         test -e $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}" 
+         if [ $? -ne 0 ] ; then
+            `cp -r ${VERSION}/* ${MYSQL_BINARIES_DIR}`
+	    touch $MYSQL_BINARIES_DIR"/${MYSQL_BINARIES_INSTALLED}"
+	    if [ $? -ne 0 ] ; then
+	       exit_error "Could write a file to $MYSQL_BINARIES_DIR" $ECHO_OUT
+	    fi
+         else
+	    echo "MySQL binaries already installed in : $MYSQL_BINARIES_DIR" $ECHO_OUT
+         fi 
 fi  
 
   echo "$MYSQL_BINARIES_DIR" $ECHO_OUT
@@ -4531,7 +4697,12 @@ setup_mysql_user_account()
         echo "-------------- Setting up User Account to Run Cluster --------------" $ECHO_OUT
         echo "" $ECHO_OUT
         echo -n "Create user account '$USERNAME' with home directory = '/home/$USERNAME'?" $ECHO_OUT
-        entry_ok
+        if [ $NON_INTERACT -eq 0 ] ; then
+           entry_ok
+        else 
+           eval false
+        fi
+
         if [ $? -eq 0 ] ; then
           exit_error "You need to start cluster as a non-root user"
         fi
@@ -4615,72 +4786,90 @@ setup_symbolic_link()
 # $1 = source (full dir) $2 = target_dir/SYM_NAME $3 = SYM_NAME  
     create_symbolic_link() 
     {
-    
+	
     # get the name of the file/directory the symbolic link points to
-    FILE_NAME=$2/$3
+	FILE_NAME=$2/$3
     # TODO: hide the output if FILE_NAME doesn't exist  2> /dev/null
-    LS_OUT=$(ls -l "$FILE_NAME")
-    TARGET=${LS_OUT#*-> }
+	LS_OUT=$(ls -l "$FILE_NAME")
+	TARGET=${LS_OUT#*-> }
 
     #if the symbolic link already exists for this directory, skip creating a symbolic link
-    if [ "$1" = "$TARGET" ] ; then
+	if [ "$1" = "$TARGET" ] ; then
+	    echo "" $ECHO_OUT
+	    echo "Symbolic link already exists from " $ECHO_OUT
+            echo "$1 to:" $ECHO_OUT
+            echo "$2/$3" $ECHO_OUT 
+	    return 0
+	fi
+	NEW_LINK_CREATED=1
+	if [ $# -ne 3 ] ; then
+	    echo "Incorrect number of params to create_symbolic_link()" $ECHO_OUT
+	fi
 	echo "" $ECHO_OUT
-	echo "Symbolic link already exists from " $ECHO_OUT
-        echo "$1 to:" $ECHO_OUT
-        echo "$2/$3" $ECHO_OUT 
-	return 0
-    fi
-    NEW_LINK_CREATED=1
-      if [ $# -ne 3 ] ; then
-	echo "Incorrect number of params to create_symbolic_link()" $ECHO_OUT
-      fi
-      echo "" $ECHO_OUT
-      echo "It is recommended that you create a symbolic link" $ECHO_OUT
-      echo "from $1" $ECHO_OUT
-      echo "to   $2/$3" $ECHO_OUT
-      echo "" $ECHO_OUT
-      if [ -e $2/$3 ]  ; then
-	  echo "Do you want to replace your existing symbolic link? (y/n/q) " $ECHO_OUT
-      else
-	  if [ -e $2/$3 ] ; then
-	      exit_error "$2/$3 already exists and is not a symbolic link. Delete it manually using 'rm'."
-	  fi
-	  echo "Do you want to create this symbolic link? (y/n/q) " $ECHO_OUT
-      fi
-      read ACCEPT
-       case $ACCEPT in
-        y | Y)
-	rm -rf ${2}/${3} >& /dev/null
-  	ln -sf  ${1} ${2}/${3}
-  	if [ $? -ne 0 ] ; then 
-            echo "" $ECHO_OUT
-  	    echo "Failed to create the symbolic link." $ECHO_OUT
-  	fi
-          ;;
-        n | N)
-          echo "Not creating a symbolic link from:" $ECHO_OUT
-  	echo "$1 to" $ECHO_OUT
-  	echo "$2/$3" $ECHO_OUT
-          ;;
-        q | Q)
-          exit_error
-          ;;
-        *)
-          echo "" $ECHO_OUT
-          echo "Please enter 'y', 'n', or 'q'." $ECHO_OUT
-          create_symbolic_link $1 $2 $3
-          ;;
-       esac
+	echo "It is recommended that you create a symbolic link" $ECHO_OUT
+	echo "from $1" $ECHO_OUT
+	echo "to   $2/$3" $ECHO_OUT
+	echo "" $ECHO_OUT
+        if [ $NON_INTERACT -eq 0 ] ; then
+	    if [ -e $2/$3 ]  ; then
+		entry_ok "Do you want to replace your existing symbolic link? (y/n/q) " 
+	    else
+		if [ -e $2/$3 ] ; then
+		    exit_error "$2/$3 already exists and is not a symbolic link. Delete it manually using 'rm'."
+		fi
+		entry_ok "Do you want to create this symbolic link? (y/n/q) " 
+	    fi
+        else
+            eval false
+        fi
+
+	if [ $? -eq 1 ] ; then  
+	    rm -rf ${2}/${3} >& /dev/null
+  	    ln -sf  ${1} ${2}/${3}
+  	    if [ $? -ne 0 ] ; then 
+		echo "" $ECHO_OUT
+  		echo "Failed to create the symbolic link." $ECHO_OUT
+  	    fi
+	else 
+	    echo "Not creating a symbolic link from:" $ECHO_OUT
+  	    echo "$1 to" $ECHO_OUT
+  	    echo "$2/$3" $ECHO_OUT
+	fi
+        
+#	read ACCEPT
+#	case $ACCEPT in
+#            y | Y)
+#		rm -rf ${2}/${3} >& /dev/null
+#  		ln -sf  ${1} ${2}/${3}
+#  		if [ $? -ne 0 ] ; then 
+#		    echo "" $ECHO_OUT
+#  		    echo "Failed to create the symbolic link." $ECHO_OUT
+#  		fi
+#		;;
+#            n | N)
+#		echo "Not creating a symbolic link from:" $ECHO_OUT
+#  		echo "$1 to" $ECHO_OUT
+#  		echo "$2/$3" $ECHO_OUT
+#		;;
+#            q | Q)
+#		exit_error
+#		;;
+#            *)
+#		echo "" $ECHO_OUT
+#		echo "Please enter 'y', 'n', or 'q'." $ECHO_OUT
+#		create_symbolic_link $1 $2 $3
+#		;;
+#	esac
     }
 
-	echo "---- Setting up Symbolic links to MySQL Server and NDB Storage Directory ----" $ECHO_OUT
-	create_symbolic_link $MYSQL_BINARIES_DIR $MYSQL_BASE_DIR "mysql"
-	create_symbolic_link $NDB_DIR $NDB_INSTALL_DIR "ndb"
-	if [ $NEW_LINK_CREATED -eq 0 ] ; then
-	    clear
-	else
-	    clear_screen
-	fi
+    echo "---- Setting up Symbolic links to MySQL Server and NDB Storage Directory ----" $ECHO_OUT
+    create_symbolic_link $MYSQL_BINARIES_DIR $MYSQL_BASE_DIR "mysql"
+    create_symbolic_link $NDB_DIR $NDB_INSTALL_DIR "ndb"
+    if [ $NEW_LINK_CREATED -eq 0 ] ; then
+	clear
+    else
+	clear_screen
+    fi
 
 }
 
@@ -4759,7 +4948,7 @@ setup_connectstring()
   fi      
   echo "Entered hostname is: $MGM_HOST" $ECHO_OUT
 
-  if [ $MGM_PORT_NOT_SET -eq 1 ] ; then
+  if [ $MGM_PORT_NOT_SET -eq 1 ] && [ $NON_INTERACT -eq 0 ] ; then
       echo ""
       enter_string "Enter the port number for the ndb_mgmd : (default $DEFAULT_MGM_PORT)" 
       MGM_PORT=$ENTERED_STRING
@@ -4777,8 +4966,6 @@ setup_connectstring()
 setup_mysqld_hostname()
 {
  echo "--------------  MySQL Server Hostname Details --------------" $ECHO_OUT
-
- MYSQL_HOST=`hostname`
 
  get_hostname() 
  {
@@ -4799,12 +4986,13 @@ setup_mysqld_hostname()
 	       ;;
 	       esac
  }
+if [ $MYSQL_HOST_NOT_SET -eq 1 ] ; then
+ MYSQL_HOST=`hostname`
  get_hostname
-
  echo ""
  echo "MySQL Server Hostname = $MYSQL_HOST"
-
  clear_screen
+fi
 
 }
 
@@ -4880,7 +5068,7 @@ setup_config_ini()
 
    if [ $PARAM_CONFIG_DEFAULT -eq 1 ] ; then
        DATA_MEMORY="${DATA_MEMORY}M"
-       INDEX_MEMORY="${INDEX_MEMORY}M"
+       INDEX_MEMORY=`expr $DATA_MEMORY / 5`"M"
        DISK_CHECKPOINT_SPEED_IN_RESTART=${DISK_CHECKPOINT_SPEED_IN_RESTART}M
        DISK_CHECKPOINT_SPEED=${DISK_CHECKPOINT_SPEED}M
        DISK_SYNC_SIZE=${DISK_SYNC_SIZE}M
@@ -4892,162 +5080,201 @@ setup_config_ini()
    setup_replicas()
    {
 
-      echo -n "The number of Replicas is currently 2. Accept?" $ECHO_OUT
-      entry_ok $REPLICA_HELP
-      if [ $? -eq 0 ] ; then
-	  enter_string "Enter the number of Replicas to be stored in each Data Node :" $REPLICA_HELP
-	  NUM_REPLICAS=$ENTERED_STRING
-      fi
+       echo -n "The number of Replicas is currently 2. Accept?" $ECHO_OUT
+       if [ $NON_INTERACT -eq 0 ] ; then
+           entry_ok $REPLICA_HELP
+       else 
+           eval false
+       fi
+       
+       if [ $? -eq 0 ] ; then
+	   enter_string "Enter the number of Replicas to be stored in each Data Node :" $REPLICA_HELP
+	   NUM_REPLICAS=$ENTERED_STRING
+       fi
    }
    if  [ $INSTALL_ACTION -eq $INSTALL_MGM ] || [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then
-     setup_replicas
+       setup_replicas
    fi
-  
-    echo "" $ECHO_OUT
-    echo -n "Size of Data Memory for NDB nodes is 80MB. Accept?" $ECHO_OUT
-    entry_ok $DATA_MEMORY_HELP
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new Data Memory size (in MB): '
-      read DM_SZ
-      DATA_MEMORY=$DM_SZ
-    fi
-    
+   
+   echo "" $ECHO_OUT
+   echo -n "Size of Data Memory for NDB nodes is 80MB. Accept?" $ECHO_OUT
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $DATA_MEMORY_HELP
+   else 
+       eval false
+   fi
+
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new Data Memory size (in MB): '
+       read DM_SZ
+       DATA_MEMORY=$DM_SZ
+   fi
+   
     # check if $DM_SZ is a number
   
-    INDEX_MEMORY=`expr $DATA_MEMORY / 5`
 
-    NUM_FRAGMENT_LOGFILES=`expr ${DATA_MEMORY} \* 6 / 64`
-    REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
+   NUM_FRAGMENT_LOGFILES=`expr ${DATA_MEMORY} \* 6 / 64`
+   REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
 
-  
+   
+   if [ "$INDEX_MEMORY" == "" ] ; then 
+       INDEX_MEMORY=`expr $DATA_MEMORY / 5`
+   fi
     # Add the 'M' postfix, after using size to compute IM
-    DATA_MEMORY="$DATA_MEMORY""M"
-  
-    echo "" $ECHO_OUT
-    echo -n "Size of Index Memory for NDB nodes is $INDEX_MEMORY MB. Accept?"  $ECHO_OUT
-    index_memory_help_setup
+   DATA_MEMORY="$DATA_MEMORY""M"
+   
+   echo "" $ECHO_OUT
+   echo -n "Size of Index Memory for NDB nodes is $INDEX_MEMORY MB. Accept?"  $ECHO_OUT
+   index_memory_help_setup
 
-    entry_ok $INDEX_MEMORY_HELP 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new Index Memory size (in MB): '
-      read IM_SZ
-      INDEX_MEMORY=$IM_SZ
-    fi
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $INDEX_MEMORY_HELP 
+   else 
+       eval false
+   fi
+
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new Index Memory size (in MB): '
+       read IM_SZ
+       INDEX_MEMORY=$IM_SZ
+   fi
    INDEX_MEMORY=${INDEX_MEMORY}M
 
 
    num_fragment_logfiles_help_setup
-    echo "" $ECHO_OUT
-    echo -n "NumberOfFragmentLogFiles is $NUM_FRAGMENT_LOGFILES (64*$NUM_FRAGMENT_LOGFILES =  ${REDO_LOG_SIZE}MB). Accept?" $ECHO_OUT
-    entry_ok $NUM_FRAGMENT_LOGFILES_HELP
+   echo "" $ECHO_OUT
+   echo -n "NumberOfFragmentLogFiles is $NUM_FRAGMENT_LOGFILES (64*$NUM_FRAGMENT_LOGFILES =  ${REDO_LOG_SIZE}MB). Accept?" $ECHO_OUT
 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new NoOfFragmentLogFiles (each file requires 64 MB disk space): '
-      read NO_FRAGS
-      NUM_FRAGMENT_LOGFILES=$NO_FRAGS
-    fi
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $NUM_FRAGMENT_LOGFILES_HELP
+   else 
+       eval false
+   fi
 
-    REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
-    if [ $? -ne 0 ] ; then
+
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new NoOfFragmentLogFiles (each file requires 64 MB disk space): '
+       read NO_FRAGS
+       NUM_FRAGMENT_LOGFILES=$NO_FRAGS
+   fi
+
+   REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
+   if [ $? -ne 0 ] ; then
        echo "" $ECHO_OUT
        echo "NoOfFragmentLogFiles entered was not a valid number." $ECHO_OUT
        exit_error
-    fi
+   fi
 
-    echo "" $ECHO_OUT
-    echo -n "DiskCheckpointSpeed is 10MBytes/Sec.  Accept?" $ECHO_OUT
-    entry_ok $DISK_CHECKPOINT_SPEED_HELP
+   echo "" $ECHO_OUT
+   echo -n "DiskCheckpointSpeed is 10MBytes/Sec.  Accept?" $ECHO_OUT
 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new DiskCheckpointSpeed value (in MBytes/sec): '
-      read DISK_CSPEED
-      DISK_CHECKPOINT_SPEED=$DISK_CSPEED
-    fi
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $DISK_CHECKPOINT_SPEED_HELP
+   else 
+       eval false
+   fi
 
-    DISK_CHECKPOINT_SPEED_IN_RESTART=`expr ${DISK_CHECKPOINT_SPEED} \* 10`
-    if [ $? -ne 0 ] ; then
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new DiskCheckpointSpeed value (in MBytes/sec): '
+       read DISK_CSPEED
+       DISK_CHECKPOINT_SPEED=$DISK_CSPEED
+   fi
+
+   DISK_CHECKPOINT_SPEED_IN_RESTART=`expr ${DISK_CHECKPOINT_SPEED} \* 10`
+   if [ $? -ne 0 ] ; then
        echo "" $ECHO_OUT
        echo "DiskCheckpointSpeed was not a valid number." $ECHO_OUT
        exit_error
-    fi
+   fi
 
-    echo "" $ECHO_OUT
-    echo -n "DiskCheckpointSpeedInRestart is ${DISK_CHECKPOINT_SPEED_IN_RESTART}MBytes/Sec. Accept?" $ECHO_OUT
+   echo "" $ECHO_OUT
+   echo -n "DiskCheckpointSpeedInRestart is ${DISK_CHECKPOINT_SPEED_IN_RESTART}MBytes/Sec. Accept?" $ECHO_OUT
 
-    entry_ok $DISK_CHECKPOINT_SPEED_IN_RESTART_HELP
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $DISK_CHECKPOINT_SPEED_IN_RESTART_HELP
+   else 
+       eval false
+   fi
 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new DiskCheckpointSpeedInRestart value (in MBytes/sec): '
-      read DISK_CSPEED
-      DISK_CHECKPOINT_SPEED_IN_RESTART=$DISK_CSPEED
-    fi
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new DiskCheckpointSpeedInRestart value (in MBytes/sec): '
+       read DISK_CSPEED
+       DISK_CHECKPOINT_SPEED_IN_RESTART=$DISK_CSPEED
+   fi
 
 
-    echo "" $ECHO_OUT
-    echo -n "DiskSyncSize is ${DISK_SYNC_SIZE}MBytes/Sec. Accept?" $ECHO_OUT
+   echo "" $ECHO_OUT
+   echo -n "DiskSyncSize is ${DISK_SYNC_SIZE}MBytes/Sec. Accept?" $ECHO_OUT
 
-    entry_ok $DISK_SYNC_SIZE_HELP
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $DISK_SYNC_SIZE_HELP
+   else 
+       eval false
+   fi
 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new DiskSyncSize value (in MBytes/sec): '
-      read DISK_CSPEED
-      DISK_SYNC_SIZE=$DISK_CSPEED
-    fi
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new DiskSyncSize value (in MBytes/sec): '
+       read DISK_CSPEED
+       DISK_SYNC_SIZE=$DISK_CSPEED
+   fi
 
-    DISK_CHECKPOINT_SPEED_IN_RESTART=${DISK_CHECKPOINT_SPEED_IN_RESTART}M
-    DISK_CHECKPOINT_SPEED=${DISK_CHECKPOINT_SPEED}M
-    DISK_SYNC_SIZE=${DISK_SYNC_SIZE}M
+   DISK_CHECKPOINT_SPEED_IN_RESTART=${DISK_CHECKPOINT_SPEED_IN_RESTART}M
+   DISK_CHECKPOINT_SPEED=${DISK_CHECKPOINT_SPEED}M
+   DISK_SYNC_SIZE=${DISK_SYNC_SIZE}M
 
-    echo "" $ECHO_OUT
-    echo -n "RedoBuffer size is ${REDO_BUFFER}MBytes/Sec. Accept?" $ECHO_OUT
+   echo "" $ECHO_OUT
+   echo -n "RedoBuffer size is ${REDO_BUFFER}MBytes/Sec. Accept?" $ECHO_OUT
 
-    entry_ok $REDO_BUFFER_HELP
+   if [ $NON_INTERACT -eq 0 ] ; then
+       entry_ok $REDO_BUFFER_HELP
+   else 
+       eval false
+   fi
 
-    if [ $? -eq 0 ] ; then  
-      echo "" $ECHO_OUT
-      printf 'Enter new RedoBuffer value (in MBytes/sec): '
-      read buf
-      REDO_BUFFER=$buf
-    fi
-    REDO_BUFFER=${REDO_BUFFER}M
+   if [ $? -eq 0 ] ; then  
+       echo "" $ECHO_OUT
+       printf 'Enter new RedoBuffer value (in MBytes/sec): '
+       read buf
+       REDO_BUFFER=$buf
+   fi
+   REDO_BUFFER=${REDO_BUFFER}M
 
-    clear_screen
-    echo "------- Summary of Configuration Parameters for MySQL Cluster -------" $ECHO_OUT
+   clear_screen
+   echo "------- Summary of Configuration Parameters for MySQL Cluster -------" $ECHO_OUT
 
-    echo "" $ECHO_OUT
-    echo -e "NoOfReplicas\t\t\t\t $NUM_REPLICAS" $ECHO_OUT
-    echo -e "DataMemory\t\t\t\t $DATA_MEMORY" $ECHO_OUT
-    echo -e "IndexMemory\t\t\t\t $INDEX_MEMORY" $ECHO_OUT
-    echo -e "NoFragmentLogFiles\t\t\t $NUM_FRAGMENT_LOGFILES (Redo Log size on disk: $REDO_LOG_SIZE MB)" $ECHO_OUT
-    echo -e "DiskCheckpointSpeed\t\t\t $DISK_CHECKPOINT_SPEED" $ECHO_OUT
-    echo -e "DiskCheckpointSpeedInRestart\t\t $DISK_CHECKPOINT_SPEED_IN_RESTART" $ECHO_OUT
-    echo -e "DiskSyncSize\t\t\t\t ${DISK_SYNC_SIZE}" $ECHO_OUT  
-    echo -e "RedoBuffer\t\t\t\t ${REDO_BUFFER}" $ECHO_OUT  
+   echo "" $ECHO_OUT
+   echo -e "NoOfReplicas\t\t\t\t $NUM_REPLICAS" $ECHO_OUT
+   echo -e "DataMemory\t\t\t\t $DATA_MEMORY" $ECHO_OUT
+   echo -e "IndexMemory\t\t\t\t $INDEX_MEMORY" $ECHO_OUT
+   echo -e "NoFragmentLogFiles\t\t\t $NUM_FRAGMENT_LOGFILES (Redo Log size on disk: $REDO_LOG_SIZE MB)" $ECHO_OUT
+   echo -e "DiskCheckpointSpeed\t\t\t $DISK_CHECKPOINT_SPEED" $ECHO_OUT
+   echo -e "DiskCheckpointSpeedInRestart\t\t $DISK_CHECKPOINT_SPEED_IN_RESTART" $ECHO_OUT
+   echo -e "DiskSyncSize\t\t\t\t ${DISK_SYNC_SIZE}" $ECHO_OUT  
+   echo -e "RedoBuffer\t\t\t\t ${REDO_BUFFER}" $ECHO_OUT  
 
-    echo "" $ECHO_OUT
-    echo "To change these configuration parameters, edit the configuration file(s): " $ECHO_OUT  
-    if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
-	echo "$NDB_DIR/config-4node.ini" $ECHO_OUT
-	echo "$NDB_DIR/config-2node.ini" $ECHO_OUT
-    else
-    # distributed
-	echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
-    fi
-    echo "" $ECHO_OUT
-    echo "Note: Perform a rolling restart for changes in these parameters to take effect." $ECHO_OUT  
+   echo "" $ECHO_OUT
+   echo "To change these configuration parameters, edit the configuration file(s): " $ECHO_OUT  
+   if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
+       echo "$NDB_DIR/config-4node.ini" $ECHO_OUT
+       echo "$NDB_DIR/config-2node.ini" $ECHO_OUT
+   else
+       echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
+   fi
+   echo "" $ECHO_OUT
+   echo "Note: Perform a rolling restart for changes in these parameters to take effect." $ECHO_OUT  
 
-    echo "" $ECHO_OUT
-    echo -e "Note: \tChanges to 'NoOfReplicas', 'DataMemory', 'IndexMemory'" $ECHO_OUT
-    echo -e "\tand 'NoFragmentLogFiles' require re-initialising the cluster with an" $ECHO_OUT
-    echo -e "\t'$INIT_START-*' script in the \$NDB_HOME/scripts directory." $ECHO_OUT
-    echo "" $ECHO_OUT
- 
+   echo "" $ECHO_OUT
+   echo -e "Note: \tChanges to 'NoOfReplicas', 'DataMemory', 'IndexMemory'" $ECHO_OUT
+   echo -e "\tand 'NoFragmentLogFiles' require re-initialising the cluster with an" $ECHO_OUT
+   echo -e "\t'$INIT_START' script in the \$NDB_HOME/scripts directory." $ECHO_OUT
+   echo "" $ECHO_OUT
+   
    clear_screen_no_skipline
 }
  
@@ -5061,7 +5288,12 @@ setup_my_cnf()
     echo "The location for the MySQL socket is:" $ECHO_OUT
     echo "$MYSQL_SOCK"  $ECHO_OUT
     echo -n "Accept?"
-    entry_ok $MYSQL_SOCKET_HELP
+    if [ $NON_INTERACT -eq 0 ] ; then
+        entry_ok $MYSQL_SOCKET_HELP
+    else 
+        eval false
+    fi
+
     if [ $? -eq 0 ] ; then
       enter_string "Enter the full pathname for the MySQL socket (e.g., /tmp/mysql.sock):" 
       MYSQL_SOCK=$ENTERED_STRING
@@ -5078,19 +5310,27 @@ setup_my_cnf()
     echo "If yes, change the port number to not clash with the existing mysqld port!" $ECHO_OUT
     echo "The port number for the mysqld is set to default (port $MYSQL_PORT)." $ECHO_OUT
     echo -n "Accept?"
-    entry_ok $MYSQL_PORT_HELP
+    if [ $NON_INTERACT -eq 0 ] ; then
+        entry_ok $MYSQL_PORT_HELP
+    else 
+        eval false
+    fi
     if [ $? -eq 0 ] ; then
 	  enter_string "Enter the port number for the mysqld :" 
 	  MYSQL_PORT=$ENTERED_STRING
     fi
-  
 
     echo "" $ECHO_OUT   
     echo "You need a binary log  to enable this MySQL server as a replication master." $ECHO_OUT   
     echo "Do not accept this option, unless you need it - logging consumes disk space." $ECHO_OUT   
     echo "Do you want to enable a binary log for the MySQL Server?" $ECHO_OUT
     echo -n "Accept?"
-    entry_ok $BINARY_LOG_HELP
+    if [ $NON_INTERACT -eq 0 ] ; then
+        entry_ok $BINARY_LOG_HELP
+    else 
+        eval true
+    fi
+
     if [ $? -eq 1 ] ; then
 	binary_log_enable
     else
@@ -5098,7 +5338,7 @@ setup_my_cnf()
     fi
   fi
 
-  MYSQL_PID="${MYSQL_INSTALL_DIR}/mysqld.pid"
+  #MYSQL_PID="${MYSQL_INSTALL_DIR}/mysqld.pid"
   make_my_cnf
   if [ $PARAM_DEFAULT_MYSQL_SETTINGS -eq 0 ] ; then
       clear_screen
@@ -5123,7 +5363,7 @@ setup_config_scripts()
 	echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
     fi
 
-    if [ $DISTRIBUTED != "0" ] ; then
+    if [ "$DISTRIBUTED" != "0" ] ; then
       make_config_ini $NUM_NODES
     else
       make_config_ini $NUM_NODES
@@ -5207,18 +5447,22 @@ setup_chown_cluster()
 
 setup_username()
 {
-   if [ $ROOTUSER -eq 1 ] ; then    
-     echo "--------- Choose the username that Cluster Processes will run as --------" $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "The default username that cluster will be run as is '$USERNAME'." $ECHO_OUT
-     echo -n "Accept?"
-     entry_ok $USERNAME_HELP
-     if [ $? -eq 0 ] ; then
-       enter_string "Enter the username that will be used to run cluster:" $USERNAME_HELP
-       USERNAME=$ENTERED_STRING
-     fi
-     clear_screen
-   fi
+    if [ $ROOTUSER -eq 1 ] ; then    
+	echo "--------- Choose the username that Cluster Processes will run as --------" $ECHO_OUT
+	echo "" $ECHO_OUT
+	echo "The default username that cluster will be run as is '$USERNAME'." $ECHO_OUT
+	echo -n "Accept?"
+	if [ $NON_INTERACT -eq 0 ] ; then
+            entry_ok $USERNAME_HELP
+	else 
+            eval false
+	fi
+	if [ $? -eq 0 ] ; then
+	    enter_string "Enter the username that will be used to run cluster:" $USERNAME_HELP
+	    USERNAME=$ENTERED_STRING
+	fi
+	clear_screen
+    fi
 }
 
 setup_sshdir()
@@ -5336,108 +5580,128 @@ setup_ssh_on_mgmd()
 
 setup_ssh_on_ndbd()
 { 
-   echo "--------- Setup SSH to be able to start this node from the Mgm Host ---------" $ECHO_OUT
-   echo "" $ECHO_OUT
-   echo "Generate a ssh-key." $ECHO_OUT
-   echo "An ssh-key allows you to start the cluster from a single host" $ECHO_OUT
-   echo "using init and start scripts installed on the management server host." $ECHO_OUT
-   echo -e "Requirements: ssh-keygen, scp, ssh.\n" $ECHO_OUT
-   echo -n "Acquire the public ssh-key from the Management Server node?" $ECHO_OUT
-   entry_ok $SSH_HELP
-   if [ $? -eq 0 ] ; then
-       clear_screen
-       return
-   fi
+    echo "--------- Setup SSH to be able to start this node from the Mgm Host ---------" $ECHO_OUT
+    echo "" $ECHO_OUT
+    echo "Generate a ssh-key." $ECHO_OUT
+    echo "An ssh-key allows you to start the cluster from a single host" $ECHO_OUT
+    echo "using init and start scripts installed on the management server host." $ECHO_OUT
+    echo -e "Requirements: ssh-keygen, scp, ssh.\n" $ECHO_OUT
+    echo -n "Acquire the public ssh-key from the Management Server node?" $ECHO_OUT
+    if [ $NON_INTERACT -eq 0 ] ; then
+	entry_ok $SSH_HELP
+    else 
+	eval false
+    fi
 
-   PUB_KEY=id_rsa.pub
-   PUB_KEY_TMP=${PUB_KEY}_tmp
+    if [ $? -eq 0 ] ; then
+	clear_screen
+	return
+    fi
+
+    PUB_KEY=id_rsa.pub
+    PUB_KEY_TMP=${PUB_KEY}_tmp
 
 
-   setup_sshdir
+    setup_sshdir
 
 # If localhost == $MGM_HOST, skip all this
-  echo "" $ECHO_OUT
-  echo -n "Is the Management Server located on the current host?" $ECHO_OUT
-  entry_ok 
-
-  if [ $? -eq 0 ] ; then
- 
     echo "" $ECHO_OUT
-    echo "If you have generated the SSH key when you installed the Management Server," $ECHO_OUT
-    echo "the public RSA key should be available on the Management Server, $MGM_HOST, at:" $ECHO_OUT
-    echo "/home/$USERNAME/.ssh/${PUB_KEY}" $ECHO_OUT
-    echo -n "Is this the correct path for the ${PUB_KEY} file?"
-    entry_ok $AUTHORIZED_KEYS_HELP
-  
-    if [ $? -eq 0 ] ; then
-      echo "Enter the ssh directory: " $ECHO_OUT
-      read dir
-      SSH_DIR=$dir
-    else
+    echo -n "Is the Management Server located on the current host?" $ECHO_OUT
+    if [ $NON_INTERACT -eq 0 ] ; then
+	entry_ok 
+    else 
+	eval true
+    fi
+
+    if [ $? -eq 0 ] && [ $SKIP_DOWNLOAD_MGM_SSH_KEY -eq 0 ] ; then
+	
+	echo "" $ECHO_OUT
+	echo "If you have generated the SSH key when you installed the Management Server," $ECHO_OUT
+	echo "the public RSA key should be available on the Management Server, $MGM_HOST, at:" $ECHO_OUT
+	echo "/home/$USERNAME/.ssh/${PUB_KEY}" $ECHO_OUT
+	echo -n "Is this the correct path for the ${PUB_KEY} file?"
+	if [ $NON_INTERACT -eq 0 ] ; then
+	    entry_ok $AUTHORIZED_KEYS_HELP
+	else 
+	    eval false
+	fi
+	
+	if [ $? -eq 0 ] ; then
+	    echo "Enter the ssh directory: " $ECHO_OUT
+	    read dir
+	    SSH_DIR=$dir
+	else
       # ~${USERNAME} did not work for some reason....
-      SSH_DIR=/home/${USERNAME}/.ssh
-    fi
-    echo "" $ECHO_OUT
+	   if [ $ROOTUSER -eq 1 ] ; then
+	     SSH_DIR=/${USERNAME}/.ssh
+           else 
+	     SSH_DIR=/home/${USERNAME}/.ssh
+           fi
+	fi
+	echo "" $ECHO_OUT
 
-    test -e ${SSH_DIR}/authorized_keys
+	test -e ${SSH_DIR}/authorized_keys
 
-    if [ $? -ne 0 ] ; then
-	touch ${SSH_DIR}/authorized_keys
-    fi
-    echo "Local authorized_keys found here: ${SSH_DIR}/authorized_keys" $ECHO_OUT
-    echo "Using scp to copy ${PUB_KEY} from Mgmt Server." $ECHO_OUT
-   `scp ${USERNAME}@${MGM_HOST}:${SSH_DIR}/${PUB_KEY} ${SSH_DIR}/${PUB_KEY_TMP}`
-    if [ $? -ne 0 ] ; then
-	echo ""
-	echo "Error number: $? for scp"
-	echo "Error: you probably do not have an ssh key for ${MGM_HOST}."
-	echo "Log in using ssh to get the ssh key:"
-	echo "ssh ${USERNAME}@${MGM_HOST}"
-  	exit_error ""
-    fi
-    cat ${SSH_DIR}/${PUB_KEY_TMP} >> ${SSH_DIR}/authorized_keys && rm ${SSH_DIR}/${PUB_KEY_TMP}
-    if [ $ROOTUSER -eq 1 ] ; then
-	chown $USERNAME ${SSH_DIR}/*
-    fi
+	if [ $? -ne 0 ] ; then
+	    touch ${SSH_DIR}/authorized_keys
+	fi
+	echo "Local authorized_keys found here: ${SSH_DIR}/authorized_keys" $ECHO_OUT
+	echo "Using scp to copy ${PUB_KEY} from Mgmt Server." $ECHO_OUT
+	`scp ${USERNAME}@${MGM_HOST}:${SSH_DIR}/${PUB_KEY} ${SSH_DIR}/${PUB_KEY_TMP}`
+	if [ $? -ne 0 ] ; then
+	    echo ""
+	    echo "Error number: $? for scp"
+	    echo "Error: you probably do not have an ssh key for ${MGM_HOST}."
+	    echo "Log in using ssh to get the ssh key:"
+	    echo "ssh ${USERNAME}@${MGM_HOST}"
+  	    exit_error ""
+	fi
+	cat ${SSH_DIR}/${PUB_KEY_TMP} >> ${SSH_DIR}/authorized_keys && rm ${SSH_DIR}/${PUB_KEY_TMP}
+	if [ $ROOTUSER -eq 1 ] ; then
+	    chown $USERNAME ${SSH_DIR}/*
+	fi
   # check for error during 'scp'
-    if [ $? -ne 0 ] ; then
-     echo "" $ECHO_OUT
-     echo "Error: Could not copy ssh-key from MGM server using 'scp' program" $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "Potential Causes of Error;" $ECHO_OUT
-     echo "0. You probably don't have a ssh-key for the mgm server. Run (then, re-run script):"
-     echo "   su mysql"
-     echo "   ssh ${USERNAME}@${MGM_HOST}"
-     echo ""
-     echo "1. Check first that the Management Server host is running: $MGM_HOST" $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "2. Have you installed the Management Server on $MGM_HOST ? You must do this first." $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "3. Is the 'scp' program installed on this host?" $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "4. You may have stale ssh keys for the host: $MGM_HOST" $ECHO_OUT
-     echo "   If so, remove the files: ${SSH_DIR}/authorized_keys and ${SSH_DIR}/known_hosts" $ECHO_OUT
-     echo "" $ECHO_OUT
-     echo "Workaround:" $ECHO_OUT
-     echo "After this script has finished, you copy the file: " $ECHO_OUT
-     echo "~$USERNAME/.ssh/authorized_keys from the remote host '${MGM_HOST}'" $ECHO_OUT
-     echo "to your local directory: ~$USERNAME/.ssh/" $ECHO_OUT
-     echo "Then, re-run this installer, and do not select the option to copy ssh-keys" $ECHO_OUT
-     echo "from the management server during install." $ECHO_OUT
-     exit_error 
+	if [ $? -ne 0 ] ; then
+	    echo "" $ECHO_OUT
+	    echo "Error: Could not copy ssh-key from MGM server using 'scp' program" $ECHO_OUT
+	    echo "" $ECHO_OUT
+	    echo "Potential Causes of Error;" $ECHO_OUT
+	    echo "0. You probably don't have a ssh-key for the mgm server. Run (then, re-run script):"
+	    echo "   su mysql"
+	    echo "   ssh ${USERNAME}@${MGM_HOST}"
+	    echo ""
+	    echo "1. Check first that the Management Server host is running: $MGM_HOST" $ECHO_OUT
+	    echo "" $ECHO_OUT
+	    echo "2. Have you installed the Management Server on $MGM_HOST ? You must do this first." $ECHO_OUT
+	    echo "" $ECHO_OUT
+	    echo "3. Is the 'scp' program installed on this host?" $ECHO_OUT
+	    echo "" $ECHO_OUT
+	    echo "4. You may have stale ssh keys for the host: $MGM_HOST" $ECHO_OUT
+	    echo "   If so, remove the files: ${SSH_DIR}/authorized_keys and ${SSH_DIR}/known_hosts" $ECHO_OUT
+	    echo "" $ECHO_OUT
+	    echo "Workaround:" $ECHO_OUT
+	    echo "After this script has finished, you copy the file: " $ECHO_OUT
+	    echo "~$USERNAME/.ssh/authorized_keys from the remote host '${MGM_HOST}'" $ECHO_OUT
+	    echo "to your local directory: ~$USERNAME/.ssh/" $ECHO_OUT
+	    echo "Then, re-run this installer, and do not select the option to copy ssh-keys" $ECHO_OUT
+	    echo "from the management server during install." $ECHO_OUT
+	    exit_error 
+	fi
+	
+	if [ $ROOTUSER -eq 1 ] ; then
+	    chmod go-w . ${SSH_DIR}/authorized_keys
+	else
+	    chmod go-w . ${SSH_DIR}/authorized_keys
+	fi
+	if [ $? -ne 0 ] ; then
+	    exit_error "Could not change permissions for ${SSH_DIR}/authorized_keys" $ECHO_OUT
+	fi
+	START_WITH_SSH=1  
     fi
-  
-    if [ $ROOTUSER -eq 1 ] ; then
-      chmod go-w . ${SSH_DIR}/authorized_keys
-    else
-      chmod go-w . ${SSH_DIR}/authorized_keys
+    if [ $SKIP_DOWNLOAD_MGM_SSH_KEY -eq 0 ] ; then
+	START_WITH_SSH=1  
     fi
-    if [ $? -ne 0 ] ; then
-      exit_error "Could not change permissions for ${SSH_DIR}/authorized_keys" $ECHO_OUT
-    fi
-    START_WITH_SSH=1  
-  fi
-  clear_screen  
+    clear_screen  
 }
 
 
@@ -5499,10 +5763,12 @@ setup_db_ownership()
    fi
    echo "" $ECHO_OUT
    echo "Creating default mysql databases using command:" $ECHO_OUT
-   echo "\$MYSQL_BIN/mysql_install_db --defaults-file=$MY_CNF --force" $ECHO_OUT
+   echo "\$MYSQL_BIN/mysql_install_db --defaults-file=$MY_CNF" $ECHO_OUT
+   #echo "\$MYSQL_BIN/mysql_install_db --defaults-file=$MY_CNF --force" $ECHO_OUT
    cd $MYSQL_BINARIES_DIR  
   # TODO: replace scripts/... with bin/..
    $MYSQL_INSTALL_DB --defaults-file=$MY_CNF --force 
+# --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
 # >& /dev/null
   
    if [ $? -ne 0 ] ; then
@@ -5600,43 +5866,46 @@ update_startup_scripts_mysqld()
 
     make_start_mysql_client "$MYSQL_NUMBER"
 
-      UPDATE_SCRIPTS=0
-      update_scripts () 
-      {
-       echo "" $ECHO_OUT
-      if [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_MYSQLD" -o "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD" ] ; then
-	  echo "Note: This step will require entering your password 4 times." $ECHO_OUT
-      fi
-       printf 'Add start/stop to the MySQL Server startup/shutdown scripts? (y/n) ' $ECHO_OUT
-       read ACCEPT
-       case $ACCEPT in
-        y | Y)
-           UPDATE_SCRIPTS=1
-          ;;
-        n | N)
-          ;;
-        q | Q)
-          exit_error
-          ;;
-        *)
-          echo "" $ECHO_OUT
-          echo "Please enter 'y', 'n', or 'q'." $ECHO_OUT
-          update_scripts
-          ;;
-       esac
-      }
-      if [ "$1" = "add_startup" ] ; then
-         UPDATE_SCRIPTS=1
-      else
-	  echo "------- Patch MySQL Cluster Init/Start/Shutdown Scripts? --------" $ECHO_OUT
-	  update_scripts
-      fi
+    UPDATE_SCRIPTS=0
+    update_scripts () 
+    {
+	echo "" $ECHO_OUT
+	if [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_MYSQLD" -o "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD" ] ; then
+	    echo "Note: This step will require entering your password 4 times." $ECHO_OUT
+	fi
+	printf 'Add start/stop to the MySQL Server startup/shutdown scripts? (y/n) ' $ECHO_OUT
+	read ACCEPT
+	case $ACCEPT in
+            y | Y)
+		UPDATE_SCRIPTS=1
+		;;
+            n | N)
+		;;
+            q | Q)
+		exit_error
+		;;
+            *)
+		echo "" $ECHO_OUT
+		echo "Please enter 'y', 'n', or 'q'." $ECHO_OUT
+		update_scripts
+		;;
+	esac
+    }
+    if [ "$1" = "add_startup" ]  ; then
+        UPDATE_SCRIPTS=1
+    else
+        if [ $NON_INTERACT -eq 0 ] ; then
+	    echo "------- Patch MySQL Cluster Init/Start/Shutdown Scripts? --------" $ECHO_OUT
+	    update_scripts
+        else 
+            UPDATE_SCRIPTS=1
+        fi
+    fi
 
       # -o is the same as [ ] || [ ] 
-      if [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_LOCALHOST_MYSQLD" -o "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD_LOCALHOST" ] 
-      then
-
-echo "
+    if [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_LOCALHOST_MYSQLD" -o "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD_LOCALHOST" ] 
+        then
+	echo "
 # Start MySQL Server Number `expr $NUM_MYSQLS + 1`
 
 if [ \"\$1\" = \"0\" ] ; then
@@ -5648,8 +5917,8 @@ fi
 
 " >> $MYSQLD_START_SCRIPT
 
-          for stop in $SHUTDOWN_SCRIPTS ; do	
-echo "
+        for stop in $SHUTDOWN_SCRIPTS ; do	
+	    echo "
 if [ \$SKIP_MYSQLDS -eq 0 ] ; then
 	    echo \"Stopping MySQL Server Number `expr $NUM_MYSQLS + 1`\"
 	    PORT=\`$CHANGE_PORT_SCRIPT\`
@@ -5658,45 +5927,45 @@ else
   echo \"Skipping stopping MySQL Server Number `expr $NUM_MYSQLS + 1`\"
 fi
                  " >> $stop
-          done
+        done
 
       # it's a remote MYSQLD
-      elif [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_MYSQLD" -o "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD" ] 
-      then
+    elif [ $UPDATE_SCRIPTS -eq 1 ] && [ "$INSTALL_ACTION" == "$INSTALL_MYSQLD" ] || [ "$INSTALL_ACTION" == "$INSTALL_ANOTHER_MYSQLD" ] 
+    then
 
-	  setup_sshdir
-          echo ""
-          echo "scp'ing MySQL start/stop scripts from $MGM_HOST to /tmp/ dir for update."
-          echo ""
+	setup_sshdir
+        echo ""
+        echo "scp'ing MySQL start/stop scripts from $MGM_HOST to /tmp/ dir for update."
+        echo ""
 	  # copy the startup/shutdown files from mgm server to a local directory. edit them, copy them back.
-	  R_MYSQL_SHUTDOWN_TMP="${NDB_DIR}/scripts/shutdown-cluster.sh"
-	  R_MYSQL="$MYSQLD_START_SCRIPT"
+	R_MYSQL_SHUTDOWN_TMP="${NDB_DIR}/scripts/shutdown-cluster.sh"
+	R_MYSQL="$MYSQLD_START_SCRIPT"
 
 
-	  echo "Downloading mysqld-startup script from $MGM_HOST..."
-	  echo ""
-          `scp $USERNAME@${MGM_HOST}:${R_MYSQL} ${MYSQLSTART_TMP}`
-	  if [ $? -ne 0 ] ; then
-	      exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL}"
-	  fi
+	echo "Downloading mysqld-startup script from $MGM_HOST..."
+	echo ""
+        `scp $USERNAME@${MGM_HOST}:${R_MYSQL} ${MYSQLSTART_TMP}`
+	if [ $? -ne 0 ] ; then
+	    exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL}"
+	fi
 
-	  echo "Downloading mysqld-shutdown script from $MGM_HOST..."
-	  echo ""
-          `scp $USERNAME@${MGM_HOST}:${R_MYSQL_SHUTDOWN_TMP} ${MYSQL_SHUTDOWN_TMP}`
-	  if [ $? -ne 0 ] ; then
-	      exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL_SHUTDOWN_TMP}"
-	  fi
+	echo "Downloading mysqld-shutdown script from $MGM_HOST..."
+	echo ""
+        `scp $USERNAME@${MGM_HOST}:${R_MYSQL_SHUTDOWN_TMP} ${MYSQL_SHUTDOWN_TMP}`
+	if [ $? -ne 0 ] ; then
+	    exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL_SHUTDOWN_TMP}"
+	fi
 
  # edit the startup scripts
 
-         echo "Patching scripts to include this mysqld in startup/shutdown...."
-         echo ""	  
+        echo "Patching scripts to include this mysqld in startup/shutdown...."
+        echo ""	  
 
 
-	 echo "" >> $MYSQLSTART_TMP
-	 echo "# Starting MySQL Server at host $MYSQL_HOST" >> $MYSQLSTART_TMP
-	 echo "" >> $MYSQLSTART_TMP
-	 echo "
+	echo "" >> $MYSQLSTART_TMP
+	echo "# Starting MySQL Server at host $MYSQL_HOST" >> $MYSQLSTART_TMP
+	echo "" >> $MYSQLSTART_TMP
+	echo "
 if [ \"\$1\" = \"0\" ] ; then
   echo \"Starting MySQL Server at host $MYSQL_HOST\"
   ssh ${USERNAME}@${MYSQL_HOST} ${MYSQLD_STARTER}
@@ -5707,7 +5976,7 @@ fi
 
 
 # edit the shutdown scripts update
-echo "
+	echo "
 if [ \$SKIP_MYSQLDS -eq 0 ] ; then
 	    echo \"Stopping MySQL Server Number at $HOSTNAME\"
 	    ssh ${USERNAME}@${MYSQL_HOST} ${MYSQLD_STOPPER}
@@ -5718,33 +5987,33 @@ fi
 
 
 	  # copy them back to mgm server
-          echo "Now going to copy the updated startup/shutdown scripts back to $MGM_HOST"
+        echo "Now going to copy the updated startup/shutdown scripts back to $MGM_HOST"
 
-	  echo ""
-	  echo "Uploading start-mysqlds script..."
-	  echo ""
-         `scp ${MYSQLSTART_TMP} $USERNAME@${MGM_HOST}:${R_MYSQL}`
-	  if [ $? -ne 0 ] ; then
-	      exit_error "Problem scp'ing to $MGM_HOST and copying to file ${R_MYSQL}"
-	  fi
+	echo ""
+	echo "Uploading start-mysqlds script..."
+	echo ""
+        `scp ${MYSQLSTART_TMP} $USERNAME@${MGM_HOST}:${R_MYSQL}`
+	if [ $? -ne 0 ] ; then
+	    exit_error "Problem scp'ing to $MGM_HOST and copying to file ${R_MYSQL}"
+	fi
 
-	  echo ""
-	  echo "Uploading stop-mysqlds script..."
-	  echo ""
-         `scp ${MYSQL_SHUTDOWN_TMP} $USERNAME@${MGM_HOST}:${R_MYSQL_SHUTDOWN_TMP}`
-	  if [ $? -ne 0 ] ; then
-	      exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL_SHUTDOWN_TMP}"
-	  fi
-	  
-      else
-	  exit_error "Something went wrong patching mysqld scripts"
-      fi
+	echo ""
+	echo "Uploading stop-mysqlds script..."
+	echo ""
+        `scp ${MYSQL_SHUTDOWN_TMP} $USERNAME@${MGM_HOST}:${R_MYSQL_SHUTDOWN_TMP}`
+	if [ $? -ne 0 ] ; then
+	    exit_error "Problem scp'ing to $MGM_HOST and copying file ${R_MYSQL_SHUTDOWN_TMP}"
+	fi
+	
+    else
+	exit_error "Something went wrong patching mysqld scripts"
+    fi
 
 
     if [ "$INSTALL_ACTION" != "$INSTALL_LOCALHOST_MYSQLD" ] ; then
-     clear_screen
+	clear_screen
     else
-     clear
+	clear
     fi
  }
 
@@ -5850,15 +6119,15 @@ start_ndbds()
       
       if [ $ROOTUSER -eq 1 ] ; then
           echo "" $ECHO_OUT
-	  echo "You should login as user '$USERNAME' and start the ndbd nodes." $ECHO_OUT
+         echo "You should login as user '$USERNAME' and start the ndbd nodes." $ECHO_OUT
       fi
       if [ $MGM_RUNNING -eq 1 ] ; then
         echo "" $ECHO_OUT
         echo "Executing: \$NDB_DIR/scripts/$NDBD_INIT-${NODEID}.sh" $ECHO_OUT
-	${NDB_DIR}/scripts/$NDBD_INIT-${NODEID}.sh
+       ${NDB_DIR}/scripts/$NDBD_INIT-${NODEID}.sh
       else
         echo "" $ECHO_OUT
-        echo "The management server does not appear to be running on: $CONNECTSTRING" $ECHO_OUT	
+        echo "The management server does not appear to be running on: $CONNECTSTRING" $ECHO_OUT        
         echo "No attempt made to start 'ndbd'." $ECHO_OUT
       fi
     fi
@@ -5893,40 +6162,41 @@ start_cluster()
     if [ $START_CLUSTER -eq 1 ] ; then
 
       if [ $ROOTUSER -eq 1 ] ; then
-	 echo "" $ECHO_OUT
-	 echo "You should login as user '$USERNAME' and start the cluster" $ECHO_OUT
+        echo "" $ECHO_OUT
+        echo "You should login as user '$USERNAME' and start the cluster" $ECHO_OUT
       else
 
- 	start_num_nodes() 
-	{
-	    echo "" $ECHO_OUT
+       start_num_nodes() 
+       {
+           echo "" $ECHO_OUT
             printf 'Enter the cluster size (number of Data Nodes) you want to start: (2/4) '
-	    read ACCEPT
-	    case $ACCEPT in
-	       2|4)
-	         NUM_NODES_TO_START=$ACCEPT
-		 ;;
-	       *)
-	       echo "" $ECHO_OUT
-	       echo "The valid number of Data Nodes  is '2' or '4'." $ECHO_OUT
-	       start_num_nodes
-	       ;;
-	       esac
+           read ACCEPT
+           case $ACCEPT in
+              2|4)
+                NUM_NODES_TO_START=$ACCEPT
+                ;;
+              *)
+              echo "" $ECHO_OUT
+              echo "The valid number of Data Nodes  is '2' or '4'." $ECHO_OUT
+              start_num_nodes
+              ;;
+              esac
         }
-	if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] && [ $MGM_RUNNING -eq 0 ]  ; then
-	    start_num_nodes
-	    echo "" $ECHO_OUT
-	    echo "Starting the cluster with $NUM_NODES_TO_START data nodes by running:" $ECHO_OUT 
-	    echo "\$NDB_HOME/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}" $ECHO_OUT
-	    echo "" $ECHO_OUT
-	    ${NDB_DIR}/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}  
-	    #>> $INSTALL_LOG 
-	    # wait for the mysqld to join as well
-	    if [ $? -eq 2 ] ; then
-		exit_error "Could not start localhost cluster."
-	    fi
-	    sleep 1
-	fi
+       if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] && [ $MGM_RUNNING -eq 0 ]  ; then
+           #start_num_nodes
+           NUM_NODES_TO_START=4
+           echo "" $ECHO_OUT
+           echo "Starting the cluster with $NUM_NODES_TO_START data nodes by running:" $ECHO_OUT 
+           echo "\$NDB_HOME/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}" $ECHO_OUT
+           echo "" $ECHO_OUT
+           ${NDB_DIR}/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}  
+           #>> $INSTALL_LOG 
+           # wait for the mysqld to join as well
+           if [ $? -eq 2 ] ; then
+               exit_error "Could not start localhost cluster."
+           fi
+           sleep 1
+       fi
      fi
    fi
     
@@ -5951,29 +6221,29 @@ start_cluster()
 install_services()
 {
     if [ $ROOTUSER -eq 0 ] ; then    
-	return 0
+       return 0
     fi
 
     PROCESS=
     PID=
     CONNECTION_TEST=
     case $INSTALL_ACTION in
-	$INSTALL_MGM)
-	 PROCESS="ndb_mgmd"
-	 PID="63"
-	 CONNECTION_TEST="  if failed host 127.0.0.1 port $MGM_PORT then restart
+       $INSTALL_MGM)
+        PROCESS="ndb_mgmd"
+        PID="63"
+        CONNECTION_TEST="  if failed host 127.0.0.1 port $MGM_PORT then restart
    if 5 restarts within 5 cycles then timeout"
          ;;
         $INSTALL_NDB)
-	 PROCESS="ndb_node-$NODEID"
-	 PID="$NODEID"
+        PROCESS="ndb_node-$NODEID"
+        PID="$NODEID"
          ;;
         $INSTALL_MYSQLD | $INSTALL_ANOTHER_MYSQLD | $INSTALL_LOCALHOST_MYSQLD)
-	 PROCESS="mysql.server"
+        PROCESS="mysql.server"
          ;;
         *)
-	  echo "Invalid install action active, when install_service called"
-	  exit 2
+         echo "Invalid install action active, when install_service called"
+         exit 2
     esac
 
 
@@ -5998,16 +6268,18 @@ install_services()
           ;;
        esac
      }
+    if [ $NON_INTERACT -eq 0 ] ; then
      start_process_as_service
-  
+    fi
+ 
     if [ $INSTALL_SERVICES -eq 0 ] ; then
-	clear_screen
-	return 1
+       clear_screen
+       return 1
     fi
 
 
     case $INSTALL_ACTION in
-	$INSTALL_MGM)
+       $INSTALL_MGM)
          make_initd_mgmd
          ;;
         $INSTALL_NDB)
@@ -6017,110 +6289,114 @@ install_services()
          make_initd_mysqld
          ;;
         *)
-	  echo "Invalid install action active, when install_service called"
-	  exit 2
+         echo "Invalid install action active, when install_service called"
+         exit 2
     esac
 
 
     USE_MONIT=0
     use_monit() 
     {
-	    echo "" $ECHO_OUT
-	    echo "You can use a 3-rd party service called 'Monit' to manage process failures." $ECHO_OUT
-	    echo "Use monitrc to monitor/restart the $PROCESS process ? (y/n/h)"
-	    read ACCEPT
-	    case $ACCEPT in
-		y | Y)
-		    USE_MONIT=1
-		    ;;
-		n | N)
-		    USE_MONIT=0
-		    ;;
-		h | H)
-		    echo ""
-		    echo "Monit code will be generated that can be added to /etc/monit/monitrc"
-		    echo ""
-		    use_monit
-		    ;;
-		*)
-		    echo "" $ECHO_OUT
-		    echo "Please enter 'y' or 'n'." $ECHO_OUT
-		    use_monit
-		    ;;
-	    esac
+           echo "" $ECHO_OUT
+           echo "You can use a 3-rd party service called 'Monit' to manage process failures." $ECHO_OUT
+           echo "Use monitrc to monitor/restart the $PROCESS process ? (y/n/h)"
+           read ACCEPT
+           case $ACCEPT in
+               y | Y)
+                   USE_MONIT=1
+                   ;;
+               n | N)
+                   USE_MONIT=0
+                   ;;
+               h | H)
+                   echo ""
+                   echo "Monit code will be generated that can be added to /etc/monit/monitrc"
+                   echo ""
+                   use_monit
+                   ;;
+               *)
+                   echo "" $ECHO_OUT
+                   echo "Please enter 'y' or 'n'." $ECHO_OUT
+                   use_monit
+                   ;;
+           esac
     }
-    use_monit
-    if [ $USE_MONIT -eq 0 ] ; then
-	clear_screen
+    if [ $NON_INTERACT -eq 0 ] ; then
+       use_monit
+       if [ $USE_MONIT -eq 0 ] ; then
+          clear_screen
+          return 0
+       fi
+    else 
         return 0
     fi
 
     MONIT_INSTALLED=0
     # if we find the monitrc file, or we're using debian/ubuntu
     if [ -e "/etc/monit/monitrc" ]  ; then
-	MONIT_INSTALLED=1
+       MONIT_INSTALLED=1
     fi
     
 
     # debian/ubuntu can install monit here
     if [ $MONIT_INSTALLED -eq 0 ] ; then
 
-	get_linux_distribution
-	if [ $LINUX_DISTRIBUTION -eq 1 ] ; then
+       get_linux_distribution
+       if [ $LINUX_DISTRIBUTION -eq 1 ] ; then
 
-	    INSTALL_MONIT=0
-	    install_monit_apt_get() 
-	    {
-		echo "" $ECHO_OUT
-		echo "Do you want to install monit now using apt-get ? (y/n/h)"
-		read ACCEPT
-		case $ACCEPT in
-		    y | Y)
-			INSTALL_MONIT=1
-			;;
-		    n | N)
-			INSTALL_MONIT=0
-			;;
-		    h | H)
-			echo "Monit can be used to monitor/restart failed processes in MySQL Cluster"
-			install_monit_apt_get
-			;;
-		    *)
-			echo "" $ECHO_OUT
-			echo "Please enter 'y' or 'n'." $ECHO_OUT
-			install_monit_apt_get
-			;;
-		esac
-	    }
-	    install_monit_apt_get
+           INSTALL_MONIT=0
+           install_monit_apt_get() 
+           {
+               echo "" $ECHO_OUT
+               echo "Do you want to install monit now using apt-get ? (y/n/h)"
+               read ACCEPT
+               case $ACCEPT in
+                   y | Y)
+                       INSTALL_MONIT=1
+                       ;;
+                   n | N)
+                       INSTALL_MONIT=0
+                       ;;
+                   h | H)
+                       echo "Monit can be used to monitor/restart failed processes in MySQL Cluster"
+                       install_monit_apt_get
+                       ;;
+                   *)
+                       echo "" $ECHO_OUT
+                       echo "Please enter 'y' or 'n'." $ECHO_OUT
+                       install_monit_apt_get
+                       ;;
+               esac
+           }
+           install_monit_apt_get
 
 
-	    if [ $INSTALL_MONIT -eq 1 ] ; then
-		apt-get install monit
-		if [ $? -ne 0 ] ; then 
-		    echo "Problem installing monit. Skipping this step."
-		    return 0
-		fi
-		MONIT_INSTALLED=1
-	    else
-		return 0
-	    fi
-	
-	else
-	    echo ""
-	    echo "No auto-install of monit support for this Linux Distribution."
-	    echo "After ndbinstaller.sh has completed, you will need to download and install"
-	    echo "monit. Then append the upcoming monit code to /etc/monit/monitrc"
+           if [ $INSTALL_MONIT -eq 1 ] ; then
+               apt-get install monit
+               if [ $? -ne 0 ] ; then 
+                   echo "Problem installing monit. Skipping this step."
+                   return 0
+               fi
+               MONIT_INSTALLED=1
+           else
+               return 0
+           fi
+       
+       else
+           echo ""
+           echo "No auto-install of monit support for this Linux Distribution."
+           echo "After ndbinstaller.sh has completed, you will need to download and install"
+           echo "monit. Then append the upcoming monit code to /etc/monit/monitrc"
         fi
 
      fi
-	
+       
 
 
-    echo ""	    
+    echo ""        
     enter_string "Enter an email address that will receive monit alerts : " 
     MONIT_EMAIL=$ENTERED_STRING
-	    
+           
     enter_string "Enter a mail server address used to send the monit alerts (default: localhost):" 
     MONIT_SNMP=$ENTERED_STRING
     if [ "$MONIT_SNMP" = "" ] ; then
@@ -6131,8 +6407,9 @@ install_services()
 #
 # GENERATED BY ndbinstaller.sh
 #
-set daemon  60
-set logfile $NDB_LOGS_DIR/monit.log
+-set daemon  60
+-set logfile $NDB_LOGS_DIR/monit.log
+
 set mailserver $MONIT_SNMP
 set mail-format { from: monit@ndbinstaller.com }
 set alert $MONIT_EMAIL
@@ -6277,7 +6554,7 @@ start_cluster_print()
 
  echo ""
  echo "4.Cluster has been initialised. Normal start of cluster (keeps existing data): "
- echo "\$NDB_HOME/scripts/${NORMAL_START}-${NUM_NODES_TO_START}${CLUSTER_START}"
+ echo "\$NDB_HOME/scripts/${NORMAL_START}-${CLUSTER_START}"
 
  print_logs
 }
@@ -6319,11 +6596,11 @@ start_ssh_print()
  echo "ssh $USERNAME@$MGM_HOST"
  echo ""
  echo "1. Then start and initialise the cluster (do this first), run: "      
- echo "\$NDB_HOME/scripts/${INIT_START}-${NUM_NODES_TO_START}${CLUSTER_START}" 
+ echo "\$NDB_HOME/scripts/${INIT_START}-${CLUSTER_START}" 
  print_shutdown "2" "3"
  echo ""
  echo "4.Cluster has been initialised. Normal start of cluster (keeps existing data): "
- echo "\$NDB_HOME/scripts/${NORMAL_START}-${NUM_NODES_TO_START}${CLUSTER_START}"
+ echo "\$NDB_HOME/scripts/${NORMAL_START}-${CLUSTER_START}"
 
  clear_screen
 }
@@ -6376,13 +6653,12 @@ check_linux
 
 check_userid
 
-splash_screen  
-
-display_license
-
-accept_license  
-
-clear_screen
+if [ $NON_INTERACT -eq 0 ] ; then
+  splash_screen  
+  display_license
+  accept_license  
+  clear_screen
+fi
 
 select_cpu
 
@@ -6464,7 +6740,7 @@ case $INSTALL_ACTION in
 	      add_mysqld
          esac
     }
-    if [ $ADD_MYSQLD -eq 0 ] ; then
+    if [ $ADD_MYSQLD -eq 0 ]  && [ $NON_INTERACT -eq 0 ] ; then
 	add_mysqld
     else
         INSTALL_ACTION=$INSTALL_LOCALHOST_MYSQLD
