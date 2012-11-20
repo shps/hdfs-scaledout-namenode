@@ -30,7 +30,7 @@ import com.google.common.base.Joiner;
 /**
  * Common class for storage information.
  * 
- * TODO namespaceID should be long and computed as hash(address + port)
+ * TODO JUDE namespaceID. Need to persist this to disk. Should be long and computed as hash(address + port)
  */
 @InterfaceAudience.Private
 public class StorageInfo implements Writable {

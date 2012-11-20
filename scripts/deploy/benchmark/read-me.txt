@@ -1,0 +1,29 @@
+Author: Hooman
+The nnthroughput-bench directory contains three files: 
+1. config.txt: 			
+	Configuration file (at this moment it only contains home directory which is the path of the hdfs files)
+2. set-env.sh: 			
+	Sets the required environment variables, it is called by throughput-benchmark.sh
+3. throughput-benchmark.sh: 	
+	This script is the main script which runs NNThroughputBenchmark over the HDFS. It receives two input parameters as the 'operations type' and the 'number of runs' in each experiment. 
+	By default, it runs multiple experiments and prints the average of the results into avg-result file.
+	In the current version it deos not support blockreport and replication operations. 
+	In order to run the script properly, it assumes the following files in the specified "home" directory:
+		- hadoop-common-0.24.0-SNAPSHOT
+		- hadoop-hdfs-0.24.0-SNAPSHOT
+		- directory "conf" containing hdfs-site.xml and core-site.xml
+
+
+Sample run
+----------
+	Package and install the latest kthfs
+	------------------------------------
+		mvn clean package -Pdist -DskipTests
+		cp -R ./kthfs/hadoop-common-project/hadoop-common/target/hadoop-common-0.24.0-SNAPSHOT /home/sics_gradient/jude/kthfs_dev/
+		cp -R ./kthfs/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-0.24.0-SNAPSHOT /home/sics_gradient/jude/kthfs_dev/
+
+	Run the benchmark
+	-----------------
+	cd /home/sics_gradient/jude/kthfs_dev/					OR 		cd /media/Software/KTH/Thesis/Benchmarking
+	./throughput-benchmark.sh <operation-name> <number-of-iterations>
+	./throughput-benchmark.sh open 5

@@ -1,0 +1,12 @@
+1. set the environment variables:
+2. 
+
+Description
+The nnthroughput-bench directory contains three files: 
+config.txt configuration file (at this moment it only contains home directory which is the path of the hdfs files)
+set-env.sh Sets the required environment variables, it is called by throughput-benchmark.sh
+throughput-benchmark.sh: This script is the main script which runs NNThroughputBenchmark over the HDFS. It receives two input parameters as the operations type and the number of runs in each experiment. By default, it runs multiple experiments and prints the average of the results into avg-result file.In the current version it deos not support blockreport and replication operations. In order to run the script properly, it supposed the following files in the specified "home" directory:
+	- hadoop-common-0.24.0-SNAPSHOT
+	- hadoop-hdfs-0.24.0-SNAPSHOT
+	- directory "conf" containing hdfs-site.xml and core-site.xml
+Author: Hooman

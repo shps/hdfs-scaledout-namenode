@@ -336,7 +336,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
       }
     }
-    //TODO: truncate the DB tables when StartupOption.FORMAT
     if (fsImage == null) {
       this.dir = new FSDirectory(this, conf);
       StartupOption startOpt = NameNode.getStartupOption(conf);
@@ -373,8 +372,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     initHandler.handle();
 
     if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
-      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
-      cache.putRoot(this.dir.rootDir); //added for magic cache
+//      INodeCache cache = INodeCacheImpl.getInstance(); //added for magic cache
+//      cache.putRoot(this.dir.rootDir); //added for magic cache
+        // TODO - JUDE Integrate Memcachd
     }
 
     this.safeMode = new SafeModeInfo(conf);
@@ -2181,7 +2181,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DatanodeDescriptor targets[]) throws IOException, PersistanceException {
     assert hasWriteLock();
     Block b = new Block(DFSUtil.getRandom().nextLong(), 0, 0);
-    // FIXME not allowed to check a new bid in the db
+    // FIXME JUDE not allowed to check a new bid in the db. THIS CODE IS STILL IN JUDE'S BRANCH.
 //    while (isValidBlock(b)) {
 //      b.setBlockId(DFSUtil.getRandom().nextLong());
 //    }
@@ -2279,7 +2279,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // TODO
+        // FIXME JUDE - this code is not in JUDE's branch. Ask KAMAL.
         throw new UnsupportedOperationException("Not supported yet.");
       }
     };
@@ -2327,7 +2327,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void renameTo(final String src, final String dst, final Options.Rename... options)
           throws IOException, UnresolvedLinkException {
-    TransactionalRequestHandler renameTo2Hanlder = new TransactionalRequestHandler(OperationType.RENAME_TO2) {
+    TransactionalRequestHandler renameTo2Handler = new TransactionalRequestHandler(OperationType.RENAME_TO2) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -2355,11 +2355,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // TODO
+        // FIXME JUDE - this code is not in JUDE's branch. Ask KAMAL.
         throw new UnsupportedOperationException("Not supported yet.");
       }
     };
-    renameTo2Hanlder.handleWithWriteLock(this);
+    renameTo2Handler.handleWithWriteLock(this);
   }
 
   private void renameToInternal(String src, String dst, Options.Rename... options) throws IOException, PersistanceException {
@@ -2874,7 +2874,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (newHolder == null) {
       return lease;
     }
-    logReassignLease(lease.getHolder(), src, newHolder); //FIXME remove
+    //logReassignLease(lease.getHolder(), src, newHolder); 
     return reassignLeaseInternal(lease, src, newHolder, pendingFile);
   }
 
@@ -2968,9 +2968,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                   + ") is not under construction");
         }
 
+
+        //FIXME: JUDE. Need to merge JUDE's changes where the recoveryId is stored
         long recoveryId =
                 ((BlockInfoUnderConstruction) storedBlock).getBlockRecoveryId();
-        if (recoveryId != newgenerationstamp) { //FIXME: [thesis] this exception fill be fixed once recoveryID is stored in DB
+        if (recoveryId != newgenerationstamp) { 
           throw new IOException("The recovery id " + newgenerationstamp
                   + " does not match current recovery id "
                   + recoveryId + " for block " + lastblock);
@@ -3184,7 +3186,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          // FIXME lock for safemode
+          // FIXME KAMAL? lock for safemode
         }
       }.handle();
     } finally {
@@ -3440,7 +3442,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // TODO safemode 
+        // TODO HOOMAN safemode 
       }
     };
     saveNamespaceHandler.handleWithReadLock(this);
@@ -3648,7 +3650,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized void leave(boolean checkForUpgrades) throws IOException, PersistanceException{
         
-        // TODO - update leader_v2 table to change this node's safe_mode state to false.
+        // TODO HOOMAN - update leader_v2 table to change this node's safe_mode state to false.
         
       if (checkForUpgrades) {
         // verify whether a distributed upgrade needs to be started
@@ -3682,7 +3684,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.info("STATE* Network topology has "
               + nt.getNumOfRacks() + " racks and "
               + nt.getNumOfLeaves() + " datanodes");
-      // TODO [lock] uncomment after fixing safemode's lock
+      // TODO HOOMAN [lock] uncomment after fixing safemode's lock
 //      NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
 //              + blockManager.numOfUnderReplicatedBlocks() + " blocks");
     }
@@ -3963,6 +3965,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * called only in assert.
      */
     private boolean isConsistent() throws IOException, PersistanceException {
+      // TODO Jude: remove writer / reader checks
       if (!isWritingNN()) {
         return true;
       }
@@ -3970,7 +3973,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
-      // TODO safemode
+      // TODO HOOMAN:  get back safemode stuff (previously it was commented out and skipped)
       int activeBlocks = blockManager.getActiveBlockCount(OperationType.SAFE_MODE_MONITOR);
 
       LOG.debug("safeBlocks: " + blockSafe + ", blockTotal: " + blockTotal + ", blocksActive: " + activeBlocks);
@@ -4015,7 +4018,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-              // TODO safemode
+              // TODO HOOMAN safemode
             }
           };
           handler.handle();
@@ -4054,7 +4057,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
 //        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
-        // TODO safemode
+        // TODO HOOMAN safemode??
       }
     };
     return (Boolean) setSafemodeLeaveHandler.handle();
@@ -4188,7 +4191,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       LOG.info("Number of blocks under construction: " + numUCBlocks);
 
-      //TODO safemode
+      //TODO HOOMAN safemode
       return getBlocksTotalNoTx(OperationType.SAFE_MODE_MONITOR) - numUCBlocks;
     } finally {
       readUnlock();
@@ -4210,7 +4213,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //getEditLog().logSyncAll();
       if (!isInSafeMode()) {
         safeMode = new SafeModeInfo(resourcesLow);
-        // TODO - update leader_v2 table to change this node's safe_mode state to true.
+        // TODO HOOMAN - update leader_v2 table to change this node's safe_mode state to true.
         return;
       }
       if (resourcesLow) {

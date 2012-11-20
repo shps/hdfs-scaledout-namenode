@@ -54,7 +54,7 @@ import se.sics.clusterj.PendingReplicationBlockTable;
  * allow multiple simultaneous connections to exist, and the read/write locks in
  * FSNamesystem and FSDirectory will make sure this stays safe. *
  */
-public class DBConnector { //TODO: [W] the methods and variables in this class should not be static
+public class DBConnector { 
 
   private static int NUM_SESSION_FACTORIES;
   static SessionFactory[] sessionFactory;
@@ -180,6 +180,9 @@ public static void setDefaultLock() {
     Transaction tx = session.currentTransaction();
     try {
       tx.begin();
+      /* TODO Jude - Add new Entries for Jude's new tables (Leaders, Counters,
+      DatanodeInfo, DelegationKey, Leader
+       */       
       session.deletePersistentAll(LeaderTable.class);
       session.deletePersistentAll(INodeTableSimple.class);
       session.deletePersistentAll(BlockInfoTable.class);

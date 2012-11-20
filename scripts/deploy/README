@@ -1,7 +1,31 @@
+The ./deploy.sh script does the following:
+  - The conf and all subdirectories are copied to $USER/dist on the $USER and nodes defined in hosts.txt.
 
-Please follow these steps to deploy/run/test KTHFS:
+./conf 
+This directory contains all the configuration files and scripts that are copied to the machines that will run the NNs, DNs and tests.
 
-./broadcast.sh cloud7 cloud6 cloud5
-./start-kthfs.sh cloud7 cloud6 cloud5 
-./start-loadgens.sh cloud7
+./loadgen
+This current directory contains scripts for starting NNs, DNs and loadtests across the cloud machines.
 
+./nn-throughput
+This current directory contains scripts for starting NNs and nn-throughput tests across the cloud machines.
+
+hosts.txt
+This contains the list of machines and the username on which the code will be deployed.
+
+
+To run the loadgen or nn-throughput tests, you have to first:
+1. start the cluster
+2. start the mysql server for the cluster
+3. Run the following scripts:
+./deploy.sh - deploys the HDFS binaries from this machine onto all of the machines/accounts in hosts.txt
+
+For nn-throughput, run:
+./nn-throughput/start-kthfs.sh - this starts a NN on each of the clusters listed in hosts.txt
+./nn-throughput/start-test.sh
+./nn-throughput/fetch-results.sh
+
+For loadgen, run:
+./loadgen/start-kthfs.sh - this starts a NN and DN on each of the clusters listed in hosts.txt
+./loadgen/start-test.sh
+./loadgen/fetch-results.sh

@@ -366,7 +366,7 @@ public class BlockManager {
     // Dump contents of neededReplication
     //
     synchronized (neededReplications) {
-      // TODO [lock] 
+      // TODO HOOMAN[lock] 
 //      out.println("Metasave: Blocks waiting for replication: "
 //              + neededReplications.size());
       for (UnderReplicatedBlock urb : EntityManager.findList(UnderReplicatedBlock.Finder.All)) {
@@ -1434,7 +1434,7 @@ public class BlockManager {
                   "BLOCK* ask "
                   + srcNode.getName() + " to replicate "
                   + block + " to " + targetList);
-          // TODO [lock]
+          // TODO HOOMAN[lock]
 //          if (NameNode.stateChangeLog.isDebugEnabled()) {
 //            NameNode.stateChangeLog.debug(
 //                    "BLOCK* neededReplications = " + neededReplications.size()
@@ -2304,8 +2304,8 @@ public class BlockManager {
 
     long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
     neededReplications.clear();
-    // TODO - if a namenode recovers or starts, it will execute this code.
-    // TODO - if the blocks are already validated and the cluster is 'working'
+    // TODO HOOMAN - if a namenode recovers or starts, it will execute this code.
+    // TODO HOOMAN - if the blocks are already validated and the cluster is 'working'
     // we can skip this code. That is, check the leader table for a single working
     // nameNode and if yes, skip the code.
     // But think carefully about how to implement this.

@@ -302,5 +302,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_READ_NAMENODES_RPC_ADDRESS_KEY = "dfs.readnamenodes.rpc-address";
   public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
 
-  public static final String  DFS_MYSL_SERVERS = "dfs.mysql.servers";
+  // TODO - JIM - there is already code for parsing a list of comma separted hostnames - NameNodes
+  // Make this code a util, and use if for parsing the set of mysql servers
+  public static final String  DFS_MYSL_SERVERS_KEY = "dfs.mysql.servers";
 }
