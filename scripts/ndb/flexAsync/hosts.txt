@@ -1,0 +1,17 @@
+cloud1.sics.se root
+cloud2.sics.se root
+cloud3.sics.se root
+cloud4.sics.se root
+cloud5.sics.se root
+cloud6.sics.se root
+cloud7.sics.se root
+cloud8.sics.se root
+cloud9.sics.se root
+cloud10.sics.se root
+cloud11.sics.se root
+cloud12.sics.se root
+cloud14.sics.se root
+cloud15.sics.se root
+cloud16.sics.se root
+cloud17.sics.se root
+cloud18.sics.se root

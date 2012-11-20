@@ -1,0 +1,20 @@
+# Copy the mysql source code, built with the following params:
+#   cmake .  -DWITH_NDB_TEST=ON -LH
+# When building mysql-cluster from source, it often hangs on compiling java 
+# code. Just kill cmake and restart cmake until it works.
+
+
+FlexAsync tests the performance of NDB with the native asynchronous API
+
+1. Upload the version of the script you want to run with its parameters:
+
+parallel-scp -h ./hosts.txt ./flexAsync.sh /root/
+
+2. Then run the flexAsync.sh test
+./start.sh
+
+3. Then download the results after it has finished
+./download.sh
+
+4. Then sum up the results at all flexAsync clients
+./sum.sh
