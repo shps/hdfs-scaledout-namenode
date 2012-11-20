@@ -331,10 +331,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dtSecretManager = createDelegationTokenSecretManager(conf);
 
     if (NameNode.getStartupOption(conf) != StartupOption.FORMAT) {
-      if (isWritingNN()) {
+//      if (isWritingNN()) {
         this.registerMBean(); // register the MBean for the FSNamesystemState
         this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
-      }
+//      }
     }
     if (fsImage == null) {
       this.dir = new FSDirectory(this, conf);
@@ -395,17 +395,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  @Override
-  public boolean isWritingNN() {
-    return nameNode == null ? false : nameNode.isWritingNN(); //FIXME: find out a better way of handling namenode format
-  }
 
   /**
    * Activate FSNamesystem daemons.
    */
   void activate(final Configuration conf) throws IOException, StorageException, PersistanceException {
 
-    if (isWritingNN()) {
       writeLock();
       try {
         EntityManager.begin();
@@ -419,7 +414,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } finally {
         writeUnlock();
       }
-    }
 //    TransactionalRequestHandler activateHandler = new TransactionalRequestHandler(OperationType.ACTIVATE) {
 //
 //      @Override
@@ -450,12 +444,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
 
-      if (isWritingNN()) {
         setBlockTotal();
         blockManager.activate(conf);
         this.lmthread = new Daemon(leaseManager.new Monitor());
         lmthread.start();
-      }
 //      TODO:kamal, resouce monitor
 //      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
 //      nnrmthread.start();
@@ -463,9 +455,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
 
-    if (isWritingNN()) {
       registerMXBean();
-    }
     DefaultMetricsSystem.instance().register(this);
   }
 
@@ -1442,7 +1432,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           long blockSize) throws SafeModeException, FileAlreadyExistsException,
           AccessControlException, UnresolvedLinkException, FileNotFoundException,
           ParentNotDirectoryException, IOException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: src=" + src
@@ -1563,9 +1552,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean recoverLease(final String src, final String holder, final String clientMachine)
           throws IOException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
     TransactionalRequestHandler recoverLeaseHandler = new TransactionalRequestHandler(OperationType.RECOVER_LEASE) {
 
       @Override
@@ -1617,7 +1603,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void recoverLeaseInternal(INode fileInode,
           String src, String holder, String clientMachine, boolean force)
           throws IOException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFile pendingFile = (INodeFile) fileInode;
@@ -1701,9 +1686,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, SafeModeException,
           FileAlreadyExistsException, FileNotFoundException,
           ParentNotDirectoryException, IOException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
     if (supportAppends == false) {
       throw new UnsupportedOperationException("Append to hdfs not supported."
               + " Please refer to dfs.support.append configuration parameter.");
@@ -1822,9 +1804,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws LeaseExpiredException, NotReplicatedYetException,
           QuotaExceededException, SafeModeException, UnresolvedLinkException,
           IOException, PersistanceException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
 
     checkBlock(previous);
     long fileLength, blockSize;
@@ -2034,7 +2013,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private void checkLease(String src, String holder, INode file)
           throws LeaseExpiredException, PersistanceException {
-    assert isWritingNN();
     assert hasReadOrWriteLock();
     if (file == null || file.isDirectory()) {
       Lease lease = leaseManager.getLease(holder);
@@ -2092,7 +2070,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean completeFile(final String src, final String holder, final ExtendedBlock last)
           throws SafeModeException, UnresolvedLinkException, IOException {
-    assert isWritingNN();
     checkBlock(last);
     TransactionalRequestHandler completeFileHandler = new TransactionalRequestHandler(OperationType.COMPLETE_FILE) {
 
@@ -2251,9 +2228,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Deprecated
   boolean renameTo(final String src, final String dst)
           throws IOException, UnresolvedLinkException, ImproperUsageException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
     TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler(OperationType.RENAME_TO) {
 
       @Override
@@ -2292,7 +2266,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Deprecated
   private boolean renameToInternal(String src, String dst)
           throws IOException, UnresolvedLinkException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -2363,7 +2336,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void renameToInternal(String src, String dst, Options.Rename... options) throws IOException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -2499,7 +2471,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removePathAndBlocks(String src, List<Block> blocks) throws IOException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src);
     if (blocks == null) {
@@ -2741,9 +2712,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           String recoveryLeaseHolder) throws AlreadyBeingCreatedException,
           IOException, UnresolvedLinkException, ImproperUsageException, PersistanceException {
     LOG.info("Recovering lease=" + lease + ", src=" + src);
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
 
     assert !isInSafeMode();
     assert hasWriteLock();
@@ -2869,7 +2837,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private Lease reassignLease(Lease lease, String src, String newHolder,
           INodeFile pendingFile) throws IOException, PersistanceException {
     assert pendingFile.isUnderConstruction();
-    assert isWritingNN();
     assert hasWriteLock();
     if (newHolder == null) {
       return lease;
@@ -2881,7 +2848,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
           INodeFile pendingFile) throws IOException, PersistanceException {
     assert pendingFile.isUnderConstruction();
-    assert isWritingNN();
     assert hasWriteLock();
     pendingFile.setClientName(newHolder);
     EntityManager.update(pendingFile);
@@ -2891,7 +2857,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
           final Block commitBlock) throws IOException, PersistanceException {
     assert fileINode.isUnderConstruction();
-    assert isWritingNN();
     assert hasWriteLock();
     if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
       return;
@@ -2916,7 +2881,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           INodeFile pendingFile)
           throws IOException, UnresolvedLinkException, PersistanceException {
     assert pendingFile.isUnderConstruction();
-    assert isWritingNN();
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
 
@@ -2935,9 +2899,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final long newgenerationstamp, final long newlength,
           final boolean closeFile, final boolean deleteblock, final DatanodeID[] newtargets)
           throws IOException, UnresolvedLinkException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
 
     TransactionalRequestHandler commitBlockSyncHanlder = new TransactionalRequestHandler(OperationType.COMMIT_BLOCK_SYNCHRONIZATION) {
 
@@ -3072,9 +3033,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Renew the lease(s) held by the given client
    */
   void renewLease(final String holder) throws ImproperUsageException, IOException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
     TransactionalRequestHandler renewLeaseHandler = new TransactionalRequestHandler(OperationType.RENEW_LEASE) {
 
       @Override
@@ -3307,9 +3265,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"MissingBlocks", "Number of missing blocks"})
   public long getMissingBlocksCount() {
     // not locking
-    if (!isWritingNN()) {
-      return -1;
-    }
     try {
       return getMissingBlocksCountInternal(OperationType.GET_MISSING_BLOCKS_COUNT);
     } catch (IOException ex) {
@@ -3356,7 +3311,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityTotalGB() {
-    return isWritingNN() ? DFSUtil.roundBytesToGB(getCapacityTotal()) : -1;
+    return DFSUtil.roundBytesToGB(getCapacityTotal());
   }
 
   /**
@@ -3369,7 +3324,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityUsedGB() {
-    return isWritingNN() ? DFSUtil.roundBytesToGB(getCapacityUsed()) : -1;
+    return DFSUtil.roundBytesToGB(getCapacityUsed());
   }
 
   @Override
@@ -3379,7 +3334,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Metric
   public float getCapacityRemainingGB() {
-    return isWritingNN() ? DFSUtil.roundBytesToGB(getCapacityRemaining()) : -1;
+    return DFSUtil.roundBytesToGB(getCapacityRemaining());
   }
 
   /**
@@ -3388,7 +3343,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public int getTotalLoad() {
-    return isWritingNN() ? datanodeStatistics.getXceiverCount() : -1;
+    return datanodeStatistics.getXceiverCount() ;
   }
 
   int getNumberOfDatanodes(DatanodeReportType type) {
@@ -3966,9 +3921,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private boolean isConsistent() throws IOException, PersistanceException {
       // TODO Jude: remove writer / reader checks
-      if (!isWritingNN()) {
-        return true;
-      }
 
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
@@ -4367,9 +4319,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getFilesTotal() {
-    if (!isWritingNN()) {
-      return -1;
-    }
     readLock();
     try {
       return this.dir.totalInodes();
@@ -4381,13 +4330,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getPendingReplicationBlocks() {
-    return isWritingNN() ? blockManager.getPendingReplicationBlocksCount() : -1;
+    return blockManager.getPendingReplicationBlocksCount();
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getUnderReplicatedBlocks() {
-    return isWritingNN() ? blockManager.getUnderReplicatedBlocksCount() : -1;
+    return blockManager.getUnderReplicatedBlocksCount();
   }
 
   /**
@@ -4395,23 +4344,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   @Metric({"CorruptBlocks", "Number of blocks with corrupt replicas"})
   public long getCorruptReplicaBlocks() {
-    return isWritingNN() ? blockManager.getCorruptReplicaBlocksCount() : -1;
+    return blockManager.getCorruptReplicaBlocksCount();
   }
 
   @Override // FSNamesystemMBean
   @Metric
   public long getScheduledReplicationBlocks() {
-    return isWritingNN() ? blockManager.getScheduledReplicationBlocksCount() : -1;
+    return blockManager.getScheduledReplicationBlocksCount();
   }
 
   @Metric
   public long getPendingDeletionBlocks() throws IOException {
-    return isWritingNN() ? (Long) blockManager.getPendingDeletionBlocksCount(OperationType.GET_PENDING_DELETION_BLOCKS_COUNT) : -1;
+    return (Long) blockManager.getPendingDeletionBlocksCount(OperationType.GET_PENDING_DELETION_BLOCKS_COUNT);
   }
 
   @Metric
   public long getExcessBlocks() throws IOException {
-    return isWritingNN() ? blockManager.getExcessBlocksCount(OperationType.GET_EXCESS_BLOCKS_COUNT) : -1;
+    return blockManager.getExcessBlocksCount(OperationType.GET_EXCESS_BLOCKS_COUNT);
   }
 
   @Metric
@@ -4593,9 +4542,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void updatePipeline(final String clientName, final ExtendedBlock oldBlock,
           final ExtendedBlock newBlock, final DatanodeID[] newNodes)
           throws IOException, ImproperUsageException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
     TransactionalRequestHandler updatePipelineHanlder = new TransactionalRequestHandler(OperationType.UPDATE_PIPELINE) {
 
       @Override
@@ -4638,7 +4584,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock,
           ExtendedBlock newBlock, DatanodeID[] newNodes)
           throws IOException, PersistanceException {
-    assert isWritingNN();
     assert hasWriteLock();
     // check the vadility of the block and lease holder name
     final INodeFile pendingFile =
@@ -4683,9 +4628,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // files that were being written to, update with new filename.
   void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo)
           throws ImproperUsageException, PersistanceException {
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
 
     String overwrite;
     String replaceBy;
@@ -4715,10 +4657,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // This is run by an inferior thread of saveNamespace, which holds a read
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
-
-    if (!isWritingNN()) {
-      throw new ImproperUsageException();
-    }
 
     synchronized (leaseManager) {
       out.writeInt(leaseManager.countPath()); // write the size
@@ -5212,7 +5150,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // NameNodeMXBean
   @Metric
   public long getTotalFiles() {
-    return isWritingNN() ? getFilesTotal() : -1;
+    return getFilesTotal();
   }
 
   @Override // NameNodeMXBean

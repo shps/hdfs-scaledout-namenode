@@ -15,7 +15,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
-import se.sics.clusterj.INodeTableSimple;
 import com.mysql.clusterj.ClusterJException;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
@@ -25,12 +24,10 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
-import org.apache.commons.collections15.map.ListOrderedMap;
+import org.apache.commons.collections.map.ListOrderedMap;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
-import org.apache.hadoop.hdfs.server.namenode.INodeCachedEntry;
-import se.sics.clusterj.BlockInfoTable;
 
 /**
  * This class provides the CRUD operations for inodes stored in database. 

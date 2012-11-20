@@ -208,7 +208,6 @@ public class BlockManager {
   public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
     namesystem = fsn;
 
-    if (namesystem.isWritingNN()) {
       datanodeManager = new DatanodeManager(this, fsn, conf);
       heartbeatManager = datanodeManager.getHeartbeatManager();
       invalidateBlocks = new InvalidateBlocks(datanodeManager);
@@ -219,7 +218,6 @@ public class BlockManager {
               DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
               DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
       replicationThread = new Daemon(new ReplicationMonitor());
-    }
 
 //    blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
@@ -315,10 +313,8 @@ public class BlockManager {
   }
 
   public void activate(Configuration conf) {
-    if (namesystem.isWritingNN()) {
       datanodeManager.activate(conf);
       replicationThread.start();
-    }
   }
 
   public void close() {
