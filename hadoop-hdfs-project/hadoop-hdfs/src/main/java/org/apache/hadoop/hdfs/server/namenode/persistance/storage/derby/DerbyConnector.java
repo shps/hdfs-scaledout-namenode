@@ -487,4 +487,9 @@ public enum DerbyConnector implements StorageConnector<Connection> {
   public void readCommitted() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
+
+    @Override
+    public void setPartitionKey(Class className, Object key) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }
