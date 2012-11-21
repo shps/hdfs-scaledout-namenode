@@ -297,12 +297,19 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_NAMENODE_DU_RESERVED_DEFAULT = 1024 * 1024 * 100; // 100 MB
   public static final String  DFS_NAMENODE_CHECKED_VOLUMES_KEY = "dfs.namenode.resource.checked.volumes";
   
-  /*for client failover api*/
-  public static final String  DFS_WRITE_NAMENODES_RPC_ADDRESS_KEY = "dfs.writenamenodes.rpc-address";
-  public static final String  DFS_READ_NAMENODES_RPC_ADDRESS_KEY = "dfs.readnamenodes.rpc-address";
-  public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
 
   // TODO - JIM - there is already code for parsing a list of comma separted hostnames - NameNodes
   // Make this code a util, and use if for parsing the set of mysql servers
   public static final String  DFS_MYSL_SERVERS_KEY = "dfs.mysql.servers";
+
+  /*for client failover api*/
+  public static final String  DFS_NAMENODES_RPC_ADDRESS_KEY = "dfs.namenodes.rpc.address";  // format {ip:port, ip:port, ip:port} comma separated
+  public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
+  public static final String DFS_LEADER_CHECK_INTERVAL_KEY = "dfs.leader.check.interval";
+  public static final int DFS_LEADER_CHECK_INTERVAL_DEFAULT = 5*1000; // 5 seconds
+
+  /* for memcache servers */
+  public static final String  DFS_MEMCACHE_SERVERS_KEY = "dfs.memcache.server.address";  // format {ip:port, ip:port, ip:port} comma separated
+  public static final String  DFS_MEMCACHE_SERVERS_DEFAULT = "127.0.0.1:11211"; 
+
 }

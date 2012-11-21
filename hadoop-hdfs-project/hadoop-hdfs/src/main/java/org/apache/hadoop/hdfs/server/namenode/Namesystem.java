@@ -33,6 +33,4 @@ public interface Namesystem extends RwLock, SafeMode {
   /** @return the block pool ID */
   public String getBlockPoolId();
   
-  /** Is it a WriterNN?  */
-  public boolean isWritingNN();
 }
