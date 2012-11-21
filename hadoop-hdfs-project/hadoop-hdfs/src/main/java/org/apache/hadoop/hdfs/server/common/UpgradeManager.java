@@ -88,5 +88,10 @@ public abstract class UpgradeManager {
 
   public abstract HdfsServerConstants.NodeType getType();
   public abstract boolean startUpgrade() throws IOException;
-  public abstract void completeUpgrade() throws IOException, PersistanceException;
+  /**
+   * @param isTransactional is not used here in the Datanode functionality as they have no contact to NDB
+   *                    This variable is just needed by the abstract function of this super class. 
+   *                    Its used by the Namenode Upgrade Manager (see @UpgradeManagerNamenode)
+   */  
+  public abstract void completeUpgrade(boolean isTransactional) throws IOException;
 }
