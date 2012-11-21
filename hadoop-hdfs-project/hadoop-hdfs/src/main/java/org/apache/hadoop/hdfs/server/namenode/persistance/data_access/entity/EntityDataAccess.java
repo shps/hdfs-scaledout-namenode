@@ -14,6 +14,7 @@ public abstract class EntityDataAccess {
 
   private static Log log = LogFactory.getLog(EntityDataAccess.class);
 
+  // TODO - Better error handling of SQL Exceptions
   protected void handleSQLException(SQLException ex) throws StorageException {
     if (ex instanceof SQLTransientException) {
       throw new StorageException(ex);

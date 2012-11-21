@@ -110,6 +110,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   protected final RPC.Server server;
   protected final InetSocketAddress rpcAddress;
   
+  /** Namenode counter that indicates the next namenode to send a block report to */
+  protected volatile int nnIndex = 0;
+  
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
     this.nn = nn;

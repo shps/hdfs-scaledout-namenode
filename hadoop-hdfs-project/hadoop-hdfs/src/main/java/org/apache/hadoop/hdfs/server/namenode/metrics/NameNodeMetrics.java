@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -39,6 +40,11 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 public class NameNodeMetrics {
   final MetricsRegistry registry = new MetricsRegistry("namenode");
 
+  // TODO - JIM Measure avg operation latency, and store it in the Leader table.
+  final private static int OP_LATENCY_WINDOW_SZ=1000;
+  @Metric MutableCounterLong opAvgLatencies;
+  ConcurrentHashMap<Long,Integer> opLatencySamples = new ConcurrentHashMap<Long,Integer>();
+  
   @Metric MutableCounterLong createFileOps;
   @Metric MutableCounterLong filesCreated;
   @Metric MutableCounterLong filesAppended;
@@ -159,4 +165,14 @@ public class NameNodeMetrics {
   public void setSafeModeTime(long elapsed) {
     safeModeTime.set((int) elapsed);
   }
+  
+//  public void setOperationProcessingLatency(long elapsed) {
+////    opLatenciesNumSamples = Math.min(OP_LATENCY_WINDOW_SZ, opLatenciesNumSamples+1);
+//    if (opLatencySamples.size() >= OP_LATENCY_WINDOW_SZ) {
+//        
+//    } else {
+//      
+//    }
+//  }  
+  
 }

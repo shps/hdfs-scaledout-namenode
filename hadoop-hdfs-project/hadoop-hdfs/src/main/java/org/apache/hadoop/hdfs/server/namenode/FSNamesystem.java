@@ -193,6 +193,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private static final ThreadLocal<StringBuilder> auditBuffer =
           new ThreadLocal<StringBuilder>() {
 
+              @Override
             protected StringBuilder initialValue() {
               return new StringBuilder();
             }
@@ -282,7 +283,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final GenerationStamp generationStamp = new GenerationStamp();
   // precision of access times.
   private long accessTimePrecision = 0;
-  // lock to protect FSNamesystem.
+  // lock to protect FSNamesystem. TODO - JIM Remove this!!
   private ReentrantReadWriteLock fsLock;
   private NameNode nameNode;
   private static boolean systemLevelLockEnabled = false;
