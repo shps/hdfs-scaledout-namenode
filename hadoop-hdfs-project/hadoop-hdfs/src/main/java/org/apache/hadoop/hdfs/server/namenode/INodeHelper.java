@@ -24,7 +24,7 @@ import com.mysql.clusterj.query.Predicate;
 import com.mysql.clusterj.query.PredicateOperand;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
-import org.apache.commons.collections.map.ListOrderedMap;
+import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.metrics.HelperMetrics;
