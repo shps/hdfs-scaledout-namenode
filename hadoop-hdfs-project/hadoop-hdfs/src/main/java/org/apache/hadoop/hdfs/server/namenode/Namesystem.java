@@ -33,4 +33,9 @@ public interface Namesystem extends RwLock, SafeMode {
   /** @return the block pool ID */
   public String getBlockPoolId();
   
+  /** Is it a Leader  */
+  public boolean isLeader();
+  
+  /** Returns the namenode id*/
+  public long getNamenodeId();
 }

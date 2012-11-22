@@ -64,7 +64,7 @@ public class TestHDFSFileContextMainOperations extends
       cluster.shutdown();
       cluster = null;
     }
-    cluster = new MiniDFSCluster.Builder(CONF).wNameNodePort(wNNPort)
+    cluster = new MiniDFSCluster.Builder(CONF).nameNodePort(wNNPort)
             .numDataNodes(1).format(false).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
