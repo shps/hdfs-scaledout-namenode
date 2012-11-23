@@ -83,45 +83,45 @@ public class FSDirectory implements Closeable {
     private Condition cond;
     private boolean quotaEnabled;
 
-  // utility methods to acquire and release read lock and write lock
-  void readLock() {
-    if (FSNamesystem.isSystemLevelLockEnabled()) {
-      this.dirLock.readLock().lock();
-    }
-  }
-
-  void readUnlock() {
-    if (FSNamesystem.isSystemLevelLockEnabled()) {
-      this.dirLock.readLock().unlock();
-    }
-  }
-
-  void writeLock() {
-    if (FSNamesystem.isSystemLevelLockEnabled()) {
-      this.dirLock.writeLock().lock();
-    }
-  }
-
-  void writeUnlock() {
-    if (FSNamesystem.isSystemLevelLockEnabled()) {
-      this.dirLock.writeLock().unlock();
-    }
-  }
-
-  boolean hasWriteLock() {
-    if (!FSNamesystem.isSystemLevelLockEnabled()) {
-      return true;
+    // utility methods to acquire and release read lock and write lock
+    void readLock() {
+        if (FSNamesystem.isSystemLevelLockEnabled()) {
+            this.dirLock.readLock().lock();
+        }
     }
 
-    return this.dirLock.isWriteLockedByCurrentThread();
-  }
-
-  boolean hasReadLock() {
-    if (!FSNamesystem.isSystemLevelLockEnabled()) {
-      return true;
+    void readUnlock() {
+        if (FSNamesystem.isSystemLevelLockEnabled()) {
+            this.dirLock.readLock().unlock();
+        }
     }
-    return this.dirLock.getReadHoldCount() > 0;
-  }
+
+    void writeLock() {
+        if (FSNamesystem.isSystemLevelLockEnabled()) {
+            this.dirLock.writeLock().lock();
+        }
+    }
+
+    void writeUnlock() {
+        if (FSNamesystem.isSystemLevelLockEnabled()) {
+            this.dirLock.writeLock().unlock();
+        }
+    }
+
+    boolean hasWriteLock() {
+        if (!FSNamesystem.isSystemLevelLockEnabled()) {
+            return true;
+        }
+
+        return this.dirLock.isWriteLockedByCurrentThread();
+    }
+
+    boolean hasReadLock() {
+        if (!FSNamesystem.isSystemLevelLockEnabled()) {
+            return true;
+        }
+        return this.dirLock.getReadHoldCount() > 0;
+    }
     /**
      * Caches frequently used file names used in {@link INode} to reuse byte[]
      * objects and reduce heap usage.
@@ -208,8 +208,8 @@ public class FSDirectory implements Closeable {
             setReady(true);
             this.nameCache.initialized();
             if (FSNamesystem.isSystemLevelLockEnabled()) {
-            cond.signalAll();
-          }
+                cond.signalAll();
+            }
         } finally {
             writeUnlock();
         }
@@ -237,22 +237,21 @@ public class FSDirectory implements Closeable {
      * Block until the object is ready to be used.
      */
     void waitForReady() {
-      if (FSNamesystem.isSystemLevelLockEnabled())
-      {
-        if (!ready) {
-            writeLock();
-            try {
-                while (!ready) {
-                    try {
-                        cond.await(5000, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException ie) {
+        if (FSNamesystem.isSystemLevelLockEnabled()) {
+            if (!ready) {
+                writeLock();
+                try {
+                    while (!ready) {
+                        try {
+                            cond.await(5000, TimeUnit.MILLISECONDS);
+                        } catch (InterruptedException ie) {
+                        }
                     }
+                } finally {
+                    writeUnlock();
                 }
-            } finally {
-                writeUnlock();
             }
         }
-      }
     }
 
     /**
@@ -1300,6 +1299,17 @@ public class FSDirectory implements Closeable {
     }
 
     /**
+     * Validate if INode correctly points to a file
+     */
+    boolean isValidINodeFile(INode inode) {
+        if (inode == null || inode.isDirectory()) {
+            return false;
+        }
+        assert !inode.isLink();
+        return true;
+    }
+
+    /**
      * Get {@link INode} associated with the file.
      */
     INodeFile getFileINode(String src) throws UnresolvedLinkException, PersistanceException {
@@ -1599,7 +1609,7 @@ public class FSDirectory implements Closeable {
         return true;
     }
 
-    /** 
+    /**
      * //TODO: kamal, TX
      */
     INode unprotectedMkdir(String src, PermissionStatus permissions,
@@ -1814,8 +1824,9 @@ public class FSDirectory implements Closeable {
                 EntityManager.add(addedNode);
             }
             // [H] The following updates modification time
-            if (quotaEnabled)
-              EntityManager.update(pathComponents[pos - 1]);
+            if (quotaEnabled) {
+                EntityManager.update(pathComponents[pos - 1]);
+            }
         }
 
         return addedNode;
@@ -2278,19 +2289,17 @@ public class FSDirectory implements Closeable {
             inode.setName(name.getBytes());
         }
     }
-    
+
     /**
      * Created for acquiring locks in KTHFS
-     * 
-     * @return 
+     *
+     * @return
      */
-    public INode getRootDir()
-    {
-      return this.rootDir;
+    public INode getRootDir() {
+        return this.rootDir;
     }
-    
-    public boolean isQuotaEnabled()
-    {
-      return this.quotaEnabled;
+
+    public boolean isQuotaEnabled() {
+        return this.quotaEnabled;
     }
 }

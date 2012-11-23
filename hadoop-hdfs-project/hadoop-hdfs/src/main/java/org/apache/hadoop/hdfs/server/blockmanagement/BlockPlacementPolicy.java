@@ -124,7 +124,7 @@ public abstract class BlockPlacementPolicy {
    * @return array of DatanodeDescriptor instances chosen as target 
    * and sorted as a pipeline.
    */
-  DatanodeDescriptor[] chooseTarget(FSInodeInfo srcInode,
+  DatanodeDescriptor[] chooseTarget(Inode srcInode,
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> chosenNodes,
@@ -163,7 +163,7 @@ public abstract class BlockPlacementPolicy {
                    listed in the previous parameter.
    * @return the replica that is the best candidate for deletion
    */
-  abstract public DatanodeDescriptor chooseReplicaToDelete(FSInodeInfo srcInode,
+  abstract public DatanodeDescriptor chooseReplicaToDelete(Inode srcInode,
                                       Block block, 
                                       short replicationFactor,
                                       Collection<DatanodeDescriptor> existingReplicas,
