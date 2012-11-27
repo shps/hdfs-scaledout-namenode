@@ -1796,11 +1796,11 @@ $NDBD_DEFNS
 
 [MYSQLD]
 
-" > $NDB_DIR/config-${1}node.ini
+" > $NDB_DIR/config.ini
 
 if [ $? -ne 0 ] ; then
  echo "" $ECHO_OUT
- echo "Failure: could not create file $NDB_DIR/config-2node.ini" $ECHO_OUT
+ echo "Failure: could not create file $NDB_DIR/config.ini" $ECHO_OUT
  exit_error
 fi
 
@@ -1952,7 +1952,7 @@ fi
 #remove memory of old configurations
 #echo "If you want to remove warnings for incompatible configuration changes, run 'rm -rf ../$NDB_DIR/$MGM_DATADIR/*'"
 
-$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/$MGM_DATADIR --reload $LOGGING $NO_DAEMON_LAUNCH 
+$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f $NDB_DIR/config.ini $NO_DAEMON --configdir=$NDB_DIR/$MGM_DATADIR --reload $LOGGING $NO_DAEMON_LAUNCH 
 
 if [ \$? -ne 0 ] ; then
   echo \"Problem starting the Management Server.\"
@@ -2056,7 +2056,6 @@ else
 fi
 
 sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
-#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
      else
 
@@ -2082,7 +2081,6 @@ else
 fi
 
 sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
-#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 	     else
 		 echo "
 
@@ -2097,7 +2095,6 @@ if [ \$? -ne 0 ] ; then
   echo \"$NDB_DIR/data_dir/${NODEID}\"
 fi
 sleep 1" >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
-#sleep 1" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
 	     fi
 	 fi
@@ -2127,7 +2124,6 @@ $NDB_DIR/scripts/$MGM_CLIENT_START -e show
 
 exit 0
 " >> $NDB_DIR/scripts/${START_TYPE}.sh $ECHO_OUT
-#" >> $NDB_DIR/scripts/${START_TYPE}-${NUM_TO_START}${CLUSTER_START} $ECHO_OUT
 
 fi
 
@@ -2336,7 +2332,7 @@ if [ ! -e $MYSQL_BINARIES_DIR/bin/ndb_mgmd ] ; then
   exit 3
 fi
 
-$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f  $NDB_DIR/config-${NUM_TO_START}node.ini $NO_DAEMON --configdir=$NDB_DIR/mgmd${1} --reload $LOGGING $NO_DAEMON_LAUNCH
+$MYSQL_BINARIES_DIR/bin/ndb_mgmd -f  $NDB_DIR/config.ini $NO_DAEMON --configdir=$NDB_DIR/mgmd${1} --reload $LOGGING $NO_DAEMON_LAUNCH
 RES=\`echo \$?\`
 if [ \$RES -ne 0 ] ; then
     echo \"\"
@@ -5357,8 +5353,7 @@ setup_config_scripts()
     echo "" $ECHO_OUT
     echo "Creating cluster configuration files:" $ECHO_OUT
     if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
-	echo "$NDB_DIR/config-4node.ini" $ECHO_OUT
-	echo "$NDB_DIR/config-2node.ini" $ECHO_OUT
+	echo "$NDB_DIR/config.ini" $ECHO_OUT
     else
 	echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
     fi
@@ -5368,7 +5363,6 @@ setup_config_scripts()
     else
       make_config_ini $NUM_NODES
       make_config_ini 2
-      make_config_ini 4
     fi
   
     if [ ! -d $NDB_DIR/$MGM_DATADIR ] ; then
