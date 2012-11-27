@@ -42,9 +42,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -337,12 +338,12 @@ public class NameNode {
    * 
    * @param conf the configuration
    */
-  protected void initialize(Configuration conf) throws IOException, StorageException, PersistanceException {
+  protected void initialize(Configuration conf) throws IOException{
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
 
     // Setting the configuration for DBConnector
-    DBConnector.setConfiguration(conf);
+//    DBConnector.setConfiguration(conf);
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
@@ -402,12 +403,18 @@ public class NameNode {
   /**
    * Activate name-node servers and threads.
    */
-  void activate(Configuration conf) throws IOException, StorageException, PersistanceException {
+  void activate(Configuration conf) throws IOException {
     if ((isRole(NamenodeRole.LEADER) || isRole(NamenodeRole.SECONDARY))
         && (UserGroupInformation.isSecurityEnabled())) {
       namesystem.activateSecretManager();
     }
+    try {
     namesystem.activate(conf);
+    } catch (StorageException ex) {
+      throw new RuntimeException(ex);
+    } catch (PersistanceException ex) {
+      throw new RuntimeException(ex);
+    }
     startHttpServer(conf);
     rpcServer.start();
     startTrashEmptier(conf);
@@ -472,7 +479,7 @@ public class NameNode {
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
-      throws IOException, StorageException, PersistanceException { 
+      throws IOException { 
 	      	
     this.role = role;
     try {
@@ -517,7 +524,6 @@ public class NameNode {
 // TODO [Jude]: Commented only for throughput benchmarking! Some configuration problem with cloud18 and cloud16    
     try {
       if (httpServer != null) httpServer.stop();
-      
       System.out.println("Stopped");
     } catch (Exception e) {
       LOG.error("Exception while stopping httpserver", e);
@@ -541,7 +547,7 @@ public class NameNode {
   /**
    * Is the cluster currently in safe mode?
    */
-  public boolean isInSafeMode() {
+  public boolean isInSafeMode() throws PersistanceException {
     return namesystem.isInSafeMode();
   }
 
@@ -620,7 +626,7 @@ public class NameNode {
       if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
         MemcacheForINode cache = MemcacheForINode.getInstance();
         cache.setConfiguration(conf);
-        //cache.clear();
+        cache.clear();
       }
     }
 
@@ -628,16 +634,19 @@ public class NameNode {
     String clusterId = StartupOption.FORMAT.getClusterId();
     if(clusterId == null || clusterId.equals("")) {
       //Get the clusterId from config
+        // TODO - JIM Store this in NDB or get from NDB
       clusterId = NNStorage.newClusterID();
     }
-    /*
-    if(clusterId == null || clusterId.equals("")) {
-      //Generate a new cluster id
-      clusterId = NNStorage.newClusterID();
-    }
-     * 
-     */
     LOG.info("Formatting using clusterid: " + clusterId);
+    
+    // Format storage
+    StorageFactory.setConfiguration(conf);
+    StorageConnector connector = StorageFactory.getConnector();
+    try {
+      assert (connector.formatStorage());
+    } catch (StorageException ex) {
+      LOG.error(ex.getMessage(), ex);
+    }
     
     FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
@@ -763,17 +772,13 @@ public class NameNode {
       printUsage();
       return null;
     }
-    
-    // Set the DB configuration parameters
-    DBConnector.setConfiguration(conf);
-
     setStartupOption(conf, startOpt);
 
     switch (startOpt) {
       case FORMAT:
         boolean aborted = format(conf, true);
         System.exit(aborted ? 1 : 0);
-        return null; // avoid javac warning
+        return null; // avoid warning
       case GENCLUSTERID:
         System.err.println("Generating new cluster id:");
         LOG.info(NNStorage.newClusterID());
@@ -782,8 +787,7 @@ public class NameNode {
       case FINALIZE:
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
-        return null; // avoid javac warning
-//TODO:kamal, backup node      case BACKUP:      
+        return null; // avoid warning
       default:
         DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf, NamenodeRole.SECONDARY);

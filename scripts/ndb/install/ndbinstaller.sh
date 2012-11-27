@@ -46,11 +46,11 @@ RELEASE=""
 
 MYSQL_VERSION_MAJOR="7"
 MYSQL_VERSION_MINOR="2"
-MYSQL_VERSION_REV="8"
+MYSQL_VERSION_REV="9"
 
 NDB_VERSION_MAJOR="7"
 NDB_VERSION_MINOR="2"
-NDB_VERSION_REV="8"
+NDB_VERSION_REV="9"
 
 VERSION_PREFIX="mysql-cluster-gpl-"
 #VERSION_PREFIX=""
@@ -2379,7 +2379,7 @@ $TEST_USERID
 
 echo \"Test if a mysql server is already running on this host.\"
 
-MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-7.2.8/scripts/util/get-mysqld-$1-socket.sh\`
+MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-${NDB_VERSION_MAJOR}.${NDB_VERSION_MINOR}.${NDB_VERSION_REV}/scripts/util/get-mysqld-$1-socket.sh\`
 $MYSQL_BINARIES_DIR/bin/mysqladmin -S \$MYSQL_SOCKET -s -u root ping 
 # Don't redirect error, as this will give a '0' return result &> /dev/null
 if [ \$? -eq 0 ] ; then
@@ -2403,7 +2403,7 @@ echo "#!/bin/sh
 $TEST_USERID  
 
 
-MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-7.2.8/scripts/util/get-mysqld-$1-socket.sh\`
+MYSQL_SOCKET=\`/var/lib/mysql-cluster/ndb-${NDB_VERSION_MAJOR}.${NDB_VERSION_MINOR}.${NDB_VERSION_REV}/scripts/util/get-mysqld-$1-socket.sh\`
 $MYSQL_BINARIES_DIR/bin/mysqladmin -S \$MYSQL_SOCKET -u root --wait=30 shutdown
 
 RES=\`echo \$?\`

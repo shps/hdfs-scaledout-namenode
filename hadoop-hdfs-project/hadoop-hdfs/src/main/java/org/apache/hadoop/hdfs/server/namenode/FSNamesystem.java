@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -129,7 +127,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.Acces
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -141,7 +138,7 @@ import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LeaderHelper;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
@@ -3866,7 +3863,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
          */
         private synchronized void decrementSafeBlockCount(short replication) throws IOException, PersistanceException {
             if (safeMode.isOn()) {
-                
+                // TODO JIM update safeblock count
+//                updateSafeBlockCount();
             }
             if (replication == safeReplication - 1) {
                 this.blockSafe--;
@@ -3874,6 +3872,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             checkMode();
         }
 
+        // TODO Jim - This is Jude's code. 
+        // This is expensive and hence will only run in safe mode
+//    private synchronized void updateSafeBlockCount(boolean isTransactional) throws IOException {
+//      
+//      // Safe blocks are all complete blocks i.e. all those blocks that are saved with atleast one DN, that block is safe
+//      List<BlockInfo> completeBlocks = em.findAllCompleteBlocks();
+//      blockSafe = completeBlocks.size();
+//    }
         /**
          * Check if safe mode was entered manually or automatically (at startup,
          * or when disk space is low).
@@ -3998,7 +4004,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
          * called only in assert.
          */
         private boolean isConsistent() throws IOException, PersistanceException {
-            // TODO Jude: remove writer / reader checks
 
             if (blockTotal == -1 && blockSafe == -1) {
                 return true; // manual safe mode
@@ -4056,6 +4061,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     assert false : msg;
                     throw new RuntimeException(msg, es);
                 } catch (IOException e) {
+                    // TODO JIM - why is this exception not
+                    // propagated
                     LOG.error(e);
                 }
             }
@@ -4094,8 +4101,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     @Override
     public void checkSafeMode() throws IOException, PersistanceException {
         // safeMode is volatile, and may be set to null at any time
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode != null) {
+        if (this.safeMode != null) {
             safeMode.checkMode();
         }
     }
@@ -4103,8 +4109,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     @Override
     public boolean isInSafeMode() throws PersistanceException {
         // safeMode is volatile, and may be set to null at any time
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode == null) {
+        if (this.safeMode == null) {
             return false;
         }
         return safeMode.isOn();
@@ -4113,8 +4118,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     @Override
     public boolean isInStartupSafeMode() throws PersistanceException {
         // safeMode is volatile, and may be set to null at any time
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode == null) {
+        if (this.safeMode == null) {
             return false;
         }
         return !safeMode.isManual() && safeMode.isOn();
@@ -4123,8 +4127,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     @Override
     public boolean isPopulatingReplQueues() {
         // safeMode is volatile, and may be set to null at any time
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode == null) {
+        if (this.safeMode == null) {
             return true;
         }
         return safeMode.isPopulatingReplQueues();
@@ -4145,15 +4148,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // safeMode is volatile, and may be set to null at any time
         // TODO - JIM - HK: what is this code? Why have a local variable point to
         // SafeModeInfo's field
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode == null) // mostly true
+        if (this.safeMode == null) // mostly true
         {
             return;
         }
         safeMode.decrementSafeBlockCount((short) blockManager.countNodes(b).liveReplicas());
     }
-    
-    
+
     /**
      * Set the total number of blocks in the system.
      *
@@ -4161,8 +4162,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private void setBlockTotal() throws IOException, PersistanceException {
         // safeMode is volatile, and may be set to null at any time
-        SafeModeInfo safeMode = this.safeMode;
-        if (safeMode == null) {
+        if (this.safeMode == null) {
             return;
         }
         safeMode.setBlockTotal((int) getCompleteBlocksTotal());
@@ -4175,8 +4175,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     @Metric
     public long getBlocksTotal() {
         try {
+            // TODO - JIM Why not do this in a transaction?
             return getBlocksTotalNoTx(OperationType.GET_BLOCKS_TOTAL);
         } catch (IOException ex) {
+            // TODO - JIM Why catch the exception: If cluster error
+            // we should retry.
             LOG.error(ex);
         }
         return -1;
@@ -4244,7 +4247,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             //getEditLog().logSyncAll();
             if (!isInSafeMode()) {
                 safeMode = new SafeModeInfo(resourcesLow);
-                // TODO HOOMAN - update leader_v2 table to change this node's safe_mode state to true.
+                // TODO HOOMAN - use 'cluster' table to update to true.
                 return;
             }
             if (resourcesLow) {
@@ -4462,6 +4465,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             };
             return (String) getFSStateHandler.handle();
         } catch (IOException ex) {
+            // TODO JIM - why is the exception not propagated?
             LOG.error(ex);
         }
         return null;
@@ -4491,6 +4495,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (mbeanName != null) {
             MBeans.unregister(mbeanName);
         }
+        // TODO Jim - Leader leaves
+        try {
+            TransactionalRequestHandler leaderExitHandler = new TransactionalRequestHandler(OperationType.GET_FS_STATE) {
+                @Override
+                public Object performTask() throws PersistanceException, IOException {
+                    LeaderHelper.removeNamenode(nameNode.getId());
+                    return null;
+                }
+
+                @Override
+                public void acquireLock() throws PersistanceException, IOException {
+                    // TODO safemode
+                }
+            };
+            leaderExitHandler.handle();
+        } catch (IOException ex) {
+            LOG.error(ex);
+        }
+
     }
 
     @Override // FSNamesystemMBean
@@ -4515,6 +4538,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     long getGenerationStamp() {
         return generationStamp.getStamp();
+        // TODO JIM - Jude's code below
+//        return CountersHelper.getCounterValue(CountersHelper.GS_COUNTER_ID);
     }
 
     /**
@@ -4527,8 +4552,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     "Cannot get next generation stamp", safeMode);
         }
         long gs = generationStamp.nextStamp();
-        //getEditLog().logGenerationStamp(gs);
-        // NB: callers sync the log
         return gs;
     }
 
@@ -4647,9 +4670,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             }
         };
         updatePipelineHanlder.handleWithWriteLock(this);
-        if (supportAppends) {
-            //getEditLog().logSync();
-        }
         LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
     }
 
@@ -4680,6 +4700,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         blockinfo.setGenerationStamp(newBlock.getGenerationStamp());
         blockinfo.setNumBytes(newBlock.getNumBytes());
 
+        // TODO - Jude did this differently - got DatanodeMgr,
+        // then blockInfo.setExpectedLocations()
         if (newNodes.length > 0) {
             for (int i = 0; i < newNodes.length; i++) {
                 ReplicaUnderConstruction replica = blockinfo.addExpectedReplica(newNodes[i].getStorageID(), HdfsServerConstants.ReplicaState.RBW);
@@ -4693,10 +4715,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         //[H]: No need to persist blocks in KTHFS.
         // persist blocks only if append is supported
-//    String src = leaseManager.findPath(pendingFile);  
-//    if (supportAppends) {
-//      dir.persistBlocks(src, pendingFile);
-//    }
+        String src = leaseManager.findPath(pendingFile);
+        if (supportAppends) {
+            dir.persistBlocks(src, pendingFile);
+        }
     }
 
     // rename was successful. If any part of the renamed subtree had
@@ -4756,73 +4778,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     INodeFile cons = (INodeFile) node;
                     assert cons.isUnderConstruction();
                     FSImageSerialization.writeINodeUnderConstruction(out, cons, lPath.getPath());
-
-
-
-
-
-
-
-
-
-
                 }
             }
         }
     }
 
-//  TODO:Kamal, backup role removal
-//  /**
-//   * Register a Backup name-node, verifying that it belongs
-//   * to the correct namespace, and adding it to the set of
-//   * active journals if necessary.
-//   * 
-//   * @param bnReg registration of the new BackupNode
-//   * @param nnReg registration of this NameNode
-//   * @throws IOException if the namespace IDs do not match
-//   */
-//  void registerBackupNode(NamenodeRegistration bnReg,
-//      NamenodeRegistration nnReg) throws IOException {
-//    writeLock();
-//    try {
-//      if(getFSImage().getStorage().getNamespaceID() 
-//         != bnReg.getNamespaceID())
-//        throw new IOException("Incompatible namespaceIDs: "
-//            + " Namenode namespaceID = "
-//            + getFSImage().getStorage().getNamespaceID() + "; "
-//            + bnReg.getRole() +
-//            " node namespaceID = " + bnReg.getNamespaceID());
-//      if (bnReg.getRole() == NamenodeRole.BACKUP) {
-//        
-//      }
-//    } finally {
-//      writeUnlock();
-//    }
-//  }
-//  TODO:Kamal, back-up role removal
-//  /**
-//   * Release (unregister) backup node.
-//   * <p>
-//   * Find and remove the backup stream corresponding to the node.
-//   * @param registration
-//   * @throws IOException
-//   */
-//  void releaseBackupNode(NamenodeRegistration registration)
-//    throws IOException {
-//    writeLock();
-//    try {
-//      if(getFSImage().getStorage().getNamespaceID()
-//         != registration.getNamespaceID())
-//        throw new IOException("Incompatible namespaceIDs: "
-//            + " Namenode namespaceID = "
-//            + getFSImage().getStorage().getNamespaceID() + "; "
-//            + registration.getRole() +
-//            " node namespaceID = " + registration.getNamespaceID());
-//      //getEditLog().releaseBackupStream(registration);
-//    } finally {
-//      writeUnlock();
-//    }
-//  }
     static class CorruptFileBlockInfo {
 
         String path;
@@ -4866,6 +4826,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     startBlockId = Block.filename2id(startBlockAfter);
                 }
 
+                // TODO JIM  -- jude did this differently
                 Collection<UnderReplicatedBlock> urblks = EntityManager.findList(UnderReplicatedBlock.Finder.ByLevel, blockManager.UNDER_REPLICATED_LEVEL_FOR_CORRUPTS);
                 for (UnderReplicatedBlock urblk : urblks) {
                     BlockInfo blk = EntityManager.find(BlockInfo.Finder.ById, urblk.getBlockId());
@@ -4889,7 +4850,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-                // FIXME 
+                // FIXME JIM - Not done yet?
                 throw new UnsupportedOperationException("Not supported yet.");
             }
         };
@@ -4955,9 +4916,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                         renewer, realUser);
                 token = new Token<DelegationTokenIdentifier>(
                         dtId, dtSecretManager);
-//      long expiryTime = dtSecretManager.getTokenExpiryTime(dtId);
-                //getEditLog().logGetDelegationToken(dtId, expiryTime);
-                //getEditLog().logSync();
                 return token;
             }
 
@@ -5068,17 +5026,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //    }
 //    //getEditLog().logSync();
 //  }
-    private void logReassignLease(String leaseHolder, String src,
-            String newHolder) throws IOException {
-        writeLock();
-        try {
-            //getEditLog().logReassignLease(leaseHolder, src, newHolder);
-        } finally {
-            writeUnlock();
-        }
-        //getEditLog().logSync();
-    }
-
+//    private void logReassignLease(String leaseHolder, String src,
+//            String newHolder) throws IOException {
+//        writeLock();
+//        try {
+//            //getEditLog().logReassignLease(leaseHolder, src, newHolder);
+//        } finally {
+//            writeUnlock();
+//        }
+//        //getEditLog().logSync();
+//    }
     /**
      *
      * @return true if delegation token operation is allowed
@@ -5331,5 +5288,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     public long getNamenodeId() {
         return nameNode.getId();
+    }
+
+    private boolean setPartition(String src) throws UnresolvedLinkException, 
+            PersistanceException {
+        // fetching inodes in the begining and passing them over to the functions to restrict db access
+        INodeFile inode = null;
+        INode[] inodesOnPath = dir.getExistingPathINodes(src);
+        if (dir.isValidINodeFile(inodesOnPath[inodesOnPath.length - 1])) {
+            inode = (INodeFile) inodesOnPath[inodesOnPath.length - 1];
+
+            // setting the partition key to inode id (will benefit from append and override functionaility)
+            Object[] partitionK = new Object[2];
+            partitionK[0] = inode.getId();
+            partitionK[1] = null;
+//            DBConnector.obtainSession().setPartitionKey(BlockInfoTable.class, partitionK);
+            EntityManager.setPartitionKey(BlockInfo.class, partitionK);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
