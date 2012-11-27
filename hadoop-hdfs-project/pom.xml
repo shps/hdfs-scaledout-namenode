@@ -13,82 +13,76 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <project>
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-project</artifactId>
+        <version>0.24.0-SNAPSHOT</version>
+        <relativePath>../hadoop-project</relativePath>
+    </parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-hdfs-project</artifactId>
     <version>0.24.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
-  </parent>
-  <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-hdfs-project</artifactId>
-  <version>0.24.0-SNAPSHOT</version>
-  <description>Apache Hadoop HDFS Project</description>
-  <name>Apache Hadoop HDFS Project</name>
-  <packaging>pom</packaging>
+    <description>Apache Hadoop HDFS Project</description>
+    <name>Apache Hadoop HDFS Project</name>
+    <packaging>pom</packaging>
 
-  <modules>
-    <module>hadoop-hdfs</module>
-  </modules>
+    <modules>
+        <module>hadoop-hdfs</module>
+    </modules>
 
- <dependencies>
-<!--
-<dependency>
-    <artifactId>clusterj</artifactId>
-    <version>1.0-SNAPSHOT</version>       
- </dependency>
--->
+    <dependencies>
     </dependencies>
 
-  <build>
-    <plugins>
-  <!--  
-    <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unpack</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>se.sics.ndb</groupId>
-                                    <artifactId>clusterj-linux32</artifactId>
-                                    <version>7.1.15a</version>
-                                    <classifier>${build.type}</classifier>
-                                    <type>jar</type>
-                                    <overWrite>false</overWrite>
-                                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
+    <build>
+        <plugins>
+            <!--  
+                <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-dependency-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>unpack</id>
+                                    <phase>compile</phase>
+                                    <goals>
+                                        <goal>unpack</goal>
+                                    </goals>
+                                    <configuration>
+                                        <artifactItems>
+                                            <artifactItem>
+                                                <groupId>se.sics.ndb</groupId>
+                                                <artifactId>clusterj-linux32</artifactId>
+                                                <version>7.1.15a</version>
+                                                <classifier>${build.type}</classifier>
+                                                <type>jar</type>
+                                                <overWrite>false</overWrite>
+                                                <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                                            </artifactItem>
+                                        </artifactItems>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+            -->    
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
--->    
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>pom.xml</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
- <repositories>
+    <repositories>
         <repository>
             <id>sics-release</id>
             <name>SICS Release Repository</name>

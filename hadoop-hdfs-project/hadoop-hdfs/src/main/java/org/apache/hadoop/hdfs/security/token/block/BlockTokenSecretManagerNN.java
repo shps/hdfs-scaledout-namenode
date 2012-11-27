@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.security.token.block;
 
-import com.mysql.clusterj.ClusterJException;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -37,7 +36,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.hdfs.server.namenode.SecretHelper;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 
 /**
@@ -128,37 +129,64 @@ public class BlockTokenSecretManagerNN extends
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
+
     
-    boolean isDone = false;
-    int tries = DBConnector.RETRY_COUNT;
-    try {
-      while (!isDone && tries > 0) {
-        try {
-          
-          
-          DBConnector.beginTransaction();
-          DBConnector.setExclusiveLock();
-          SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
-          SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
-          DBConnector.commit();
-          isDone=true;
-          
-        }//end-inner try
-        catch (ClusterJException ex) {
-            DBConnector.safeRollback();
-            DBConnector.setDefaultLock();
-            tries--;
-            //For now, the ClusterJException are just catched here.
-            LOG.error(ex.getMessage(), ex);
-          }
-      }//end-while
-    }//end-outer most try
-    finally {
-      if(!isDone) {
-        DBConnector.safeRollback();
-        DBConnector.setDefaultLock();
-      }
-    } // finally for db try block
+        TransactionalRequestHandler generateKeysHandler = new TransactionalRequestHandler(OperationType.GET_LISTING) {
+            @Override
+            public Object performTask() throws PersistanceException, IOException {
+                SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
+                SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
+                return null;
+            }
+            @Override
+            public void acquireLock() throws PersistanceException, IOException {
+                // TODO JIM - what locks are acquired here? An exclusive lock on
+                // 
+//                TransactionLockManager tla = new TransactionLockManager();
+//                tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
+//                        TransactionLockManager.INodeLockType.READ,
+//                        new String[]{src},
+//                        getFsDirectory().getRootDir()).
+//                        addBlock(TransactionLockManager.LockType.READ).
+//                        addReplica(TransactionLockManager.LockType.READ).
+//                        addExcess(TransactionLockManager.LockType.READ).
+//                        addCorrupt(TransactionLockManager.LockType.READ).
+//                        addReplicaUc(TransactionLockManager.LockType.READ).
+//                        acquire();
+            }
+        };
+        generateKeysHandler.handleWithReadLock(this);    
+    
+//    boolean isDone = false;
+//    int tries = DBConnector.RETRY_COUNT;
+//    try {
+//      while (!isDone && tries > 0) {
+//        try {
+//          
+//          
+//          DBConnector.beginTransaction();
+//          DBConnector.setExclusiveLock();
+//          SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
+//          SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
+//          DBConnector.commit();
+//          isDone=true;
+//          
+//        }//end-inner try
+//        catch (ClusterJException ex) {
+//            DBConnector.safeRollback();
+//            DBConnector.setDefaultLock();
+//            tries--;
+//            //For now, the ClusterJException are just catched here.
+//            LOG.error(ex.getMessage(), ex);
+//          }
+//      }//end-while
+//    }//end-outer most try
+//    finally {
+//      if(!isDone) {
+//        DBConnector.safeRollback();
+//        DBConnector.setDefaultLock();
+//      }
+//    } // finally for db try block
     
   }
 

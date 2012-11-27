@@ -1,10 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.LeaderHelper;
-import com.mysql.clusterj.ClusterJException;
-import com.mysql.clusterj.LockMode;
-import com.mysql.clusterj.Session;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
