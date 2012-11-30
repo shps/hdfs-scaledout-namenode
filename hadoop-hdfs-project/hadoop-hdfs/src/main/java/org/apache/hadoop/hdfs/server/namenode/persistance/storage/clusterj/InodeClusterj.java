@@ -148,13 +148,14 @@ public class InodeClusterj extends InodeDataAccess {
 
     void setSymlink(String symlink);
   }
+  
   private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
-  public void prepare(Collection<INode> removed, Collection<INode> newed, Collection<INode> modified) throws StorageException {
+  public void prepare(Collection<INode> removed, Collection<INode> newEntries, Collection<INode> modified) throws StorageException {
     Session session = connector.obtainSession();
     try {
-      for (INode inode : newed) {
+      for (INode inode : newEntries) {
         InodeDTO persistable = session.newInstance(InodeDTO.class);
         createPersistable(inode, persistable);
         session.savePersistent(persistable);
@@ -254,14 +255,10 @@ public class InodeClusterj extends InodeDataAccess {
       PredicateOperand field = dobj.get("id");
       PredicateOperand values = dobj.param("param");
       Predicate predicate = field.in(values);
-
       dobj.where(predicate);
       Query<InodeDTO> query = session.createQuery(dobj);
-
-      query.setParameter(
-              "param", ids.toArray());
+      query.setParameter("param", ids.toArray());
       List<InodeDTO> results = query.getResultList();
-      List<INode> inodes = null;
       return createInodeList(results);
     } catch (Exception e) {
       throw new StorageException(e);
@@ -298,7 +295,6 @@ public class InodeClusterj extends InodeDataAccess {
       inode = new INodeSymlink(persistable.getSymlink(), persistable.getModificationTime(),
               persistable.getATime(), ps);
     } else {
-
       inode = new INodeFile(persistable.getIsUnderConstruction(), persistable.getName().getBytes(),
               getReplication(persistable.getHeader()),
               persistable.getModificationTime(),
@@ -343,12 +339,12 @@ public class InodeClusterj extends InodeDataAccess {
       persistable.setNSCount(((INodeDirectory) inode).getNsCount());
       persistable.setDSCount(((INodeDirectory) inode).getDsCount());
     }
-    if (inode instanceof INodeDirectoryWithQuota) {
+    else if (inode instanceof INodeDirectoryWithQuota) {
       persistable.setIsDir(true); //why was it false earlier?	    	
       persistable.setIsUnderConstruction(false);
       persistable.setIsDirWithQuota(true);
     }
-    if (inode instanceof INodeFile) {
+    else if (inode instanceof INodeFile) {
       persistable.setIsDir(false);
       persistable.setIsUnderConstruction(inode.isUnderConstruction());
       persistable.setIsDirWithQuota(false);
@@ -357,9 +353,11 @@ public class InodeClusterj extends InodeDataAccess {
       persistable.setClientMachine(((INodeFile) inode).getClientMachine());
       persistable.setClientNode(((INodeFile) inode).getClientNode() == null ? null : ((INodeFile) inode).getClientNode().getName());
     }
-    if (inode instanceof INodeSymlink) {
+    else if (inode instanceof INodeSymlink) {
       String linkValue = DFSUtil.bytes2String(((INodeSymlink) inode).getSymlink());
       persistable.setSymlink(linkValue);
+    } else {
+        throw new IllegalStateException("Unrecognised INode type");
     }
   }
 }

@@ -4,14 +4,14 @@ import java.io.Serializable;
 
 /**
  *
- * @author jude
+ * @author jude, jim
  */
-  public class INodeCachedEntry implements Serializable{
+  public class INodeMemcachedEntry implements Serializable{
     private long id;
     private long parentid;
     String name;
     
-    public INodeCachedEntry(long id, long parentid, String name) {
+    public INodeMemcachedEntry(long id, long parentid, String name) {
       this.id=id;
       this.parentid = parentid;
       this.name = name;
