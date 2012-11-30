@@ -123,6 +123,8 @@ public class LeaderElection extends Thread {
         LeaderHelper.removePrevoiouslyElectedLeaders(leaderId);
         nn.setRole(NamenodeRole.LEADER);
       }
+      
+      // TODO [S] do something if i am no longer the leader. 
   }
   @Override
   //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

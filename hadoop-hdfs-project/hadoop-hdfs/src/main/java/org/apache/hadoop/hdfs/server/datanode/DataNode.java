@@ -331,6 +331,7 @@ public class DataNode extends Configured
         throws IOException, InterruptedException {
       List<NamenodeService> toShutdown = new ArrayList<NamenodeService>();
       List<InetSocketAddress> toStart = new ArrayList<InetSocketAddress>();
+      //Todo [S] why multiple locks
       synchronized (refreshNamenodesLock) {
         synchronized (this) {
           for (InetSocketAddress nnaddr : nameNodeThreads.keySet()) {

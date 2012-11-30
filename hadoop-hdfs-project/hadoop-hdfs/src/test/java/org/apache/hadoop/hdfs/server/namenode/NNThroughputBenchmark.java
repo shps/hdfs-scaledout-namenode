@@ -1520,6 +1520,7 @@ public class NNThroughputBenchmark {
         bench.close();
         while(!nameNode.getLeaderAlgo().selectAll().isEmpty())
         {
+          // [Salman] release the cpu for a while. dont be a CPU Hog  
           // wait till all namenodes are done with the benchmark to move to the next stage
         }
         // wait for all to start in order

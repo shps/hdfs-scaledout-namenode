@@ -43,6 +43,7 @@ public class LeaderHelper {
     l.setHostname(hostname);
     l.setTimestamp(now());    // default in ndb is now()
     updateNamenodeInternal(session, l);
+    //TODO [S] why put new row every time. update the previous table
   }
 
   /**
