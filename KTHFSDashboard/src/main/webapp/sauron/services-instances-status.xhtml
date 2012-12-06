@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"   
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      >
+
+    <ui:composition template="layout.xhtml">
+
+        <ui:define name="title">
+            KTHFS Dashboard - Services Instances Status
+        </ui:define>
+
+        <ui:define name="css">
+
+        </ui:define>
+
+        <ui:define name="scripts">
+
+        </ui:define>
+
+
+        <ui:define name="content">
+
+            <!--Navigation Bar - Begin -->
+            <h:form styleClass="styleNav">
+                <p:panelGrid>  
+                    <p:row>  
+                        <p:column>
+                            <p:commandLink action="services" ajax="false">  
+                                <h:outputText value="Services" />
+                            </p:commandLink> 
+                            <h:outputText value=" &raquo; "/>
+                            <p:commandLink action="#{serviceController.gotoServiceStatus()}" ajax="false">  
+                                <h:outputText value="#{serviceController.kthfsInstance}" />
+                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
+                                <f:param name="service" value="#{serviceController.service}"/>  
+                            </p:commandLink> 
+                            <h:outputText value=" &raquo; "/>
+                        </p:column>
+                    </p:row>
+                </p:panelGrid>
+            </h:form>
+            <!--Navigation Bar - End-->
+
+            <!-- Second Toolbar-->
+            <h:form>  
+                <p:toolbar styleClass="SecondToolbarGood">  
+                    <p:toolbarGroup align="left">  
+                        <p:commandLink  action="#{serviceController.gotoServiceInstanceStatus()}" ajax="false">
+                            <h:outputText value="#{serviceController.service} (#{serviceController.hostname})"/>
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                            <f:param name="service" value="#{serviceController.service}"/>
+                            <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                              
+                            <f:param name="hostname" value="#{serviceController.hostname}"/>
+                        </p:commandLink>
+
+                        <p:commandButton styleClass="Selected" value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceInstanceStatus()}" ajax="false">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                            <f:param name="service" value="#{serviceController.service}"/>
+                            <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                             
+                            <f:param name="hostname" value="#{serviceController.hostname}"/>                          
+                        </p:commandButton>  
+
+                        <p:commandButton rendered="#{serviceInstanceController.showSubservices}" value="Subservices" icon="ui-icon-note" action="#{serviceController.gotoServiceInstanceSubservices()}" ajax="false">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                            <f:param name="service" value="#{serviceController.service}"/>
+                            <f:param name="servicegroup" value="#{serviceController.service}"/>                            
+                            <f:param name="hostname" value="#{serviceController.hostname}"/>                          
+                        </p:commandButton>                          
+                    </p:toolbarGroup>  
+
+                    <p:toolbarGroup align="right">  
+                        <p:menuButton value="Actions">  
+                           <p:menuitem value="Init" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance" disabled="true">
+                                <f:param name="hostname" value="#{hostController.hostname}" />
+                                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
+                                <f:param name="service" value="#{hostController.service}" />
+                                <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                   
+                                <f:param name="command" value="init" />
+                            </p:menuitem>
+                           <p:menuitem value="Start" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance">
+                                <f:param name="hostname" value="#{hostController.hostname}" />
+                                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
+                                <f:param name="service" value="#{hostController.service}" />
+                                <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                   
+                                <f:param name="command" value="start" />
+                            </p:menuitem>
+                           <p:menuitem value="Stop" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance">
+                                <f:param name="hostname" value="#{hostController.hostname}" />
+                                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
+                                <f:param name="service" value="#{hostController.service}" />
+                                <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                  
+                                <f:param name="command" value="stop" />
+                            </p:menuitem>
+
+                        </p:menuButton>  
+                    </p:toolbarGroup>  
+
+                </p:toolbar>  
+
+            </h:form>
+
+            <p:spacer width="1" height="10" />
+
+            <h:form id="form_messages" >
+                <p:messages id="messages" showDetail="true" autoUpdate="true"/>  
+            </h:form>
+
+
+            <h:form id="Instance" styleClass="styleInfoPanel">
+                <p:panel header="Service Status">
+
+                    <p:dataTable id="instances" var="instance" value="#{serviceController.instanceFullInfo}">
+                        <p:column headerText="Name"><h:outputText value="#{instance.name}"/></p:column>
+                        <p:column headerText="Host">
+                            <h:outputLink id="hostlink" value="#{serviceController.hostUrl}">
+                                <h:outputText value="#{instance.host}"/>
+                                <f:param name="hostname" value="#{instance.host}"/>
+                            </h:outputLink>
+                        </p:column>
+                        <p:column headerText="Status"><h:outputText value="#{instance.status}"/></p:column>
+                        <p:column headerText="Health">
+                            <div class="Health-#{instance.health}"><h:outputText value="#{instance.health}"/></div>
+                        </p:column>
+                        <p:column headerText="Pid"><h:outputText value="#{instance.pid}"/></p:column>
+                        <p:column headerText="Uptime"><h:outputText value="#{instance.uptime}"/></p:column>
+                    </p:dataTable> 
+                </p:panel>                    
+            </h:form>
+
+            <p:spacer width="1" height="20" />
+
+            <h:form styleClass="styleInfoPanel" rendered="#{serviceInstanceController.showSubservices}">
+                <p:panel header="Subservices Summary">
+
+                    <p:dataTable id="serviceRole" var="serviceRole" value="#{serviceController.mysqlClusterSuberviceRoles}">
+                        <p:column headerText="">
+                            <p:commandLink action="#{serviceController.gotoSubserviceInstances()}" ajax="false">
+                                <h:outputText value="#{serviceRole.name}"/>
+                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                                <f:param name="service" value="#{serviceRole.shortName}"/>
+                                <f:param name="servicegroup" value="#{serviceController.service}"/>    
+                                <f:param name="hostname" value="#{serviceController.hostname}"/>
+                            </p:commandLink>                         
+                        </p:column>  
+                        <p:column headerText="Status">
+                            <p:commandLink id="showD1" onclick="dlg.show()">
+                                <h:outputText value="#{serviceRole.statusStarted}"/>
+                                <f:param name="name" value="#{serviceController.service}"/>
+                            </p:commandLink> 
+                            <p:spacer width="10" height="0" />
+                            <p:commandLink id="showD2" onclick="dlg.show()">
+                                <h:outputText value="#{serviceRole.statusStopped}"/>
+                                <f:param name="name" value="#{serviceController.service}"/>
+                            </p:commandLink> 
+                        </p:column>  
+                        <p:column headerText="Health"><h:outputText value="#{serviceRole.health}"/></p:column> 
+                    </p:dataTable> 
+
+                </p:panel>                    
+            </h:form>  
+
+            <p:spacer width="1" height="20" />
+
+            <p:accordionPanel activeIndex="-1">
+                <p:tab title ="JMX Info" rendered="#{jarmonController.showJarmonChart}">
+                    <iframe id="iframejarmon" src="#{jarmonController.jarmonUrl}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
+                </p:tab>
+                <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.shoWLogs}">
+                    <h:form id="logsform">
+                        <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
+                            <f:param name="service" value="#{serviceController.service}"/>  
+                            <f:param name="hostname" value="#{serviceController.hostname}"/>
+                        </p:commandLink>
+                        <p:panelGrid id="logs" styleClass="LogOutput">
+                            <p:row>
+                                <p:column  styleClass="LogOutput column">
+                                    Stdout<br/>
+                                    <div>
+                                        <h:outputText escape="false" value="#{serviceController.showStdoutLog(20)}"/>                       
+                                    </div>
+                                </p:column>
+                                <p:column styleClass="LogOutput column">
+                                    Stderr<br/>
+                                    <div>
+                                        <h:outputText escape="false" value="#{serviceController.showStderrLog(20)}"/> 
+                                    </div>
+                                </p:column>
+                            </p:row>
+                        </p:panelGrid>
+                    </h:form>
+                </p:tab>   
+                <p:tab title="Configuration File" rendered="#{serviceInstanceController.showConfiguration}">
+                    <h:form id="configform">
+
+                        <p:commandLink styleClass="AccordionPanelLink" value="Save Configuration" update="config">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
+                            <f:param name="service" value="#{serviceController.service}"/>  
+                            <f:param name="hostname" value="#{serviceController.hostname}"/>
+                        </p:commandLink>
+
+                        Configuration:<br/>
+                        <p:inputTextarea id ="config" style="width:100%" rows="25" value="#{serviceController.showConfig()}" autoResize="false"/>
+
+                    </h:form>
+
+                </p:tab>
+            </p:accordionPanel>
+
+        </ui:define>
+
+    </ui:composition>
+
+</html>

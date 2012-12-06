@@ -1,0 +1,12 @@
+#!upstart
+description "MySQL Cluster"
+
+env USER=<%= node[:ndb][:user] %>
+
+start on startup
+stop on shutdown
+
+respawn
+
+exec sudo -u $USER sh -c "/usr/local/mysql/bin/ndb_mgmd -f /etc/ndb/ndb.ini  --configdir=<%= ['ndb']['install'] %>/mgmd1 --reload 2>&1 >> \
+  <%= node[:ndb][:log_dir] %>/cluster.log"

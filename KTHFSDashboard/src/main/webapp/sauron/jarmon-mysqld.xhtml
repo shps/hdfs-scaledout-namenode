@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+    <head>
+        <title>Jarmon mysqlserver</title>
+
+        <link rel="stylesheet" type="text/css" href="../jarmon/assets/css/style.css" />
+        <link rel="stylesheet" type="text/css" href="../jarmon/assets/css/tabs-no-images.css" />
+        <link rel="stylesheet" type="text/css" href="../jarmon/assets/css/jquerytools.dateinput.skin1.css" />     
+
+        <script type="text/javascript" src="../jarmon/assets/js/dependencies.js"></script>
+        <script type="text/javascript" src="../jarmon/assets/js/jarmon.js"></script>
+        <script type="text/javascript" src="../jarmon/recipes_mysqld.js"></script>
+        <script type="text/javascript">
+            $(function() {
+                jarmon.SET('#{hostController.host.name}');
+
+                jarmon.buildTabbedChartUi(
+                $('.chart-container').remove(),
+                jarmon.CHART_RECIPES_COLLECTD(),
+                $('.tabbed-chart-interface'),
+                jarmon.TAB_RECIPES_STANDARD(),
+                $('.chartRangeControl'));
+            });
+        </script>  
+
+        <script type="text/javascript">
+            $(document).ajaxStart (function() {
+                if(self==parent) return false; /* Checks that page is in iframe. */
+                var FramePageHeight = document.getElementById('jarmondiv').offsetHeight + 30 + 'px';
+                parent.document.getElementById("iframejarmon").style.height= FramePageHeight;
+            });
+            
+            $(document).ajaxComplete (function() {
+                if(self==parent) return false; /* Checks that page is in iframe. */
+                var FramePageHeight = document.getElementById('jarmondiv').offsetHeight + 30 + 'px';
+                parent.document.getElementById("iframejarmon").style.height= FramePageHeight;
+            });
+        </script>      
+    </head>
+
+    <body style="border:0;" id="framePage" onload="resizeIframe()">
+        <div id="jarmondiv">
+            <div class="jarmon chartRangeControl">
+                <form >
+                    <div>
+                        <span class="timerange_control custom">
+                            <img src="../jarmon/assets/icons/calendar.png" width="16" height="16" alt="calendar" class="from_custom"
+                                 title="Click to choose a custom start date" />
+                            <input name="from_custom" type="text" readonly="readonly"
+                                   title="Time range start" />
+                            <img src="../jarmon/assets/icons/calendar.png" width="16" height="16" alt="calendar" class="to_custom"
+                                 title="Click to choose a custom end date" />
+                            <input name="to_custom" type="text" readonly="readonly"
+                                   title="Time range end" />
+                        </span>
+                        <span class="timerange_control standard">
+                            <select name="from_standard"
+                                    title="Time range shortcuts - clickchartRangeControl to select an alternative time range" >
+                            </select>
+                        </span>
+                        <input name="from" type="hidden"  />
+                        <input name="to" type="hidden"  />
+                        <select name="tzoffset"
+                                title="Timezone offset - click to choose a custom timezone offset" ></select>
+                        <input name="action" value="Update" type="button"
+                               title="Graph update - click to update all graphs" />
+                    </div>
+                    <div class="range-preview"
+                         title="Time range preview - click and drag to select a custom timerange" ></div>
+                </form>
+            </div>
+            <div class="jarmon">
+                <div class="tabbed-chart-interface"></div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2 class="title"></h2>
+                    </div>
+                    <div class="error"></div>
+                    <div class="chart"></div>
+                    <div class="graph-legend"></div>
+                </div>
+            </div>
+            <br/>
+        </div>
+    </body>
+
+</html>
+

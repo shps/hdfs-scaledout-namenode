@@ -1,0 +1,76 @@
+#!/bin/sh 
+
+
+USERID=`id | sed -e 's/).*//; s/^.*(//;'`
+if [ "X$USERID" != "Xroot" ]; then
+ if [ "X$USERID" = "Xroot" ]; then
+   echo ""
+   echo "You started cluster as user: 'root'."
+   echo "You should start cluster as user: 'root'."
+   echo "If you continue, you will change ownership of database files"
+   echo "from 'root' to 'root'."
+# TODO: return -2
+ else
+   echo ""
+   echo "You started the cluster as user: '$USERID'."
+   echo "You should start the cluster as user: 'root'."
+   echo "If you continue, you will change ownership of database files"
+   echo "from 'root' to '$USERID'."
+# TODO: return -2
+ fi
+ 
+ echo ""
+start_as_wrong_user() 
+{
+  echo -n "Do you really want to start the cluster as user 'root'? y/n/h(help) "
+  read ACCEPT
+  case $ACCEPT in
+   y | Y)
+      ;;
+   n | N)
+      echo ""
+      echo "Bye.."
+      echo ""
+      exit 1
+      ;;
+    *)
+      echo ""
+      echo -n "Please enter 'y' or 'n'." 
+      start_as_wrong_user
+      ;;
+   esac
+}
+start_as_wrong_user
+
+
+fi
+
+
+  echo "" 
+  echo "Testing to see if a cluster is already running on host 'cloud11:1186' ..." 
+  echo "" 
+  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -t 2 -e show 1> /dev/null
+
+  if [ $? -eq 0 ] ; then
+      echo ""      
+      echo "A management server is already running on cloud11:1186" 
+      echo "" 	
+      exit 2
+  fi
+
+
+if [ ! -e <%= ['mysql']['install'] %>/bin/ndb_mgmd ] ; then
+  echo "Error: could not find file: <%= ['mysql']['install'] %>/bin/ndb_mgmd"
+  exit 3
+fi
+
+<%= ['mysql']['install'] %>/bin/ndb_mgmd -f  <%= ['ndb']['install'] %>/config.ini  --configdir=<%= ['ndb']['install'] %>/mgmd4 --reload  
+RES=`echo $?`
+if [ $RES -ne 0 ] ; then
+    echo ""
+    echo "Error when starting the management server: $?."
+    echo ""
+    exit 2
+fi
+exit $RES
+

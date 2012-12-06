@@ -1,0 +1,391 @@
+body {
+    margin: 5px;
+    font-family: Arial,sans-serif;
+
+}
+
+.stylelayout {
+    font-family:    Arial,sans-serif;
+    font-size:      12px;
+}
+
+
+.styleNav {
+    font-family:    Arial,sans-serif;
+    font-size:      12px;
+    padding-top: 5px;
+    margin: -5px;
+}
+
+.styleNav .ui-panelgrid tr {
+    border-bottom: solid;
+    border-top: none;
+    border-color: gray;
+    border-width: 1px;
+}
+
+/*Panel*/
+
+.ui-panel {
+    padding: 0.0em;
+    font-size: 12px;
+}
+
+.ui-panel .ui-panel-titlebar {
+    padding: 0.6em 0.6em 0.6em;
+    font-size: 14px;
+    margin: -1px;
+}
+
+.ui-panel .ui-panel-title {
+    margin: 0.1em 16px 0.1em 0;
+}
+
+.ui-panel .ui-panel-content {
+    border: 0;
+    background: none;
+    padding: 0.2em 0.25em;
+    margin-top: 0px;
+    margin-left: -2px;
+    margin-right: -2px;
+    margin-bottom: -2px; /* -6? -8?*/
+}
+
+.styleInfoPanel .ui-panel .ui-panel-content {
+    border: 0;
+    background: none;
+    padding: 0.2em 0.25em;
+    margin-top: 0px;
+    margin-left: -2px;
+    margin-right: -2px;
+    margin-bottom: -8px; /* -6? -8?*/
+}
+
+
+/*panelgrid*/
+
+.ui-panelgrid {    
+    margin: -1px;
+    border-collapse: collapse;
+    border:none;
+    width: 100%;
+    font-family: Arial,sans-serif;
+    font-size: 20px;
+}
+
+.ui-panelgrid .ui-panelgrid-header {
+    text-align:left;
+}
+
+.ui-panelgrid td {
+    border: none;
+    border-color: inherit;
+    padding:4px 5px;
+    font-size: 12px;
+}
+
+.ui-panelgrid tr {
+    border-bottom: 1px;
+    border-left: none;
+    border-right: none;
+}
+
+/*datatable*/
+
+.ui-datatable {
+
+    border-collapse: collapse;
+    width: 100%;
+    font-family: Arial,sans-serif;
+    /*    padding: 1px;*/
+
+}
+
+.ui-datatable table {
+    border-collapse: collapse;
+    border:none;
+    font-family: Arial,sans-serif;
+    font-size: 12px;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.ui-datatable th, .ui-datatable tfoot td {
+    text-align:left;
+    white-space:nowrap;
+
+    padding:0px;
+    margin:0px;
+    overflow: hidden;
+    font-size: 10px;
+}
+
+.ui-datatable-data, .ui-datatable-data-empty {}
+
+.ui-datatable .ui-datatable-data td,
+.ui-datatable .ui-datatable-data-empty td {
+    border-width: 0px;
+    border-style: none;
+    border-color: inherit;
+    padding:0px;
+    margin:0px;
+    overflow: hidden;
+}
+
+.ui-datatable .ui-datatable-data td, .ui-datatable .ui-datatable-data-empty td {
+    border-style: none;
+}
+
+/*toolbar*/
+.MainToolbar {
+    margin-top:     -6px;
+    margin-left:    -6px;
+    margin-right:   -5px;
+    border-radius:  0px;
+    border-right:   none;
+    border-left:    none;
+}
+
+.MainToolbar .ui-commandlink {
+    text-decoration: none;
+    font-size: 15px;
+    position: relative;
+    left: 5px;
+    padding-right: 20px;
+}
+
+
+/*.SecondToolbarBad*/
+.SecondToolbarBad {
+    margin-top:     3px;
+    margin-left:    -5px;
+    margin-right:   -5px;
+    margin-top:     4px;
+    padding-top:    4px;    
+    border-radius:  0px;
+    border-right:   none;
+    border-left:    none;
+    background-color: pink;
+    height: 32px;
+}
+.SecondToolbarBad .ui-commandlink {
+    text-decoration: none;
+    font-size: 18px;
+    position: relative ;
+    top: 3px;
+    left: 10px;
+    padding-right: 20px;
+}
+
+.SecondToolbarBad .ui-button {
+    background-color: pink; 
+    border:         none; 
+    font-weight:    normal; 
+    box-shadow:     none; 
+    text-shadow:    none;
+}
+.SecondToolbarBad .Selected {
+    height: 30px; 
+    background-color: #3366CC;
+    border:         none; 
+    color:          white;
+    font-weight:    normal; 
+    border-radius:  6px; 
+    box-shadow:     none;
+    text-shadow:    none; 
+
+}
+
+
+/*.SecondToolbarGood*/
+
+.SecondToolbarGood {
+    margin-left:    -5px;
+    margin-right:   -5px;
+    margin-top:     4px;
+    padding-top:    4px;
+    border-radius:  0px;
+    border-right:   none;
+    border-left:    none;
+    background-color: #B5EAAA;
+    height: 32px;
+}
+.SecondToolbarGood .ui-commandlink {
+    text-decoration: none;
+    font-size: 18px;
+    position: relative ;
+    top: 3px;
+    left: 10px;
+    padding-right: 20px;
+}
+
+.SecondToolbarGood .ui-button {
+    background-color: #B5EAAA; 
+    border:none; 
+    font-weight: normal; 
+    box-shadow: none; 
+    text-shadow: none;
+}
+.SecondToolbarGood .Selected  {
+    height: 30px; 
+    background-color: #3366CC;
+    border: none; color:white;
+    font-weight: normal; 
+    border-radius: 6px; 
+    box-shadow: none;
+    text-shadow:none; 
+
+}
+
+
+
+/*Global*/
+.ui-widget {
+    font-size: 12px;
+}
+
+/*div host.health*/
+.ui-panel .Health-Good {
+    color: green;
+}
+.ui-panel .Health-Bad {
+    color: red;
+}
+
+/*div hosts-header*/
+.hosts-header {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-size:   14px;
+    font-weight: bold;
+}
+
+/*innerDataTable*/
+.ui-datatable.innerDataTable .ui-datatable-data  {
+    border-style: hidden;
+}
+
+
+.ui-datatable.innerDataTable table thead tr {
+    display: none;
+}
+
+.ui-datatable.innerDataTable .ui-datatable-data td div.ui-dt-c {
+    padding: 0px;
+    background-color: transparent;
+}
+
+
+
+.alignTop {
+    vertical-align: top;
+}
+
+
+/*CapacityUsage*/
+
+.CapacityUsage {
+    display: block;
+    position: relative;
+    text-align: center;
+    overflow: hidden;
+    margin: auto 0 auto 0;
+    font-size: 11px;
+    line-height: 11px;
+    border: 1px solid #444;
+    background-color: gray;
+}
+
+.CapacityUsage .reading {
+    display: block;
+    position: relative;
+    z-index: 1;
+    height: 12px;
+    border: 1px solid transparent;
+    text-align: center;
+    font-weight: bold;
+    color: white;
+    text-shadow: #222 0 1px 2px;
+}
+
+.CapacityUsage.priorityLow .bar {
+    background-color: #080;
+}
+
+.CapacityUsage.priorityMed .bar {
+    background-color: #AA881A;
+}
+
+.CapacityUsage.priorityHigh .bar {
+    background-color: #B30000;
+}
+
+.CapacityUsage .bluebar, .CapacityUsage .greenbar, .CapacityUsage .bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+
+/*Log output*/
+
+.LogOutput td {
+    padding: 0px 5px;
+}
+
+.LogOutput tr {
+    border-width: 0px;
+}
+
+.LogOutput .column{
+    width:50%;
+    vertical-align: top;
+}
+
+.LogOutput div {
+    border-width: 1px; 
+    border-style: solid; 
+    border-color: lightgray; 
+    background-color: #F0F0F0; 
+    padding: 10px; 
+    border-radius: 6px;    
+}
+
+/*.AccordionPanelLink*/
+.AccordionPanelLink {
+    color: darkblue !important;
+    z-index:2; 
+    position:relative; 
+    top:-10px; 
+    right:8px; 
+    float:right;
+}
+
+
+/*CommandStatus*/
+
+.CommandStatus_Failed {
+    color: red;
+
+}
+
+.CommandStatus_Succeeded {
+    color: green;
+
+}
+
+/*AlertSeverity*/
+
+.AlertSeverity_FAILURE {
+   color:red;
+}
+
+.AlertSeverity_WARNING {
+   color: orange;
+}
+
+.AlertSeverity_OKAY {
+   color: green;
+}

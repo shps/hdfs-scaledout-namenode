@@ -1,0 +1,11 @@
+Two-pass chef script required.
+In the first pass, the nodes go into 'bootstrap' mode.
+In the 2nd pass, they move into 'running' mode.
+
+mgmd recipe - config.ini, pub/priv key, list-of-ndbds, config variables 
+                 store public key in data bag in chef server,
+    https://github.com/barcampbangkok/chef-repo/wiki/Getting-Started-with-Chef
+
+ndbd recipe - start/init/stop-ndbd.sh, ID, connectstring,
+                 search for mgm-server's public key in data bag, then add
+                 to .ssh/authorized_hosts of the 'root' user.

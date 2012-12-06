@@ -1,0 +1,277 @@
+#!/bin/sh
+
+  case $1 in
+    "-h"|"--help"|"-help")
+   echo ""
+   echo "Usage: prog_name [restart-timeout default=300]"
+   echo ""
+   echo "Restarts a cluster to effect any configuration changes to a cluster"
+   echo "Restarts the management server first, then restarts the data nodes, in turn."
+   echo ""
+   echo "Pass a higher restart-timeout value if data nodes do not complete a restart"
+   echo "within 300 seconds - increase this value for large databases."
+   echo ""
+   echo ""
+   exit 0
+      ;;      
+  esac 
+
+
+ RESTART_TIMEOUT=300
+if [ "$1" != "" ] ; then
+ RESTART_TIMEOUT=$1
+fi
+
+  echo "Restarting Management Server..."
+  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "63 restart"
+
+  if [ $? -ne 0 ] ; then
+      echo ""
+      echo "Failure: could not restart management server. Failure Code: 0"
+      echo ""
+      exit 63
+  fi
+
+  MGMD_COUNT=0
+  MGMD_STARTED=0
+  while [ $MGMD_STARTED -eq 0 ] ; do
+
+    FOUND=`tail -30 <%= ['ndb']['install'] %>/logs/cluster.log | grep "Node 63: Node 63 Connected"`
+    if [ "$FOUND" != "" ] ; then
+	MGMD_STARTED=1;
+	echo ""
+    else
+	if [ ${MGMD_COUNT} -eq 0 ] ; then
+	    echo -n "Seconds until timeout of MGMD  restart: "
+	fi
+
+	echo -n "`expr ${RESTART_TIMEOUT} - ${MGMD_COUNT}` "
+	sleep 1
+	MGMD_COUNT=`expr ${MGMD_COUNT} + 1`
+	   
+	if [ $MGMD_COUNT -gt ${RESTART_TIMEOUT} ] ; then
+	    MGMD_STARTED=2;
+	fi
+    fi
+  done
+
+  if [ $MGMD_STARTED -ne 1 ] ; then
+      echo ""
+      echo "Failure when re-starting the 'mgmd'."
+      echo ""
+      echo "Restart the 'mgmd' or the entire cluster."
+      echo ""
+      exit 2
+  else
+      echo ""
+      echo "Restart of MGMD completed."
+      echo ""
+  fi
+
+# Sleep, waiting for ndb_mgmd to connect to all nodes in cluster
+   sleep 5
+
+
+
+   echo "Restarting Data Node 4..."
+   <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "4 restart"
+   if [ $? -ne 0 ] ; then
+	echo ""
+	echo "Failure: could not restart data node 4. Failure Code: 0"
+	echo ""
+	exit 4
+   fi
+
+   NDBD_COUNT=0
+   NDBD_STARTED=0
+   while [ ${NDBD_STARTED} -eq 0 ] ; do
+
+     FOUND=`tail -300 <%= ['ndb']['install'] %>/logs/cluster.log | grep "Node 4: Start phase 101 completed"`
+     if [ "$FOUND" != "" ] ; then
+	 NDBD_STARTED=1;
+	 echo ""
+     else
+	 if [ ${NDBD_COUNT} -eq 0 ] ; then
+	     echo -n "Seconds until timeout of NDBD 4 restart: "
+	 fi
+
+	 echo -n "`expr ${RESTART_TIMEOUT} - ${NDBD_COUNT}` "
+	 sleep 1
+	 NDBD_COUNT=`expr ${NDBD_COUNT} + 1`
+	   
+	 if [ ${NDBD_COUNT} -gt ${RESTART_TIMEOUT} ] ; then
+	   NDBD_STARTED=2;
+	 fi
+     fi
+   done
+
+   if [ $NDBD_STARTED -ne 1 ] ; then
+       echo ""
+       echo "Failure when re-starting the 'ndbd'."
+       echo ""
+       echo "Restart the 'ndbd' or the entire cluster."
+       echo ""
+       exit 2
+   else
+       echo ""
+       echo "Restart of NDBD 4 completed."
+       echo ""
+   fi
+   
+# Sleep, waiting for NDBD to connect to all nodes in cluster
+  sleep 5
+
+      
+
+   echo "Restarting Data Node 3..."
+   <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "3 restart"
+   if [ $? -ne 0 ] ; then
+	echo ""
+	echo "Failure: could not restart data node 3. Failure Code: 0"
+	echo ""
+	exit 3
+   fi
+
+   NDBD_COUNT=0
+   NDBD_STARTED=0
+   while [ ${NDBD_STARTED} -eq 0 ] ; do
+
+     FOUND=`tail -300 <%= ['ndb']['install'] %>/logs/cluster.log | grep "Node 3: Start phase 101 completed"`
+     if [ "$FOUND" != "" ] ; then
+	 NDBD_STARTED=1;
+	 echo ""
+     else
+	 if [ ${NDBD_COUNT} -eq 0 ] ; then
+	     echo -n "Seconds until timeout of NDBD 3 restart: "
+	 fi
+
+	 echo -n "`expr ${RESTART_TIMEOUT} - ${NDBD_COUNT}` "
+	 sleep 1
+	 NDBD_COUNT=`expr ${NDBD_COUNT} + 1`
+	   
+	 if [ ${NDBD_COUNT} -gt ${RESTART_TIMEOUT} ] ; then
+	   NDBD_STARTED=2;
+	 fi
+     fi
+   done
+
+   if [ $NDBD_STARTED -ne 1 ] ; then
+       echo ""
+       echo "Failure when re-starting the 'ndbd'."
+       echo ""
+       echo "Restart the 'ndbd' or the entire cluster."
+       echo ""
+       exit 2
+   else
+       echo ""
+       echo "Restart of NDBD 3 completed."
+       echo ""
+   fi
+   
+# Sleep, waiting for NDBD to connect to all nodes in cluster
+  sleep 5
+
+      
+
+   echo "Restarting Data Node 2..."
+   <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "2 restart"
+   if [ $? -ne 0 ] ; then
+	echo ""
+	echo "Failure: could not restart data node 2. Failure Code: 0"
+	echo ""
+	exit 2
+   fi
+
+   NDBD_COUNT=0
+   NDBD_STARTED=0
+   while [ ${NDBD_STARTED} -eq 0 ] ; do
+
+     FOUND=`tail -300 <%= ['ndb']['install'] %>/logs/cluster.log | grep "Node 2: Start phase 101 completed"`
+     if [ "$FOUND" != "" ] ; then
+	 NDBD_STARTED=1;
+	 echo ""
+     else
+	 if [ ${NDBD_COUNT} -eq 0 ] ; then
+	     echo -n "Seconds until timeout of NDBD 2 restart: "
+	 fi
+
+	 echo -n "`expr ${RESTART_TIMEOUT} - ${NDBD_COUNT}` "
+	 sleep 1
+	 NDBD_COUNT=`expr ${NDBD_COUNT} + 1`
+	   
+	 if [ ${NDBD_COUNT} -gt ${RESTART_TIMEOUT} ] ; then
+	   NDBD_STARTED=2;
+	 fi
+     fi
+   done
+
+   if [ $NDBD_STARTED -ne 1 ] ; then
+       echo ""
+       echo "Failure when re-starting the 'ndbd'."
+       echo ""
+       echo "Restart the 'ndbd' or the entire cluster."
+       echo ""
+       exit 2
+   else
+       echo ""
+       echo "Restart of NDBD 2 completed."
+       echo ""
+   fi
+   
+# Sleep, waiting for NDBD to connect to all nodes in cluster
+  sleep 5
+
+      
+
+   echo "Restarting Data Node 1..."
+   <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "1 restart"
+   if [ $? -ne 0 ] ; then
+	echo ""
+	echo "Failure: could not restart data node 1. Failure Code: 0"
+	echo ""
+	exit 1
+   fi
+
+   NDBD_COUNT=0
+   NDBD_STARTED=0
+   while [ ${NDBD_STARTED} -eq 0 ] ; do
+
+     FOUND=`tail -300 <%= ['ndb']['install'] %>/logs/cluster.log | grep "Node 1: Start phase 101 completed"`
+     if [ "$FOUND" != "" ] ; then
+	 NDBD_STARTED=1;
+	 echo ""
+     else
+	 if [ ${NDBD_COUNT} -eq 0 ] ; then
+	     echo -n "Seconds until timeout of NDBD 1 restart: "
+	 fi
+
+	 echo -n "`expr ${RESTART_TIMEOUT} - ${NDBD_COUNT}` "
+	 sleep 1
+	 NDBD_COUNT=`expr ${NDBD_COUNT} + 1`
+	   
+	 if [ ${NDBD_COUNT} -gt ${RESTART_TIMEOUT} ] ; then
+	   NDBD_STARTED=2;
+	 fi
+     fi
+   done
+
+   if [ $NDBD_STARTED -ne 1 ] ; then
+       echo ""
+       echo "Failure when re-starting the 'ndbd'."
+       echo ""
+       echo "Restart the 'ndbd' or the entire cluster."
+       echo ""
+       exit 2
+   else
+       echo ""
+       echo "Restart of NDBD 1 completed."
+       echo ""
+   fi
+   
+# Sleep, waiting for NDBD to connect to all nodes in cluster
+  sleep 5
+
+      
+
+exit 0
+   

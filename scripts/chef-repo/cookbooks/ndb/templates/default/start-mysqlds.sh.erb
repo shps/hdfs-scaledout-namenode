@@ -1,0 +1,16 @@
+#!/bin/sh 
+
+echo "Starting MySQL Servers...."
+
+
+
+# Starting MySQL Server at host cloud11
+
+
+if [ "$1" = "0" ] ; then
+  echo "Starting MySQL Server at host cloud11"
+  ssh root@cloud11 <%= ['ndb']['install'] %>/scripts/start-mysqld-1.sh
+else
+  echo "Skipping stopping MySQL Server at host cloud11"
+fi
+

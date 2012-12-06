@@ -1,0 +1,183 @@
+[NDBD DEFAULT]
+#Used by ndbmdmt to determine the number of LQH threads
+MaxNoOfExecutionThreads=<%= @cores / 2 %>
+
+#More flexible than MaxNoOfExecutionThreads
+#Threadconfig=main={cpubind=0},ldm={count=8,cpubind=1,2,3,4,13,14,15,16},io={count=4,cpubind=5,6,17,18},rep={cpubind=7},recv={count=2,cpubind=8,19}
+
+#The number of copies of the data stored on different nodes in the cluster
+NoOfReplicas=2
+
+#The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
+<% @memSize = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
+DataMemory=<%= @memSize * 4 %>M
+#The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
+IndexMemory=<%= @memSize %>M
+
+
+
+#   REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
+#  NUM_FRAGMENT_LOGFILES=`expr ${DATA_MEMORY} \* 6 / 64`
+#The amount of disk space (NoOfFragmentLogFiles * 64MB) used to store the Redo Log (used for node recovery)
+NoOfFragmentLogFiles=<%= (@memSize * 4) / 10 %>
+
+#The size of a Redo Log file on disk.
+FragmentLogFileSize=64M
+
+#The speed at which LocalCheckpoints (LCP) are written to disk
+DiskCheckpointSpeed=1M
+
+#The speed at which LocalCheckpoints (LCP) are written to disk, as part of a node recovery 
+DiskCheckpointSpeedInRestart=10M
+
+#The size of the RedoLog Buffer in memory; Reduce for improved disk throughput (but slower recovery time)
+DiskSyncSize=4M
+
+#The size of the RedoBuffer used to buffer writes to the disk subsystem. Increase for high write-rate or slow disk.
+RedoBuffer=32M
+
+#The maximum time in ms that is permitted to lapse between operations in the same transaction before the transaction is aborted.
+TransactionInactiveTimeout=10000
+
+TransactionDeadlockDetectionTimeout=3G
+
+[MYSQLD DEFAULT]
+
+[NDB_MGMD DEFAULT]
+
+[TCP DEFAULT]
+SendBufferMemory=2M
+ReceiveBufferMemory=2M
+
+ 
+# Management Server
+# <% @mgmId = 63 %>
+# <% @rank = 1 %>
+# <% for @mgm in node[:ndb][:mgmServers] %>
+#[NDB_MGMD]
+#  NodeId=<%= @mgmId %>
+#  <% @mgmId -= 1 %>
+#  HostName=<%= @mgm %>
+#  PortNumber=1186
+#  DataDir=<%= node[:ndb][:install] %>/logs
+#  LogDestination=FILE:filename=node[:ndb][:install]/logs/cluster.log,maxsize=10000000,maxfiles=6
+#  ArbitrationRank=<%= @rank %>
+#  <% @rank += 1 %>
+#<% end %>
+
+[NDB_MGMD]
+NodeId=63
+HostName=<%= node[:ndb][:mgmServer] %>
+PortNumber=<%= node[:ndb][:port] %>
+DataDir=<%= node[:ndb][:install] %>/logs
+LogDestination=FILE:filename=<%= node[:ndb][:install] %>/logs/cluster.log,maxsize=10000000,maxfiles=6
+ArbitrationRank=1
+
+<% @id = 1 %>
+<% for @dn in node[:ndb][:dataNodes] %>
+[NDBD]
+HostName=<%= @dn %>
+DataDir=<%= node[:ndb][:install] %>/logs
+FileSystemPath=<%= node[:ndb][:install] %>/ndb_data/<%= @id %>
+NodeId=<%= @id %>
+#LockExecuteThreadToCPU=
+#LockMaintThreadToCPU=
+
+<% @id += 1 %>
+<% end %>
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]

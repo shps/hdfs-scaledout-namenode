@@ -1,0 +1,36 @@
+#!/bin/sh
+
+BACKUP_DIR="<%= ['ndb']['install'] %>/backup/"
+
+  case $1 in
+    "-h"|"--help"|"-help")
+   echo ""
+   echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= ['ndb']['install'] %>/backup\)]"
+   echo ""
+   echo "Creates a backup of the cluster, and stores it in BACKUP-DIR."
+   echo "Copies backups from all data-nodes to the management serverb."
+   echo "You need to authenticate at all data nodes to copy their backup files."
+   echo ""
+   exit 0
+      ;;      
+    "-d")
+         shift
+         BACKUP_DIR=""
+         ;;
+  esac 
+
+  echo "Starting backup..."
+  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "start backup"
+
+  if [ $? -ne 0 ] ; then
+      echo ""
+      echo "Failure: could not start backup. Failure Code: $?"
+      echo ""
+      exit $?
+  fi
+
+# Sleep, waiting for ndb_mgmd to connect to all nodes in cluster
+   sleep 5
+
+   exit 0
+

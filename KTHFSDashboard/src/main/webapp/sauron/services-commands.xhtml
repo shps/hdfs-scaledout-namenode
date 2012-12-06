@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"   
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      >
+
+
+
+    <ui:composition template="layout.xhtml">
+
+        <ui:define name="title">
+            KTHFS Dashboard - Service Commands
+        </ui:define>
+
+        <ui:define name="css">
+
+        </ui:define>
+
+        <ui:define name="scripts">
+
+
+        </ui:define>
+
+
+        <ui:define name="content">
+
+            <!--Navigation Bar - Begin -->
+            <h:form styleClass="styleNav">
+                <p:panelGrid>  
+                    <p:row>  
+                        <p:column>
+                            <p:commandLink action="services" ajax="false">  
+                                <h:outputText value="Services" />
+                            </p:commandLink> 
+                            <h:outputText value=" &raquo; "/>
+                            <p:commandLink action="#{serviceController.gotoServiceStatus()}" ajax="false">  
+                                <h:outputText value="#{serviceController.kthfsInstance}" />
+                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
+                            </p:commandLink> 
+                            <h:outputText value=" &raquo;"/>
+                        </p:column>
+                    </p:row>
+                </p:panelGrid>
+            </h:form>
+            <!--Navigation Bar - End-->
+
+            <!-- Second Toolbar-->
+            <h:form>  
+                <p:toolbar styleClass="SecondToolbarGood">  
+                    <p:toolbarGroup align="left">  
+                        <p:commandLink  action="#{serviceController.gotoServiceStatus()}" ajax="false">
+                            <h:outputText value="#{serviceController.kthfsInstance}"/>
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                         
+                        </p:commandLink>
+
+                        <p:commandButton value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceStatus()}" ajax="false">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                        </p:commandButton>  
+                        <p:commandButton value="Instances" icon="ui-icon-note" action="#{serviceController.gotoServiceInstances()}">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>   
+                        </p:commandButton>  
+                        <p:commandButton styleClass="Selected" value="Commands" icon="ui-icon-circle-triangle-e" action="#{serviceController.gotoServiceCommands()}">
+                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                        </p:commandButton>  
+                    </p:toolbarGroup>  
+
+                    <p:toolbarGroup align="right">  
+                       <p:menuButton value="Actions" disabled="true">  
+                            <p:menuitem value="Start..." url="???" /> 
+                            <p:menuitem value="Stop..." url="???" /> 
+                        </p:menuButton>  
+                    </p:toolbarGroup>  
+
+                </p:toolbar>  
+            </h:form>
+
+            <p:spacer width="1" height="10" />
+
+            
+            <p:panel header="Running Commands">
+               <p:dataTable var="command" value="#{commandController.runningCommandsByInstance}">
+               <p:column headerText="Command"><h:outputText value="#{command.command}"/></p:column>
+               <p:column headerText="Instance"><h:outputText value="#{command.instance}"/></p:column>
+               <p:column headerText="Group"><h:outputText value="#{command.serviceGroup}"/></p:column>
+               <p:column headerText="Service"><h:outputText value="#{command.service}"/></p:column>
+               <p:column headerText="Started at"><h:outputText value="#{command.startTimeShort}"/></p:column>
+               <p:column headerText="Status"><h:outputText value="#{command.status}"/></p:column>
+            </p:dataTable>                 
+            </p:panel>
+           
+            <p:spacer width="1" height="10" />
+            
+            <p:panel header="Recent Commands">
+               
+               <p:dataTable var="command" value="#{commandController.recentCommandsByInstance}">
+                  
+                  <p:column headerText="Command"><h:outputText value="#{command.command}"/></p:column>
+                  <p:column headerText="Instance"><h:outputText value="#{command.instance}"/></p:column>
+                  <p:column headerText="Group"><h:outputText value="#{command.serviceGroup}"/></p:column>
+                  <p:column headerText="Service"><h:outputText value="#{command.service}"/></p:column>
+                  <p:column headerText="Started at"><h:outputText value="#{command.startTimeShort}"/></p:column>
+                  <p:column headerText="Status">
+                     <h:outputText styleClass="CommandStatus_#{command.status}" value="#{command.status}, #{command.endTimeShort}"/>
+                  </p:column>
+               </p:dataTable>             
+               
+            </p:panel>
+
+
+
+        </ui:define>
+
+    </ui:composition>
+
+</html>
+
