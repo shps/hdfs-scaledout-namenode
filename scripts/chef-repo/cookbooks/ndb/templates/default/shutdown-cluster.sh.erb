@@ -28,12 +28,12 @@ while [ $# -gt 0 ]; do
 done
 
 
-<%= ['mysql']['install'] %>/bin/ndb_mgm -c $MGM_CONN -e "shutdown"
+<%= @mysql_dir %>/bin/ndb_mgm -c $MGM_CONN -e "shutdown"
 
 
 if [ $SKIP_MYSQLDS -eq 0 ] ; then
 	    echo "Stopping MySQL Server Number at cloud11"
-	    ssh root@cloud11 <%= ['ndb']['install'] %>/scripts/stop-mysqld-1.sh
+	    ssh root@cloud11 <%= @ndb_dir %>/scripts/stop-mysqld-1.sh
 else
   echo "Skipping stopping MySQL Server Number at cloud11"
 fi

@@ -29,6 +29,6 @@ usage()
       exit 1
   fi
 
-  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "ENTER SINGLE USER MODE $1"
+  <%= @mysql_dir %>/bin/ndb_mgm -c cloud11:1186 -e "ENTER SINGLE USER MODE $1"
 
 

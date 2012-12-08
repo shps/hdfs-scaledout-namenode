@@ -1,0 +1,5 @@
+#!/bin/sh 
+
+MYSQL_PORT=`grep ^port <%= @ndb_mysql_dir %>/my.cnf | sed -e 's/port.*= //'`
+
+echo "$MYSQL_PORT"

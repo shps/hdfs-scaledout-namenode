@@ -1,0 +1,62 @@
+  
+#################################################
+# MySQL Cluster client, Jim Dowling.
+#################################################
+
+[mysqld]
+user           = <%= node[:ndb][:user] %>
+basedir         = <%= node[:mysql][:base_dir] %>
+datadir         = <%= node[:ndb][:mysql_data_dir] %>
+port            = <%= node[:ndb][:mysql_port] %>
+socket          = <%= node[:ndb][:mysql_socket] %>
+bind-address    = <%= node['ipaddress'] %>
+
+# use NDB storage engine and make NDB the default table type
+ndbcluster
+default-storage-engine = ndbcluster
+ndb-cluster-connection-pool=2
+
+#################################################
+# optimizations to improve performance of NDB
+#################################################
+#
+# We only use the mysql-server for SELECT COUNT(*) operations. 
+# This makes most other queries become much slower. 
+# It can have a significant effect on performance. 
+ndb-use-exact-count=1
+
+# flush the adaptive-send buffer immediately 
+ndb-force-send=0
+
+# allow indexes to be used on ndb nodes (rather than joins performed in MySQL Server)
+engine-condition-pushdown=1
+
+# use the cluster connection pool to reduce cluster connection setup time
+ndb-cluster-connection-pool=4
+
+# Log more data at MySQL Server about ndb
+ndb-extra-logging=0
+
+# for autoincrement, size of prefetching 
+ndb-autoincrement-prefetch-sz=256
+
+#################################################
+# Other [mysqld] params
+#################################################
+
+# do not include innodb engine 
+skip-innodb
+
+# replication settings go here
+#server-id=2838
+#log-bin=mysql-bin
+
+#################################################
+# mysql_cluster connection params
+#################################################
+
+[mysql_cluster]
+# set connectstring to ndb management server (used by all executables)
+ndb-connectstring=<%= node[:ndb][:connect_string] %>
+
+

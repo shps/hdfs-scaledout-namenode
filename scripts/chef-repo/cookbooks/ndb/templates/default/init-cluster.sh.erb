@@ -16,8 +16,8 @@ while [ $# -gt 0 ]; do
               SKIP_USER_CHECK=1
 	      ;;
     -sc)
-              echo "Deleting old configurations from /<%= ['ndb']['install'] %>/mgmd1/"
-              rm -rf ../<%= ['ndb']['install'] %>/mgmd1/*
+              echo "Deleting old configurations from /<%= @ndb_dir %>/mgmd1/"
+              rm -rf ../<%= @ndb_dir %>/mgmd1/*
 	      ;;
     --skip-ndbds)
               SKIP_NDBDS=1
@@ -36,7 +36,7 @@ done
   echo "" 
   echo "Testing to see if a cluster is already running on host 'cloud11:1186' ..." 
   echo "" 
-  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -t 2 -e show 1> /dev/null
+  <%= @mysql_dir %>/bin/ndb_mgm -c cloud11:1186 -t 2 -e show 1> /dev/null
 
   if [ $? -eq 0 ] ; then
       echo ""      
@@ -123,13 +123,13 @@ fi
 echo "Cluster Startup may take a few minutes."  
 
 
-echo "Truncating the cluster log file: <%= ['ndb']['install'] %>/logs/cluster.log"
-rm <%= ['ndb']['install'] %>/logs/cluster.log 
+echo "Truncating the cluster log file: <%= @ndb_dir %>/logs/cluster.log"
+rm <%= @ndb_dir %>/logs/cluster.log 
 
 echo "Starting the Management Server ....."
 
-if [ -e <%= ['ndb']['install'] %>/logs/cluster.log ] ; then
-    SIZE_CL=`cat <%= ['ndb']['install'] %>/logs/cluster.log | wc -l`
+if [ -e <%= @ndb_dir %>/logs/cluster.log ] ; then
+    SIZE_CL=`cat <%= @ndb_dir %>/logs/cluster.log | wc -l`
 else
     SIZE_CL=0
 fi
@@ -137,13 +137,13 @@ fi
 #remove memory of old configurations
 #echo If you want to remove warnings for incompatible configuration changes, run rm -rf ../$NDB_DIR/$MGM_DATADIR/*
 
-<%= ['mysql']['install'] %>/bin/ndb_mgmd -f <%= ['ndb']['install'] %>/config.ini  --configdir=<%= ['ndb']['install'] %>/mgmd1 --reload   
+<%= @mysql_dir %>/bin/ndb_mgmd -f <%= @ndb_dir %>/config.ini  --configdir=<%= @ndb_dir %>/mgmd1 --reload   
 
 if [ $? -ne 0 ] ; then
   echo "Problem starting the Management Server."
   echo "Please read the logs in:"
-  echo "<%= ['ndb']['install'] %>/logs."
-  echo "<%= ['ndb']['install'] %>/mgmd_1"
+  echo "<%= @ndb_dir %>/logs."
+  echo "<%= @ndb_dir %>/mgmd_1"
   exit 1
 fi
 
@@ -156,8 +156,8 @@ MGMD_TIMEOUT=200
 MGMD_COUNT=0
 while [ $MGMD_STARTED -eq 0 ] ; do
 
-  if [ -e <%= ['ndb']['install'] %>/logs/cluster.log ] ; then
-    UPDATED_SIZE_CL=`cat <%= ['ndb']['install'] %>/logs/cluster.log | wc -l`
+  if [ -e <%= @ndb_dir %>/logs/cluster.log ] ; then
+    UPDATED_SIZE_CL=`cat <%= @ndb_dir %>/logs/cluster.log | wc -l`
   else
     UPDATED_SIZE_CL=0
   fi
@@ -208,8 +208,8 @@ if [ $SKIP_NDBDS -eq 0 ] ; then
   if [ $? -ne 0 ] ; then
     echo "Problem starting a Data Node on host cloud8."
     echo "Please read the logs on host cloud8 in directories:"
-    echo "<%= ['ndb']['install'] %>/logs"
-    echo "<%= ['ndb']['install'] %>/data_dir/1"
+    echo "<%= @ndb_dir %>/logs"
+    echo "<%= @ndb_dir %>/data_dir/1"
   fi
 else
   echo "Skipping starting ndbd."
@@ -227,8 +227,8 @@ if [ $SKIP_NDBDS -eq 0 ] ; then
   if [ $? -ne 0 ] ; then
     echo "Problem starting a Data Node on host cloud9."
     echo "Please read the logs on host cloud9 in directories:"
-    echo "<%= ['ndb']['install'] %>/logs"
-    echo "<%= ['ndb']['install'] %>/data_dir/2"
+    echo "<%= @ndb_dir %>/logs"
+    echo "<%= @ndb_dir %>/data_dir/2"
   fi
 else
   echo "Skipping starting ndbd."
@@ -246,8 +246,8 @@ if [ $SKIP_NDBDS -eq 0 ] ; then
   if [ $? -ne 0 ] ; then
     echo "Problem starting a Data Node on host cloud12."
     echo "Please read the logs on host cloud12 in directories:"
-    echo "<%= ['ndb']['install'] %>/logs"
-    echo "<%= ['ndb']['install'] %>/data_dir/3"
+    echo "<%= @ndb_dir %>/logs"
+    echo "<%= @ndb_dir %>/data_dir/3"
   fi
 else
   echo "Skipping starting ndbd."
@@ -265,8 +265,8 @@ if [ $SKIP_NDBDS -eq 0 ] ; then
   if [ $? -ne 0 ] ; then
     echo "Problem starting a Data Node on host cloud13."
     echo "Please read the logs on host cloud13 in directories:"
-    echo "<%= ['ndb']['install'] %>/logs"
-    echo "<%= ['ndb']['install'] %>/data_dir/4"
+    echo "<%= @ndb_dir %>/logs"
+    echo "<%= @ndb_dir %>/data_dir/4"
   fi
 else
   echo "Skipping starting ndbd."
@@ -278,7 +278,7 @@ echo "Waiting for the cluster to be ready by calling:"
 echo "ndb_waiter -c cloud11:1186 --timeout=300"
 echo "This can take a few minutes..."
 
-<%= ['mysql']['install'] %>/bin/ndb_waiter -c cloud11:1186 --timeout=300 2>&1 > /dev/null
+<%= @mysql_dir %>/bin/ndb_waiter -c cloud11:1186 --timeout=300 2>&1 > /dev/null
 
 if [ $? -ne 0 ] ; then
     echo "Error when waiting on the cluster to be ready."
@@ -286,11 +286,11 @@ if [ $? -ne 0 ] ; then
     exit 3
 fi
 
-<%= ['ndb']['install'] %>/scripts/start-mysqlds.sh $SKIP_MYSQLDS
+<%= @ndb_dir %>/scripts/start-mysqlds.sh $SKIP_MYSQLDS
 
 sleep 1
 
-<%= ['ndb']['install'] %>/scripts/mgm-client.sh -e show
+<%= @ndb_dir %>/scripts/mgm-client.sh -e show
 
 exit 0
 

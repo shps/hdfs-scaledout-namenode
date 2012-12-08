@@ -53,32 +53,32 @@ ReceiveBufferMemory=2M
 # Management Server
 # <% @mgmId = 63 %>
 # <% @rank = 1 %>
-# <% for @mgm in node[:ndb][:mgmServers] %>
+# <% for @mgm in node[:ndb][:mgm_servers] %>
 #[NDB_MGMD]
 #  NodeId=<%= @mgmId %>
 #  <% @mgmId -= 1 %>
 #  HostName=<%= @mgm %>
 #  PortNumber=1186
-#  DataDir=<%= node[:ndb][:install] %>/logs
-#  LogDestination=FILE:filename=node[:ndb][:install]/logs/cluster.log,maxsize=10000000,maxfiles=6
+#  DataDir=<%= node[:ndb][:base_dir] %>/logs
+#  LogDestination=FILE:filename=node[:ndb][:base_dir]/logs/cluster.log,maxsize=10000000,maxfiles=6
 #  ArbitrationRank=<%= @rank %>
 #  <% @rank += 1 %>
 #<% end %>
 
 [NDB_MGMD]
 NodeId=63
-HostName=<%= node[:ndb][:mgmServer] %>
+HostName=<%= node[:ndb][:mgm_server] %>
 PortNumber=<%= node[:ndb][:port] %>
-DataDir=<%= node[:ndb][:install] %>/logs
-LogDestination=FILE:filename=<%= node[:ndb][:install] %>/logs/cluster.log,maxsize=10000000,maxfiles=6
+DataDir=<%= node[:ndb][:base_dir] %>/logs
+LogDestination=FILE:filename=<%= node[:ndb][:base_dir] %>/logs/cluster.log,maxsize=10000000,maxfiles=6
 ArbitrationRank=1
 
 <% @id = 1 %>
-<% for @dn in node[:ndb][:dataNodes] %>
+<% for @dn in node[:ndb][:data_nodes] %>
 [NDBD]
 HostName=<%= @dn %>
-DataDir=<%= node[:ndb][:install] %>/logs
-FileSystemPath=<%= node[:ndb][:install] %>/ndb_data/<%= @id %>
+DataDir=<%= node[:ndb][:base_dir] %>/logs
+FileSystemPath=<%= node[:ndb][:data_dir]/@id %>
 NodeId=<%= @id %>
 #LockExecuteThreadToCPU=
 #LockMaintThreadToCPU=

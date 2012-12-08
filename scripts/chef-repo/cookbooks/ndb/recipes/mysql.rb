@@ -18,40 +18,38 @@
 #
 
 
-#install ruby
-#\curl -kL https://get.rvm.io | bash -s stable --ruby
-\curl -kL https://get.rvm.io | sudo bash -s stable
-source /etc/profile
-rvm install 1.9.2
-rvm use 1.9.2
-
-package "build-essential" do
-  action :install
-end
-
 user node[:ndb][:user] do
   action :create
   system true
   shell "/bin/bash"
 end
 
-
-directory node[:ndb][:data_dir] do
+directory node[:ndb][:mysql_server_dir] do
   owner node[:ndb][:user]
   mode "0755"
   action :create
+  recursive true  
+end
+
+directory node[:ndb][:mysql_data_dir] do
+  owner node[:ndb][:user]
+  mode "0755"
+  action :create
+  recursive true  
 end
 
 directory node[:mysql][:base_dir] do
   owner node[:ndb][:user]
   mode "0755"
   action :create
+  recursive true
 end
 
 directory node[:ndb][:log_dir] do
   mode 0755
   owner node[:ndb][:user]
   action :create
+  recursive true
 end
 
 remote_file "#{Chef::Config[:file_cache_path]}/ndb.tar.gz" do
@@ -59,36 +57,16 @@ remote_file "#{Chef::Config[:file_cache_path]}/ndb.tar.gz" do
   action :create_if_missing
 end
 
-service "ndb" do
-  provider Chef::Provider::Service::Upstart
-  subscribes :restart, resources(:bash => "compile_ndb_source")
-  supports :restart => true, :start => true, :stop => true
-end
-
-template "ndb.conf" do
-  path "#{node[:ndb][:dir]}/config.ini"
-  source "ndb.conf.erb"
+template "mysql.cnf" do
+  path "#{node[:ndb][:mysql_server_dir]}/my.cnf"
+  source "my.cnf.erb"
   owner "root"
   group "root"
   mode "0644"
-  notifies :restart, resources(:service => "ndb")
+  notifies :restart, resources(:service => "mysql")
 end
 
-template "ndb.upstart.conf" do
-  path "/etc/init/mysqlcluster.upstart"
-  source "ndb.upstart.conf.erb"
-  owner "root"
-  group "root"
-  mode "0644"
-  notifies :restart, resources(:service => "ndb")
-end
-
-service "ndb" do
-  action [:enable, :start]
-end
-
-
-for script in node[:ndb][:scripts]
+for script in node[:mysql][:scripts]
   template "#{node[:ndb][:base_dir]}/scripts/#{script}" do
     source "#{script}.erb"
     owner "root"

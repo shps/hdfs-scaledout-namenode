@@ -1,0 +1,9 @@
+#!/bin/sh
+IDo=1
+WATCHDOG=`cat ../../logs/ndb_${ID}.pid`
+PID=`expr $PID + 1`
+echo "Killing process-id $PID and $WATCHDOG ...\n" >> ../../logs/ndb_${ID}_out.log
+echo "Killing process-id $PID and $WATCHDOG ...\n" 
+kill $WATCHDOG
+kill $PID
+exit 0

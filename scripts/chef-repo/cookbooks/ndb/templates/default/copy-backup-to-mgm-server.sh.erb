@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/bin/sh
 
-BACKUP_DIR="<%= ['ndb']['install'] %>/backup"
+BACKUP_DIR="<%= @ndb_dir %>/backup"
 BACKUP_ID=1
-NDB_DATA_DIR="<%= ['ndb']['install'] %>/ndb_data"
+NDB_DATA_DIR="<%= @ndb_dir %>/ndb_data"
 
   case $1 in
     "-h"|"--help"|"-help")
          echo ""
-         echo "Usage: prog_name [-b ID \(default=1\)] [-d BACKUP-DIR \(default=<%= ['ndb']['install'] %>/backup\)]"
+         echo "Usage: prog_name [-b ID \(default=1\)] [-d BACKUP-DIR \(default=<%= @ndb_dir %>/backup\)]"
          echo ""
          echo "Copies backups, with optionally supplied backup id from data-nodes to mgm server."
          echo "You need to authenticate at all data nodes to copy their backup files."

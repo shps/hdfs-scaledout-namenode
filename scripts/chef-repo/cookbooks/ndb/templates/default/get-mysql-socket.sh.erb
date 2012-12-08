@@ -1,0 +1,5 @@
+#!/bin/sh 
+
+MYSQL_SOCKET=`grep ^socket <%= @ndb_mysql_dir %>/my.cnf | sed -e 's/socket.*= //'`
+
+echo "$MYSQL_SOCKET"

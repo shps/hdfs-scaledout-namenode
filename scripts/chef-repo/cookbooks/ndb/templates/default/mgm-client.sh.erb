@@ -38,5 +38,5 @@ while [ $# -gt 0 ]; do
 done
 
 
-<%= ['mysql']['install'] %>/bin/ndb_mgm -c $MGM_CONN $EXEC $PARAMS
-
+<%= @mysql_dir %>/bin/ndb_mgm -c $MGM_CONN $EXEC $PARAMS
+exit $?

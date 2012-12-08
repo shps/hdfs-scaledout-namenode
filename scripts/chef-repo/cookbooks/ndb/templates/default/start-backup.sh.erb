@@ -1,11 +1,11 @@
 #!/bin/sh
 
-BACKUP_DIR="<%= ['ndb']['install'] %>/backup/"
+BACKUP_DIR="<%= @ndb_dir %>/backup/"
 
   case $1 in
     "-h"|"--help"|"-help")
    echo ""
-   echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= ['ndb']['install'] %>/backup\)]"
+   echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= @ndb_dir %>/backup\)]"
    echo ""
    echo "Creates a backup of the cluster, and stores it in BACKUP-DIR."
    echo "Copies backups from all data-nodes to the management serverb."
@@ -20,7 +20,7 @@ BACKUP_DIR="<%= ['ndb']['install'] %>/backup/"
   esac 
 
   echo "Starting backup..."
-  <%= ['mysql']['install'] %>/bin/ndb_mgm -c cloud11:1186 -e "start backup"
+  <%= @mysql_dir %>/bin/ndb_mgm -c cloud11:1186 -e "start backup"
 
   if [ $? -ne 0 ] ; then
       echo ""

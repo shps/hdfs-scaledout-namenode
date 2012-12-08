@@ -1,8 +1,7 @@
 
 notifying_action :create do
-  requires_authbind = new_resource.port < 1024 || new_resource.admin_port < 1024
 
-  service "glassfish-#{new_resource.domain_name}" do
+  service "ndb-#{new_resource.domain_name}" do
     provider Chef::Provider::Service::Upstart
     supports :start => true, :restart => true, :stop => true
     action :nothing
