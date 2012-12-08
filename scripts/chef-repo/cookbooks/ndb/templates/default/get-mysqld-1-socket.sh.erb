@@ -1,6 +1,0 @@
-#!/bin/sh 
-
-MYSQL_SOCKET=`grep ^socket <%= ['ndb']['install'] %>/mysql_1/my-7-2-8.cnf | sed -e 's/socket.*= //'`
-
-echo "$MYSQL_SOCKET"
-

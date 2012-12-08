@@ -4,11 +4,11 @@
 #################################################
 
 [mysqld]
-user           = <%= node[:ndb][:user] %>
-basedir         = <%= node[:mysql][:base_dir] %>
-datadir         = <%= node[:ndb][:mysql_data_dir] %>
-port            = <%= node[:ndb][:mysql_port] %>
-socket          = <%= node[:ndb][:mysql_socket] %>
+user           = <%= @user %>
+basedir         = <%= @mysql_dir %>
+datadir         = <%= @ndb_mysql_data_dir %>
+port            = <%= @mysql_port %>
+socket          = <%= @mysql_socket %>
 bind-address    = <%= node['ipaddress'] %>
 
 # use NDB storage engine and make NDB the default table type
@@ -45,7 +45,7 @@ ndb-autoincrement-prefetch-sz=256
 #################################################
 
 # do not include innodb engine 
-skip-innodb
+# skip-innodb
 
 # replication settings go here
 #server-id=2838
@@ -57,6 +57,4 @@ skip-innodb
 
 [mysql_cluster]
 # set connectstring to ndb management server (used by all executables)
-ndb-connectstring=<%= node[:ndb][:connect_string] %>
-
-
+ndb-connectstring=<%= @connect_string %>

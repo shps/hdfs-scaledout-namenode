@@ -73,10 +73,15 @@ for script in node[:mysql][:scripts]
     group "root"
     mode 0644
     variables({
+       :user => node[:ndb][:user],
        :ndb_dir => node[:ndb][:base_dir],
        :mysql_dir => node[:mysql][:base_dir],
+       :ndb_mysql_dir => node[:ndb][:mysql_dir],
+       :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
        :connect_string => node[:ndb][:connect_string],
-       :node_id => node[:ndb][:id]
+       :node_id => node[:ndb][:id],
+       :mysql_port => node[:ndb][:mysql_port],
+       :mysql_socket => node[:ndb][:mysql_socket]
     })
   end
 end 

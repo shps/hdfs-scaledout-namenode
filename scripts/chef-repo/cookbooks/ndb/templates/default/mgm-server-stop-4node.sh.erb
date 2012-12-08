@@ -1,8 +1,0 @@
-#!/bin/sh
-ID=63
-PID=`cat ../../logs/ndb_${ID}.pid`
-echo "Killing mgm server with process-id $PID " >> ../../logs/ndb_${ID}_out.log
-echo ""
-echo "Killing mgm server with process-id $PID " 
-kill $PID
-exit $?
