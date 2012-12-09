@@ -16,7 +16,7 @@ Vagrant::Config.run do |config|
    config.vm.provision :chef_solo do |chef|
      chef.cookbooks_path = "cookbooks"
      chef.log_level = :debug
-     chef.add_recipe "ndb::mgm"
+     chef.add_recipe "ndb::ndb"
   end 
 
 end

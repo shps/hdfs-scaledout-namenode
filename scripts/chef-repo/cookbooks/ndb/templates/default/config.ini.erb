@@ -9,17 +9,17 @@ MaxNoOfExecutionThreads=<%= @cores / 2 %>
 NoOfReplicas=2
 
 #The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
-<% @memSize = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
-DataMemory=<%= @memSize * 4 %>M
+# <% @data_memory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
+#DataMemory=<%= @data_memory%>M
 #The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
-IndexMemory=<%= @memSize %>M
-
-
+#IndexMemory=<%= @data_memory / 4 %>M
+DataMemory=<%= node[:ndb][:data_memory] %>M
+IndexMemory=<%= node[:ndb][:index_memory] %>M
 
 #   REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
 #  NUM_FRAGMENT_LOGFILES=`expr ${DATA_MEMORY} \* 6 / 64`
 #The amount of disk space (NoOfFragmentLogFiles * 64MB) used to store the Redo Log (used for node recovery)
-NoOfFragmentLogFiles=<%= (@memSize * 4) / 10 %>
+NoOfFragmentLogFiles=<%= node[:ndb][:data_memory].to_i / 10 %>
 
 #The size of a Redo Log file on disk.
 FragmentLogFileSize=64M
@@ -50,21 +50,6 @@ SendBufferMemory=2M
 ReceiveBufferMemory=2M
 
  
-# Management Server
-# <% @mgmId = 63 %>
-# <% @rank = 1 %>
-# <% for @mgm in node[:ndb][:mgm_servers] %>
-#[NDB_MGMD]
-#  NodeId=<%= @mgmId %>
-#  <% @mgmId -= 1 %>
-#  HostName=<%= @mgm %>
-#  PortNumber=1186
-#  DataDir=<%= node[:ndb][:base_dir] %>/logs
-#  LogDestination=FILE:filename=node[:ndb][:base_dir]/logs/cluster.log,maxsize=10000000,maxfiles=6
-#  ArbitrationRank=<%= @rank %>
-#  <% @rank += 1 %>
-#<% end %>
-
 [NDB_MGMD]
 NodeId=63
 HostName=<%= node[:ndb][:mgm_server] %>
@@ -78,7 +63,7 @@ ArbitrationRank=1
 [NDBD]
 HostName=<%= @dn %>
 DataDir=<%= node[:ndb][:base_dir] %>/logs
-FileSystemPath=<%= node[:ndb][:data_dir]/@id %>
+FileSystemPath=<%= node[:ndb][:data_dir] + "/" + @id.to_s() %>
 NodeId=<%= @id %>
 #LockExecuteThreadToCPU=
 #LockMaintThreadToCPU=

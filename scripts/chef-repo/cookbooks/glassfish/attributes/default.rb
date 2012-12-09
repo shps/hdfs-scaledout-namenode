@@ -24,33 +24,33 @@ default['glassfish']['base_dir'] = "/usr/local/glassfish-#{version}"
 default['glassfish']['domains_dir'] = "/usr/local/glassfish-#{version}/glassfish/domains"
 default['glassfish']['domains'] = 
 {
-  "domain1": {
-    "config": {
-	"secure": true, 
-	"remote_access" : true, 
-	"secure_admin" : true, 
-	"username" : "admin", 
-	"password" : "admin", 
-	"admin_port" : 4848, 
-	"port" : 8080, 
+  "domain1"=> {
+    "config"=> {
+	"secure"=> true, 
+	"remote_access" => true, 
+	"secure_admin" => true, 
+	"username" => "admin", 
+	"password" => "admin", 
+	"admin_port" => 4848, 
+	"port" => 8080, 
         } 
-   # ,"jdbc_connection_pools" : { 
-   #    "config" : {
-   #      "datasource-classname" : "com.mysql.jdbc.jdbc2.optional.MysqlDataSource",
-   #      "PortNumber" : 3306,   
-   #      "Password" : "kthfs",   
-   #      "User" : "kthfs",   
-   #      "serverName" : "localhost",   
-   #      "DatabaseName" : "kthfs",   
-   #      "serverName" : "localhost",   
-   #      "connectionAttributes" : ";create=true",
-   #      "CacheCallableStatements" : "false"
+   # ,"jdbc_connection_pools" => { 
+   #    "config" => {
+   #      "datasource-classname" => "com.mysql.jdbc.jdbc2.optional.MysqlDataSource",
+   #      "PortNumber" => 3306,   
+   #      "Password" => "kthfs",   
+   #      "User" => "kthfs",   
+   #      "serverName" => "localhost",   
+   #      "DatabaseName" => "kthfs",   
+   #      "serverName" => "localhost",   
+   #      "connectionAttributes" => ";create=true",
+   #      "CacheCallableStatements" => "false"
    #      }
-   #  , "resources" : {
-   #      "resource_name" : "MysqlKthfs",
-   #      "enabled" : true,
-   #      "pool-name" : "MysqlKthfs",   
-   #      "jndi-name" : "jdbc/kthfs"   
+   #  , "resources" => {
+   #      "resource_name" => "MysqlKthfs",
+   #      "enabled" => true,
+   #      "pool-name" => "MysqlKthfs",   
+   #      "jndi-name" => "jdbc/kthfs"   
    #      }   
   }
 }

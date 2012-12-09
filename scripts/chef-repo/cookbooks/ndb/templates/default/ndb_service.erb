@@ -17,10 +17,10 @@
 #prog="#{node[:mysql][:base_dir]}/bin/ndbd"
 #START_PROG="$prog -c #{node[:ndb][:connect_string]} --ndb-nodeid=#{node[:ndb][:id]} > #{node[:ndb][:logs_dir]}/ndb_#{node[:ndb][:id]}.log 2>&1 > /dev/null &"
 
-INIT_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/init-start-ndbd.sh"
-START_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/start-noinit-ndbd.sh"
-STOP_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/stop-ndbd.sh"
-RESTART_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/restart-ndbd.sh"
+INIT_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/ndbd-init.sh"
+START_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/ndbd-start.sh"
+STOP_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/ndbd-stop.sh"
+RESTART_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/ndbd-restart.sh"
 
 
 RETVAL=0
@@ -43,7 +43,6 @@ start() {
 stop() {
   $EXEC_WITH_USER "$STOP_PROG"
 
-  PID_FILE=<%= node[:ndb][:logs_dir] + "/ndb_" + node[:ndb][:id] + ".pid" %> 
   PROCESS_ID=`cat $PID_FILE`
   echo "Shutting down"
   kill $PROCESS_ID

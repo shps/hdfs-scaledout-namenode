@@ -17,48 +17,17 @@
 # limitations under the License.
 #
 
+include_recipe "ndb"
 
-user node[:ndb][:user] do
-  action :create
-  system true
-  shell "/bin/bash"
-end
-
-directory node[:ndb][:mysql_server_dir] do
+directory "#{node[:ndb][:base_dir]}/mysql/data" do
   owner node[:ndb][:user]
   mode "0755"
   action :create
   recursive true  
-end
-
-directory node[:ndb][:mysql_data_dir] do
-  owner node[:ndb][:user]
-  mode "0755"
-  action :create
-  recursive true  
-end
-
-directory node[:mysql][:base_dir] do
-  owner node[:ndb][:user]
-  mode "0755"
-  action :create
-  recursive true
-end
-
-directory node[:ndb][:log_dir] do
-  mode 0755
-  owner node[:ndb][:user]
-  action :create
-  recursive true
-end
-
-remote_file "#{Chef::Config[:file_cache_path]}/ndb.tar.gz" do
-  source "http://dev.mysql.com/get/Downloads/MySQL-Cluster-7.2/mysql-cluster-gpl-7.2.8-linux2.6-x86_64.tar.gz/from/http://ftp.sunet.se/pub/unix/databases/relational"
-  action :create_if_missing
 end
 
 template "mysql.cnf" do
-  path "#{node[:ndb][:mysql_server_dir]}/my.cnf"
+  path "#{node[:ndb][:base_dir]}/my.cnf"
   source "my.cnf.erb"
   owner "root"
   group "root"
@@ -67,7 +36,7 @@ template "mysql.cnf" do
 end
 
 for script in node[:mysql][:scripts]
-  template "#{node[:ndb][:base_dir]}/scripts/#{script}" do
+  template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
     owner "root"
     group "root"
@@ -79,15 +48,14 @@ for script in node[:mysql][:scripts]
        :ndb_mysql_dir => node[:ndb][:mysql_dir],
        :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
        :connect_string => node[:ndb][:connect_string],
-       :node_id => node[:ndb][:id],
        :mysql_port => node[:ndb][:mysql_port],
        :mysql_socket => node[:ndb][:mysql_socket]
     })
   end
 end 
 
-
-
 # load the users using distributed privileges
 # http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-privilege-distribution.html
 # mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
+
+# mysql_install_db --config=my.cnf...
