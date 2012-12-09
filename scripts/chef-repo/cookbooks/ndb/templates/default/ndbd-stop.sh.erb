@@ -1,9 +1,18 @@
 #!/bin/sh
-IDo=1
-WATCHDOG=`cat ../../logs/ndb_${ID}.pid`
-PID=`expr $PID + 1`
-echo "Killing process-id $PID and $WATCHDOG ...\n" >> ../../logs/ndb_${ID}_out.log
-echo "Killing process-id $PID and $WATCHDOG ...\n" 
-kill $WATCHDOG
+ID=<%= @node_id %>
+PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
+PROCESS_ID=`cat $PID_FILE`
+echo ""
+echo "Killing ndbd with process-id $PID " >> $PID_FILE
+echo ""
 kill $PID
-exit 0
+wait_pid_removed=10
+timeout=0
+while [ $timeout -lt $wait_pid_removed ] ; do
+    sleep 1
+    test ! -s $PID_FILE && break
+    echo -n "."
+    timeout=`expr $timeout + 1`
+done
+echo ""
+

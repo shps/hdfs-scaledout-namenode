@@ -1,8 +1,17 @@
 #!/bin/sh
 ID=63
-PID=`cat ../../logs/ndb_${ID}.pid`
-echo "Killing mgm server with process-id $PID " >> ../../logs/ndb_${ID}_out.log
+PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
+PROCESS_ID=`cat $PID_FILE`
 echo ""
-echo "Killing mgm server with process-id $PID " 
+echo "Killing mgm server with process-id $PID " >> $PID_FILE
+echo ""
 kill $PID
-exit $?
+wait_pid_removed=10
+timeout=0
+while [ $timeout -lt $wait_pid_removed ] ; do
+    sleep 1
+    test ! -s $PID_FILE && break
+    echo -n "."
+    timeout=`expr $timeout + 1`
+done
+echo ""

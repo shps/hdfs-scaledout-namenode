@@ -19,41 +19,64 @@
 
 include_recipe "ndb"
 
+Chef::Log.info "Hostname is: #{node['hostname']}"
+Chef::Log.info "IP address is: #{node['ipaddress']}"
+
 directory node[:ndb][:data_dir] do
   owner node[:ndb][:user]
-  mode "0755"
+  mode "755"
   action :create
+  recursive true
 end
 
-@id = 0
+id = 0
 @found = false
 for ndbd in node[:ndb][:data_nodes]
-  if node['hostname'].eql? @ndbd
+  Chef::Log.info "Testing IP address: #{ndbd}"
+  if node['ipaddress'].eql? ndbd
+    Chef::Log.info "Found matching IP address in the list of data nodes: #{ndbd} . ID= id.to_s()"
     @found = true
   end
-  @id += 1
+  id += 1
 end 
 
+Chef::Log.info "ID IS: #{id}"
+
 if @found != true
-  return -1
+    Chef::Log.info "Could not find matching IP address is list of data nodes."
 end
 
 
 for script in node[:ndb][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
-    owner "root"
-    group "root"
+    owner node[:ndb][:user]
+    group node[:ndb][:user]
     mode 0655
     variables({
-       :ndb_dir => node[:ndb][:base_dir],
-       :mysql_dir => node[:mysql][:base_dir],
-       :connect_string => node[:ndb][:connect_string],
-       :node_id => @id
-    })
+                :ndb_dir => node[:ndb][:base_dir],
+                :mysql_dir => node[:mysql][:base_dir],
+                :connect_string => node[:ndb][:connect_string],
+                :node_id => id
+              })
   end
 end 
+
+template "/etc/init.d/ndbd" do
+  source "ndbd.erb"
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode 0655
+  variables({
+              :ndb_dir => node[:ndb][:base_dir],
+              :mysql_dir => node[:mysql][:base_dir],
+              :connect_string => node[:ndb][:connect_string],
+              :node_id => id
+            })
+end
 
 
 # create symbolic link from /var/lib/mysql-cluster/ndb-* to 'ndb'. Same for /usr/local/mysql-* to mysql
 # Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs
+
+# install services in /etc/init.d/

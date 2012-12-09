@@ -14,15 +14,25 @@
 ### END INIT INFO
 
 # Variables
+#prog="#{node[:mysql][:base_dir]}/bin/ndbd"
+#START_PROG="$prog -c #{node[:ndb][:connect_string]} --ndb-nodeid=#{node[:ndb][:id]} > #{node[:ndb][:logs_dir]}/ndb_#{node[:ndb][:id]}.log 2>&1 > /dev/null &"
 
-START_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/start-mgm-server.sh"
-STOP_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/stop-mgm-server.sh"
-RESTART_PROG=<%= node[:ndb][:base_dir] %> + "/scripts/restart-mgm-server.sh"
+INIT_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-init.sh" %>
+START_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-start.sh" %>
+STOP_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-stop.sh" %>
+RESTART_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-restart.sh" %>
 
 
 RETVAL=0
 
 EXEC_WITH_USER="su <%= node[:ndb][:user] %> -c"
+
+init() {
+  echo "Executing as '<%= node[:ndb][:user] %>': $INIT_PROG"
+  $EXEC_WITH_USER "$INIT_PROG"
+  return $?
+}
+
 
 start() {
   echo "Executing as '<%= node[:ndb][:user] %>': $START_PROG"
@@ -31,37 +41,23 @@ start() {
 }
 
 stop() {
+  echo "Executing as 'root': $STOP_PROG"
   $EXEC_WITH_USER "$STOP_PROG"
-
-  PID_FILE=<%= node[:ndb][:logs_dir] %> + "/ndb_63.pid" 
-  PROCESS_ID=`cat $PID_FILE`
-  echo "Shutting down"
-  kill $PROCESS_ID
-
-  wait_pid_removed=10
-  timeout=0
-  while [ $timeout -lt $wait_pid_removed ] ; do
-    sleep 1
-    test ! -s $PID_FILE && break
-    echo -n "."
-    timeout=`expr $timeout + 1`
-  done
-  echo ""
-
   return $?
 }
 
 restart() {
   echo "Executing as 'root': $RESTART_PROG"
-
   $EXEC_WITH_USER "$RESTART_PROG"
-
   return $?
 }
 
 
 # user-supplied parameter to stop/start/restart process.
 case "$1" in
+  init)
+    init
+    ;;
   start)
     start
     ;;

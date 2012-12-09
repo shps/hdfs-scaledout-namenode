@@ -7,9 +7,7 @@ BACKUP_DIR="<%= @ndb_dir %>/backup/"
    echo ""
    echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= @ndb_dir %>/backup\)]"
    echo ""
-   echo "Creates a backup of the cluster, and stores it in BACKUP-DIR."
-   echo "Copies backups from all data-nodes to the management serverb."
-   echo "You need to authenticate at all data nodes to copy their backup files."
+   echo "Creates a backup of the cluster, and stores it in BACKUP-DIR on all the data nodes."
    echo ""
    exit 0
       ;;      

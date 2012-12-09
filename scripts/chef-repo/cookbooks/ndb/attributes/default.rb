@@ -17,10 +17,10 @@ default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server]}:#{ default[:ndb]
  # percentage of total memory used by Data Nodes
 default[:ndb][:data_memory] = 500
 default[:ndb][:index_memory] = 100
-default[:ndb][:data_nodes] = %w{ cloud8 cloud9 cloud12 cloud13 }
+default[:ndb][:data_nodes] = %w{ cloud8 cloud9 cloud12 cloud13 10.0.2.15 }
 
-default[:mgm][:scripts] = %w{ copy-backup-to-mgm-server.sh rolling-restart.sh backup-start.sh enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh cluster-start.sh exit-singleuser-mode.sh  memory-usage.sh ndb_mgm_service ndb.upstart.conf }
-default[:ndb][:scripts] = %w{ ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh ndb_service ndb.upstart.conf }
+default[:mgm][:scripts] = %w{ backup-start.sh enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh cluster-start.sh exit-singleuser-mode.sh }
+default[:ndb][:scripts] = %w{ ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
 default[:mysql][:scripts] = %w{ mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
 
 default[:ndb][:version] = #{versionStr}

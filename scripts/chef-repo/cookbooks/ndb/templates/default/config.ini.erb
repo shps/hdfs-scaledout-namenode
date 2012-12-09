@@ -65,9 +65,10 @@ HostName=<%= @dn %>
 DataDir=<%= node[:ndb][:base_dir] %>/logs
 FileSystemPath=<%= node[:ndb][:data_dir] + "/" + @id.to_s() %>
 NodeId=<%= @id %>
+# ServerPort is set to know what ports to forward in Vagrant
+ServerPort=<%= 10000 + @id %>
 #LockExecuteThreadToCPU=
 #LockMaintThreadToCPU=
-
 <% @id += 1 %>
 <% end %>
 
