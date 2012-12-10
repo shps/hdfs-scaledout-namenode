@@ -11,7 +11,7 @@ MaxNoOfExecutionThreads=<%= cpus  %>
 #Threadconfig=main={cpubind=0},ldm={count=8,cpubind=1,2,3,4,13,14,15,16},io={count=4,cpubind=5,6,17,18},rep={cpubind=7},recv={count=2,cpubind=8,19}
 
 #The number of copies of the data stored on different nodes in the cluster
-NoOfReplicas=2
+NoOfReplicas=<%= node[:ndb][:num_replicas] %>
 
 #The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
 # <% @data_memory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
@@ -63,18 +63,18 @@ DataDir=<%= node[:ndb][:log_dir] %>
 LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6
 ArbitrationRank=1
 
-<% @id = 1 %>
-<% for @dn in node[:ndb][:data_nodes] %>
+<% id = 1 %>
+<% for dn in node[:ndb][:data_nodes] %>
 [NDBD]
-HostName=<%= @dn %>
-DataDir=<%= node[:ndb][:base_dir] %>/logs
-FileSystemPath=<%= node[:ndb][:data_dir] + "/" + @id.to_s() %>
-NodeId=<%= @id %>
+HostName=<%= dn %>
+DataDir=<%= node[:ndb][:log_dir] %>
+FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
+NodeId=<%= id %>
 # ServerPort is set to know what ports to forward in Vagrant
-ServerPort=<%= 10000 + @id %>
+ServerPort=<%= 10000 + id %>
 #LockExecuteThreadToCPU=
 #LockMaintThreadToCPU=
-<% @id += 1 %>
+<% id += 1 %>
 <% end %>
 
 [MYSQLD]

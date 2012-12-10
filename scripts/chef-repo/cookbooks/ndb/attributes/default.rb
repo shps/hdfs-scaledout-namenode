@@ -6,7 +6,7 @@ minorVersion="9"
 versionStr= "7.2.9"
 
 default[:ndb][:loglevel]  = "notice"
-default[:ndb][:mgm_server] = "10.0.2.2"
+default[:ndb][:mgm_server] = "10.0.2.15"
 default[:ndb][:user]      = "root"
 default[:ndb][:port]      = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
@@ -16,7 +16,9 @@ default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server]}:#{ default[:ndb]
 # percentage of total memory used by Data Nodes
 default[:ndb][:data_memory] = 500
 default[:ndb][:index_memory] = 100
-default[:ndb][:data_nodes] = %w{ cloud8.sics.se cloud9.sics.se cloud16.sics.se 10.0.2.15 }
+default[:ndb][:data_nodes] = %w{ 10.0.2.15 }
+# cloud8.sics.se cloud9.sics.se cloud16.sics.se 
+default[:ndb][:num_replicas] = 1
 
 default[:mgm][:scripts] = %w{ backup-start.sh enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }

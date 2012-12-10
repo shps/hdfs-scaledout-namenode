@@ -66,6 +66,14 @@ end
     Chef::Log.info "Could not find matching IP address is list of data nodes."
   end
 
+directory "#{node[:ndb][:data_dir]}/#{id}" do
+  owner node[:ndb][:user]
+  mode "755"
+  action :create
+  recursive true
+end
+
+
 
 for script in node[:ndb][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do

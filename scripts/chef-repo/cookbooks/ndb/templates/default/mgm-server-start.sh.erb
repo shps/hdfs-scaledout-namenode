@@ -11,14 +11,13 @@ fi
 echo "" 
 echo "Testing to see if a cluster is already running on <%= @connect_string %> ..." 
 echo "" 
-<%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string %> -e \"show\"> /dev/null
+# <%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string %> -e \"show\"> /dev/null
+# netstat -a | grep <%= node[:ndb][:port] %>
 
-if [ $? -eq 0 ] ; then
-    echo ""      
-    echo "A management server is already running on <%= @connect_string %>" 
-    echo "" 	
-    exit 2
-fi
+#if [ $? -eq 0 ] ; then
+#    echo "A management server is already running on <%= @connect_string %>" 
+#    exit 2
+# fi
 
 
 if [ ! -e <%= @mysql_dir %>/bin/ndb_mgmd ] ; then
@@ -26,7 +25,7 @@ if [ ! -e <%= @mysql_dir %>/bin/ndb_mgmd ] ; then
     exit 3
 fi
 
-<%= @mysql_dir %>/bin/ndb_mgmd -f  <%= @ndb_dir %>/config.ini  --configdir=<%= @ndb_dir %>/mgmd --reload  
+<%= @mysql_dir %>/bin/ndb_mgmd -f  <%= @ndb_dir %>/config.ini  --configdir=<%= @ndb_dir %>/mgmd --reload --no-nodeid-checks
 RES=`echo $?`
 if [ $RES -ne 0 ] ; then
     echo ""
