@@ -29,6 +29,7 @@ public class StorageFactory {
   private static ReplicaDataAccess replicaDataAccess;
   private static ReplicaUnderConstruntionDataAccess replicaUnderConstruntionDataAccess;
   private static UnderReplicatedBlockDataAccess underReplicatedBlockDataAccess;
+  private static LeaderDataAccess leaderDataAccess;
   private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
 
   private static void initDataAccessMap() {
@@ -43,6 +44,7 @@ public class StorageFactory {
     dataAccessMap.put(replicaDataAccess.getClass().getSuperclass(), replicaDataAccess);
     dataAccessMap.put(replicaUnderConstruntionDataAccess.getClass().getSuperclass(), replicaUnderConstruntionDataAccess);
     dataAccessMap.put(underReplicatedBlockDataAccess.getClass().getSuperclass(), underReplicatedBlockDataAccess);
+    dataAccessMap.put(leaderDataAccess.getClass().getSuperclass(), leaderDataAccess);
   }
 
   public static StorageConnector getConnector() {
@@ -66,6 +68,7 @@ public class StorageFactory {
       replicaDataAccess = new ReplicaDerby();
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionDerby();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockDerby();
+      leaderDataAccess = new LeaderDataAccessDerby();
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
       defaultStorage.setConfiguration(conf);
@@ -80,6 +83,7 @@ public class StorageFactory {
       replicaDataAccess = new ReplicaClusterj();
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionClusterj();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockClusterj();
+      leaderDataAccess = new LeaderDataAccessClusterj();
     }
 
     initDataAccessMap();
@@ -105,6 +109,7 @@ public class StorageFactory {
     entityContexts.put(INodeSymlink.class, inodeContext);
     entityContexts.put(CorruptReplica.class, new CorruptReplicaContext(corruptReplicaDataAccess));
     entityContexts.put(UnderReplicatedBlock.class, new UnderReplicatedBlockContext(underReplicatedBlockDataAccess));
+    entityContexts.put(Leader.class, new LeaderContext(leaderDataAccess));
     return entityContexts;
   }
 
