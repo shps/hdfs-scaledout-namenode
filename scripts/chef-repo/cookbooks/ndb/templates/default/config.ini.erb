@@ -1,0 +1,174 @@
+[NDBD DEFAULT]
+#Used by ndbmdmt to determine the number of LQH threads
+<% cpus = @cores / 2 %>
+<% if cpus < 2
+     cpus =2 
+   end
+%>
+MaxNoOfExecutionThreads=<%= cpus  %>
+
+#More flexible than MaxNoOfExecutionThreads
+#Threadconfig=main={cpubind=0},ldm={count=8,cpubind=1,2,3,4,13,14,15,16},io={count=4,cpubind=5,6,17,18},rep={cpubind=7},recv={count=2,cpubind=8,19}
+
+#The number of copies of the data stored on different nodes in the cluster
+NoOfReplicas=<%= node[:ndb][:num_replicas] %>
+
+#The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
+# <% @data_memory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
+#DataMemory=<%= @data_memory%>M
+#The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
+#IndexMemory=<%= @data_memory / 4 %>M
+DataMemory=<%= node[:ndb][:data_memory] %>M
+IndexMemory=<%= node[:ndb][:index_memory] %>M
+
+#   REDO_LOG_SIZE=`expr ${NUM_FRAGMENT_LOGFILES} \* 64`
+#  NUM_FRAGMENT_LOGFILES=`expr ${DATA_MEMORY} \* 6 / 64`
+#The amount of disk space (NoOfFragmentLogFiles * 64MB) used to store the Redo Log (used for node recovery)
+NoOfFragmentLogFiles=<%= node[:ndb][:data_memory].to_i / 10 %>
+
+#The size of a Redo Log file on disk.
+FragmentLogFileSize=64M
+
+#The speed at which LocalCheckpoints (LCP) are written to disk
+DiskCheckpointSpeed=1M
+
+#The speed at which LocalCheckpoints (LCP) are written to disk, as part of a node recovery 
+DiskCheckpointSpeedInRestart=10M
+
+#The size of the RedoLog Buffer in memory; Reduce for improved disk throughput (but slower recovery time)
+DiskSyncSize=4M
+
+#The size of the RedoBuffer used to buffer writes to the disk subsystem. Increase for high write-rate or slow disk.
+RedoBuffer=32M
+
+#The maximum time in ms that is permitted to lapse between operations in the same transaction before the transaction is aborted.
+TransactionInactiveTimeout=10000
+
+TransactionDeadlockDetectionTimeout=3G
+
+[MYSQLD DEFAULT]
+
+[NDB_MGMD DEFAULT]
+
+[TCP DEFAULT]
+SendBufferMemory=2M
+ReceiveBufferMemory=2M
+
+ 
+[NDB_MGMD]
+NodeId=63
+HostName=<%= node[:ndb][:mgm_server] %>
+PortNumber=<%= node[:ndb][:port] %>
+DataDir=<%= node[:ndb][:log_dir] %>
+LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6
+ArbitrationRank=1
+
+<% id = 1 %>
+<% for dn in node[:ndb][:data_nodes] %>
+[NDBD]
+HostName=<%= dn %>
+DataDir=<%= node[:ndb][:log_dir] %>
+FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
+NodeId=<%= id %>
+# ServerPort is set to know what ports to forward in Vagrant
+ServerPort=<%= 10000 + id %>
+#LockExecuteThreadToCPU=
+#LockMaintThreadToCPU=
+<% id += 1 %>
+<% end %>
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]
+
+[MYSQLD]

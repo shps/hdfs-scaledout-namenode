@@ -1,0 +1,8 @@
+#!/bin/sh 
+
+MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysqld-1-socket.sh`
+<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -u root --wait=30 shutdown
+
+RES=`echo $?`
+exit $RES
+

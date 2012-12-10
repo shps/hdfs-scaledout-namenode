@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"   
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:p="http://primefaces.org/ui"
+      >
+
+    <ui:composition template="layout.xhtml">
+
+        <ui:define name="title">
+            KTHFS Dashboard - Services
+        </ui:define>
+        <ui:define name="css"/>
+        <ui:define name="scripts"/>
+        <ui:define name="content">
+            <!--Navigation Bar - Begin -->
+            <h:form styleClass="styleNav">
+                <p:panelGrid>  
+                    <p:row>  
+                        <p:column>
+                            <h:outputText value="Services"/>
+                        </p:column>
+                    </p:row>
+                </p:panelGrid>
+            </h:form>
+            <!--Navigation Bar - End-->
+
+            <h3>Services:</h3>
+            <p><h:outputText value="Request params: #{serviceController.requestParams()}"/></p>
+            <p:panel header="KTHFS Instances">  
+                <h:form id="formServices">  
+
+                    <p:growl id="messages"/>  
+
+                    <p:dataTable id="table_services" var="kthfsInstance" value="#{serviceController.kthfsInstances}">
+
+                        <p:column  headerText="Name"  style="" >  
+                            <p:commandLink id="id#{kthfsInstance.name}" action="#{serviceController.doGotoService()}" ajax="false">  
+                                <h:outputText value="#{kthfsInstance.name}" />
+                                 <f:param name="kthfsinstance" value="#{kthfsInstance.name}"/>
+                            </p:commandLink> 
+                        </p:column>
+                        <p:column headerText="Type"><h:outputText value="#{kthfsInstance.type}"/></p:column>  
+                        <p:column headerText="Status"><h:outputText value="#{kthfsInstance.status}"/></p:column>  
+                        <p:column headerText="Health"><h:outputText value="#{kthfsInstance.health}"/></p:column>  
+                        <p:column headerText="" style="width:10%">
+                            <p:menuButton value="Actions">  
+                                <p:menuitem value="Start..." update=":formServices:messages" actionListener="#{serviceController.startService()}" />  
+                                <p:menuitem value="Stop..." update=":formServices:messages" actionListener="#{serviceController.stopService()}" />  
+                                <p:menuitem value="Restart..." update=":formServices:messages" actionListener="#{serviceController.restartService()}"/>  
+                                <p:separator />  
+                                <p:menuitem value="Delete..." update=":formServices:messages" actionListener="#{serviceController.deleteService()}"/>  
+                            </p:menuButton>  
+                        </p:column>
+                    </p:dataTable>  
+                </h:form> 
+            </p:panel>
+            <p:spacer width="1" height="8" />
+        </ui:define>
+    </ui:composition>
+</html>

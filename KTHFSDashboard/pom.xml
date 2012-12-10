@@ -13,12 +13,22 @@
     <properties>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         
-        <glassfish.hostname>cloud9.sics.se</glassfish.hostname>
-        <glassfish.rmiport>4848</glassfish.rmiport>
-        <glassfish.servletport>8888</glassfish.servletport>
+        <glassfish.hostname>localhost</glassfish.hostname>
+        <glassfish.admin></glassfish.admin>
+        <glassfish.passwd></glassfish.passwd>
+
+                
+<!--        <glassfish.hostname>lucan.sics.se</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
-        <glassfish.passwd>admin</glassfish.passwd>
+        <glassfish.passwd>dight12</glassfish.passwd>-->
+        
+
+<!--        <glassfish.hostname>cloud16.sics.se</glassfish.hostname>
+        <glassfish.admin>admin</glassfish.admin>
+        <glassfish.passwd>admin</glassfish.passwd>-->
+        
         <netbeans.hint.deploy.server>gfv3ee6</netbeans.hint.deploy.server>
     </properties>
 
@@ -201,8 +211,6 @@
                         <type>runtime</type>
                         <properties>
                             <cargo.hostname>${glassfish.hostname}</cargo.hostname>
-                            <cargo.rmi.port>${glassfish.rmiport}</cargo.rmi.port>
-                            <cargo.servlet.port>${glassfish.servletport}</cargo.servlet.port>
                             <cargo.remote.username>${glassfish.admin}</cargo.remote.username>
                             <cargo.remote.password>${glassfish.passwd}</cargo.remote.password>
                         </properties>
@@ -221,7 +229,17 @@
     </build>
 
     <repositories>
-        
+               <repository>
+                        <id>sics-release</id>
+                        <name>SICS Release Repository</name>
+                        <url>http://kompics.sics.se/maven/repository</url>
+                        <releases>
+                        </releases>
+                        <snapshots>
+                                <enabled>false</enabled>
+                        </snapshots>
+                </repository>
+
         <repository>
             <id>maven2-repository.dev.java.net</id>
             <name>Java.net Repository for Maven</name>

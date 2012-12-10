@@ -1,0 +1,50 @@
+#!/bin/sh 
+
+# return codes:
+# 0: success
+# -3: started cluster as 'wrong' user.
+
+
+USERID=`id | sed -e 's/).*//; s/^.*(//;'`
+if [ "X$USERID" != "X<%= node[:ndb][:user] %>" ]; then
+   echo "You should have started the cluster as user: '<%= node[:ndb][:user] %>'."
+   echo "If you continue, you will change ownership of database files"
+   echo "from '<%= node[:ndb][:user] %>' to '$USERID'."
+   exit -3
+fi  
+
+RES=./ndbd-stop.sh
+if [ "$RES" != "0" ] ; then
+ exit $RES
+fi
+
+ 
+MGM_CONN=<%= @connect_string %>
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help|-help)
+              echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] "
+	      echo ""
+	      echo "connectstring is set to <%=  %>"
+	      exit 0 
+	      ;;
+    -c|--connectstring)
+              shift
+	      MGM_CONN=$1
+	      break 
+	      ;;
+	   * )
+              echo "Unknown option '$1'" 
+              exit -1
+  esac
+  shift       
+done
+
+
+echo "Re-starting Data Node <%= @node_id %>."
+
+<%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>
+RES=`echo $?`
+exit $RES
+
