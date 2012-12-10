@@ -27,7 +27,7 @@ if [ $SOCKET -eq 1 ] ; then
    fi
 else
     PORT=`<%= @ndb_dir %>/scripts/get-mysql-port.sh`
-    <%= @mysql_dir %>/bin/mysql -u root --protocol=tcp -h cloud11 --port=$PORT $EXECUTE_SQL
+    <%= @mysql_dir %>/bin/mysql -u root --protocol=tcp -h <%= [:ndb][:mgm_server] %> --port=$PORT $EXECUTE_SQL
 fi
-
+exit $?
 

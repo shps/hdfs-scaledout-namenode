@@ -4,26 +4,21 @@
 # 0: success
 # -3: started cluster as 'wrong' user.
 
+
 USERID=`id | sed -e 's/).*//; s/^.*(//;'`
-if [ "X$USERID" != "X#{node[:ndb][:user]}" ]; then
- if [ "X$USERID" = "X#{node[:ndb][:user]}" ]; then
-   echo ""
-   echo "You started cluster as user: '#{node[:ndb][:user]}'."
-   echo "You should start cluster as user: '#{node[:ndb][:user]}'."
+if [ "X$USERID" != "X<%= node[:ndb][:user] %>" ]; then
+   echo "You should have started the cluster as user: '<%= node[:ndb][:user] %>'."
    echo "If you continue, you will change ownership of database files"
-   echo "from '#{node[:ndb][:user]}' to '#{node[:ndb][:user]}'."
- else
-   echo ""
-   echo "You started the cluster as user: '$USERID'."
-   echo "You should start the cluster as user: '#{node[:ndb][:user]}'."
-   echo "If you continue, you will change ownership of database files"
-   echo "from '#{node[:ndb][:user]}' to '$USERID'."
+   echo "from '<%= node[:ndb][:user] %>' to '$USERID'."
    exit -3
- fi
-  
 fi  
 
+RES=./ndbd-stop.sh
+if [ "$RES" != "0" ] ; then
+ exit $RES
+fi
 
+ 
 MGM_CONN=<%= @connect_string %>
 
 while [ $# -gt 0 ]; do
@@ -31,7 +26,7 @@ while [ $# -gt 0 ]; do
     -h|--help|-help)
               echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] "
 	      echo ""
-	      echo "connectstring is set to cloud11:1186"
+	      echo "connectstring is set to <%=  %>"
 	      exit 0 
 	      ;;
     -c|--connectstring)
@@ -47,7 +42,7 @@ while [ $# -gt 0 ]; do
 done
 
 
-echo "Re-starting Data Node."
+echo "Re-starting Data Node <%= @node_id %>."
 
 <%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>
 RES=`echo $?`

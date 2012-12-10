@@ -1,6 +1,5 @@
 #!/bin/sh 
 
-
 USERID=`id | sed -e 's/).*//; s/^.*(//;'`
 if [ "X$USERID" != "X<%= node[:ndb][:user] %>" ]; then
    echo "You should have started the cluster as user: '<%= node[:ndb][:user] %>'."
@@ -10,13 +9,13 @@ if [ "X$USERID" != "X<%= node[:ndb][:user] %>" ]; then
 fi  
  
 
-MGM_CONN=cloud11:1186
+MGM_CONN=<%= @connect_string %>
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help|-help)
               echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] "
 	      echo ""
-	      echo "connectstring is set to cloud11:1186"
+	      echo "connectstring is set to <%=  %>"
 	      exit 0 
 	      ;;
     -c|--connectstring)
@@ -32,10 +31,9 @@ while [ $# -gt 0 ]; do
 done
 
 
-echo "Starting Data Node 1."
+echo "Initializing Data Node <%= @node_id %>."
 echo ""
 
 <%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --initial --ndb-nodeid==<% @node_id %>
 RES=`echo $?`
 exit 
-

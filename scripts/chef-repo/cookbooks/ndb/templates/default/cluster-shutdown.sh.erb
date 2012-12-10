@@ -1,7 +1,7 @@
 #!/bin/sh 
 
 
-MGM_CONN=cloud11:1186
+MGM_CONN=<%= @connection_string %>
 SKIP_MYSQLDS=0
 
 while [ $# -gt 0 ]; do
@@ -9,7 +9,7 @@ while [ $# -gt 0 ]; do
     -h|--help|-help)
               echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] [ -s|--skip-mysqlds ]"
 	      echo ""
-	      echo "connectstring is set to cloud11:1186"
+	      echo "connectstring is set to <%=  %>"
 	      exit 0 
 	      ;;
     -c|--connectstring)
@@ -30,11 +30,4 @@ done
 
 <%= @mysql_dir %>/bin/ndb_mgm -c $MGM_CONN -e "shutdown"
 
-
-if [ $SKIP_MYSQLDS -eq 0 ] ; then
-	    echo "Stopping MySQL Server Number at cloud11"
-	    ssh root@cloud11 <%= @ndb_dir %>/scripts/stop-mysqld-1.sh
-else
-  echo "Skipping stopping MySQL Server Number at cloud11"
-fi
                  

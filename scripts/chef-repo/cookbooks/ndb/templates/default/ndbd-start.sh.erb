@@ -16,7 +16,7 @@ while [ $# -gt 0 ]; do
     -h|--help|-help)
               echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] "
 	      echo ""
-	      echo "connectstring is set to cloud11:1186"
+	      echo "connectstring is set to <%=  %>"
 	      exit 0 
 	      ;;
     -c|--connectstring)
@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
 done
 
 
-echo "Starting Data Node 1."
+echo "Starting Data Node <%= @node_id %>."
 
 <%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<% @node_id %>
 RES=`echo $?`

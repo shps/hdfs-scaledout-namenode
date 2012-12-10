@@ -1,5 +1,13 @@
 include_recipe "ndb"
 
+directory node[:ndb][:mgm_dir] do
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode "755"
+  recursive true
+end
+
+
 for script in node[:mgm][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
@@ -8,7 +16,8 @@ for script in node[:mgm][:scripts]
     mode 0655
     variables({
        :ndb_dir => node[:ndb][:base_dir],
-       :mysql_dir => node[:mysql][:base_dir]
+       :mysql_dir => node[:mysql][:base_dir],
+       :connect_string => node[:ndb][:connect_string],
     })
   end
 end 

@@ -1,7 +1,6 @@
 #!/bin/sh 
 
-
-MGM_CONN=cloud11:1186
+MGM_CONN=<%= @connect_string %>
 PARAMS=
 EXEC=
 while [ $# -gt 0 ]; do
@@ -9,7 +8,7 @@ while [ $# -gt 0 ]; do
     -h|--help|-help)
               echo "usage: <prog> [ -c | --connectstring MGMD_HOST:MGMD_PORT ] ] [ -e [command] ] "
 	      echo ""
-	      echo "Default connectstring parameter = cloud11:1186"
+	      echo "Default connectstring parameter = <%=  %>"
 	      echo ""
 	      echo "To view the state of the cluster (which nodes are connected), type:"
 	      echo "./mgm-client.sh -e show"

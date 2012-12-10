@@ -2,33 +2,22 @@
 
 BACKUP_DIR="<%= @ndb_dir %>/backup/"
 
-  case $1 in
+case $1 in
     "-h"|"--help"|"-help")
-   echo ""
-   echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= @ndb_dir %>/backup\)]"
-   echo ""
-   echo "Creates a backup of the cluster, and stores it in BACKUP-DIR on all the data nodes."
-   echo ""
-   exit 0
-      ;;      
+	echo ""
+	echo "Usage: prog_name [-d BACKUP-DIR \(default=<%= @ndb_dir %>/backup\)]"
+	echo ""
+	echo "Creates a backup of the cluster, and stores it in BACKUP-DIR on all the data nodes."
+	echo ""
+	exit 0
+	;;      
     "-d")
-         shift
-         BACKUP_DIR=""
-         ;;
-  esac 
+        shift
+        BACKUP_DIR=""
+        ;;
+esac 
 
-  echo "Starting backup..."
-  <%= @mysql_dir %>/bin/ndb_mgm -c cloud11:1186 -e "start backup"
-
-  if [ $? -ne 0 ] ; then
-      echo ""
-      echo "Failure: could not start backup. Failure Code: $?"
-      echo ""
-      exit $?
-  fi
-
-# Sleep, waiting for ndb_mgmd to connect to all nodes in cluster
-   sleep 5
-
-   exit 0
+echo "Starting backup..."
+RES=<%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string %> -e "start backup"
+exit $RES
 
