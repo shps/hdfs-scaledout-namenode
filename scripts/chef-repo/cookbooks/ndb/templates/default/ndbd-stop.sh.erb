@@ -3,9 +3,9 @@ ID=<%= @node_id %>
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
 PID=`cat $PID_FILE`
 echo ""
-echo "Killing ndbd with process-id $PID " >> $PID_FILE
+echo "Killing ndbd with process-id $PID"
 echo ""
-kill $PID
+kill -9 $PID
 wait_pid_removed=10
 timeout=0
 while [ $timeout -lt $wait_pid_removed ] ; do

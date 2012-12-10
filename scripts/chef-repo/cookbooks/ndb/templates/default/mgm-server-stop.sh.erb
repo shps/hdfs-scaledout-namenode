@@ -3,7 +3,7 @@ ID=63
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
 PID=`cat $PID_FILE`
 echo ""
-echo "Killing mgm server with process-id $PID " >> $PID_FILE
+echo "Killing mgm server with process-id $PID "
 echo ""
 kill $PID
 wait_pid_removed=10
