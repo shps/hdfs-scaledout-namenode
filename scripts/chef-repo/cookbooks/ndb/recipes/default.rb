@@ -1,3 +1,8 @@
+bash "install_ruby_libs" do
+    code <<-EOF
+  gem install pythonconfig
+EOF
+end
 
 
 user node[:ndb][:user] do
@@ -37,7 +42,7 @@ template "#{node[:ndb][:base_dir]}/config.ini" do
   variables({:cores => node[:cpu][:total]})
 #    notifies :restart, resources(:service => "ndbd")
 end
-
+# 
 package_url = "#{node[:ndb][:package_url]}/#{node[:ndb][:package_src]}"
 Chef::Log.info "Downloading mysql cluster binaries from #{package_url}"
 base_package_filename =  File.basename(node[:ndb][:package_url])

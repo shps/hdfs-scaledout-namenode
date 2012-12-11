@@ -59,3 +59,23 @@ end
 # mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
 
 # mysql_install_db --config=my.cnf...
+
+
+
+args = "[mysqld]"
+args << "status"
+args << "instance = "
+args << "service-group = mysqld"
+args << "stop-script = "
+args << "start-script = "
+args << "pid-file =  "
+args << "stdout-file =  "
+args << "stderr-file =  "
+args << "start-time = " 
+
+bash "install_mysqld_agent" do
+  code <<-EOF
+   echo args >> node[:kthfs][:base_dir]/services
+not_if 
+EOF
+end

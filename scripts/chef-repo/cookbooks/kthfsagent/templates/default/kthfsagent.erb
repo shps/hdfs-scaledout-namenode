@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Startup script for ndbd
+# Startup script for kthfs-agent
 #
 ### BEGIN INIT INFO
 # Provides:                     ndb_node-*
@@ -14,37 +14,29 @@
 ### END INIT INFO
 
 # Variables
-INIT_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-init.sh" %>
-START_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-start.sh" %>
-STOP_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-stop.sh" %>
-RESTART_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-restart.sh" %>
+START_PROG=<%= "#{node[:kthfs][:base_dir]}/start-agent.sh" %>
+STOP_PROG=<%= "#{node[:kthfs][:base_dir]}/stop-agent.sh" %>
+RESTART_PROG=<%= "#{node[:kthfs][:base_dir]}/restart-agent.sh" %>
 
 
 RETVAL=0
 
-EXEC_WITH_USER="su <%= node[:ndb][:user] %> -c"
-
-init() {
-  echo "Executing as '<%= node[:ndb][:user] %>': $INIT_PROG"
-  $EXEC_WITH_USER "$INIT_PROG"
-  return $?
-}
-
+EXEC_WITH_USER="su <%= node[:kthfs][:user] %> -c"
 
 start() {
-  echo "Executing as '<%= node[:ndb][:user] %>': $START_PROG"
+  echo "Executing as '<%= node[:kthfs][:user] %>': $START_PROG"
   $EXEC_WITH_USER "$START_PROG"
   return $?
 }
 
 stop() {
-  echo "Executing as '<%= node[:ndb][:user] %>': $STOP_PROG"
+  echo "Executing as '<%= node[:kthfs][:user] %>': $STOP_PROG"
   $EXEC_WITH_USER "$STOP_PROG"
   return $?
 }
 
 restart() {
-  echo "Executing as '<%= node[:ndb][:user] %>': $RESTART_PROG"
+  echo "Executing as '<%= node[:kthfs][:user] %>': $RESTART_PROG"
   $EXEC_WITH_USER "$RESTART_PROG"
   return $?
 }

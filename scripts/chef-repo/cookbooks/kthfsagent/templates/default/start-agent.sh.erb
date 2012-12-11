@@ -1,0 +1,14 @@
+#!/bin/sh
+# returns '0' if agent started successfully
+# returns '1' if agent already running
+
+echo "Checking if the agent is running...."
+PID=`ps -ef | grep "agent[.]py" | tr -s ' ' | cut -d ' ' -f 2`
+if [$PID == ""]; then
+	echo "Agent is not running."
+	nohup <%= node[:kthfs][:base_dir] %>/agent.py & > /dev/null
+else
+    exit 1
+fi
+
+

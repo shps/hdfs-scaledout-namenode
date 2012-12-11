@@ -108,3 +108,21 @@ end
 # Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs
 
 # install services in /etc/init.d/
+
+args = "[ndb]"
+args << "status"
+args << "instance = "
+args << "service-group = mysqlcluster"
+args << "stop-script = "
+args << "start-script = "
+args << "pid-file =  "
+args << "stdout-file =  "
+args << "stderr-file =  "
+args << "start-time = " 
+
+bash "install_ndbd_agent" do
+  code <<-EOF
+   echo args >> node[:kthfs][:base_dir]/services
+not_if 
+EOF
+end

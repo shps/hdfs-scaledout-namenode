@@ -34,3 +34,52 @@ template "/etc/init.d/ndb_mgmd" do
               :node_id => @id
             })
 end
+
+
+
+args = "[mgmserver]"
+args << "status"
+args << "instance = "
+args << "service-group = mysqlcluster"
+args << "stop-script = "
+args << "start-script = "
+args << "pid-file =  "
+args << "stdout-file =  "
+args << "stderr-file =  "
+args << "start-time = " 
+
+bash "install_mgmd_agent" do
+  code <<-EOF
+   echo args >> node[:kthfs][:base_dir]/services
+not_if 
+EOF
+end
+
+
+
+
+args = "[mysqlcluster]"
+args << "status"
+args << "instance = "
+args << "service-group = mysqlcluster"
+args << "stop-script = "
+args << "start-script = "
+args << "pid-file =  "
+args << "stdout-file =  "
+args << "stderr-file =  "
+args << "start-time = " 
+
+bash "install_mysqlcluster_agent" do
+  code <<-EOF
+   echo args >> node[:kthfs][:base_dir]/services
+not_if 
+EOF
+end
+
+
+#File.open(File.expand_path(File.join(File.dirname(__FILE__),"config.ini")), "r") do |inp|
+File.open(File.expand_path(#{node[:kthfs][:base_dir]},"config.ini")), "w") do |inp|
+@cfg = ConfigParser.new(inp)
+@cfg.
+@cfg.add_section "[mysqlcluster]"
+@cfg.sections["mysqlcluster"]["status", Float])
