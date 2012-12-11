@@ -1,10 +1,10 @@
-\[server\]
+[server]
 url: <%= node[:kthfs][:rest_url] %>
 
-\[agent\]
+[agent]
 restport: <%= node[:kthfs][:port] %>
 name: <%= @name %> 
 rack: <%= @rack %>
 heartbeat-interval: <%= node[:kthfs][:heartbeat_interval] %>
-watch-interval = <%= node[:kthfs][:watch_interval]
-
+watch-interval: <%= node[:kthfs][:watch_interval] %>
+pid-file: <%= node[:kthfs][:pid_file] %>

@@ -2,6 +2,7 @@
 
 '''
 Created on Aug 3, 2012
+
 @author: Hamidreza Afzali <afzali@kth.se>
 '''
 # First install requests: easy_install requests
@@ -24,8 +25,8 @@ from bottle import Bottle, run, get, post, HTTPResponse
 config_mutex = Lock()
 
 service_commands = {}
-service_commands["namenode"] =  ["install", "uninstall", "start", "stop"]
-service_commands["datanode"] =  ["install", "uninstall", "start", "stop"]
+service_commands["namenode"] =  ["start", "stop"]
+service_commands["datanode"] =  ["start", "stop"]
 
 service_commands["mysqlcluster"] =  ["init", "start", "stop"]
 service_commands["ndb"] =           ["init","start", "stop"]
@@ -49,10 +50,12 @@ logger.setLevel(logging.INFO)
 logger.info("KTHFS-Agent started.")
 cores = multiprocessing.cpu_count()
 
+
 # reading config
 try:
     config = ConfigParser.ConfigParser()
     config.read(config_filename)
+    agent_pidfile = config.get('agent','pid-file')    
     heartbeat_interval = config.getfloat('agent','heartbeat-interval')
     watch_interval = config.getfloat('agent','watch-interval')   
     url = config.get('server', 'url')
@@ -110,7 +113,6 @@ class Heartbeat():
                 payload["disk-used"] = disk_used
                 payload['memory-capacity'] = mem.total
                 payload['memory-used'] = mem.used
-#                Todo: send only needed service info                
                 payload["services"] = services_list   
                 payload["agent-time"] = str(now)             
                 if not init:    
@@ -209,7 +211,6 @@ class Config():
             for s in services.sections():
                 item = {}
                 for key, val in services.items(s):
-                    #
                     if (not 'file' in key) and (not 'script' in key):
                         item[key] = val
                 services_list.append(item)                
@@ -345,66 +346,50 @@ class Service:
         Config().edit(section, options_to_add, options_to_remove)
 
 
-class CommandHandler():
+class CommandHanlder():
 
     def respose(self, code, msg):
         resp = HTTPResponse(status=code, output=msg)
         logger.info("{0}: {1}".format(resp, resp.output))
         return resp
-
-    def install(self, instance, service):
-        section = Config().sectionName(instance, service)
-        if services.has_section(section):
-            return CommandHandler().respose(400, 'Already available.')
-        else:
-            Service().add(instance, service)
-            return CommandHandler().respose(200, 'Service Installed.')
-
-    def uninstall(self, instance, service):#    @staticmethod          
-        section = Config().sectionName(instance, service)
-        if not services.has_section(section):
-            return CommandHandler().respose(400, "Not available!")
-        else:
-            Service().remove(instance, service)
-            return CommandHandler().respose(200, "Service uninstalled.")
          
     def init(self, instance, service):
         section = Config().sectionName(instance, service)
         if not services.has_section(section):
-            return CommandHandler().respose(400, 'Service not installed.')
+            return CommandHanlder().respose(400, 'Service not installed.')
         else:
             if Service().init(instance, service) == True:
-                return CommandHandler().respose(200, 'Service initialized.')
+                return CommandHanlder().respose(200, 'Service initialized.')
             else:
-                return CommandHandler().respose(400, 'Error: Cannot initialize the service.')
+                return CommandHanlder().respose(400, 'Error: Cannot initialize the service.')
     
     def start(self, instance, service):
         section = Config().sectionName(instance, service)
         if not services.has_section(section):
-            return CommandHandler().respose(400, 'Service not installed.')
+            return CommandHanlder().respose(400, 'Service not installed.')
         elif services.get(section, 'status') == 'Started':
-            return CommandHandler().respose(400, 'Service already started.')
+            return CommandHanlder().respose(400, 'Service already started.')
         else:
             res = Service().start(instance, service)
             if res == False:
-                return CommandHandler().respose(400, 'Error: Cannot start the service.')
+                return CommandHanlder().respose(400, 'Error: Cannot start the service.')
             else:
                 payload = {}
                 payload['pid'] = str(res)
                 payload['msg'] = 'Service started.'
-                return CommandHandler().respose(200, json.dumps(payload))
+                return CommandHanlder().respose(200, json.dumps(payload))
 
     def stop(self, instance, service):
         section = Config().sectionName(instance, service)
         if not services.has_section(section):
-            return CommandHandler().respose(400, 'Service not installed.')
+            return CommandHanlder().respose(400, 'Service not installed.')
         elif not services.get(section, 'status') == 'Started':
-            return CommandHandler().respose(400, 'Service is not running.')
+            return CommandHanlder().respose(400, 'Service is not running.')
         else:
             if Service().stop(instance, service) == True:
-                return CommandHandler().respose(200, 'Service stopped.')
+                return CommandHanlder().respose(200, 'Service stopped.')
             else:
-                return CommandHandler().respose(400, 'Error: Cannot stop the service.')
+                return CommandHanlder().respose(400, 'Error: Cannot stop the service.')
 
     def readLog(self, instance, service, log_type, lines):
         try:
@@ -414,11 +399,11 @@ class CommandHandler():
             with open(log_file_name) as log_file:
                 log = "".join(str(x) for x in (list(log_file)[- lines -1:-1]))
             
-            return CommandHandler().respose(200, log)
+            return CommandHanlder().respose(200, log)
         
         except Exception as err:
             logger.error(err)
-            return CommandHandler().respose(400, "Cannot read file.")
+            return CommandHanlder().respose(400, "Cannot read file.")
 
     def readConfig(self, instance, service):
         try:
@@ -427,29 +412,34 @@ class CommandHandler():
             with open(config_file_name) as config_file:
                 conf = "".join(str(x) for x in (list(config_file)))
             
-            return CommandHandler().respose(200, conf)
+            return CommandHanlder().respose(200, conf)
         
         except Exception as err:
             logger.error(err)
-            return CommandHandler().respose(400, "Cannot read file.")
+            return CommandHanlder().respose(400, "Cannot read file.")
 
     def info(self, instance, service):
         
         try:
             section = Config().sectionName(instance, service)
             resp = json.dumps(Config().getSection(section))
-            return CommandHandler().respose(200, resp)
+            return CommandHanlder().respose(200, resp)
         
         except Exception as err:
             logger.error(err)
-            return CommandHandler().respose(400, "Cannot read file.")
+            return CommandHanlder().respose(400, "Cannot read file.")
                 
     def refresh(self):
         Heartbeat.send(False);
-        return CommandHandler().respose(200, "OK")
+        return CommandHanlder().respose(200, "OK")
 
 
 if __name__ == '__main__':
+    
+    #write pidfile
+    agent_pid = str(os.getpid())
+    file(agent_pidfile, 'w').write(agent_pid)
+    logger.info( "KTHFS-Agent PID: {0}".format(agent_pid))    
     
     thread.start_new_thread(Heartbeat, ())
     
@@ -474,16 +464,12 @@ if __name__ == '__main__':
         if not command in service_commands[service]:
             return HTTPResponse(status=400, output='Invalid command.')            
         
-        if command == "install":
-            return CommandHandler().install(instance, service);
-        elif command == "uninstall":
-            return CommandHandler().uninstall(instance, service);
-        elif command == "start":
-            return CommandHandler().start(instance, service);
+        if command == "start":
+            return CommandHanlder().start(instance, service);
         elif command == "stop":
-            return CommandHandler().stop(instance, service);                
+            return CommandHanlder().stop(instance, service);                
         elif command == "init":
-            return CommandHandler().init(instance, service); 
+            return CommandHanlder().init(instance, service); 
         else:
             return HTTPResponse(status=400, output='Invalid command.')        
 
@@ -497,7 +483,7 @@ if __name__ == '__main__':
         elif log_type not in ['stdout', 'stderr']:
             return HTTPResponse(status=400, output='Invalid log type.')                        
             
-        return CommandHandler().readLog(instance, service, log_type, lines);
+        return CommandHanlder().readLog(instance, service, log_type, lines);
 
     @get('/config/<instance>/<service>')
     def config(instance, service):
@@ -506,7 +492,7 @@ if __name__ == '__main__':
         if not services.has_section(Config().sectionName(instance, service)):
             return HTTPResponse(status=400, output='Instance/Service not available.')
             
-        return CommandHandler().readConfig(instance, service);
+        return CommandHanlder().readConfig(instance, service);
 
     @get('/info/<instance>/<service>')
     def info(instance, service):
@@ -515,13 +501,13 @@ if __name__ == '__main__':
         if not services.has_section(Config().sectionName(instance, service)):
             return HTTPResponse(status=400, output='Instance/Service not available.')
             
-        return CommandHandler().info(instance, service);
+        return CommandHanlder().info(instance, service);
 
     @get('/refresh') #request heartbeat
     def refresh():
         logger.info('Incoming REST Request:  GET /refresh')
             
-        return CommandHandler().refresh();
+        return CommandHanlder().refresh();
  
 
     logger.info("RESTful service started.")

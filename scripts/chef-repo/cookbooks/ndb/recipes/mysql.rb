@@ -1,23 +1,7 @@
-#
-# Cookbook Name:: ndb
-# Recipe:: default
-#
-# Copyright 2012, Example Com
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 include_recipe "ndb"
+require 'fileutils'
+require 'inifile'
+
 
 directory "#{node[:ndb][:base_dir]}/mysql/data" do
   owner node[:ndb][:user]
@@ -62,20 +46,22 @@ end
 
 
 
-args = "[mysqld]"
-args << "status"
-args << "instance = "
-args << "service-group = mysqld"
-args << "stop-script = "
-args << "start-script = "
-args << "pid-file =  "
-args << "stdout-file =  "
-args << "stderr-file =  "
-args << "start-time = " 
+ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
 
-bash "install_mysqld_agent" do
-  code <<-EOF
-   echo args >> node[:kthfs][:base_dir]/services
-not_if 
-EOF
+if ini_file.has_section?('hdfs1-mysqld')
+  Chef::Log.warn "mysqld section already exists in the ini file"
 end
+# I assume, this will write over any existing section with the same name.
+ini_file["hdfs1-mysqld"] = {
+  'status' => 'Stopped',
+  'instance' => 'hdfs1',
+  'service-group'  => 'mysqlcluster',
+  'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
+  'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
+  'pid-file'  => "#{node[:ndb][:log_dir]}/.pid",
+  'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
+  'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
+  'start-time'  => ''
+} 
+ini_file.save
+

@@ -1,4 +1,6 @@
 include_recipe "ndb"
+require 'fileutils'
+require 'inifile'
 
 directory node[:ndb][:mgm_dir] do
   owner node[:ndb][:user]
@@ -37,65 +39,43 @@ end
 
 
 
-args = "[mgmserver]"
-args << "status"
-args << "instance = "
-args << "service-group = mysqlcluster"
-args << "stop-script = "
-args << "start-script = "
-args << "pid-file =  "
-args << "stdout-file =  "
-args << "stderr-file =  "
-args << "start-time = " 
+# content = File.read("#{node[:kthfs][:base_dir]}/config.ini")
+# ini_file = IniFile.new(content, :comment => ';')
 
-bash "install_mgmd_agent" do
-  code <<-EOF
-   echo args >> node[:kthfs][:base_dir]/services
-not_if 
-EOF
+#ini_file = IniFile.load("#{node[:kthfs][:base_dir]}/config.ini", :comment => ';#')
+ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
+
+if ini_file.has_section?('hdfs1-mysqlcluster')
+  Chef::Log.warn "mysqlcluster already exists in the ini file"
 end
+ini_file["hdfs1-mysqlcluster"] = {
+  'status' => 'Stopped',
+  'instance' => 'hdfs1',
+  'service-group'  => 'mysqlcluster',
+  'stop-script'  => "#{node[:ndb][:scripts_dir]}/cluster-shutdown.sh",
+  'start-script'  => "",
+  'pid-file'  => "",
+  'stdout-file'  => "#{node[:ndb][:log_dir]}/cluster.log",
+  'stderr-file'  => "",
+  'start-time'  => ''
+} 
 
-
-
-
-args = "[mysqlcluster]"
-args << "status"
-args << "instance = "
-args << "service-group = mysqlcluster"
-args << "stop-script = "
-args << "start-script = "
-args << "pid-file =  "
-args << "stdout-file =  "
-args << "stderr-file =  "
-args << "start-time = " 
-
-bash "install_mysqlcluster_agent" do
-  code <<-EOF
-   echo args >> node[:kthfs][:base_dir]/services
-not_if 
-EOF
+if ini_file.has_section?('hdfs1-mgmserver')
+  Chef::Log.warn "mgmd already exists in the ini file"
 end
+ini_file["hdfs1-mgmserver"] = {
+  'status' => '',
+  'instance' => '',
+  'service-group'  => 'mysqlcluster',
+  'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
+  'start-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-start.sh",
+  'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_63.pid",
+  'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
+  'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
+  'start-time'  => ''
+} 
+
+ini_file.save
 
 
-# Also, this class supports interpolation:
-#    [Awards]
-#    output: Congratulations for winning %(prize)!
-#    prize: the lottery
-# Will result in:
-#    config.sections["Awards"]["output"] == "Congratulations for winning the lottery!"
-#
-# You can modify any values you want, though to add sections, you should use the add_section
-# method.
-#    config.sections["prizes"]["lottery"] = "100 dollars" # someone hit the jackpot
-#    config.add_section("Candies")
-#    config.candies["green"] = "tasty"
-# When you want to output a configuration, just call its +to_s+ method.
-#    File.open("output.ini","w") do |out|
-#      out.write config.to_s
-#    end
-#File.open(File.expand_path(File.join(File.dirname(__FILE__),"config.ini")), "r") do |inp|
-#File.open(File.expand_path(#{node[:kthfs][:base_dir]},"config.ini")), "w") do |inp|
-#@cfg = ConfigParser.new(inp)
-#@cfg.
-#@cfg.add_section "[mysqlcluster]"
-#@cfg.sections["mysqlcluster"]["status", Float])
+#ini_file.delete_section('namenode')
