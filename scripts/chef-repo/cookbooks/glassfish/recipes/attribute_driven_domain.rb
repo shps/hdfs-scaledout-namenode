@@ -342,4 +342,32 @@ EOF
     only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
 end
 
-end
+#bash "install_chef_server" do 
+# code <<-EOF
+#   echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
+#   sudo mkdir -p /etc/apt/trusted.gpg.d
+#   gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+#   gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+#   sudo apt-get -y update
+#   sudo apt-get -y install opscode-keyring
+#   sudo apt-get -y upgrade
+#   sudo apt-get -y install chef chef-server
+#   mkdir -p ~/.chef
+#   sudo cp /etc/chef/validation.pem /etc/chef/webui.pem ~/.chef
+#   sudo chown -R $USER ~/.chef
+#   knife configure -i --defaults -r . -y -u #{node['glassfish']['user']}
+#   knife client list
+#  Chef::Log.info "YOU HAVE TO RUN 'knife configure -i --defaults -r .'"   
+# EOF
+#    not_if { ::File.exists?( ~/.chef)}
+
+# Chef Client
+# echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
+# sudo mkdir -p /etc/apt/trusted.gpg.d
+# gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+# gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+# sudo apt-get -y update
+# sudo apt-get -y install opscode-keyring
+# sudo apt-get -y upgrade
+# sudo apt-get -y install chef
+#end
