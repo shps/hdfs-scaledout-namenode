@@ -77,9 +77,25 @@ EOF
 end
 
 
+# Also, this class supports interpolation:
+#    [Awards]
+#    output: Congratulations for winning %(prize)!
+#    prize: the lottery
+# Will result in:
+#    config.sections["Awards"]["output"] == "Congratulations for winning the lottery!"
+#
+# You can modify any values you want, though to add sections, you should use the add_section
+# method.
+#    config.sections["prizes"]["lottery"] = "100 dollars" # someone hit the jackpot
+#    config.add_section("Candies")
+#    config.candies["green"] = "tasty"
+# When you want to output a configuration, just call its +to_s+ method.
+#    File.open("output.ini","w") do |out|
+#      out.write config.to_s
+#    end
 #File.open(File.expand_path(File.join(File.dirname(__FILE__),"config.ini")), "r") do |inp|
-File.open(File.expand_path(#{node[:kthfs][:base_dir]},"config.ini")), "w") do |inp|
-@cfg = ConfigParser.new(inp)
-@cfg.
-@cfg.add_section "[mysqlcluster]"
-@cfg.sections["mysqlcluster"]["status", Float])
+#File.open(File.expand_path(#{node[:kthfs][:base_dir]},"config.ini")), "w") do |inp|
+#@cfg = ConfigParser.new(inp)
+#@cfg.
+#@cfg.add_section "[mysqlcluster]"
+#@cfg.sections["mysqlcluster"]["status", Float])

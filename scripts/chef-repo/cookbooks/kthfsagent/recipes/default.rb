@@ -23,6 +23,7 @@ bash "install_python_ruby_libs" do
     code <<-EOF
   easy_install requests
   easy_install bottle
+  gem install inifile
 EOF
 end
 
@@ -76,5 +77,3 @@ end
     mode 0655
   end
 end 
-
-
