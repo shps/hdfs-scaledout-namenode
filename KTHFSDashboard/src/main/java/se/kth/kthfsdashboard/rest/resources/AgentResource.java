@@ -2,7 +2,6 @@ package se.kth.kthfsdashboard.rest.resources;
 
 import java.util.Date;
 import java.util.List;
-import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -37,11 +36,16 @@ public class AgentResource {
    private ServiceEJB serviceEJB;
    @EJB
    private AlertEJB alertEJB;
-
-   //Add USER for authentication 
-   @Path("load/{name}")
+   
+   @GET   
+   @Path("ping")
+   @Produces(MediaType.TEXT_PLAIN)
+   public String getLog() {
+      return "KTHFSDashboard: Pong";
+   }
+   
    @GET
-   @PermitAll
+   @Path("load/{name}")   
    @Produces(MediaType.APPLICATION_JSON)
    public Response getLoadAvg(@PathParam("name") String name) {
       Host host = hostEJB.findHostByName(name);
@@ -61,10 +65,8 @@ public class AgentResource {
       return Response.ok(json).build();
    }
 
-   //Add USER for authentication 
-   @Path("loads")
    @GET
-   @PermitAll
+   @Path("loads")
    @Produces(MediaType.APPLICATION_JSON)
    public Response getLoads() {
       JSONArray jsonArray = new JSONArray();
@@ -89,9 +91,8 @@ public class AgentResource {
       return Response.ok(jsonArray).build();
    }
 
-   @Path("/keep-alive")
    @POST
-   @RolesAllowed({"AGENT", "ADMIN"})
+   @Path("/keep-alive")
    @Consumes(MediaType.APPLICATION_JSON)
    public Response keepAlive(@Context HttpServletRequest req, String jsonStrig) {
       try {
@@ -137,9 +138,6 @@ public class AgentResource {
             service.setStatus(Service.serviceStatus.valueOf(s.getString("status")));
             serviceEJB.storeService(service);
          }
-
-//            System.err.println("Agent Keep-Alive");
-
       } catch (Exception ex) {
          System.err.println("Exception: " + ex);
          return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -147,8 +145,8 @@ public class AgentResource {
       return Response.ok("OK").build();
    }
 
-   @Path("/alert")
    @POST
+   @Path("/alert")
    @Consumes(MediaType.APPLICATION_JSON)
    public Response alert(@Context HttpServletRequest req, String jsonStrig) {
 

@@ -16,24 +16,22 @@ import se.kth.kthfsdashboard.log.TempLogStore;
  */
 @Path("/collectd")
 @Stateless
+@RolesAllowed({"AGENT", "ADMIN"})
 public class CollectdResource {
 
    @EJB
    private LogEJB logEJB;
    
    TempLogStore tempLogStore = new TempLogStore();
-   
+
    @GET
+   @Path("ping")
    @Produces(MediaType.TEXT_PLAIN)
-   @RolesAllowed({"AGENT", "ADMIN"})
    public String getLog() {
-      System.out.println("GET");
-      return "GET collectd works.";
+      return "KTHFSDashboard: Pong";
    }
 
-   
    @POST
-   //RolesAllowed ?
    @Consumes(MediaType.APPLICATION_JSON)
    public String postLog(@Context HttpServletRequest Req, String jsonArrayStrig) {
 //        try {
