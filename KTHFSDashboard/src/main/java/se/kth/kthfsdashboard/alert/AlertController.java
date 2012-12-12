@@ -5,7 +5,6 @@ import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import se.kth.kthfsdashboard.command.*;
 
 /**
  *
@@ -15,7 +14,6 @@ import se.kth.kthfsdashboard.command.*;
 @RequestScoped
 //@ViewScoped
 public class AlertController {
-
 
     @EJB
     private AlertEJB alertEJB;

@@ -1,10 +1,8 @@
 package se.kth.kthfsdashboard.command;
 
-import se.kth.kthfsdashboard.service.*;
 import java.util.List;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
-import javax.persistence.Parameter;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 

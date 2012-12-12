@@ -257,11 +257,9 @@ public class HostController implements Serializable {
 
    public void doCommand(ActionEvent actionEvent) throws NoSuchAlgorithmException {
 
-      //store command in database
       //  TODO: If the web application server craches, status will remain 'Running'.
       Command c = new Command(command, hostname, serviceGroup, service, kthfsInstance);
       commandEJB.persistCommand(c);
-
       FacesMessage message;
 
       disableCertificateValidation();
@@ -271,50 +269,36 @@ public class HostController implements Serializable {
 //      String url = "http://" + h.getIp() + ":8090/do/" + kthfsInstance + "/" + service + "/" + command;
       String url = "https://localhost:8090/do/hdfs1/namenode/start";
 
-
       WebResource webResource = client.resource(url);
       MultivaluedMap params = new MultivaluedMapImpl();
       params.add("username", "kthfsagent@sics.se");
       params.add("password", "kthfsagent");
-     
+
       try {
          ClientResponse response = webResource.queryParams(params).get(ClientResponse.class);
 
          if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
-
             c.succeeded();
             commandEJB.updateCommand(c);
-
             String msg = "";
-            if (command.equalsIgnoreCase("install")) {
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               s.setStatus(Service.serviceStatus.Stopped);
-               serviceEJB.persistService(s);
-               msg = command + ": " + response.getEntity(String.class);
-
-            } else if (command.equalsIgnoreCase("uninstall")) {
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               serviceEJB.deleteService(s);
-               msg = command + ": " + response.getEntity(String.class);
-
+            Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+            if (command.equalsIgnoreCase("init")) {
+//               TODO:
+               
             } else if (command.equalsIgnoreCase("start")) {
-
                JSONObject json = new JSONObject(response.getEntity(String.class));
                msg = json.getString("msg");
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               s.setStatus(Service.serviceStatus.Started);
+               s.setStatus(Service.Status.Started);
                serviceEJB.storeService(s);
 
             } else if (command.equalsIgnoreCase("stop")) {
-
                msg = command + ": " + response.getEntity(String.class);
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               s.setStatus(Service.serviceStatus.Stopped);
+               s.setStatus(Service.Status.Stopped);
                serviceEJB.storeService(s);
             }
             message = new FacesMessage(FacesMessage.SEVERITY_INFO, "Success", msg);
-         } else {
 
+         } else {
             c.failed();
             commandEJB.updateCommand(c);
 
