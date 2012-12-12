@@ -72,10 +72,7 @@ try:
     agent_username = config.get('agent', 'username')
     agent_password = config.get('agent', 'password')          
     agent_pidfile = config.get('agent','pid-file')
-    use_ssl = config.getboolean('agent', 'use-ssl')
-#    cert = None 
-#    if (use_ssl == True):
-#        cert = config.get('agent', 'certificate-file')
+
     heartbeat_interval = config.getfloat('agent','heartbeat-interval')
     watch_interval = config.getfloat('agent','watch-interval')
     restport = config.getint('agent', 'restport')
