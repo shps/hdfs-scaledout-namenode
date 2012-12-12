@@ -333,18 +333,6 @@ EOF
   #not_if { ::File.exists?( #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib/mysql-connector-java-5.1.22-bin.jar)}
 end
 
-bash "secure_admin_glassfish" do
-  code <<-EOF
-  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
-# Stopping and restarting the domain doesn't seem to work. Maybe stopping restarting glassfish?
-#  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
-#  {node['glassfish']['base_dir']}/glassfish/bin/asadmin start-domain 
-# starting domain asking for password doesn't work - it asks for a master passwd
-# #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd start-domain 
-EOF
- only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
-end
-
 #bash "install_chef_server" do 
 # code <<-EOF
 #   echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
