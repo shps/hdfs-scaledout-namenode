@@ -37,6 +37,40 @@ easy_install_package "bottle" do
   action :install
 end
 
+cherry="CherryPy-3.2.2"
+cookbook_file "#{Chef::Config[:file_cache_path]}/#{cherry}.tar.gz" do
+  source "#{cherry}.tar.gz"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0755
+end
+
+openSsl="pyOpenSSL-0.13"
+cookbook_file "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz" do
+  source "#{openSsl}.tar.gz"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0755
+end
+
+
+
+ bash "install_python" do
+    code <<-EOF
+  tar zxf "#{Chef::Config[:file_cache_path]}/#{cherry}.tar.gz"
+  cd #{cherry}
+  python setup.py install
+  cd ..
+  tar zxf "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz"
+  cd #{openSsl}
+  python setup.py install
+#  easy_install requests
+#  easy_install bottle
+#  gem install inifile
+ EOF
+ end
+
+
 easy_install_package "cherrypy" do
   action :install
 end

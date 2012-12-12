@@ -10,7 +10,7 @@ rack: <%= @rack %>
 heartbeat-interval: <%= node[:kthfs][:heartbeat_interval] %>
 watch-interval: <%= node[:kthfs][:watch_interval] %>
 pid-file: <%= node[:kthfs][:pid_file] %>
-username: <%= default[:kthfs][:agent_user] = "kthfsagent@sics.se" %>
-password: <%= default[:kthfs][:agent_password] = "kthfsagent" %>
-certificate-file: <%= default[:kthfs][:certificate_file] = "server.pem" %>
-use-ssl: <%= default[:kthfs][:use_ssl] = "yes" %>
+username: <%= node[:kthfs][:agent_user] = "kthfsagent@sics.se" %>
+password: <%= node[:kthfs][:agent_password] = "kthfsagent" %>
+certificate-file: <%= node[:kthfs][:certificate_file] = "server.pem" %>
+use-ssl: <%= node[:kthfs][:use_ssl] %>

@@ -3,11 +3,14 @@ echo ""
 echo "Checking if the agent is running...."
 echo ""
 PID_FILE=<%= node[:kthfs][:pid_file] %>
-PID=`cat $PID_FILE`
+PID=""
+if [ test -e $PID_FILE ] ; then
+  PID=`cat $PID_FILE > /dev/null`
+fi
 if [$PID == ""]; then
 	echo "Agent is not running."
 else
-	echo "Agent is running (PID = $PID). Killing the agent..."
+	echo "Agent's process-id is $PID. Killing the agent..."
 	kill -9 $PID
 fi
 echo $?
