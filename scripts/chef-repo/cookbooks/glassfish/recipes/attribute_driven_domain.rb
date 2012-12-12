@@ -332,11 +332,11 @@ end
 
 bash "secure_admin_glassfish" do
   code <<-EOF
-  #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
-  #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
-  #{node['glassfish']['base_dir']}/glassfish/bin/asadmin start-domain 
+  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
+  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
+  {node['glassfish']['base_dir']}/glassfish/bin/asadmin start-domain 
 # starting domain asking for password doesn't work - it asks for a master passwd
-# #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd start-domain 
+ #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd start-domain 
 EOF
   only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
 end
