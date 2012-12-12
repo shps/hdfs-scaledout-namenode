@@ -3,8 +3,11 @@ package se.kth.kthfsdashboard.host;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import java.io.Serializable;
-import java.security.Provider;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -19,6 +22,13 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response.Status.Family;
 import org.codehaus.jettison.json.JSONObject;
 import se.kth.kthfsdashboard.command.Command;
@@ -60,9 +70,8 @@ public class HostController implements Serializable {
    private Host host;
    private boolean currentHostAvailable;
    private long lastUpdate;
-//    private int numberOfCpu; // EJB
-   private int memoryUsed; //percent
-   private int swapUsed; //percent   
+   private int memoryUsed; //percentage
+   private int swapUsed; //percentage
    private String load;
    private String health;
    private List<DiskInfo> df;
@@ -88,73 +97,6 @@ public class HostController implements Serializable {
    public void doSetRackId() {
 
       hostEJB.storeHostRackId(host);
-   }
-
-   public void doCommand(ActionEvent actionEvent) {
-
-      //store command in database
-      //  TODO: If the web application server craches, status will remain 'Running'.
-      Command c = new Command(command, hostname, serviceGroup, service, kthfsInstance);
-      commandEJB.persistCommand(c);
-
-      FacesMessage message;
-      Client client = Client.create();
-      Host h = hostEJB.findHostByName(hostname);
-      String url = "http://" + h.getIp() + ":8090/do/" + kthfsInstance + "/" + service + "/" + command;
-      WebResource resource = client.resource(url);
-      try {
-         ClientResponse response = resource.get(ClientResponse.class);
-
-         if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
-
-            c.succeeded();
-            commandEJB.updateCommand(c);
-
-            String msg = "";
-            if (command.equalsIgnoreCase("install")) {
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               s.setStatus(Service.serviceStatus.Stopped);
-               serviceEJB.persistService(s);
-               msg = command + ": " + response.getEntity(String.class);
-
-            } else if (command.equalsIgnoreCase("uninstall")) {
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               serviceEJB.deleteService(s);
-               msg = command + ": " + response.getEntity(String.class);
-
-            } else if (command.equalsIgnoreCase("start")) {
-
-               JSONObject json = new JSONObject(response.getEntity(String.class));
-               msg = json.getString("msg");
-               Service s = new Service(hostname, kthfsInstance, serviceGroup,service);
-               s.setStatus(Service.serviceStatus.Started);
-               serviceEJB.storeService(s);
-
-            } else if (command.equalsIgnoreCase("stop")) {
-
-               msg = command + ": " + response.getEntity(String.class);
-               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-               s.setStatus(Service.serviceStatus.Stopped);
-               serviceEJB.storeService(s);
-            }
-            message = new FacesMessage(FacesMessage.SEVERITY_INFO, "Success", msg);
-         } else {
-
-            c.failed();
-            commandEJB.updateCommand(c);
-
-            if (response.getStatus() == 400) {
-               message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", command + ": " + response.getEntity(String.class));
-            } else {
-               message = new FacesMessage(FacesMessage.SEVERITY_FATAL, "Server Error", "");
-            }
-         }
-      } catch (Exception e) {
-         c.failed();
-         commandEJB.updateCommand(c);
-         message = new FacesMessage(FacesMessage.SEVERITY_FATAL, "Communication Error", e.toString());
-      }
-      FacesContext.getCurrentInstance().addMessage(null, message);
    }
 
    public List<String> getCommands() {
@@ -222,11 +164,6 @@ public class HostController implements Serializable {
       return lastUpdate;
    }
 
-//    public int getNumberOfCpu() {
-//
-//        this.numberOfCpu = logEJB.findNumberOfCpu(hostName).intValue();
-//        return numberOfCpu;
-//    }
    public int getMemoryUsed() {
 
       List<Log> logs = logEJB.findLatestLogForPlugin(hostname, "memory");
@@ -316,5 +253,114 @@ public class HostController implements Serializable {
    public String getInterfaces() {
 
       return collectdTools.typeInstances(hostname, "interface").toString();
+   }
+
+   public void doCommand(ActionEvent actionEvent) throws NoSuchAlgorithmException {
+
+      //store command in database
+      //  TODO: If the web application server craches, status will remain 'Running'.
+      Command c = new Command(command, hostname, serviceGroup, service, kthfsInstance);
+      commandEJB.persistCommand(c);
+
+      FacesMessage message;
+
+      disableCertificateValidation();
+
+      Client client = Client.create();
+      Host h = hostEJB.findHostByName(hostname);
+//      String url = "http://" + h.getIp() + ":8090/do/" + kthfsInstance + "/" + service + "/" + command;
+      String url = "https://localhost:8090/do/hdfs1/namenode/start";
+
+
+      WebResource webResource = client.resource(url);
+      MultivaluedMap params = new MultivaluedMapImpl();
+      params.add("username", "kthfsagent@sics.se");
+      params.add("password", "kthfsagent");
+     
+      try {
+         ClientResponse response = webResource.queryParams(params).get(ClientResponse.class);
+
+         if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
+
+            c.succeeded();
+            commandEJB.updateCommand(c);
+
+            String msg = "";
+            if (command.equalsIgnoreCase("install")) {
+               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+               s.setStatus(Service.serviceStatus.Stopped);
+               serviceEJB.persistService(s);
+               msg = command + ": " + response.getEntity(String.class);
+
+            } else if (command.equalsIgnoreCase("uninstall")) {
+               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+               serviceEJB.deleteService(s);
+               msg = command + ": " + response.getEntity(String.class);
+
+            } else if (command.equalsIgnoreCase("start")) {
+
+               JSONObject json = new JSONObject(response.getEntity(String.class));
+               msg = json.getString("msg");
+               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+               s.setStatus(Service.serviceStatus.Started);
+               serviceEJB.storeService(s);
+
+            } else if (command.equalsIgnoreCase("stop")) {
+
+               msg = command + ": " + response.getEntity(String.class);
+               Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+               s.setStatus(Service.serviceStatus.Stopped);
+               serviceEJB.storeService(s);
+            }
+            message = new FacesMessage(FacesMessage.SEVERITY_INFO, "Success", msg);
+         } else {
+
+            c.failed();
+            commandEJB.updateCommand(c);
+
+            if (response.getStatus() == 400) {
+               message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", command + ": " + response.getEntity(String.class));
+            } else {
+               message = new FacesMessage(FacesMessage.SEVERITY_FATAL, "Server Error", "");
+            }
+         }
+      } catch (Exception e) {
+         c.failed();
+         commandEJB.updateCommand(c);
+         message = new FacesMessage(FacesMessage.SEVERITY_FATAL, "Communication Error", e.toString());
+      }
+      FacesContext.getCurrentInstance().addMessage(null, message);
+   }
+
+   public static void disableCertificateValidation() {
+      // Create a trust manager that does not validate certificate chains
+      TrustManager[] trustAllCerts = new TrustManager[]{
+         new X509TrustManager() {
+            public X509Certificate[] getAcceptedIssuers() {
+               return new X509Certificate[0];
+            }
+
+            public void checkClientTrusted(X509Certificate[] certs, String authType) {
+            }
+
+            public void checkServerTrusted(X509Certificate[] certs, String authType) {
+            }
+         }};
+
+      // Ignore differences between given hostname and certificate hostname
+      HostnameVerifier hv = new HostnameVerifier() {
+         public boolean verify(String hostname, SSLSession session) {
+            return true;
+         }
+      };
+
+      // Install the all-trusting trust manager
+      try {
+         SSLContext sc = SSLContext.getInstance("SSL");
+         sc.init(null, trustAllCerts, new SecureRandom());
+         HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+         HttpsURLConnection.setDefaultHostnameVerifier(hv);
+      } catch (Exception e) {
+      }
    }
 }
