@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-Created on 12 December 2012
+Created on Aug 3, 2012
 
 @author: Hamidreza Afzali <afzali@kth.se>
 '''
@@ -28,21 +28,21 @@ from socket import gethostname
 from pprint import pprint
 from time import gmtime, mktime
 from os.path import exists, join
+# from certgen import *   
 
 config_mutex = Lock()
 
 service_commands = {}
-service_commands["namenode"] =      ["init", "start", "stop"]
-service_commands["datanode"] =      ["init", "start", "stop"]
+service_commands["namenode"] =  ["start", "stop"]
+service_commands["datanode"] =  ["start", "stop"]
+
 service_commands["mysqlcluster"] =  ["init", "start", "stop"]
-service_commands["ndb"] =           ["init", "start", "stop"]
+service_commands["ndb"] =           ["init","start", "stop"]
 service_commands["mysqld"] =        ["start", "stop"]
 service_commands["mgmserver"] =     ["start", "stop"]
 
 config_filename = "config.ini"
 services_filename = "services"
-CERT_FILE = "kthfs.pem"
-KEY_FILE = "kthfs.key"
 
 #logging
 logger = logging.getLogger('agent')
@@ -56,8 +56,10 @@ logger.addHandler(logger_stream_handler)
 logger.setLevel(logging.INFO)
 
 logger.info("KTHFS-Agent started.")
-
 cores = multiprocessing.cpu_count()
+CERT_FILE = "kthfs.pem"
+KEY_FILE = "kthfs.key"
+
 
 # reading config
 try:
@@ -70,9 +72,10 @@ try:
     agent_username = config.get('agent', 'username')
     agent_password = config.get('agent', 'password')          
     agent_pidfile = config.get('agent','pid-file')
-    agent_restport = config.getint('agent', 'restport')
+
     heartbeat_interval = config.getfloat('agent','heartbeat-interval')
     watch_interval = config.getfloat('agent','watch-interval')
+    restport = config.getint('agent', 'restport')
     if (config.has_option("agent", "name")):
         name = config.get("agent", "name")
     else:
@@ -544,7 +547,7 @@ if __name__ == '__main__':
         if not Authentication().check():
             return HTTPResponse(status=400, output="Invalid username/password.")
         
-        return "Kthfs-Agent: Pong"
+        return "Pong! Kthfs-Agent"
         
     @get('/do/<instance>/<service>/<command>')
     def do(instance, service, command):
@@ -610,6 +613,6 @@ if __name__ == '__main__':
  
 
     logger.info("RESTful service started.")
-    run(host='0.0.0.0', port=agent_restport, server='sslcherrypy')
+    run(host='0.0.0.0', port=restport, server='sslcherrypy')
 
 

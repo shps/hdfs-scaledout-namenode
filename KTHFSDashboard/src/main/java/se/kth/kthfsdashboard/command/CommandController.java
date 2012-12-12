@@ -1,31 +1,10 @@
 package se.kth.kthfsdashboard.command;
 
-import se.kth.kthfsdashboard.service.*;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Logger;
 import javax.ejb.EJB;
-import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.ViewScoped;
-import javax.faces.context.FacesContext;
-import javax.faces.event.ActionEvent;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
-import se.kth.kthfsdashboard.host.Host;
-import se.kth.kthfsdashboard.host.HostEJB;
-import se.kth.kthfsdashboard.struct.InstanceFullInfo;
-import se.kth.kthfsdashboard.struct.InstanceInfo;
-import se.kth.kthfsdashboard.struct.KthfsInstanceInfo;
-import se.kth.kthfsdashboard.struct.ServiceRoleInfo;
-import se.kth.kthfsdashboard.util.Formatter;
 
 /**
  *
@@ -35,7 +14,6 @@ import se.kth.kthfsdashboard.util.Formatter;
 @RequestScoped
 //@ViewScoped
 public class CommandController {
-
 
     @EJB
     private CommandEJB commandEJB;
@@ -50,8 +28,6 @@ public class CommandController {
 
     
 //    private HashMap<String, InstanceInfo> commands = new HashMap<String, InstanceInfo>();
-
-
 
     public CommandController() {
 
