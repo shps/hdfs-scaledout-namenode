@@ -53,14 +53,6 @@ cookbook_file "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz" do
   mode 0755
 end
 
-# cookbook_file "#{node[:kthfs][:base_dir]}/server.pem" do
-#   source "server.pem"
-#   owner node[:kthfs][:user]
-#   group node[:kthfs][:user]
-#   mode 0755
-# end
-
-
  bash "install_python" do
     code <<-EOF
   tar zxf "#{Chef::Config[:file_cache_path]}/#{cherry}.tar.gz"
@@ -70,16 +62,8 @@ end
   tar zxf "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz"
   cd #{openSsl}
   python setup.py install
-#  easy_install requests
-#  easy_install bottle
-#  gem install inifile
  EOF
  end
-
-
-easy_install_package "cherrypy" do
-  action :install
-end
 
 directory node[:kthfs][:base_dir] do
   owner node[:kthfs][:user]
@@ -96,6 +80,11 @@ cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do
   mode 0755
 end
 
+service "kthfsagent" do
+  supports :restart => true
+  action [ :nothing ]
+end
+
 template "#{node[:kthfs][:base_dir]}/config.ini" do
   source "config.ini.erb"
   owner node[:kthfs][:user]
@@ -105,7 +94,7 @@ template "#{node[:kthfs][:base_dir]}/config.ini" do
               :name => node['ipaddress'],
               :rack => '/default'
             })
-#    notifies :restart, resources(:service => "ndbd")
+    notifies :restart, resources(:service => "kthfsagent")
 end
 
 template "/etc/init.d/kthfsagent" do
