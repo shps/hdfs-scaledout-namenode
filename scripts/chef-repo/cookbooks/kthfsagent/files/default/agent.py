@@ -28,7 +28,7 @@ from socket import gethostname
 from pprint import pprint
 from time import gmtime, mktime
 from os.path import exists, join
-
+# from certgen import *   
 
 config_mutex = Lock()
 
@@ -57,6 +57,8 @@ logger.setLevel(logging.INFO)
 
 logger.info("KTHFS-Agent started.")
 cores = multiprocessing.cpu_count()
+CERT_FILE = "kthfs.pem"
+KEY_FILE = "kthfs.key"
 
 
 # reading config
@@ -71,9 +73,9 @@ try:
     agent_password = config.get('agent', 'password')          
     agent_pidfile = config.get('agent','pid-file')
     use_ssl = config.getboolean('agent', 'use-ssl')
-    cert = None 
-    if (use_ssl == True):
-        cert = config.get('agent', 'certificate-file')
+#    cert = None 
+#    if (use_ssl == True):
+#        cert = config.get('agent', 'certificate-file')
     heartbeat_interval = config.getfloat('agent','heartbeat-interval')
     watch_interval = config.getfloat('agent','watch-interval')
     restport = config.getint('agent', 'restport')
@@ -477,19 +479,17 @@ class SSLCherryPy(ServerAdapter):
         from cherrypy import wsgiserver  
         server = wsgiserver.CherryPyWSGIServer((self.host, self.port), handler)  
         #cert: Certificate path. If a valid path, SSL will be used. Set to None to disable SSL  
-        server.ssl_certificate = cert  
-        server.ssl_private_key = cert  
+        server.ssl_certificate = CERT_FILE
+        server.ssl_private_key = KEY_FILE
         try:  
             server.start()  
         finally:  
             server.stop() 
 
-CERT_FILE = "kthfs.crt"
-KEY_FILE = "kthfs.key"
 
 def create_self_signed_cert(cert_dir):
     """
-    If kthfs.crt and kthfs.key don't exist in cert_dir, create a new
+    If kthfs.pem and kthfs.key don't exist in cert_dir, create a new
     self-signed cert and keypair and write them into that directory.
     """
 
@@ -528,7 +528,7 @@ if __name__ == '__main__':
     logger.info( "KTHFS-Agent PID: {0}".format(agent_pid))    
     
     cert_dir = os.path.dirname(os.path.abspath(__file__))
-    if (os.path.isfile(cert_dir + CERT_FILE) == False):
+    if (os.path.isfile(cert_dir + CERT_FILE) == False or os.path.isfile(cert_dir + KEY_FILE) == False ):
         create_self_signed_cert(cert_dir)
     
     thread.start_new_thread(Heartbeat, ())

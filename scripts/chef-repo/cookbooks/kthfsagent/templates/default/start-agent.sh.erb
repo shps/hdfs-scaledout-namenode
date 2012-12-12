@@ -1,16 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 # returns '0' if agent started successfully
 # returns '1' if agent already running
 
-echo "Checking if the agent is running...."
-echo ""
-PID_FILE=<%= node[:kthfs][:pid_file] %>
-#PID=`cat $PID_FILE`
-if [$PID == ""]; then
+source <%= node[:kthfs][:base_dir] %>/get-pid.sh
+
+if [ $? -ne 0 ]; then
 	echo "Agent is not running."
-	nohup <%= node[:kthfs][:base_dir] %>/agent.py & > /dev/null
+	nohup <%= node[:kthfs][:base_dir] %>/agent.py &> /dev/null &
 else
-	echo "Agent is already running."
+    echo "Agent is already running with pid=$PID."
     exit 1
 fi
 echo ""
+exit 0
+

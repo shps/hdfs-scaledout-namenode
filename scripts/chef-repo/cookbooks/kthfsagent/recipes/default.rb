@@ -53,6 +53,12 @@ cookbook_file "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz" do
   mode 0755
 end
 
+# cookbook_file "#{node[:kthfs][:base_dir]}/server.pem" do
+#   source "server.pem"
+#   owner node[:kthfs][:user]
+#   group node[:kthfs][:user]
+#   mode 0755
+# end
 
 
  bash "install_python" do
@@ -109,7 +115,7 @@ template "/etc/init.d/kthfsagent" do
   mode 0655
 end
 
-['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services'].each do |script|
+['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services', 'get-pid.sh'].each do |script|
   Chef::Log.info "Installing #{script}"
   template "#{node[:kthfs][:base_dir]}/#{script}" do
     source "#{script}.erb"
