@@ -1,8 +1,5 @@
 package se.kth.kthfsdashboard.service;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,11 +10,8 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
-import javax.faces.event.ActionEvent;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 import se.kth.kthfsdashboard.host.Host;
 import se.kth.kthfsdashboard.host.HostEJB;
 import se.kth.kthfsdashboard.struct.InstanceFullInfo;
@@ -25,6 +19,7 @@ import se.kth.kthfsdashboard.struct.InstanceInfo;
 import se.kth.kthfsdashboard.struct.KthfsInstanceInfo;
 import se.kth.kthfsdashboard.struct.ServiceRoleInfo;
 import se.kth.kthfsdashboard.util.Formatter;
+import se.kth.kthfsdashboard.util.WebCommunication;
 
 /**
  *
@@ -358,62 +353,29 @@ public class ServiceController {
 
     public String showStdoutLog(int n) {
 
-        Client client = Client.create();
-        String log = NOT_AVAILABLE;
-//        TODO: does not work with hostname!
-
-        try {
-            Host h = hostEJB.findHostByName(hostname);
-            String url = "http://" + h.getIp() + ":8090/log/" + kthfsInstance + "/" + service + "/stdout/" + n;
-            WebResource resource = client.resource(url);
-            ClientResponse response = resource.get(ClientResponse.class);
-            if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
-                log = response.getEntity(String.class);
-            }
-        } catch (Exception e) {
-        }
-        log = log.replaceAll("\n", "<br>");
-        return log;
+      //Todo: does not work with hostname. Only works with IP address.
+      Host h = hostEJB.findHostByName(hostname);      
+      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
+      
+      return webComm.getStdOut(n);
     }
 
     public String showStderrLog(int n) {
-
-        Client client = Client.create();
-        String log = NOT_AVAILABLE;
-//        TODO: does not work with hostname!
-        try {
-            Host h = hostEJB.findHostByName(hostname);
-            String url = "http://" + h.getIp() + ":8090/log/" + kthfsInstance + "/" + service + "/stderr/" + n;
-            WebResource resource = client.resource(url);
-            ClientResponse response = resource.get(ClientResponse.class);
-            if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
-                log = response.getEntity(String.class);
-            }
-        } catch (Exception e) {
-            System.err.println("Stderr Exception: " + e.toString());
-        }
-        log = log.replaceAll("\n", "<br>");
-        return log;
+       
+      //Todo: does not work with hostname. Only works with IP address.
+      Host h = hostEJB.findHostByName(hostname);      
+      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
+      
+      return webComm.getStdErr(n);
     }
 
     public String showConfig() {
-
-        Client client = Client.create();
-        String conf = NOT_AVAILABLE;
-        Host h = hostEJB.findHostByName(hostname);
-        String url = "http://" + h.getIp() + ":8090/config/" + kthfsInstance + "/" + service;
-        WebResource resource = client.resource(url);
-        try {
-            ClientResponse response = resource.get(ClientResponse.class);
-
-            if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
-                conf = response.getEntity(String.class);
-            } 
-        } catch (Exception e) {
-            System.err.println(e.toString());
-        }
-
-        return conf;
+       
+      //Todo: does not work with hostname. Only works with IP address.
+      Host h = hostEJB.findHostByName(hostname);      
+      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
+      
+      return webComm.getConfig();
     }
     
     

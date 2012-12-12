@@ -166,8 +166,7 @@ CREATE TABLE `Services` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
-GRANT ALL PRIVILEGES on kthfs.* TO 'kthfs@sics.se'@'%' IDENTIFIED BY '<%= node['mysql']['kthfs_password'] %>';-- Dumping data for table `Services`
---
+GRANT ALL PRIVILEGES on kthfs.* TO 'kthfs@sics.se'@'%' IDENTIFIED BY '<%= node['mysql']['kthfs_password'] %>';
 
 --
 -- Table structure for table `USERS`
@@ -196,7 +195,6 @@ LOCK TABLES `USERS` WRITE;
 /*!40000 ALTER TABLE `USERS` DISABLE KEYS */;
 INSERT INTO `USERS` VALUES ('jdowling@sics.se','33','jim','6A696D','2012-09-04 12:51:52','xx','jdowling');
 INSERT INTO `USERS` VALUES ('kthfsagent@sics.se','33','kthfsagent','6B746866736167656E74','2012-09-04 12:51:52','xx','kthfsagent');
-
 /*!40000 ALTER TABLE `USERS` ENABLE KEYS */;
 UNLOCK TABLES;
 

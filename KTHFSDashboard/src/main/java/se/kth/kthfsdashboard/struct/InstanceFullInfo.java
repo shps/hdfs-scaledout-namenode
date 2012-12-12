@@ -13,12 +13,12 @@ public class InstanceFullInfo implements Serializable {
     private String host;
     private String service;
     private String rack;
-    private Service.serviceStatus status;
+    private Service.Status status;
     private String health;
     private int pid;
     private String uptime;
 
-    public InstanceFullInfo(String service, String host, String rack, Service.serviceStatus status, String health) {
+    public InstanceFullInfo(String service, String host, String rack, Service.Status status, String health) {
 
         this.name = service + " (" + host + ")";
         this.host = host;
@@ -40,7 +40,7 @@ public class InstanceFullInfo implements Serializable {
         return rack;
     }
 
-    public Service.serviceStatus getStatus() {
+    public Service.Status getStatus() {
         return status;
     }
 

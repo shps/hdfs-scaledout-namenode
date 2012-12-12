@@ -135,7 +135,7 @@ public class AgentResource {
             } else if (s.has("start-time")) {
                service.setUptime(agentTime - s.getLong("start-time"));
             }
-            service.setStatus(Service.serviceStatus.valueOf(s.getString("status")));
+            service.setStatus(Service.Status.valueOf(s.getString("status")));
             serviceEJB.storeService(service);
          }
       } catch (Exception ex) {

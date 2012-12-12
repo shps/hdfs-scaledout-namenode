@@ -14,10 +14,10 @@ public class InstanceInfo implements Serializable {
     private String service;
     private String serviceGroup;
     private String rack;
-    private Service.serviceStatus status;
+    private Service.Status status;
     private String health;
 
-    public InstanceInfo(String serviceGroup, String service, String host, String rack, Service.serviceStatus status, String health) {
+    public InstanceInfo(String serviceGroup, String service, String host, String rack, Service.Status status, String health) {
 
         this.name = service + " (" + host + ")";
         this.host = host;
@@ -40,7 +40,7 @@ public class InstanceInfo implements Serializable {
         return rack;
     }
 
-    public Service.serviceStatus getStatus() {
+    public Service.Status getStatus() {
         return status;
     }
 

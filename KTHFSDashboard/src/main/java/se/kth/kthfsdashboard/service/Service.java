@@ -42,7 +42,7 @@ import javax.persistence.*;
 })
 public class Service implements Serializable {
 
-    public enum serviceStatus {
+    public enum Status {
 
         Started, Stopped, Failed, None, All
     }
@@ -65,13 +65,13 @@ public class Service implements Serializable {
     private long uptime;
 //    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private serviceStatus status;
+    private Status status;
     private int pid;
 
     public Service() {
     }
 
-    public Service(String hostname, String instance, String serviceGroup, String service, Service.serviceStatus status) {
+    public Service(String hostname, String instance, String serviceGroup, String service, Service.Status status) {
         this.hostname = hostname;
         this.instance = instance;
         this.serviceGroup = serviceGroup;
@@ -86,11 +86,11 @@ public class Service implements Serializable {
         this.service = service;
     }
 
-    public static serviceStatus getServiceStatus(String status) {
+    public static Status getServiceStatus(String status) {
         try {
-            return serviceStatus.valueOf(status);
+            return Status.valueOf(status);
         } catch (Exception ex) {
-            return serviceStatus.None;
+            return Status.None;
         }
     }
 
@@ -142,11 +142,11 @@ public class Service implements Serializable {
         this.uptime = uptime;
     }
 
-    public serviceStatus getStatus() {
+    public Status getStatus() {
         return status;
     }
 
-    public void setStatus(serviceStatus status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 
@@ -166,7 +166,7 @@ public class Service implements Serializable {
 
     public Health getHealth() {
 
-        if (status == serviceStatus.Failed) {
+        if (status == Status.Failed) {
             return Health.Bad;
         }
         return Health.Good;

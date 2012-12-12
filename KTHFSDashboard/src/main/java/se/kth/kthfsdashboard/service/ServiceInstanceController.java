@@ -47,9 +47,9 @@ public class ServiceInstanceController implements Serializable {
 
    static {
       statusStates = new String[3];
-      statusStates[0] = Service.serviceStatus.Started.toString();
-      statusStates[1] = Service.serviceStatus.Stopped.toString();
-      statusStates[2] = Service.serviceStatus.Failed.toString();
+      statusStates[0] = Service.Status.Started.toString();
+      statusStates[1] = Service.Status.Stopped.toString();
+      statusStates[2] = Service.Status.Failed.toString();
 
       roles = new String[]{"namenode", "datanode", "mysqlcluster"};
       mysqlClusterRoles = new String[]{"ndb", "mgmserver", "mysqld"};

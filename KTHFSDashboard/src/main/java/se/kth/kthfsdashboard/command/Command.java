@@ -1,8 +1,6 @@
 package se.kth.kthfsdashboard.command;
 
 import java.io.Serializable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.persistence.*;
 import se.kth.kthfsdashboard.util.Formatter;
