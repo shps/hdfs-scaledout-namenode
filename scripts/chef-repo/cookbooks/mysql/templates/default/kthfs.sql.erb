@@ -169,11 +169,12 @@ CREATE TABLE `Services` (
 -- Dumping data for table `Services`
 --
 
-LOCK TABLES `Services` WRITE;
-/*!40000 ALTER TABLE `Services` DISABLE KEYS */;
-INSERT INTO `Services` VALUES (7,'cloud17.sics.se','hdfs1',7903,'ndb','mysqlcluster',0,367859),(8,'cloud16.sics.se','hdfs1',0,'mysqlcluster','mysqlcluster',0,367835),(9,'cloud16.sics.se','hdfs1',10932,'mysqld','mysqlcluster',0,367831),(10,'cloud16.sics.se','hdfs1',10857,'mgmserver','mysqlcluster',0,367859),(11,'cloud18.sics.se','hdfs1',19763,'ndb','mysqlcluster',0,367857),(12,'cloud1.sics.se','hdfs1',0,'namenode','namenode',1,1732258);
-/*!40000 ALTER TABLE `Services` ENABLE KEYS */;
-UNLOCK TABLES;
+-- LOCK TABLES `Services` WRITE;
+-- /*!40000 ALTER TABLE `Services` DISABLE KEYS */;
+-- INSERT INTO `Services` VALUES (7,'cloud11.sics.se','hdfs1',7903,'ndb','mysqlcluster',0,367859),(8,'cloud16.sics.se','hdfs1',0,'mysqlcluster','mysqlcluster',0,367835),(9,'cloud16.sics.se','hdfs1',10932,'mysqld','mysqlcluster',0,367831),(10,'cloud16.sics.se','hdfs1',10857,'mgmserver','mysqlcluster',0,367859),(11,'cloud18.sics.se','hdfs1',19763,'ndb','mysqlcluster',0,367857),(12,'cloud1.sics.se','hdfs1',0,'namenode','namenode',1,1732258);
+-- /*!40000 ALTER TABLE `Services` ENABLE KEYS */;
+-- UNLOCK TABLES;
+
 
 --
 -- Table structure for table `USERS`
@@ -201,6 +202,7 @@ CREATE TABLE `USERS` (
 LOCK TABLES `USERS` WRITE;
 /*!40000 ALTER TABLE `USERS` DISABLE KEYS */;
 INSERT INTO `USERS` VALUES ('jdowling@sics.se','33','jim','6A696D','2012-09-04 12:51:52','xx','jdowling');
+INSERT INTO `USERS` VALUES ('kthfsagent@sics.se','00','kthfsagent','6A696D','2012-12-12 12:12:12','xx','kthfsagent');
 /*!40000 ALTER TABLE `USERS` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -226,6 +228,7 @@ CREATE TABLE `USERS_GROUPS` (
 LOCK TABLES `USERS_GROUPS` WRITE;
 /*!40000 ALTER TABLE `USERS_GROUPS` DISABLE KEYS */;
 INSERT INTO `USERS_GROUPS` VALUES ('jdowling@sics.se','ADMIN');
+INSERT INTO `USERS_GROUPS` VALUES ('kthfsagent@sics.se','AGENT');
 /*!40000 ALTER TABLE `USERS_GROUPS` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
