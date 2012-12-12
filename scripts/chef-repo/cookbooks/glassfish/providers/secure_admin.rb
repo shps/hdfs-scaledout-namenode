@@ -24,7 +24,7 @@ notifying_action :enable do
   end
 
   bash "asadmin_enable-secure-admin" do
-    only_if "#{asadmin_command('get secure-admin.enabled')} | grep -x -- 'secure-admin.enabled=false'"
+#    only_if "#{asadmin_command('get secure-admin.enabled')} | grep -x -- 'secure-admin.enabled=false'"
     user node['glassfish']['user']
     group node['glassfish']['group']
     Chef::Log.info "Enable secure admin..."

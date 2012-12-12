@@ -55,7 +55,8 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
     username username if username
     password_file password_file if password_file
     secure secure if secure
-    action ('true' == definition['config']['remote_access'].to_s) ? :enable : :disable
+#    action ('true' == definition['config']['remote_access'].to_s) ? :enable : :disable
+    action :enable
   end
 
 
@@ -317,6 +318,8 @@ remote_file cached_connectorj_filename do
   action :create_if_missing
 end
 
+
+
 bash "unpack_connectorj" do
   code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
@@ -332,13 +335,13 @@ end
 
 bash "secure_admin_glassfish" do
   code <<-EOF
-  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
+#  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
 #  {node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
 #  {node['glassfish']['base_dir']}/glassfish/bin/asadmin start-domain 
 # starting domain asking for password doesn't work - it asks for a master passwd
  #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd start-domain 
 EOF
-  only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
+  # only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
 end
 
 #bash "install_chef_server" do 
