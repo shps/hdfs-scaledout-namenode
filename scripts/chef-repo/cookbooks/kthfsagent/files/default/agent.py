@@ -7,20 +7,21 @@ Created on Aug 3, 2012
 '''
 # First install requests: easy_install requests
 # Also install bottle: easy_install bottle
+# And Cherrypy: easy_install cherrypy
 
 import time, socket
 from time import sleep
 from datetime import datetime
 import multiprocessing, thread
 from threading import Lock
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen
 import subprocess
 import os, sys
 import ConfigParser
 import requests
 import logging
 import json
-from bottle import Bottle, run, get, post, HTTPResponse
+from bottle import Bottle, run, get, post, request, HTTPResponse, server_names, ServerAdapter  
 
 config_mutex = Lock()
 
@@ -55,17 +56,29 @@ cores = multiprocessing.cpu_count()
 try:
     config = ConfigParser.ConfigParser()
     config.read(config_filename)
-    agent_pidfile = config.get('agent','pid-file')    
+    server_url = config.get('server', 'url')
+    server_username = config.get('server', 'username')
+    server_password = config.get('server', 'password')
+    
+    agent_username = config.get('agent', 'username')
+    agent_password = config.get('agent', 'password')          
+    agent_pidfile = config.get('agent','pid-file')
+    use_ssl = config.getboolean('agent', 'use-ssl')
+    cert = None 
+    if (use_ssl == True):
+        cert = config.get('agent', 'certificate-file')
     heartbeat_interval = config.getfloat('agent','heartbeat-interval')
-    watch_interval = config.getfloat('agent','watch-interval')   
-    url = config.get('server', 'url')
+    watch_interval = config.getfloat('agent','watch-interval')
     restport = config.getint('agent', 'restport')
     if (config.has_option("agent", "name")):
         name = config.get("agent", "name")
     else:
-        name = socket.gethostbyaddr(socket.gethostname())[0] 
+        name = socket.gethostbyaddr(socket.gethostname())[0]
     rack = config.get("agent", "rack")
     ip = socket.gethostbyname(name)
+    
+    print server_username, server_password
+    
 except Exception, e:
     logger.error("Exception while reading {0} file: {1}".format(config_filename, e))
     sys.exit(1)
@@ -122,8 +135,9 @@ class Heartbeat():
                     logger.info("Sending Init Heartbeat...")
                 else:
                     logger.info("Sending Heartbeat...")
-                    
-                requests.post(url, data=json.dumps(payload), headers=headers)
+                
+                auth = (server_username, server_password)     
+                requests.post(server_url, data=json.dumps(payload), headers=headers, auth=auth, verify=False)
                 init = True
             except Exception as err:
                 logger.error("Exception! Retrying... : {0}".format(err))
@@ -434,6 +448,36 @@ class CommandHanlder():
         return CommandHanlder().respose(200, "OK")
 
 
+
+class Authentication():
+    def check(self):
+        result = False
+        try:
+            username = request.params['username']  
+            password = request.params['password']  
+            if (username, password) == (agent_username, agent_password):
+                return True
+        except Exception:
+            result = False
+
+        if result == False:
+            logger.info("Authentication failed")
+        return result
+
+
+class SSLCherryPy(ServerAdapter):  
+    def run(self, handler):  
+        from cherrypy import wsgiserver  
+        server = wsgiserver.CherryPyWSGIServer((self.host, self.port), handler)  
+        #cert: Certificate path. If a valid path, SSL will be used. Set to None to disable SSL  
+        server.ssl_certificate = cert  
+        server.ssl_private_key = cert  
+        try:  
+            server.start()  
+        finally:  
+            server.stop() 
+
+
 if __name__ == '__main__':
     
     #write pidfile
@@ -450,17 +494,24 @@ if __name__ == '__main__':
         if not service == 'mysqlcluster': 
             thread.start_new_thread(ExtProcess.watch,(instance, service,))
         else:
-            print "not watching" + service    
+            logger.info("Not watching {0}".format(service))    
 
-#    app = Bottle()
+    server_names['sslcherrypy'] = SSLCherryPy  
+    app = Bottle()
     @get('/ping')
     def ping():
         logger.info('Incoming REST Request:  GET /ping')
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+        
         return "Pong! Kthfs-Agent"
         
     @get('/do/<instance>/<service>/<command>')
     def do(instance, service, command):
         logger.info('Incoming REST Request:  GET /do/{0}/{1}/{2}'.format(instance,service,command))
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+        
         if not command in service_commands[service]:
             return HTTPResponse(status=400, output='Invalid command.')            
         
@@ -477,7 +528,9 @@ if __name__ == '__main__':
     @get('/log/<instance>/<service>/<log_type>/<lines>')
     def log(instance, service, log_type, lines):
         logger.info('Incoming REST Request:  GET /log/{0}/{1}/{2}/{3}'.format(instance,service,log_type,lines))
-
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+        
         if not services.has_section(Config().sectionName(instance, service)):
             return HTTPResponse(status=400, output='Instance/Service not available.')
         elif log_type not in ['stdout', 'stderr']:
@@ -488,7 +541,9 @@ if __name__ == '__main__':
     @get('/config/<instance>/<service>')
     def config(instance, service):
         logger.info('Incoming REST Request:  GET /log/{0}/{1}'.format(instance,service))
-
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+        
         if not services.has_section(Config().sectionName(instance, service)):
             return HTTPResponse(status=400, output='Instance/Service not available.')
             
@@ -497,7 +552,9 @@ if __name__ == '__main__':
     @get('/info/<instance>/<service>')
     def info(instance, service):
         logger.info('Incoming REST Request:  GET /status/{0}/{1}'.format(instance,service))
-
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+        
         if not services.has_section(Config().sectionName(instance, service)):
             return HTTPResponse(status=400, output='Instance/Service not available.')
             
@@ -506,11 +563,13 @@ if __name__ == '__main__':
     @get('/refresh') #request heartbeat
     def refresh():
         logger.info('Incoming REST Request:  GET /refresh')
-            
+        if not Authentication().check():
+            return HTTPResponse(status=400, output="Invalid username/password.")
+             
         return CommandHanlder().refresh();
  
 
     logger.info("RESTful service started.")
-    run(host='0.0.0.0', port=restport)
+    run(host='0.0.0.0', port=restport, server='sslcherrypy')
 
 

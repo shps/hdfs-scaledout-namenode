@@ -10,6 +10,24 @@ include_recipe "python"
 # EOF
 # end
 
+user node[:kthfs][:user] do
+  action :create
+  system true
+  shell "/bin/bash"
+end
+
+inifile_gem = "inifile-2.0.2.gem"
+cookbook_file "#{Chef::Config[:file_cache_path]}/#{inifile_gem}" do
+  source "#{inifile_gem}"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0755
+end
+
+gem_package "inifile" do
+  source "#{Chef::Config[:file_cache_path]}/#{inifile_gem}"
+  action :install
+end
 
 easy_install_package "requests" do
   action :install
@@ -19,15 +37,8 @@ easy_install_package "bottle" do
   action :install
 end
 
-gem_package "inifile" do
-  source "../files/default/inifile-2.0.2.gem"
+easy_install_package "cherrypy" do
   action :install
-end
-
-user node[:kthfs][:user] do
-  action :create
-  system true
-  shell "/bin/bash"
 end
 
 directory node[:kthfs][:base_dir] do
