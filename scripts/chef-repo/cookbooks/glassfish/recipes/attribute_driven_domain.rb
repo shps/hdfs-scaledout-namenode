@@ -285,7 +285,7 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
       end
     end
   end
-
+end
 
 kthfsmgr_url = node['kthfs']['mgr']
 kthfsmgr_filename = File.basename(kthfsmgr_url)
@@ -298,13 +298,13 @@ remote_file cached_kthfsmgr_filename do
 end
 
 bash "unpack_kthfsmgr" do
-    code <<-EOF
+  code <<-EOF
 chown -R #{node['glassfish']['user']} #{cached_kthfsmgr_filename} 
 chgrp -R #{node['glassfish']['group']} #{cached_kthfsmgr_filename} 
 #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd deploy --force=true --keepstate=true --name KTHFSDashboard #{cached_kthfsmgr_filename}
 rm #{cached_kthfsmgr_filename}
 EOF
-    not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-applications --type ejb | grep -w 'KTHFSDashboard'"
+  not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-applications --type ejb | grep -w 'KTHFSDashboard'"
 end
 
 connectorj_url = node['mysql']['connectorj']
@@ -318,7 +318,7 @@ remote_file cached_connectorj_filename do
 end
 
 bash "unpack_connectorj" do
-    code <<-EOF
+  code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
 tar zxf #{cached_connectorj_filename}
 cp mysql-connector-java-5.1.22/mysql-connector-java-5.1.22-bin.jar  #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib/
@@ -331,7 +331,7 @@ EOF
 end
 
 bash "secure_admin_glassfish" do
-    code <<-EOF
+  code <<-EOF
   #{Chef::Log.info "Enabling secure access to GlassFish Domain #{domain_key}"}
   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
@@ -339,7 +339,7 @@ bash "secure_admin_glassfish" do
 # starting domain asking for password doesn't work - it asks for a master passwd
 # #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd start-domain 
 EOF
-    only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
+  only_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
 end
 
 #bash "install_chef_server" do 

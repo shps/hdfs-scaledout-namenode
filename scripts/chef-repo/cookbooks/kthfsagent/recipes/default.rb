@@ -1,14 +1,4 @@
 include_recipe "python"
-# First install requests: easy_install requests
-# Also install bottle: easy_install bottle
-
-# bash "install_python_ruby_libs" do
-#    code <<-EOF
-#  easy_install requests
-#  easy_install bottle
-#  gem install inifile
-# EOF
-# end
 
 user node[:kthfs][:user] do
   action :create
@@ -78,6 +68,7 @@ cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0755
+  notifies :restart, resources(:service => "kthfsagent")
 end
 
 service "kthfsagent" do
@@ -94,7 +85,7 @@ template "#{node[:kthfs][:base_dir]}/config.ini" do
               :name => node['ipaddress'],
               :rack => '/default'
             })
-    notifies :restart, resources(:service => "kthfsagent")
+  notifies :restart, resources(:service => "kthfsagent")
 end
 
 template "/etc/init.d/kthfsagent" do
@@ -102,6 +93,7 @@ template "/etc/init.d/kthfsagent" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0655
+  notifies :restart, resources(:service => "kthfsagent")
 end
 
 ['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services', 'get-pid.sh'].each do |script|
@@ -111,5 +103,6 @@ end
     owner node[:kthfs][:user]
     group node[:kthfs][:user]
     mode 0655
+    notifies :restart, resources(:service => "kthfsagent")
   end
 end 
