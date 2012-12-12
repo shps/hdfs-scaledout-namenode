@@ -332,7 +332,6 @@ end
 
 bash "secure_admin_glassfish" do
   code <<-EOF
-  #{Chef::Log.info "Enabling secure access to GlassFish Domain #{domain_key}"}
   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd stop-domain
   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin start-domain 
