@@ -369,7 +369,7 @@ public class ServiceController {
       return webComm.getStdErr(n);
     }
 
-    public String showConfig() {
+    public String showConfig() throws Exception {
        
       //Todo: does not work with hostname. Only works with IP address.
       Host h = hostEJB.findHostByName(hostname);      

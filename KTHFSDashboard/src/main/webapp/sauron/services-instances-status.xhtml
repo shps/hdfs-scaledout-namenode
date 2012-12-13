@@ -198,14 +198,8 @@
                 <p:tab title="Configuration File" rendered="#{serviceInstanceController.showConfiguration}">
                     <h:form id="configform">
 
-                        <p:commandLink styleClass="AccordionPanelLink" value="Save Configuration" update="config">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
-                            <f:param name="service" value="#{serviceController.service}"/>  
-                            <f:param name="hostname" value="#{serviceController.hostname}"/>
-                        </p:commandLink>
-
                         Configuration:<br/>
-                        <p:inputTextarea id ="config" style="width:100%" rows="25" value="#{serviceController.showConfig()}" autoResize="false"/>
+                        <p:inputTextarea id ="config" readonly="true" style="width:100%" rows="25" value="#{serviceController.showConfig()}" autoResize="false"/>
 
                     </h:form>
 
