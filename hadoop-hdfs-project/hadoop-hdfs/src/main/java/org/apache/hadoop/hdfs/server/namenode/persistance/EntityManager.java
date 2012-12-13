@@ -75,6 +75,10 @@ public class EntityManager {
   public static <T> void add(T entity) throws PersistanceException {
     context().add(entity);
   }
+  
+  public static int max(Class type) throws PersistanceException {
+      return context().max(type);
+  }
 
   public static void writeLock() {
     EntityContext.setLockMode(EntityContext.LockMode.WRITE_LOCK);

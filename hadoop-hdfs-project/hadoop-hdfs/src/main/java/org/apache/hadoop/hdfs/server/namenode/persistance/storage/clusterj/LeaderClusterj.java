@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hdfs.server.namenode.Leader;
-
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeaderDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
@@ -72,7 +71,7 @@ public class LeaderClusterj extends LeaderDataAccess
     @Override
     public Leader findById(long id) throws StorageException
     {
-         try
+        try
         {
             Session session = connector.obtainSession();
             LeaderDTO lTable = session.find(LeaderDTO.class, id);
@@ -91,10 +90,23 @@ public class LeaderClusterj extends LeaderDataAccess
     @Override
     public Collection<Leader> findAllByCounter(long counter) throws StorageException
     {
-        // FIXME
-        // start fromthere
-        
-        throw new UnsupportedOperationException("Not supported yet.");
+        try
+        {
+            Session session = connector.obtainSession();
+            QueryBuilder qb = session.getQueryBuilder();
+            QueryDomainType dobj = qb.createQueryDefinition(LeaderDTO.class);
+            PredicateOperand propertyPredicate = dobj.get("counter");
+            String param = "counter";
+            PredicateOperand propertyLimit = dobj.param(param);
+            Predicate greaterThan = propertyPredicate.greaterThan(propertyLimit);
+            dobj.where(greaterThan);
+            Query query = session.createQuery(dobj);
+            query.setParameter(param, new Long(counter));
+            return createList(query.getResultList());
+        } catch (Exception e)
+        {
+            throw new StorageException(e);
+        }
     }
 
     @Override
@@ -147,70 +159,6 @@ public class LeaderClusterj extends LeaderDataAccess
         }
     }
 
-///
-    @Override
-    public int countAll() throws StorageException
-    {
-        return findAll().size();
-    }
-
-
-    @Override
-    public Lease findByHolderId(int holderId) throws StorageException
-    {
-        try
-        {
-            Session session = connector.obtainSession();
-            QueryBuilder qb = session.getQueryBuilder();
-            QueryDomainType<LeaseDTO> dobj = qb.createQueryDefinition(LeaseDTO.class);
-
-            dobj.where(dobj.get("holderId").equal(dobj.param("param")));
-
-            Query<LeaseDTO> query = session.createQuery(dobj);
-            query.setParameter("param", holderId); //the WHERE clause of SQL
-            List<LeaseDTO> leaseTables = query.getResultList();
-
-            if (leaseTables.size() > 1)
-            {
-                LeaseManager.LOG.error("Error in selectLeaseTableInternal: Multiple rows with same holderID");
-                return null;
-            } else if (leaseTables.size() == 1)
-            {
-                Lease lease = createLease(leaseTables.get(0));
-                return lease;
-            } else
-            {
-                LeaseManager.LOG.info("No rows found for holderID:" + holderId + " in Lease table");
-                return null;
-            }
-        } catch (Exception e)
-        {
-            throw new StorageException(e);
-        }
-    }
-
-    @Override
-    public Collection<Lease> findByTimeLimit(long timeLimit) throws StorageException
-    {
-        try
-        {
-            Session session = connector.obtainSession();
-            QueryBuilder qb = session.getQueryBuilder();
-            QueryDomainType dobj = qb.createQueryDefinition(LeaseDTO.class);
-            PredicateOperand propertyPredicate = dobj.get("lastUpdate");
-            String param = "timelimit";
-            PredicateOperand propertyLimit = dobj.param(param);
-            Predicate lessThan = propertyPredicate.lessThan(propertyLimit);
-            dobj.where(lessThan);
-            Query query = session.createQuery(dobj);
-            query.setParameter(param, new Long(timeLimit));
-            return createList(query.getResultList());
-        } catch (Exception e)
-        {
-            throw new StorageException(e);
-        }
-    }
-
     private SortedSet<Leader> createList(List<LeaderDTO> list)
     {
         SortedSet<Leader> finalSet = new TreeSet<Leader>();
@@ -238,7 +186,7 @@ public class LeaderClusterj extends LeaderDataAccess
         lTable.setCounter(leader.getCounter());
         lTable.setHostname(leader.getHostName());
         lTable.setTimestamp(leader.getTimeStamp());
-        lTable.setAvgRequestProcessingLatency(leader.getAvg_request_processing_latency());
-        lTable.setPartitionVal(leader.getPartition_val());
+        lTable.setAvgRequestProcessingLatency(leader.getAvgRequestProcessingLatency());
+        lTable.setPartitionVal(leader.getPartitionVal());
     }
 }
