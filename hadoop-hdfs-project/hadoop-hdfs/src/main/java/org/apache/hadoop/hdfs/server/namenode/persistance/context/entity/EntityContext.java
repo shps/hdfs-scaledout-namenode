@@ -63,6 +63,7 @@ public abstract class EntityContext<T> {
 
   public abstract void update(T entity) throws PersistanceException;
 
+
   public void log(String opName, CacheHitState state, String... params) {
     StringBuilder message = new StringBuilder();
     if (state == CacheHitState.HIT) {

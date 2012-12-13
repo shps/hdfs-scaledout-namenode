@@ -148,7 +148,7 @@ public class TransactionContext {
       throw new RuntimeException(UNKNOWN_TYPE + counter.getType());
     }
   }
-
+  
   private void aboutToPerform() throws StorageException {
     if (activeTxExpected && !connector.isTransactionActive()) {
       throw new StorageException("Active transaction is expected while storage doesn't have it.");

@@ -68,7 +68,7 @@ public class StorageFactory {
       replicaDataAccess = new ReplicaDerby();
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionDerby();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockDerby();
-      leaderDataAccess = new LeaderDataAccessDerby();
+      leaderDataAccess = new LeaderDerby();
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
       defaultStorage.setConfiguration(conf);
@@ -83,7 +83,7 @@ public class StorageFactory {
       replicaDataAccess = new ReplicaClusterj();
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionClusterj();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockClusterj();
-      leaderDataAccess = new LeaderDataAccessClusterj();
+      leaderDataAccess = new LeaderClusterj();
     }
 
     initDataAccessMap();
