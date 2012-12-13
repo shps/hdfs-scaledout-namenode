@@ -20,10 +20,12 @@ gem_package "inifile" do
 end
 
 easy_install_package "requests" do
+  options "-U"
   action :install
 end
 
 easy_install_package "bottle" do
+  options "-U"
   action :install
 end
 

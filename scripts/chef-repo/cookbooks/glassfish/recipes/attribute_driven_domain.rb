@@ -319,7 +319,6 @@ remote_file cached_connectorj_filename do
 end
 
 
-
 bash "unpack_connectorj" do
   code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
@@ -332,6 +331,9 @@ chgrp -R #{node['glassfish']['group']} #{node['glassfish']['base_dir']}/glassfis
 EOF
   #not_if { ::File.exists?( #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib/mysql-connector-java-5.1.22-bin.jar)}
 end
+
+#asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
+
 
 #bash "install_chef_server" do 
 # code <<-EOF

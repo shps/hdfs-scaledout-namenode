@@ -17,4 +17,3 @@ SET PASSWORD FOR 'root'@'localhost' = PASSWORD('<%= node['mysql']['server_root_p
 
 CREATE DATABASE IF NOT EXISTS kthfs;
 GRANT ALL PRIVILEGES on kthfs.* TO 'kthfs'@'%' IDENTIFIED BY '<%= node['mysql']['kthfs_password'] %>';
-
