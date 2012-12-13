@@ -165,7 +165,8 @@ public class ServiceController {
     }
     
     public String gotoServiceInstance() {
-        return "services-instances-status?faces-redirect=true&hostname=" + hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
+        return "services-instances-status?faces-redirect=true&hostname=" + 
+                hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
     }
 
     public String gotoServiceStatus() {
@@ -177,11 +178,24 @@ public class ServiceController {
     }
 
     public String gotoServiceInstanceStatus() {
-        return "services-instances-status?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname + "&service=" + service;
+        return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
+                kthfsInstance + "&hostname=" + hostname + "&service=" + service;
     }
+    
+    public String gotoParentServiceInstanceStatus() {
+       String parentHostname = "";
+       if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
+            //There is one mysqlcluster per kthfs instance
+            Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
+            parentHostname = s.getHostname();
+       }
+       return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
+               kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup;
+    }    
 
     public String gotoServiceInstanceSubservices() {
-        String url = "services-instances-subservices?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname;
+        String url = "services-instances-subservices?faces-redirect=true&kthfsinstance=" + 
+                kthfsInstance + "&hostname=" + hostname;
         if (service != null) {
             url += "&service=" + service;
         }
@@ -192,7 +206,8 @@ public class ServiceController {
     }
 
     public String gotoServiceInstanceSubservicesInstance() {
-        return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
+        return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance=" 
+                + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
     }
 
     public String getServiceInstanceStatusUrl() {

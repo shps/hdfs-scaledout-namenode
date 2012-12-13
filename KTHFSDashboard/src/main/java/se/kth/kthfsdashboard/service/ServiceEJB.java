@@ -56,6 +56,13 @@ public class ServiceEJB {
         return query.getResultList();
     }
 
+    
+    public List<Service> findServiceByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
+
+        TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-ServiceGroup", Service.class).setParameter("serviceGroup", serviceGroup).setParameter("instance", kthfsInstance);
+        return query.getResultList();
+    }
+    
     public List<Service> findByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
 
         TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup);
