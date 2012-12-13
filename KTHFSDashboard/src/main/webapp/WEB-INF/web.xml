@@ -91,18 +91,6 @@
             <transport-guarantee>CONFIDENTIAL</transport-guarantee>
         </user-data-constraint>-->
     </security-constraint>
-    
-<!--    <security-constraint>
-        <web-resource-collection>
-            <web-resource-name>REST agents sending status data</web-resource-name>
-            <url-pattern>/rest/agent/*</url-pattern>
-        </web-resource-collection>
-        <auth-constraint>
-            <role-name>ADMIN</role-name>
-            <role-name>AGENT</role-name>
-        </auth-constraint>
-    </security-constraint>-->
-  
     <security-constraint>
         <web-resource-collection>
             <web-resource-name>Secured Content</web-resource-name>
@@ -112,7 +100,41 @@
             <role-name>ADMIN</role-name>
         </auth-constraint>
     </security-constraint>
+
    
+      
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Secured Content for REST agents sending alerts data</web-resource-name>
+            <url-pattern>/rest/collectd/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>AGENT</role-name>
+            <role-name>ADMIN</role-name>            
+        </auth-constraint>
+        <user-data-constraint>
+            <description>SSL Support</description>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>        
+    </security-constraint>                  
+            
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Secured Content for REST agents sending status data</web-resource-name>
+            <url-pattern>/rest/agent/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>AGENT</role-name>
+            <role-name>ADMIN</role-name>            
+        </auth-constraint>
+        <user-data-constraint>
+            <description>SSL Support</description>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint> 
+    </security-constraint>
+                                  
+                     
     <login-config>
         <!--<auth-method>FORM</auth-method>-->
         <auth-method>BASIC</auth-method>

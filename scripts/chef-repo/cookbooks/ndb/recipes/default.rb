@@ -1,4 +1,10 @@
+include_recipe "kthfsagent"
 
+bash "install_ruby_libs" do
+    code <<-EOF
+  gem install inifile
+EOF
+end
 
 user node[:ndb][:user] do
   action :create
@@ -37,7 +43,7 @@ template "#{node[:ndb][:base_dir]}/config.ini" do
   variables({:cores => node[:cpu][:total]})
 #    notifies :restart, resources(:service => "ndbd")
 end
-
+# 
 package_url = "#{node[:ndb][:package_url]}/#{node[:ndb][:package_src]}"
 Chef::Log.info "Downloading mysql cluster binaries from #{package_url}"
 base_package_filename =  File.basename(node[:ndb][:package_url])
@@ -61,21 +67,6 @@ cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
 EOF
   not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
 end
-
-#service "ndb" do
-#  provider Chef::Provider::Service::Upstart
-#  subscribes :restart, resources(:unpack_mysql_cluster => "ndb")
-#  supports :restart => true, :start => true, :stop => true
-#end
-
-#template "ndbd.upstart.conf" do
-#  path "/etc/init/ndb.conf"
-#  source "ndb.upstart.conf.erb"
-#  owner node[:ndb][:user]
-#  group node[:ndb][:user]
-#  mode "0644"
-#  notifies :restart, resources(:service => "redis")
-#end
 
 #service "ndb" do
 #  action [:enable, :start]

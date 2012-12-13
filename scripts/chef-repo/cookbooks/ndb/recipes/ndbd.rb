@@ -16,8 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 include_recipe "ndb"
+require 'fileutils'
+require 'inifile'
+
 
 Chef::Log.info "Hostname is: #{node['hostname']}"
 Chef::Log.info "IP address is: #{node['ipaddress']}"
@@ -31,7 +33,7 @@ end
 
 
 
-@found = false
+found_id = -1
 id = 0
 # if no default IP is set, then look around for the IP 
 if node.attribute?('ipaddress') != true
@@ -43,9 +45,11 @@ if node.attribute?('ipaddress') != true
     Chef::Log.info "Testing IP address: #{ndbd}"
     if ipaddress_eth1.eql? ndbd
       @found = true
+      found_id = id
     end
     if ipaddress_eth0.eql? ndbd
       @found = true
+      found_id = id
     end
     id += 1
   end 
@@ -56,6 +60,7 @@ else
     if node['ipaddress'].eql? ndbd
       Chef::Log.info "Found matching IP address in the list of data nodes: #{ndbd} . ID= #{id}"
       @found = true
+      found_id = id
     end
     id += 1
   end 
@@ -85,7 +90,7 @@ for script in node[:ndb][:scripts]
                 :ndb_dir => node[:ndb][:base_dir],
                 :mysql_dir => node[:mysql][:base_dir],
                 :connect_string => node[:ndb][:connect_string],
-                :node_id => id
+                :node_id => found_id
               })
   end
 end 
@@ -107,4 +112,22 @@ end
 # create symbolic link from /var/lib/mysql-cluster/ndb-* to 'ndb'. Same for /usr/local/mysql-* to mysql
 # Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs
 
-# install services in /etc/init.d/
+ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
+
+if ini_file.has_section?("hdfs1-ndb")
+  Chef::Log.warn "A data node (ndbd) already exists in the ini file"
+end
+  ini_file["hdfs1-ndb"] = {
+    'status' => 'Stopped',
+    'instance' => 'hdfs1',
+    'service-group'  => 'mysqlcluster',
+    'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
+    'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
+    'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.err.log",
+    'start-time'  => ''
+  } 
+  ini_file.save
+

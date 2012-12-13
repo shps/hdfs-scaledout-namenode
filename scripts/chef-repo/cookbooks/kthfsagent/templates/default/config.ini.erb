@@ -1,0 +1,15 @@
+[server]
+url: <%= node[:kthfs][:rest_url] %>
+username: <%= node[:kthfs][:rest_user] %>
+password: <%= node[:kthfs][:rest_password] %>
+
+[agent]
+restport: <%= node[:kthfs][:port] %>
+name: <%= @name %> 
+rack: <%= @rack %>
+heartbeat-interval: <%= node[:kthfs][:heartbeat_interval] %>
+watch-interval: <%= node[:kthfs][:watch_interval] %>
+pid-file: <%= node[:kthfs][:pid_file] %>
+username: <%= node[:kthfs][:agent_user] = "kthfsagent@sics.se" %>
+password: <%= node[:kthfs][:agent_password] = "kthfsagent" %>
+

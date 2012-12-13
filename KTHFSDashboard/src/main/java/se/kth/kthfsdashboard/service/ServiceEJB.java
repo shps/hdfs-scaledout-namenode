@@ -26,7 +26,7 @@ public class ServiceEJB {
         return query.getResultList();
     }
 
-    public List<Service> findByInstanceServiceStatus(String kthfsInstance, String service, Service.serviceStatus status) {
+    public List<Service> findByInstanceServiceStatus(String kthfsInstance, String service, Service.Status status) {
 
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", kthfsInstance).setParameter("service", service).setParameter("status", status);
         return query.getResultList();
@@ -95,9 +95,9 @@ public class ServiceEJB {
         TypedQuery<Service> query;
 
         if (subService) {
-            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Started);
+            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
         } else {
-            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Started);
+            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
         }
         return query.getResultList().size();
     }
@@ -106,9 +106,9 @@ public class ServiceEJB {
 
         TypedQuery<Service> query;
         if (subService) {
-            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Stopped);
+            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
         } else {
-            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Stopped);
+            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
         }
         return query.getResultList().size();
     }
@@ -116,9 +116,9 @@ public class ServiceEJB {
     public int getFailedServicesCount(String instance, String service, boolean subService) {
         TypedQuery<Service> query;
         if (subService) {
-            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Failed);
+            query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
         } else {
-            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.serviceStatus.Failed);
+            query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
         }
         return query.getResultList().size();
     }

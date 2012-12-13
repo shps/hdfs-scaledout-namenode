@@ -14,9 +14,6 @@
 ### END INIT INFO
 
 # Variables
-#prog="#{node[:mysql][:base_dir]}/bin/ndbd"
-#START_PROG="$prog -c #{node[:ndb][:connect_string]} --ndb-nodeid=#{node[:ndb][:id]} > #{node[:ndb][:logs_dir]}/ndb_#{node[:ndb][:id]}.log 2>&1 > /dev/null &"
-
 INIT_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-init.sh" %>
 START_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-start.sh" %>
 STOP_PROG=<%= "#{node[:ndb][:base_dir]}/scripts/ndbd-stop.sh" %>
@@ -41,13 +38,13 @@ start() {
 }
 
 stop() {
-  echo "Executing as 'root': $STOP_PROG"
+  echo "Executing as '<%= node[:ndb][:user] %>': $STOP_PROG"
   $EXEC_WITH_USER "$STOP_PROG"
   return $?
 }
 
 restart() {
-  echo "Executing as 'root': $RESTART_PROG"
+  echo "Executing as '<%= node[:ndb][:user] %>': $RESTART_PROG"
   $EXEC_WITH_USER "$RESTART_PROG"
   return $?
 }

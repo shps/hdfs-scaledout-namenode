@@ -2,7 +2,7 @@ package se.kth.kthfsdashboard.rest.resources;
 
 import java.util.Date;
 import java.util.List;
-import javax.annotation.security.PermitAll;
+import javax.annotation.security.RolesAllowed;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.servlet.http.HttpServletRequest;
@@ -13,6 +13,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
+import se.kth.kthfsdashboard.alert.Alert;
+import se.kth.kthfsdashboard.alert.AlertEJB;
 import se.kth.kthfsdashboard.host.Host;
 import se.kth.kthfsdashboard.host.HostEJB;
 import se.kth.kthfsdashboard.service.Service;
@@ -25,16 +27,25 @@ import se.kth.kthfsdashboard.service.ServiceEJB;
  */
 @Path("/agent")
 @Stateless
+@RolesAllowed({"AGENT", "ADMIN"})
 public class AgentResource {
 
    @EJB
    private HostEJB hostEJB;
    @EJB
    private ServiceEJB serviceEJB;
-
-   @Path("load/{name}")
+   @EJB
+   private AlertEJB alertEJB;
+   
+   @GET   
+   @Path("ping")
+   @Produces(MediaType.TEXT_PLAIN)
+   public String getLog() {
+      return "KTHFSDashboard: Pong";
+   }
+   
    @GET
-   @PermitAll
+   @Path("load/{name}")   
    @Produces(MediaType.APPLICATION_JSON)
    public Response getLoadAvg(@PathParam("name") String name) {
       Host host = hostEJB.findHostByName(name);
@@ -54,9 +65,8 @@ public class AgentResource {
       return Response.ok(json).build();
    }
 
-   @Path("loads")
    @GET
-   @PermitAll
+   @Path("loads")
    @Produces(MediaType.APPLICATION_JSON)
    public Response getLoads() {
       JSONArray jsonArray = new JSONArray();
@@ -81,15 +91,13 @@ public class AgentResource {
       return Response.ok(jsonArray).build();
    }
 
-   @Path("/keep-alive")
    @POST
+   @Path("/keep-alive")
    @Consumes(MediaType.APPLICATION_JSON)
    public Response keepAlive(@Context HttpServletRequest req, String jsonStrig) {
       try {
          JSONObject json = new JSONObject(jsonStrig);
          long agentTime = json.getLong("agent-time");
-
-//            System.err.println(json);
 
          Host host = new Host();
          host.setLastHeartbeat((new Date()).getTime());
@@ -127,16 +135,54 @@ public class AgentResource {
             } else if (s.has("start-time")) {
                service.setUptime(agentTime - s.getLong("start-time"));
             }
-            service.setStatus(Service.serviceStatus.valueOf(s.getString("status")));
+            service.setStatus(Service.Status.valueOf(s.getString("status")));
             serviceEJB.storeService(service);
          }
-
-//            System.err.println("Agent Keep-Alive");
-
       } catch (Exception ex) {
          System.err.println("Exception: " + ex);
          return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
       }
       return Response.ok("OK").build();
+   }
+
+   @POST
+   @Path("/alert")
+   @Consumes(MediaType.APPLICATION_JSON)
+   public Response alert(@Context HttpServletRequest req, String jsonStrig) {
+
+//       TODO: Alerts are stored in the database. Later, we should define reactions (Email, SMS, ...).
+      try {
+         JSONObject json = new JSONObject(jsonStrig);
+
+         Alert alert = new Alert();
+         alert.setAlertTime(new Date());
+
+         alert.setAgentTime(json.getLong("Time"));
+         alert.setMessage(json.getString("Message"));
+         alert.setHostname(json.getString("Host"));
+         alert.setSeverity(Alert.Severity.valueOf(json.getString("Severity")));
+
+         alert.setPlugin(json.getString("Plugin"));
+         if (json.has("PluginInstance")) {
+            alert.setPluginInstance(json.getString("PluginInstance"));
+         }
+
+         alert.setType(json.getString("Type"));
+         alert.setTypeInstance(json.getString("TypeInstance"));
+
+         alert.setDataSource(json.getString("DataSource"));
+         alert.setCurrentValue(json.getString("CurrentValue"));
+         alert.setWarningMin(json.getString("WarningMin"));
+         alert.setWarningMax(json.getString("WarningMax"));
+         alert.setFailureMin(json.getString("FailureMin"));
+         alert.setFailureMax(json.getString("FailureMax"));
+
+         alertEJB.persistAlert(alert);
+
+      } catch (Exception ex) {
+         System.err.println("Exception: " + ex);
+         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+      }
+      return Response.ok().build();
    }
 }
