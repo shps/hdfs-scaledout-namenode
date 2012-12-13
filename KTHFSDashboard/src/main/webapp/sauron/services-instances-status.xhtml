@@ -32,6 +32,7 @@
                         <p:column>
                             <p:commandLink action="services" ajax="false">  
                                 <h:outputText value="Services" />
+                                <f:param name="service" value="#{serviceController.service}"/>  
                             </p:commandLink> 
                             <h:outputText value=" &raquo; "/>
                             <p:commandLink action="#{serviceController.gotoServiceStatus()}" ajax="false">  
