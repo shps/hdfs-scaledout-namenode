@@ -27,9 +27,7 @@ import se.kth.kthfsdashboard.util.WebCommunication;
  */
 @ManagedBean
 @RequestScoped
-//@ViewScoped
 public class ServiceController {
-
     @EJB
     private HostEJB hostEJB;
     @EJB
@@ -159,17 +157,16 @@ public class ServiceController {
 //        FacesContext context = FacesContext.getCurrentInstance();
 //        String kthfsInstance = context.getApplication().evaluateExpressionGet(context, "#{kthfsInstance.name}", String.class);
 
-
         return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
     }
 
     public String doGotoService(String kthfsInstance) {
-
         return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
     }
-
+    
     public String gotoServiceInstance() {
-        return "services-instances-status?faces-redirect=true&hostname=" + hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
+        return "services-instances-status?faces-redirect=true&hostname=" + 
+                hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
     }
 
     public String gotoServiceStatus() {
@@ -181,11 +178,24 @@ public class ServiceController {
     }
 
     public String gotoServiceInstanceStatus() {
-        return "services-instances-status?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname + "&service=" + service;
+        return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
+                kthfsInstance + "&hostname=" + hostname + "&service=" + service;
     }
+    
+    public String gotoParentServiceInstanceStatus() {
+       String parentHostname = "";
+       if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
+            //There is one mysqlcluster per kthfs instance
+            Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
+            parentHostname = s.getHostname();
+       }
+       return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
+               kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup;
+    }    
 
     public String gotoServiceInstanceSubservices() {
-        String url = "services-instances-subservices?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname;
+        String url = "services-instances-subservices?faces-redirect=true&kthfsinstance=" + 
+                kthfsInstance + "&hostname=" + hostname;
         if (service != null) {
             url += "&service=" + service;
         }
@@ -196,7 +206,8 @@ public class ServiceController {
     }
 
     public String gotoServiceInstanceSubservicesInstance() {
-        return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance=" + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
+        return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance=" 
+                + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
     }
 
     public String getServiceInstanceStatusUrl() {
@@ -212,7 +223,6 @@ public class ServiceController {
     }
 
     public String gotoServiceInstances() {
-
         String url = "services-instances?faces-redirect=true";
         if (hostname != null) {
             url += "&hostname=" + hostname;
@@ -246,20 +256,14 @@ public class ServiceController {
     }
 
     public List<ServiceRoleInfo> getServiceRoles() {
-
         List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
         String instance = "hdfs1";
         int started, stopped, failed, good, bad;
         if (kthfsInstance.equalsIgnoreCase(instance)) {
-
             List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
             roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
-//            roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
-//            roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
-//            roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
             roles.add(new ServiceRoleInfo("NameNode", "namenode"));
             roles.add(new ServiceRoleInfo("DataNode", "datanode"));
-
             for (ServiceRoleInfo role : roles) {
                 started = getStartedServiceCount(instance, role.getShortName(), false);
                 stopped = getStoppedServiceCount(instance, role.getShortName(), false);
@@ -271,24 +275,19 @@ public class ServiceController {
                 role.setHealth(String.format("%d Good, %d Bad", good, bad));
                 serviceRoles.add(role);
             }
-
         }
-
         return serviceRoles;
     }
 
     public List<ServiceRoleInfo> getMysqlClusterSuberviceRoles() {
-
         List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
         String instance = "hdfs1";
         int started, stopped, failed, good, bad;
         if (kthfsInstance.equalsIgnoreCase(instance)) {
-
             List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
             roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
             roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
             roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
-
             for (ServiceRoleInfo role : roles) {
                 started = getStartedServiceCount(instance, role.getShortName(), true);
                 stopped = getStoppedServiceCount(instance, role.getShortName(), true);
@@ -300,24 +299,10 @@ public class ServiceController {
                 role.setHealth(String.format("%d Good, %d Bad", good, bad));
                 serviceRoles.add(role);
             }
-
         }
-
         return serviceRoles;
     }
-    public boolean show;
 
-    public boolean getShow() {
-        return true;
-    }
-
-    public void doShow() {
-//        this.show = false;
-    }
-
-//    public int getServiceCount(String role) {
-//        return serviceEJB.findRoleCount(role);
-//    }
     public int getStartedServiceCount(String kthfsInstance, String service, boolean subService) {
         return serviceEJB.getStartedServicesCount(kthfsInstance, service, subService);
     }
@@ -352,32 +337,19 @@ public class ServiceController {
     }
 
     public String showStdoutLog(int n) {
-
-      //Todo: does not work with hostname. Only works with IP address.
-      Host h = hostEJB.findHostByName(hostname);      
-      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
-      
+      WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getStdOut(n);
     }
 
     public String showStderrLog(int n) {
-       
-      //Todo: does not work with hostname. Only works with IP address.
-      Host h = hostEJB.findHostByName(hostname);      
-      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
-      
+      WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getStdErr(n);
     }
 
-    public String showConfig() {
-       
-      //Todo: does not work with hostname. Only works with IP address.
-      Host h = hostEJB.findHostByName(hostname);      
-      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
-      
+    public String showConfig() throws Exception {
+      WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getConfig();
     }
-    
     
     public String getNotAvailable(){
         return NOT_AVAILABLE;

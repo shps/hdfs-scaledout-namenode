@@ -8,7 +8,6 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.ejb.EJB;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -17,7 +16,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import se.kth.kthfsdashboard.host.HostEJB;
 
 /**
  *
@@ -30,12 +28,11 @@ public class WebCommunication {
       STDOUT, STDERR, DO
    }
    private static String NOT_AVAILABLE = "Not available.";
-   @EJB
-   private HostEJB hostEJB;
    private String hostname;
    private String kthfsInstance;
    private String service;
-   private String baseUrl;
+   
+   private static final Logger logger = Logger.getLogger(WebCommunication.class.getName());
 
    public WebCommunication(String hostname, String kthfsInstance, String service) {
       this.hostname = hostname;
@@ -43,55 +40,52 @@ public class WebCommunication {
       this.service = service;
    }
 
-   public String getStdOut(int n) {
-      String url = getBaseUrl(hostname) + "/log/" + kthfsInstance + "/" + service + "/stdout/" + n;
-      return getLog(url);
+   public String getStdOut(int lines) {
+      return getLog("stdout", lines);
    }
 
-   public String getStdErr(int n) {
-      String url = getBaseUrl(hostname) + "/log/" + kthfsInstance + "/" + service + "/stderr/" + n;
-      return getLog(url);
+   public String getStdErr(int lines) {
+      return getLog("stderr", lines);
    }
 
-   private String getLog(String url) {
-
+   private String getLog(String logType, int lines) {
+      
       String log = NOT_AVAILABLE;
+      String url = baseUrl(hostname) + "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + lines;
       try {
          ClientResponse response = getWebResource(url);
          if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
             log = response.getEntity(String.class);
+            log = log.replaceAll("\n", "<br>");
          }
       } catch (Exception ex) {
-         Logger.getLogger(WebCommunication.class.getName()).log(Level.SEVERE, null, ex);
+         logger.log(Level.SEVERE, null, ex);
       }
-      log = log.replaceAll("\n", "<br>");
       return log;
    }
 
    public String getConfig() {
 
       String conf = NOT_AVAILABLE;
-      String url = baseUrl + "/config/" + kthfsInstance + "/" + service;
+      String url = baseUrl(hostname) + "/config/" + kthfsInstance + "/" + service;
       try {
          ClientResponse response = getWebResource(url);
          if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
             conf = response.getEntity(String.class);
          }
       } catch (Exception e) {
-         Logger.getLogger(WebCommunication.class.getName()).log(Level.SEVERE, null, e);
+         logger.log(Level.SEVERE, null, e);
       }
       return conf;
    }
 
    public ClientResponse doCommand(String command) throws Exception {
 
-      String url = getBaseUrl(hostname) + "/do/" + kthfsInstance + "/" + service + "/" + command;
-//      String url = getBaseUrl(hostname) + "/do/hdfs1/namenode/start";
-
+      String url = baseUrl(hostname) + "/do/" + kthfsInstance + "/" + service + "/" + command;
       return getWebResource(url);
    }
 
-   private String getBaseUrl(String hostname) {
+   private static String baseUrl(String hostname) {
 
       return "https://" + hostname + ":8090";
    }

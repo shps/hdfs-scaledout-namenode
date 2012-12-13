@@ -42,11 +42,11 @@
                                 <f:param name="service" value="#{serviceController.serviceGroup}"/>
                             </p:commandLink> 
                             <h:outputText value=" &raquo; "/>
-                            <p:commandLink action="#{serviceController.gotoServiceInstanceStatus()}" ajax="false">  
+                            <p:commandLink action="#{serviceController.gotoParentServiceInstanceStatus()}" ajax="false">  
                                 <h:outputText value="#{serviceController.serviceGroup}"/>
                                 <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
                                 <f:param name="hostname" value="#{serviceController.hostname}"/>
-                                <f:param name="service" value="#{serviceController.serviceGroup}"/>
+                                <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>
                             </p:commandLink> 
                             <h:outputText value=" &raquo; "/>
 
