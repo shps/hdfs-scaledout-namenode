@@ -21,7 +21,7 @@ import se.kth.kthfsdashboard.util.Formatter;
 })
 public class Host implements Serializable {
 
-    public static final int HOST_TIMEOUT = 15;
+    public static final int HOST_TIMEOUT = 20;
 
     public enum Health {
 
