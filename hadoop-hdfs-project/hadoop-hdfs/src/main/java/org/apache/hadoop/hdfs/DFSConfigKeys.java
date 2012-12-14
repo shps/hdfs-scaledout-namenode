@@ -303,10 +303,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_MYSL_SERVERS_KEY = "dfs.mysql.servers";
 
   /*for client failover api*/
-  public static final String  DFS_NAMENODES_RPC_ADDRESS_KEY = "dfs.namenodes.rpc.address";  // format {ip:port, ip:port, ip:port} comma separated
-  public static final String  DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
-  public static final String DFS_LEADER_CHECK_INTERVAL_KEY = "dfs.leader.check.interval";
-  public static final int DFS_LEADER_CHECK_INTERVAL_DEFAULT = 5*1000; // 5 seconds
+  public static final String    DFS_NAMENODES_RPC_ADDRESS_KEY = "dfs.namenodes.rpc.address";  // format {ip:port, ip:port, ip:port} comma separated
+  public static final String    DFS_NAMENODE_SELECTOR_POLICY_KEY = "dfs.namenode.selector-policy";
+  public static final String    DFS_LEADER_CHECK_INTERVAL_KEY = "dfs.leader.check.interval";
+  public static final int       DFS_LEADER_CHECK_INTERVAL_DEFAULT = 5*1000; // 5 seconds
+  public static final String    DFS_LEADER_MISSED_HB_THRESHOLD = "dfs.leader.missed.hb";
+  public static final int       DFS_LEADER_MISSED_HB_THRESHOLD_DEFAULT = 1;
 
   /* for memcache servers */
   public static final String  DFS_MEMCACHE_SERVERS_KEY = "dfs.memcache.server.address";  // format {ip:port, ip:port, ip:port} comma separated

@@ -148,8 +148,9 @@ public class LeaderContext extends EntityContext<Leader> {
                 return leaders;
 
             case AllByIDLT:
+                long id = (Long) params[0];
                 aboutToAccessStorage();
-                leaders = dataAccess.findAllByCounterGT(counter);
+                leaders = dataAccess.findAllByIDLT(id);
 
                 // put all read leaders in the cache
                 if (leaders != null) {

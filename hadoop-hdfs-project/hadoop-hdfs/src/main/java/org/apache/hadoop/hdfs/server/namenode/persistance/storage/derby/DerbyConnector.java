@@ -137,6 +137,7 @@ public enum DerbyConnector implements StorageConnector<Connection> {
       s.execute(String.format("delete from %s", ExcessReplicaDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", ReplicaUnderConstruntionDataAccess.TABLE_NAME));
       s.execute(String.format("delete from %s", UnderReplicatedBlockDataAccess.TABLE_NAME));
+      s.execute(String.format("delete from %s", LeaderDataAccess.TABLE_NAME));
 
       //commit changes
       conn.commit();
@@ -429,6 +430,21 @@ public enum DerbyConnector implements StorageConnector<Connection> {
             + "PRIMARY KEY (%s))", UnderReplicatedBlockDataAccess.TABLE_NAME,
             UnderReplicatedBlockDataAccess.BLOCK_ID, UnderReplicatedBlockDataAccess.LEVEL,
             UnderReplicatedBlockDataAccess.BLOCK_ID));
+    log.info(String.format("Table %s is created.", UnderReplicatedBlockDataAccess.TABLE_NAME));
+    
+    
+    s.execute(String.format("CREATE TABLE %s ("
+            + "%s BIGINT NOT NULL,"
+            + "%s BIGINT NOT NULL,"
+            + "%s BIGINT NOT NULL,"
+            + "%s varchar(50) NOT NULL,"
+            + "%s INTEGER NOT NULL,"
+            + "%s INTEGER NOT NULL DEFAULT 0"
+            + "PRIMARY KEY (%s,%S))", LeaderDataAccess.TABLE_NAME,
+            LeaderDataAccess.ID, LeaderDataAccess.COUNTER, LeaderDataAccess.TIMESTAMP,
+            LeaderDataAccess.HOSTNAME, LeaderDataAccess.AVG_REQUEST_PROCESSING_LATENCY,
+            LeaderDataAccess.PARTITION_VAL, LeaderDataAccess.ID, LeaderDataAccess.PARTITION_VAL));
+    
     log.info(String.format("Table %s is created.", UnderReplicatedBlockDataAccess.TABLE_NAME));
 
   }
