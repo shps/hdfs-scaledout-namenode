@@ -24,7 +24,7 @@ public class Leader implements Comparable<Leader>
 
     public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<Leader>
     {
-        ById, ByCounter, All;
+        ById, AllByCounterGTN, AllByIDLT, All;
 
         @Override
         public Class getType()

@@ -23,7 +23,9 @@ public abstract class LeaderDataAccess extends EntityDataAccess {
   
   public abstract Leader findById(long id) throws StorageException;
 
-  public abstract Collection<Leader> findAllByCounter(long counter) throws StorageException;
+  public abstract Collection<Leader> findAllByCounterGT(long counter) throws StorageException;
+  
+  public abstract Collection<Leader> findAllByIDLT(long id) throws StorageException;
   
   public abstract Collection<Leader> findAll() throws StorageException;
 

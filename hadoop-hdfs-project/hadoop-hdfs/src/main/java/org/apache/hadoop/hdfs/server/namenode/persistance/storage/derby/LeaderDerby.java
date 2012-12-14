@@ -164,7 +164,7 @@ public class LeaderDerby extends LeaderDataAccess {
     }
 
     @Override
-    public Collection<Leader> findAllByCounter(long counter) throws StorageException
+    public Collection<Leader> findAllByCounterGT(long counter) throws StorageException
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }

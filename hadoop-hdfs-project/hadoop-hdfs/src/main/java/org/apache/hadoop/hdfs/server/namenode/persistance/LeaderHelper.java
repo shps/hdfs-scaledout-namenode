@@ -15,7 +15,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.namenode.LeaderElection;
 import org.apache.hadoop.net.NetUtils;
-import se.sics.clusterj.LeaderTable;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.Leader;
 
@@ -25,7 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.Leader;
 public class LeaderHelper
 {
 
-    private static Log LOG = LogFactory.getLog(LeaderHelper.class);
+    private static Log LOG = LogFactory.getLog(xxx.class);
 
     /*
      * Updates the running counter from [Counter]
@@ -33,8 +32,9 @@ public class LeaderHelper
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public static void updateCounter(long counter, long id, String hostname) throws IOException, PersistanceException
     {
-
         // update the counter in [Leader]
+        // insert the row. if it exists then update it
+        // otherwise create a new row
         Leader leader = new Leader(id, counter, now(), hostname);
         EntityManager.add(leader);
     }
@@ -43,7 +43,7 @@ public class LeaderHelper
      * Gets the running counter
      */
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static long getCounter() throws IOException, PersistanceException
+    public static long getLeaderRowCount() throws IOException, PersistanceException
     {
         return EntityManager.count(Leader.Counter.AllById);
     }
@@ -76,6 +76,12 @@ public class LeaderHelper
         return getMaxNamenodeId(namenodes);
     }
 
+    public static long getMaxNamenodeCounter() throws PersistanceException
+    {
+        List<Leader> namenodes = getAllNamenodesInternal();
+        return getMaxNamenodeCounter(namenodes);
+    }
+     
     private static long getMaxNamenodeId(List<Leader> namenodes)
     {
         long maxId = 0;
@@ -87,6 +93,19 @@ public class LeaderHelper
             }
         }
         return maxId;
+    }
+    
+    private static long getMaxNamenodeCounter(List<Leader> namenodes)
+    {
+        long maxCounter = 0;
+        for (Leader lRecord : namenodes)
+        {
+            if (lRecord.getCounter() > maxCounter)
+            {
+                maxCounter = lRecord.getCounter();
+            }
+        }
+        return maxCounter;
     }
 
     private static long getMinNamenodeId(List<Leader> namenodes)
@@ -107,18 +126,17 @@ public class LeaderHelper
      * returned is the eligble leader
      */
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static long getLeader()
+    public static long getLeader() throws PersistanceException, IOException 
     {
-
-        long maxCounter = EntityManager.Max;
-        int totalNamenodes = getAllNamenodesInternal(session).size();
+        long maxCounter = getMaxNamenodeCounter();
+        long totalNamenodes = getLeaderRowCount();
         if (totalNamenodes == 0)
         {
             LOG.warn("No namenodes in the system. The first one to start would be the leader");
             return LeaderElection.LEADER_INITIALIZATION_ID;
         }
 
-        List<LeaderTable> activeNamenodes = getActiveNamenodesInternal(session, maxCounter, totalNamenodes);
+        List<Leader> activeNamenodes = getActiveNamenodesInternal(maxCounter, totalNamenodes);
         return getMinNamenodeId(activeNamenodes);
     }
 
@@ -126,22 +144,20 @@ public class LeaderHelper
      * Gets all currently running active namenodes
      */
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static SortedMap<Long, InetSocketAddress> getActiveNamenodes()
+    public static SortedMap<Long, InetSocketAddress> getActiveNamenodes() throws PersistanceException
     {
-        Session session = DBConnector.obtainSession();
-
         // get max counter and total namenode count
         long maxCounter = CountersHelper.getCounterValue(CountersHelper.LEADER_COUNTER_ID);
-        int totalNamenodes = getAllNamenodesInternal(session).size();
+        int totalNamenodes = getAllNamenodesInternal().size();
 
         // get all active namenodes
-        List<LeaderTable> nns = getActiveNamenodesInternal(session, maxCounter, totalNamenodes);
+        List<Leader> nns = getActiveNamenodesInternal(maxCounter, totalNamenodes);
 
         // Order by id
         SortedMap<Long, InetSocketAddress> activennMap = new TreeMap<Long, InetSocketAddress>();
-        for (LeaderTable l : nns)
+        for (Leader l : nns)
         {
-            InetSocketAddress addr = NetUtils.createSocketAddr(l.getHostname());
+            InetSocketAddress addr = NetUtils.createSocketAddr(l.getHostName());
             activennMap.put(l.getId(), addr);
         }
 
@@ -152,56 +168,37 @@ public class LeaderHelper
      * Remove previously selected leaders
      */
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static void removePrevoiouslyElectedLeaders(long id)
+    public static void removePrevoiouslyElectedLeaders(long id) throws PersistanceException
     {
-        DBConnector.checkTransactionState(true);
-
-        Session session = DBConnector.obtainSession();
-        List<LeaderTable> prevLeaders = getPreceedingNamenodesInternal(session, id);
-        for (LeaderTable l : prevLeaders)
+        List<Leader> prevLeaders = getPreceedingNamenodesInternal(id);
+        for (Leader l : prevLeaders)
         {
-            deleteNamenodeInternal(session, l);
+            EntityManager.remove(l);
         }
     }
 
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static int countPredecessors(long id)
+    public static int countPredecessors(long id) throws PersistanceException
     {
-        Session session = DBConnector.obtainSession();
-        return getPreceedingNamenodesInternal(session, id).size();
+        return getPreceedingNamenodesInternal(id).size();
     }
-    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    public static int countSuccessors(long id)
-    {
-        Session session = DBConnector.obtainSession();
-        return getSucceedingNamenodesInternal(session, id).size();
-    }
+   
 
     /*
      * Remove previously selected leaders
      */
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    public static void removeNamenode(long id)
+    public static void removeNamenode(long id) throws PersistanceException
     {
-        DBConnector.checkTransactionState(true);
-
-        Session session = DBConnector.obtainSession();
-        LeaderTable record = getNamenodeInternal(session, id);
-        deleteNamenodeInternal(session, record);
+        Leader record = getNamenodeInternal(id);
+        EntityManager.remove(record);
     }
     ///////////////////////////////////////////////////////////////////// 
     /////////////////// Internal functions/////////////////////////////
     ///////////////////////////////////////////////////////////////////// 
-
-    private static void deleteNamenodeInternal(Session session, LeaderTable namenode)
+    private static Leader getNamenodeInternal(long id) throws PersistanceException
     {
-        session.deletePersistent(namenode);
-    }
-
-    private static LeaderTable getNamenodeInternal(Session session, long id)
-    {
-        return session.find(LeaderTable.class, id);
+        return EntityManager.find(Leader.Finder.ById, id);
     }
 
     private static List<Leader> getAllNamenodesInternal() throws PersistanceException
@@ -210,42 +207,16 @@ public class LeaderHelper
         return leaders;
     }
 
-    private static List<LeaderTable> getPreceedingNamenodesInternal(Session session, long id)
+    private static List<Leader> getPreceedingNamenodesInternal(long id) throws PersistanceException
     {
-        QueryBuilder qb = session.getQueryBuilder();
-        QueryDomainType<LeaderTable> dobj = qb.createQueryDefinition(LeaderTable.class);
-        Predicate pred = dobj.get("id").lessThan(dobj.param("id"));
-        dobj.where(pred);
-        Query<LeaderTable> query = session.createQuery(dobj);
-        query.setParameter("id", id);
-        return query.getResultList();
+        List<Leader> list = (List<Leader>) EntityManager.findList(Leader.Finder.AllByIDLT, id);
+        return list;
     }
 
-    private static List<LeaderTable> getSucceedingNamenodesInternal(Session session, long id)
+    private static List<Leader> getActiveNamenodesInternal(long counter, long totalNamenodes) throws PersistanceException
     {
-        QueryBuilder qb = session.getQueryBuilder();
-        QueryDomainType<LeaderTable> dobj = qb.createQueryDefinition(LeaderTable.class);
-        Predicate pred = dobj.get("id").greaterThan(dobj.param("id"));
-        dobj.where(pred);
-        Query<LeaderTable> query = session.createQuery(dobj);
-        query.setParameter("id", id);
-        return query.getResultList();
-    }
-
-    private static List<LeaderTable> getActiveNamenodesInternal(Session session, long counter, int totalNamenodes)
-    {
-        QueryBuilder qb = session.getQueryBuilder();
-        QueryDomainType<LeaderTable> dobj = qb.createQueryDefinition(LeaderTable.class);
-        Predicate pred = dobj.get("counter").greaterThan(dobj.param("counter"));
-        dobj.where(pred);
-        Query<LeaderTable> query = session.createQuery(dobj);
-        query.setParameter("counter", (counter - totalNamenodes));
-        return query.getResultList();
-    }
-
-    private static void updateNamenodeInternal(Session session, LeaderTable namenode)
-    {
-        session.savePersistent(namenode);
-        //session.makePersistent(namenode);
+        long condition = counter - totalNamenodes * Delta;
+        List<Leader> list = (List<Leader>) EntityManager.findList(Leader.Finder.AllByCounterGTN, condition);
+        return list;
     }
 }

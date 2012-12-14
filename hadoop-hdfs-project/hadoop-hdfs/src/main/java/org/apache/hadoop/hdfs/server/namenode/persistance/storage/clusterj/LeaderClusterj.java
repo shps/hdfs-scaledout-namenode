@@ -88,7 +88,7 @@ public class LeaderClusterj extends LeaderDataAccess
     }
 
     @Override
-    public Collection<Leader> findAllByCounter(long counter) throws StorageException
+    public Collection<Leader> findAllByCounterGT(long counter) throws StorageException
     {
         try
         {
@@ -102,6 +102,28 @@ public class LeaderClusterj extends LeaderDataAccess
             dobj.where(greaterThan);
             Query query = session.createQuery(dobj);
             query.setParameter(param, new Long(counter));
+            return createList(query.getResultList());
+        } catch (Exception e)
+        {
+            throw new StorageException(e);
+        }
+    }
+    
+    @Override
+    public Collection<Leader> findAllByIDLT(long id) throws StorageException
+    {
+        try
+        {
+            Session session = connector.obtainSession();
+            QueryBuilder qb = session.getQueryBuilder();
+            QueryDomainType dobj = qb.createQueryDefinition(LeaderDTO.class);
+            PredicateOperand propertyPredicate = dobj.get("id");
+            String param = "id";
+            PredicateOperand propertyLimit = dobj.param(param);
+            Predicate greaterThan = propertyPredicate.lessThan(propertyLimit);
+            dobj.where(greaterThan);
+            Query query = session.createQuery(dobj);
+            query.setParameter(param, new Long(id));
             return createList(query.getResultList());
         } catch (Exception e)
         {
