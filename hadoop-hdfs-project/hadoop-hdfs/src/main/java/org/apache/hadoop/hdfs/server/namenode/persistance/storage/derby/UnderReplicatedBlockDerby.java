@@ -145,4 +145,11 @@ public class UnderReplicatedBlockDerby extends UnderReplicatedBlockDataAccess {
 
     return blocks;
   }
+
+    @Override
+    public int countAll() throws StorageException
+    {
+       // TODO - use MySQL Server to get block count
+      return 0; 
+    }
 }

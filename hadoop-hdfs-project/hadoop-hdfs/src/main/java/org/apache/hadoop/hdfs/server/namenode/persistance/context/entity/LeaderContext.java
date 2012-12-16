@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
  *
  * @author salman
  */
-
 // [S]
 // FIXME this chache is not generic. 
 // Design a generic chache that works for all 
@@ -40,9 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 // should not wirte context again agian for every 
 // table
 //
-
-public class LeaderContext extends EntityContext<Leader>
-{
+public class LeaderContext extends EntityContext<Leader> {
 
     private Map<Long, Leader> allReadLeaders = new HashMap<Long, Leader>();
     private Map<Long, Leader> modifiedLeaders = new HashMap<Long, Leader>();
@@ -50,32 +47,27 @@ public class LeaderContext extends EntityContext<Leader>
     private Map<Long, Leader> newLeaders = new HashMap<Long, Leader>();
     private LeaderDataAccess dataAccess;
 
-    public LeaderContext(LeaderDataAccess dataAccess)
-    {
+    public LeaderContext(LeaderDataAccess dataAccess) {
         this.dataAccess = dataAccess;
     }
 
     @Override
-    public void add(Leader leader) throws PersistanceException
-    {
-        if (removedLeaders.containsKey(leader.getId()))
-        {
+    public void add(Leader leader) throws PersistanceException {
+        if (removedLeaders.containsKey(leader.getId())) {
             throw new TransactionContextException("Removed leader passed for persistance");
         }
 
         newLeaders.put(leader.getId(), leader);
 
         log("added-leader", CacheHitState.NA,
-                new String[]
-                {
+                new String[]{
                     "id", Long.toString(leader.getId()), "hostName", leader.getHostName(), "counter", Long.toString(leader.getCounter()),
                     "timeStamp", Long.toString(leader.getTimeStamp())
                 });
     }
 
     @Override
-    public void clear()
-    {
+    public void clear() {
         storageCallPrevented = false;
         modifiedLeaders.clear();
         removedLeaders.clear();
@@ -84,49 +76,40 @@ public class LeaderContext extends EntityContext<Leader>
     }
 
     @Override
-    public int count(CounterType<Leader> counter, Object... params) throws PersistanceException
-    {
-        Leader.Counter lCounter = (Leader.Counter)counter;
-        
-        switch(lCounter)
-        {
+    public int count(CounterType<Leader> counter, Object... params) throws PersistanceException {
+        Leader.Counter lCounter = (Leader.Counter) counter;
+
+        switch (lCounter) {
             case AllById:
                 log("count-all-leaders", CacheHitState.LOSS);
                 aboutToAccessStorage();
                 return dataAccess.countAllById();
         }
-        
+
         throw new RuntimeException(UNSUPPORTED_COUNTER);
-        
+
     }
 
     @Override
-    public Leader find(FinderType<Leader> finder, Object... params) throws PersistanceException
-    {
+    public Leader find(FinderType<Leader> finder, Object... params) throws PersistanceException {
         Leader.Finder lFinder = (Leader.Finder) finder;
         Leader leader;
 
-        switch (lFinder)
-        {
+        switch (lFinder) {
             case ById:
                 Long id = (Long) params[0];
-                if (allReadLeaders.containsKey(id))
-                {
-                    log("find-leader-by-id", CacheHitState.HIT, new String[]
-                            {
+                if (allReadLeaders.containsKey(id)) {
+                    log("find-leader-by-id", CacheHitState.HIT, new String[]{
                                 "leaderId", Long.toString(id)
                             });
                     leader = allReadLeaders.get(id);
-                } else
-                {
-                    log("find-leader-by-id", CacheHitState.LOSS, new String[]
-                            {
+                } else {
+                    log("find-leader-by-id", CacheHitState.LOSS, new String[]{
                                 "leaderId", Long.toString(id)
                             });
                     aboutToAccessStorage();
                     leader = dataAccess.findById(id);
-                    if (leader != null)
-                    {
+                    if (leader != null) {
                         allReadLeaders.put(leader.getId(), leader);
                     }
                 }
@@ -137,31 +120,26 @@ public class LeaderContext extends EntityContext<Leader>
     }
 
     @Override
-    public Collection<Leader> findList(FinderType<Leader> finder, Object... params) throws PersistanceException
-    {
+    public Collection<Leader> findList(FinderType<Leader> finder, Object... params) throws PersistanceException {
         Leader.Finder lFinder = (Leader.Finder) finder;
         Collection<Leader> leaders = null;
 
-        switch (lFinder)
-        {
-            case ByCounter:
+        switch (lFinder) {
+            case AllByCounterGTN:
                 long counter = (Long) params[0];
                 // we are looking for range of row
                 // not a good idea for running a range query on the cache
                 // just get the damn rows from ndb
 
                 aboutToAccessStorage();
-                leaders = dataAccess.findAllByCounter(counter);
+                leaders = dataAccess.findAllByCounterGT(counter);
 
                 // put all read leaders in the cache
-                if (leaders != null)
-                {
+                if (leaders != null) {
                     Iterator itr = leaders.iterator();
-                    while (itr.hasNext())
-                    {
+                    while (itr.hasNext()) {
                         Leader leader = (Leader) itr.next();
-                        if (!allReadLeaders.containsKey(leader.getId()))
-                        {
+                        if (!allReadLeaders.containsKey(leader.getId())) {
                             allReadLeaders.put(leader.getId(), leader);
                         }
                     }
@@ -169,19 +147,34 @@ public class LeaderContext extends EntityContext<Leader>
 
                 return leaders;
 
+            case AllByIDLT:
+                long id = (Long) params[0];
+                aboutToAccessStorage();
+                leaders = dataAccess.findAllByIDLT(id);
+
+                // put all read leaders in the cache
+                if (leaders != null) {
+                    Iterator itr = leaders.iterator();
+                    while (itr.hasNext()) {
+                        Leader leader = (Leader) itr.next();
+                        if (!allReadLeaders.containsKey(leader.getId())) {
+                            allReadLeaders.put(leader.getId(), leader);
+                        }
+                    }
+                }
+                
+                return leaders;
+
             case All:
                 aboutToAccessStorage();
                 leaders = dataAccess.findAll();
 
                 // put all read leaders in the cache
-                if (leaders != null)
-                {
+                if (leaders != null) {
                     Iterator itr = leaders.iterator();
-                    while (itr.hasNext())
-                    {
+                    while (itr.hasNext()) {
                         Leader leader = (Leader) itr.next();
-                        if (!allReadLeaders.containsKey(leader.getId()))
-                        {
+                        if (!allReadLeaders.containsKey(leader.getId())) {
                             allReadLeaders.put(leader.getId(), leader);
                         }
                     }
@@ -193,49 +186,40 @@ public class LeaderContext extends EntityContext<Leader>
     }
 
     @Override
-    public void prepare() throws StorageException
-    {
+    public void prepare() throws StorageException {
         dataAccess.prepare(removedLeaders.values(), newLeaders.values(), modifiedLeaders.values());
     }
 
     @Override
-    public void remove(Leader leader) throws PersistanceException
-    {
+    public void remove(Leader leader) throws PersistanceException {
         removedLeaders.put(leader.getId(), leader);
-        
-        if(allReadLeaders.containsKey(leader.getId()))
-        {
+
+        if (allReadLeaders.containsKey(leader.getId())) {
             allReadLeaders.remove(leader.getId());
         }
-        
-        log("removed-leader", CacheHitState.NA, new String[]
-                {
+
+        log("removed-leader", CacheHitState.NA, new String[]{
                     "id", Long.toString(leader.getId()), "hostName", leader.getHostName(), "counter", Long.toString(leader.getCounter()),
                     "timeStamp", Long.toString(leader.getTimeStamp())
                 });
     }
 
     @Override
-    public void removeAll() throws PersistanceException
-    {
+    public void removeAll() throws PersistanceException {
         throw new UnsupportedOperationException(NOT_SUPPORTED_YET);
     }
 
     @Override
-    public void update(Leader leader) throws PersistanceException
-    {
-        if (removedLeaders.containsKey(leader.getId()))
-        {
+    public void update(Leader leader) throws PersistanceException {
+        if (removedLeaders.containsKey(leader.getId())) {
             throw new TransactionContextException("Trying to update a removed leader record");
         }
 
         modifiedLeaders.put(leader.getId(), leader);
-        
-        log("updated-leader", CacheHitState.NA,new String[]
-                {
+
+        log("updated-leader", CacheHitState.NA, new String[]{
                     "id", Long.toString(leader.getId()), "hostName", leader.getHostName(), "counter", Long.toString(leader.getCounter()),
                     "timeStamp", Long.toString(leader.getTimeStamp())
                 });
     }
-
 }
