@@ -65,17 +65,26 @@ directory node[:kthfs][:base_dir] do
   recursive true
 end
 
+service "kthfsagent" do
+  provider Chef::Provider::Service::Init
+  supports :restart => true
+  action [ :nothing ]
+end
+
+template "/etc/init.d/kthfsagent" do
+  source "kthfsagent.erb"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0655
+  notifies :restart, resources(:service => "kthfsagent")
+end
+
 cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do
   source "agent.py"
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0755
   notifies :restart, resources(:service => "kthfsagent")
-end
-
-service "kthfsagent" do
-  supports :restart => true
-  action [ :nothing ]
 end
 
 template "#{node[:kthfs][:base_dir]}/config.ini" do
@@ -90,13 +99,6 @@ template "#{node[:kthfs][:base_dir]}/config.ini" do
   notifies :restart, resources(:service => "kthfsagent")
 end
 
-template "/etc/init.d/kthfsagent" do
-  source "kthfsagent.erb"
-  owner node[:kthfs][:user]
-  group node[:kthfs][:user]
-  mode 0655
-  notifies :restart, resources(:service => "kthfsagent")
-end
 
 ['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services', 'get-pid.sh'].each do |script|
   Chef::Log.info "Installing #{script}"
@@ -108,3 +110,11 @@ end
     notifies :restart, resources(:service => "kthfsagent")
   end
 end 
+
+if platform?(%w{debian ubuntu})
+ bash "install-initd-service" do
+    code <<-EOF
+#    update-rc.d kthfsagent default
+ EOF
+ end
+end

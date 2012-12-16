@@ -18,7 +18,7 @@ actions :create, :delete
 
 attribute :pool_name, :kind_of => String, :name_attribute => true
 
-STRING_ATTRIBUTES = [:datasourceclassname, :initsql, :sqltracelisteners, :driverclassname, :validationclassname, :target, :validationtable]
+STRING_ATTRIBUTES = [:datasourceclassname, :initsql, :sqltracelisteners, :driverclassname, :validationclassname, :validationtable]
 STRING_ATTRIBUTES.each do |key|
   attribute key, :kind_of => String, :default => nil
 end
@@ -71,10 +71,7 @@ attribute :terse, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :echo, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :username, :kind_of => String, :default => nil
 attribute :password_file, :kind_of => String, :default => nil
-attribute :secure, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :secure, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :admin_port, :kind_of => Integer, :default => 4848
 
-def initialize( *args )
-  super
-  @action = :create
-end
+default_action :create

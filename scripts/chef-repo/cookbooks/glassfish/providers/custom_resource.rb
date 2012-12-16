@@ -22,12 +22,12 @@ notifying_action :create do
   command << "--restype" << new_resource.restype
   factoryclass = new_resource.factoryclass || "org.glassfish.resources.custom.factory.PrimitivesAndStringFactory"
   command << "--factoryclass" << factoryclass
-  command << "--enabled=#{enabled}" if new_resource.enabled
+  command << "--enabled=#{new_resource.enabled}" if new_resource.enabled
   command << "--description" << "'#{new_resource.description}'" if new_resource.description
   properties = new_resource.properties.dup
   properties['value'] = new_resource.value if new_resource.value
   command << "--property" << encode_parameters(properties) unless properties.empty?
-  command << "--target" << new_resource.target if new_resource.target
+  command << asadmin_target_flag
   command << new_resource.jndi_name
 
   bash "asadmin_create-custom-resource #{new_resource.jndi_name} => #{new_resource.value}" do
@@ -41,11 +41,11 @@ end
 notifying_action :delete do
   command = []
   command << "delete-custom-resource"
-  command << "--target" << new_resource.target if new_resource.target
+  command << asadmin_target_flag
   command << new_resource.jndi_name
 
   bash "asadmin_delete-custom-resource #{new_resource.jndi_name}" do
-    only_if "#{asadmin_command("get resources.custom-resource.#{new_resource.jndi_name}.property.value")} | grep -x -- 'resources.custom-resource.#{new_resource.jndi_name}.property.value=#{escape_property(new_resource.value)}'"
+    only_if "#{asadmin_command('list-custom-resources')} #{new_resource.target} | grep -x -- '#{new_resource.jndi_name}'"
     user node['glassfish']['user']
     group node['glassfish']['group']
     code asadmin_command(command.join(' '))

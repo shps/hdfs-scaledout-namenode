@@ -16,6 +16,18 @@
 
 include_recipe "glassfish::default"
 
+def gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, command)
+  options = {:remote_command => true, :terse => true, :echo => false}
+  options[:username] = username if username
+  options[:password_file] = password_file if password_file
+  options[:secure] = secure if secure
+  options[:admin_port] = admin_port if admin_port
+
+  output = `#{Asadmin.asadmin_command(node, command, options)} 2> /dev/null`
+  output.split("\n").collect { |line| line.scan(/^(\S+)/).flatten[0] }.each do |existing|
+    yield existing
+  end
+end
 
 node['glassfish']['domains'].each_pair do |domain_key, definition|
   domain_key = domain_key.to_s
@@ -45,9 +57,23 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
     realm_types definition['realm_types'] if definition['realm_types']
     extra_jvm_options definition['config']['jvm_options'] if definition['config']['jvm_options']
     env_variables definition['config']['environment'] if definition['config']['environment']
-    extra_libraries definition['extra_libraries'].values if definition['extra_libraries'] # 
   end
 
+  if definition['extra_libraries']
+    definition['extra_libraries'].values.each do |config|
+      config = config.is_a?(Hash) ? config : {'url' => config}
+      url = config['url']
+      library_type = config['type'] || 'ext'
+      glassfish_library url do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        library_type library_type
+      end
+    end
+  end
 
   glassfish_secure_admin "#{domain_key}: secure_admin" do
     domain_name domain_key
@@ -56,9 +82,7 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
     password_file password_file if password_file
     secure secure if secure
     action ('true' == definition['config']['remote_access'].to_s) ? :enable : :disable
-#    action :enable
   end
-
 
   if definition['properties']
     definition['properties'].each_pair do |key, value|
@@ -105,8 +129,8 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
         secure secure if secure
         target configuration['target'] if configuration['target']
         classname configuration['classname'] if configuration['classname']
-        jaas_context configuration['jaas-context'] if configuration['jaas-context']
-        assign_groups configuration['assign-groups'] if configuration['assign-groups']
+        jaas_context configuration['jaas_context'] if configuration['jaas_context']
+        assign_groups configuration['assign_groups'] if configuration['assign_groups']
         properties configuration['properties'] if configuration['properties']
       end
     end
@@ -187,8 +211,8 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
           end
         end
       end
-      if resource_configuration['admin-objects']
-        resource_configuration['admin-objects'].each_pair do |admin_object_key, admin_object_configuration|
+      if resource_configuration['admin_objects']
+        resource_configuration['admin_objects'].each_pair do |admin_object_key, admin_object_configuration|
           admin_object_key = admin_object_key.to_s
           glassfish_admin_object admin_object_key do
             domain_name domain_key
@@ -286,81 +310,206 @@ node['glassfish']['domains'].each_pair do |domain_key, definition|
       end
     end
   end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-applications") do |existing|
+    unless definition['deployables'] && definition['deployables'][existing]
+      glassfish_deployable existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :undeploy
+      end
+    end
+  end
+
+  if definition['deployables']
+    definition['deployables'].each_pair do |component_name, configuration|
+      next if configuration['type'] && configuration['type'].to_s == 'osgi'
+      gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-web-env-entry #{component_name}") do |existing|
+        unless configuration['web_env_entries'] && configuration['web_env_entries'][existing]
+          glassfish_web_env_entry "#{domain_key}: #{component_name} unset #{existing}" do
+            domain_name domain_key
+            admin_port admin_port if admin_port
+            username username if username
+            password_file password_file if password_file
+            secure secure if secure
+            webapp component_name
+            name existing
+            action :unset
+          end
+        end
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-resource-adapter-configs") do |existing|
+    unless definition['resource_adapters'] && definition['resource_adapters'][existing]
+      glassfish_resource_adapter existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-connector-connection-pools") do |existing|
+    found = false
+    if definition['resource_adapters']
+      definition['resource_adapters'].each_pair do |key, configuration|
+        if configuration['connection_pools'] && configuration['connection_pools'][existing]
+          found = true
+        end
+      end
+    end
+    unless found
+      glassfish_connector_connection_pool existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-connector-resources") do |existing|
+    found = false
+    if definition['resource_adapters']
+      definition['resource_adapters'].each_pair do |key, configuration|
+        if configuration['connection_pools']
+          configuration['connection_pools'].each_pair do |pool_name, pool_configuration|
+            if pool_configuration['resources'] && pool_configuration['resources'][existing]
+              found = true
+            end
+          end
+        end
+      end
+    end
+    unless found
+      glassfish_connector_resource existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-admin-objects") do |existing|
+    found = false
+    if definition['resource_adapters']
+      definition['resource_adapters'].each_pair do |key, configuration|
+        if configuration['admin_objects'] && configuration['admin_objects'][existing]
+          found = true
+        end
+      end
+    end
+    unless found
+      glassfish_admin_object existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-jdbc-connection-pools") do |existing|
+    standard_pools = %w{__TimerPool}
+    unless definition['jdbc_connection_pools'] && definition['jdbc_connection_pools'][existing] || standard_pools.include?(existing)
+      glassfish_jdbc_connection_pool existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-jdbc-resources") do |existing|
+    found = false
+    if definition['jdbc_connection_pools']
+      definition['jdbc_connection_pools'].each_pair do |key, configuration|
+        if configuration['resources'] && configuration['resources'][existing]
+          found = true
+        end
+      end
+    end
+    standard_resources = %w{jdbc/__TimerPool}
+    unless found || standard_resources.include?(existing)
+      glassfish_jdbc_connection_pool existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-javamail-resources") do |existing|
+    unless definition['javamail_resources'] && definition['javamail_resources'][existing]
+      glassfish_javamail_resource existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-custom-resources") do |existing|
+    unless definition['custom_resources'] && definition['custom_resources'][existing]
+      glassfish_custom_resource existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-resource-adapter-configs") do |existing|
+    unless definition['resource_adapters'] && definition['resource_adapters'][existing]
+      glassfish_resource_adapter existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
+
+  gf_scan_existing_resources(domain_key, admin_port, username, password_file, secure, "list-auth-realms") do |existing|
+    standard_realms = %w{admin-realm file certificate}
+    unless definition['realms'] && definition['realms'][existing] || standard_realms.include?(existing)
+      glassfish_auth_realm existing do
+        domain_name domain_key
+        admin_port admin_port if admin_port
+        username username if username
+        password_file password_file if password_file
+        secure secure if secure
+        action :delete
+      end
+    end
+  end
 end
-
-kthfsmgr_url = node['kthfs']['mgr']
-kthfsmgr_filename = File.basename(kthfsmgr_url)
-cached_kthfsmgr_filename = "#{Chef::Config[:file_cache_path]}/#{kthfsmgr_filename}"
-
-remote_file cached_kthfsmgr_filename do
-  source kthfsmgr_url
-  mode "0655"
-  action :create
-end
-
-bash "unpack_kthfsmgr" do
-  code <<-EOF
-chown -R #{node['glassfish']['user']} #{cached_kthfsmgr_filename} 
-chgrp -R #{node['glassfish']['group']} #{cached_kthfsmgr_filename} 
-#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd deploy --force=true --keepstate=true --name KTHFSDashboard #{cached_kthfsmgr_filename}
-rm #{cached_kthfsmgr_filename}
-EOF
-  not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-applications --type ejb | grep -w 'KTHFSDashboard'"
-end
-
-connectorj_url = node['mysql']['connectorj']
-connectorj_filename = File.basename(connectorj_url)
-cached_connectorj_filename = "#{Chef::Config[:file_cache_path]}/#{connectorj_filename}"
-
-remote_file cached_connectorj_filename do
-  source connectorj_url
-  mode "0600"
-  action :create_if_missing
-end
-
-
-bash "unpack_connectorj" do
-  code <<-EOF
-cd #{Chef::Config[:file_cache_path]}
-tar zxf #{cached_connectorj_filename}
-cp mysql-connector-java-5.1.22/mysql-connector-java-5.1.22-bin.jar  #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib/
-cp mysql-connector-java-5.1.22/mysql-connector-java-5.1.22-bin.jar  #{node['glassfish']['base_dir']}/glassfish/lib/
-chown -R #{node['glassfish']['user']} #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib
-chgrp -R #{node['glassfish']['group']} #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib
-# rm -rf /tmp/mysql-connector-java-5.1.22*
-EOF
-  #not_if { ::File.exists?( #{node['glassfish']['base_dir']}/glassfish/domains/domain1/lib/mysql-connector-java-5.1.22-bin.jar)}
-end
-
-#asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd get secure-admin.enabled | grep -x -- 'secure-admin.enabled=false'"
-
-
-#bash "install_chef_server" do 
-# code <<-EOF
-#   echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
-#   sudo mkdir -p /etc/apt/trusted.gpg.d
-#   gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
-#   gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
-#   sudo apt-get -y update
-#   sudo apt-get -y install opscode-keyring
-#   sudo apt-get -y upgrade
-#   sudo apt-get -y install chef chef-server
-#   mkdir -p ~/.chef
-#   sudo cp /etc/chef/validation.pem /etc/chef/webui.pem ~/.chef
-#   sudo chown -R $USER ~/.chef
-#   knife configure -i --defaults -r . -y -u #{node['glassfish']['user']}
-#   knife client list
-#  Chef::Log.info "YOU HAVE TO RUN 'knife configure -i --defaults -r .'"   
-# EOF
-#    not_if { ::File.exists?( ~/.chef)}
-
-# Chef Client
-# echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list
-# sudo mkdir -p /etc/apt/trusted.gpg.d
-# gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
-# gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
-# sudo apt-get -y update
-# sudo apt-get -y install opscode-keyring
-# sudo apt-get -y upgrade
-# sudo apt-get -y install chef
-#end

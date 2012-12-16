@@ -17,7 +17,6 @@
 actions :create, :delete
 
 attribute :resource_adapter_name, :kind_of => String, :name_attribute => true
-attribute :target, :kind_of => String, :default => nil
 attribute :threadpoolid, :kind_of => String, :default => nil
 attribute :objecttype, :kind_of => String, :default => nil
 attribute :properties, :kind_of => Hash, :default => {}
@@ -27,10 +26,7 @@ attribute :terse, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :echo, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :username, :kind_of => String, :default => nil
 attribute :password_file, :kind_of => String, :default => nil
-attribute :secure, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :secure, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :admin_port, :kind_of => Integer, :default => 4848
 
-def initialize( *args )
-  super
-  @action = :create
-end
+default_action :create

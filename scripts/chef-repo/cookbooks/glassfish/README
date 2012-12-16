@@ -1,0 +1,6 @@
+git fetch upstream
+git merge upstream/master
+# git pull is essentially git fetch + git merge.
+# To pull from the original github glassfish repo:
+
+git pull upstream master

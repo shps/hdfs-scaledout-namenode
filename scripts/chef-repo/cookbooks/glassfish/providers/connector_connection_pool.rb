@@ -18,8 +18,7 @@ include Chef::Asadmin
 
 notifying_action :create do
 
-  parameters = [:connectiondefinition, :raname, :transactionsupport] +
-    ::Chef::Resource::GlassfishConnectorConnectionPool::STRING_ATTRIBUTES +
+  parameters = [:connectiondefinition, :raname, :transactionsupport, :description] +
     ::Chef::Resource::GlassfishConnectorConnectionPool::NUMERIC_ATTRIBUTES +
     ::Chef::Resource::GlassfishConnectorConnectionPool::BOOLEAN_ATTRIBUTES
 
@@ -45,7 +44,6 @@ end
 notifying_action :delete do
   command = []
   command << "delete-connector-connection-pool"
-  command << "--target" << new_resource.target if new_resource.target
   command << "--cascade=true"
   command << new_resource.pool_name
 

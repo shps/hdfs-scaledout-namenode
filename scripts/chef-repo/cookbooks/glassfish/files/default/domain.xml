@@ -1,27 +1,16 @@
 <domain log-root="${com.sun.aas.instanceRoot}/logs" application-root="${com.sun.aas.instanceRoot}/applications" version="10.0">
   <system-applications />
-  <applications>
-  </applications>
+  <applications />
   <resources>
     <jdbc-resource pool-name="__TimerPool" jndi-name="jdbc/__TimerPool" object-type="system-admin" />
     <jdbc-connection-pool name="__TimerPool" datasource-classname="org.apache.derby.jdbc.EmbeddedXADataSource" res-type="javax.sql.XADataSource">
       <property value="${com.sun.aas.instanceRoot}/lib/databases/ejbtimer" name="databaseName" />
       <property value=";create=true" name="connectionAttributes" />
     </jdbc-connection-pool>
-    <jdbc-connection-pool driver-classname="" datasource-classname="com.mysql.jdbc.jdbc2.optional.MysqlDataSource" res-type="javax.sql.DataSource" description="" name="MysqlKthfs">
-      <property name="portNumber" value="3306"></property>
-      <property name="databaseName" value="kthfs"></property>
-      <property name="networkProtocol" value="tcp"></property>
-      <property name="serverName" value="%%%BIND_ADDRESS%%%"></property>
-      <property name="user" value="root"></property>
-      <property name="password" value="kthfs"></property>
-    </jdbc-connection-pool>
-    <jdbc-resource pool-name="MysqlKthfs" description="" jndi-name="jdbc/kthfs"></jdbc-resource>
   </resources>
   <servers>
     <server name="%%%SERVER_ID%%%" config-ref="%%%CONFIG_MODEL_NAME%%%">
       <resource-ref ref="jdbc/__TimerPool" />
-      <resource-ref ref="jdbc/kthfs"></resource-ref>
     </server>
   </servers>
   <nodes>
@@ -77,22 +66,6 @@
         <auth-realm classname="com.sun.enterprise.security.auth.realm.file.FileRealm" name="file">
           <property value="${com.sun.aas.instanceRoot}/config/keyfile" name="file" />
           <property value="fileRealm" name="jaas-context" />
-        </auth-realm>
-        <auth-realm name="DBRealm" classname="com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm">
-          <property name="jaas-context" value="jdbcRealm"></property>
-          <property name="password-column" value="PASSWORD"></property>
-          <property name="assign-groups" value="ADMIN,USER"></property>
-          <property name="datasource-jndi" value="jdbc/kthfs"></property>
-          <property name="group-table" value="USERS_GROUPS"></property>
-          <property name="user-table" value="USERS"></property>
-          <property name="group-name-column" value="groupname"></property>
-          <property name="digestrealm-password-enc-algorithm" value="none"></property>
-          <property name="group-table-user-name-column" value="email"></property>
-          <property name="digest-algorithm" value="none"></property>
-          <property name="user-name-column" value="EMAIL"></property>
-          <property name="encoding" value="Hex"></property>
-          <property name="db-user" value="root"></property>
-          <property name="db-password" value="kthfs"></property>
         </auth-realm>
         <auth-realm classname="com.sun.enterprise.security.auth.realm.certificate.CertificateRealm" name="certificate" />
         <jacc-provider policy-configuration-factory-provider="com.sun.enterprise.security.provider.PolicyConfigurationFactoryImpl" policy-provider="com.sun.enterprise.security.provider.PolicyWrapper" name="default">
@@ -152,6 +125,7 @@
       <java-config classpath-suffix="" system-classpath="" debug-options="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=%%%JAVA_DEBUGGER_PORT%%%">
         <jvm-options>-XX:+AggressiveHeap</jvm-options>
         <jvm-options>-XX:+DisableExplicitGC</jvm-options>
+        <jvm-options>-XX:+UseCompressedOops</jvm-options>
         <jvm-options>-XX:+UseParallelOldGC</jvm-options>
         <jvm-options>-XX:ParallelGCThreads=%%%CPU_NODE_COUNT%%%</jvm-options>
         <jvm-options>-XX:MaxPermSize=%%%MAX_PERM_SIZE%%%m</jvm-options>
@@ -271,29 +245,29 @@
              </session-config>
          </web-container>
          <ejb-container session-store="${com.sun.aas.instanceRoot}/session-store">
-             <property name="disable-nonportable-jndi-names" value="true"></property>
-             <ejb-timer-service />
+           <property name="disable-nonportable-jndi-names" value="true"></property>
+           <ejb-timer-service />
          </ejb-container>
          <mdb-container />
          <jms-service type="EMBEDDED" default-jms-host="default_JMS_host" addresslist-behavior="priority">
-             <jms-host name="default_JMS_host" host="localhost" port="${JMS_PROVIDER_PORT}" admin-user-name="admin" admin-password="admin" lazy-init="true"/>
+           <jms-host name="default_JMS_host" host="localhost" port="${JMS_PROVIDER_PORT}" admin-user-name="admin" admin-password="admin" lazy-init="true"/>
          </jms-service>
          <log-service log-rotation-limit-in-bytes="2000000" file="${com.sun.aas.instanceRoot}/logs/server.log">
-             <module-log-levels />
+           <module-log-levels />
          </log-service>
          <security-service>
-             <auth-realm classname="com.sun.enterprise.security.auth.realm.file.FileRealm" name="admin-realm">
-                 <property name="file" value="${com.sun.aas.instanceRoot}/config/admin-keyfile" />
-                 <property name="jaas-context" value="fileRealm" />
-             </auth-realm>
-             <auth-realm classname="com.sun.enterprise.security.auth.realm.file.FileRealm" name="file">
-                 <property name="file" value="${com.sun.aas.instanceRoot}/config/keyfile" />
-                 <property name="jaas-context" value="fileRealm" />
-             </auth-realm>
-             <auth-realm classname="com.sun.enterprise.security.auth.realm.certificate.CertificateRealm" name="certificate" />
-             <jacc-provider policy-provider="com.sun.enterprise.security.provider.PolicyWrapper" name="default" policy-configuration-factory-provider="com.sun.enterprise.security.provider.PolicyConfigurationFactoryImpl">
-                 <property name="repository" value="${com.sun.aas.instanceRoot}/generated/policy" />
-             </jacc-provider>
+           <auth-realm classname="com.sun.enterprise.security.auth.realm.file.FileRealm" name="admin-realm">
+             <property name="file" value="${com.sun.aas.instanceRoot}/config/admin-keyfile" />
+             <property name="jaas-context" value="fileRealm" />
+           </auth-realm>
+           <auth-realm classname="com.sun.enterprise.security.auth.realm.file.FileRealm" name="file">
+             <property name="file" value="${com.sun.aas.instanceRoot}/config/keyfile" />
+             <property name="jaas-context" value="fileRealm" />
+           </auth-realm>
+           <auth-realm classname="com.sun.enterprise.security.auth.realm.certificate.CertificateRealm" name="certificate" />
+           <jacc-provider policy-provider="com.sun.enterprise.security.provider.PolicyWrapper" name="default" policy-configuration-factory-provider="com.sun.enterprise.security.provider.PolicyConfigurationFactoryImpl">
+             <property name="repository" value="${com.sun.aas.instanceRoot}/generated/policy" />
+           </jacc-provider>
              <jacc-provider policy-provider="com.sun.enterprise.security.jacc.provider.SimplePolicyProvider" name="simple" policy-configuration-factory-provider="com.sun.enterprise.security.jacc.provider.SimplePolicyConfigurationFactory" />
              <audit-module classname="com.sun.enterprise.security.Audit" name="default">
                  <property name="auditOn" value="false" />
@@ -338,6 +312,7 @@
          <java-config debug-options="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=${JAVA_DEBUGGER_PORT}" system-classpath="" classpath-suffix="">
              <jvm-options>-XX:+AggressiveHeap</jvm-options>
              <jvm-options>-XX:+DisableExplicitGC</jvm-options>
+             <jvm-options>-XX:+UseCompressedOops</jvm-options>
              <jvm-options>-XX:+UseParallelOldGC</jvm-options>
              <jvm-options>-XX:ParallelGCThreads=%%%CPU_NODE_COUNT%%%</jvm-options>
              <jvm-options>-XX:MaxPermSize=%%%MAX_PERM_SIZE%%%m</jvm-options>

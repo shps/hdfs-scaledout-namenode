@@ -45,7 +45,6 @@ end
 notifying_action :delete do
   command = []
   command << "delete-jdbc-connection-pool"
-  command << "--target" << new_resource.target if new_resource.target
   command << "--cascade=true"
   command << new_resource.name
 

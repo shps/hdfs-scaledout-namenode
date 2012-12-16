@@ -1,3 +1,65 @@
+## v0.5.18:
+* Change  : Support file:// urls in `glassfish_deployable` LWRP.
+* Change  : Avoid checking for port availability when creating the domain.
+
+
+## v0.5.16:
+* Change  : Stop using LWRPs to gather the scan the list of resources to delete in the `attribute_driven_domain`
+            recipe and instead execute the code inline. Refactor the asadmin library to make it easier to
+            implement this functionality.
+
+## v0.5.14:
+* Change  : Extract the utility code out into the 'cutlery' cookbook.
+
+## v0.5.12:
+* Bug     : Fix regression where properties were not escaping the ':' or '=' characters correctly.
+
+## v0.5.10:
+* Enhance : Set umask to 0700 for services.
+* Enhance : Escape a more complete set of shell characters when escaping properties. Identified by Robin Wenglewski.
+* Change  : Support specification of the library_type in the extra_libraries section while evaluating the
+            `attribute_driven_domain` recipe. Submitted by Robin Wenglewski.
+* Change  : Make glassfish user a system user.
+* Bug     : Ensure all services have the status flag enabled.
+* Bug     : Stop starting the glassfish service multiple times in the `glassfish_domain` LWRP and remove duplicate
+            actions that caused issues in later versions of chef and how it interacted with upstart services.
+* Change  : Upgrade to the 3.1.2.2 version of Glassfish. There was several crippling bugs in the 3.1.2 version.
+* Bug     : Fix the guard in the `glassfish_property` LWRP so it will not execute if not needed.
+* Bug     : Fix bug that prevented the deletion of historic web_env_entries.
+* Bug     : Fix bug due to looking for web_env_entries in osgi deployables. Resulted in errors in glassfish log.
+* Bug     : Ensure that the sort key if any is passed to the blend_search_results_into_node method
+* Bug     : Avoid attempting to delete the list file if it does not exist. Bug can be expressed when glassfish is
+            installed but not running or the domain does not exist.
+* Enhance : Add some default JVM options. (-Dfile.encoding=UTF-8 and -Djava.awt.headless=true)
+* Enhance : Default to not setting the server name in HTTP response by defaulting the product.name system property.
+* Enhance : Expand the realm_types parameter of the domain to support chained configs, flags options in configuration.
+
+## v0.5.8:
+
+* Change  : Remove extra_libraries parameter from the `glassfish_domain` LWRP and replace it's use in the
+            `attribute_driven_domain` recipe with uses of the `glassfish_library` LWRP.
+* Enhance : Add a `glassfish_library` LWRP that can add and remove libraries of various types to the instance.
+* Change  : Update the `attribute_driven_domain` recipe to use the keys;
+            - 'admin_objects' rather than 'admin-objects'
+            - 'jaas_context' rather than 'jaas-context'
+            - 'assign_groups' rather than 'assign-groups'
+* Enhance : Update the `glassfish_secure_admin` LWRP to immediately restart the service if invoked.
+* Enhance : In the `attribute_driven_domain` recipe, delete sub-components that are no longer present in the node
+            configuration. The sub-components include things such as resources, realms, pools, deployables etc.
+* Bug     : Ensure that the delete action on the `glassfish_custom_resource` LWRP actually executes.
+* Enhance : Add returns parameter to the `glassfish_asadmin` LWRP that is directly applied to underlying bash resource.
+* Enhance : Pass through the ignore_failure flag on the `glassfish_asadmin` resource to the underlying resource.
+* Enhance : Add in a `search_driven_domain` recipe to simplify the collection of data for the
+            `attribute_driven_domain` recipe.
+* Change  : Make jaas_context optional in the `glassfish_auth_realm` LWRP. Submitted By Adrian Stanila.
+* Change  : Use default_action DSL rather than constructor to specify default actions for LWRPs. This means the plugin
+            requires Chef v0.10.10 or higher.
+* Bug     : Fix the usage of the enabled flag in several resource centric LWRPs. Submitted By Adrian Stanila.
+* Bug     : Fix the usage of the debug flag in the javamail resource LWRP.
+* Bug     : Fix the usage of the target flag in several resource centric LWRPs. Ensure the guard conditions pass the
+            correct target flag. Submitted By Adrian Stanila.
+* Bug     : Remove obsolete target flag from jdbc_connection_pool, connector_connection_pool, resource_adapter LWRPs.
+
 ## v0.5.6:
 
 * Change  : Rename the attribute tree used to define javamail resources in the `glassfish::attribute_driven_domain`

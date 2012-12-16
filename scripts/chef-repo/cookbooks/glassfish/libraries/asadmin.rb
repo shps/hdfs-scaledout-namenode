@@ -20,22 +20,37 @@ class Chef
       "'#{properties.collect{|k,v| "#{k}=#{escape_property(v)}"}.join(":")}'"
     end
 
+    def asadmin_target_flag
+      new_resource.target ? "--target #{new_resource.target}" : ''
+    end
+
     def escape_property(string)
-      string.to_s.gsub('\\', '\\\\').gsub(':', '\\:').gsub('""', '\\""')
+      string.to_s.gsub(/([#{Regexp.escape('\/,=:.!$%^&*|{}[]"`~;')}])/) {|match| "\\#{match}" }
     end
 
     def asadmin_command(command, remote_command = true)
+      options = {}
+      options[:remote_command] = remote_command
+      options[:terse] = new_resource.terse
+      options[:echo] = new_resource.echo
+      options[:username] = new_resource.username
+      options[:password_file] = new_resource.password_file
+      options[:secure] = new_resource.secure
+      options[:admin_port] = new_resource.admin_port
+      Asadmin.asadmin_command(node, command, options)
+    end
+
+    def self.asadmin_command(node, command, options = {})
       args = []
-      args << "--terse" if new_resource.terse
-      args << "--echo" if new_resource.echo
-      args << "--user #{new_resource.username}" if new_resource.username
-      args << "--passwordfile=#{new_resource.password_file}" if new_resource.password_file
-      if remote_command
-        args << "--secure" if new_resource.secure
-        args << "--port #{new_resource.admin_port}"
+      args << "--terse" if options[:terse]
+      args << "--echo" if options[:echo]
+      args << "--user #{options[:username]}" if options[:username]
+      args << "--passwordfile=#{options[:password_file]}" if options[:password_file]
+      if options[:remote_command].nil? || options[:remote_command]
+        args << "--secure" if options[:secure]
+        args << "--port #{options[:admin_port]}"
       end
 
-      Chef::Log.info "asadmin #{args.join(" ")} #{command} "
       "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin #{args.join(" ")} #{command}"
     end
   end

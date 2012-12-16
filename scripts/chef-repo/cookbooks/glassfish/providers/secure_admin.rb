@@ -19,25 +19,23 @@ include Chef::Asadmin
 notifying_action :enable do
   service "glassfish-#{new_resource.domain_name}" do
     provider Chef::Provider::Service::Upstart
-    supports :restart => true
+    supports :restart => true, :status => true
     action :nothing
   end
 
   bash "asadmin_enable-secure-admin" do
-    only_if "#{asadmin_command('get secure-admin.enabled')} | grep -x -- 'secure-admin.enabled=false'"
+    not_if "#{asadmin_command('get secure-admin.enabled')} | grep -x -- 'secure-admin.enabled=true'"
     user node['glassfish']['user']
     group node['glassfish']['group']
-    Chef::Log.info "Enable secure admin..."
     code asadmin_command("enable-secure-admin")
-    Chef::Log.info "Restarting GlassFish Domain glassfish-#{new_resource.domain_name}"
-    notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :delayed
+    notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :immediate
   end
 end
 
 notifying_action :disable do
   service "glassfish-#{new_resource.domain_name}" do
     provider Chef::Provider::Service::Upstart
-    supports :restart => true
+    supports :restart => true, :status => true
     action :nothing
   end
 
@@ -46,6 +44,6 @@ notifying_action :disable do
     user node['glassfish']['user']
     group node['glassfish']['group']
     code asadmin_command("disable-secure-admin")
-    notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :delayed
+    notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :immediate
   end
 end

@@ -101,9 +101,6 @@
         </auth-constraint>
     </security-constraint>
 
-   
-      
-
     <security-constraint>
         <web-resource-collection>
             <web-resource-name>Secured Content for REST agents sending alerts data</web-resource-name>

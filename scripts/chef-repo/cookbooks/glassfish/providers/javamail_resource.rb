@@ -29,13 +29,13 @@ notifying_action :create do
   command << "--transprotocolclass" << new_resource.transprotocolclass if new_resource.transprotocolclass
   command << "--property" << encode_parameters(new_resource.properties) unless new_resource.properties.empty?
   command << "--description" << "'#{new_resource.description}'" if new_resource.description
-  command << "--debug=#{debug}" if new_resource.debug
-  command << "--enabled=#{enabled}" if new_resource.enabled
-  command << "--target" << new_resource.target if new_resource.target
+  command << "--debug=#{new_resource.debug}" if new_resource.debug
+  command << "--enabled=#{new_resource.enabled}" if new_resource.enabled
+  command << asadmin_target_flag
   command << new_resource.jndi_name
 
   bash "asadmin_create-javamail-resource #{new_resource.jndi_name}" do
-    not_if "#{asadmin_command('list-javamail-resources')} | grep -x -- '#{new_resource.jndi_name}'"
+    not_if "#{asadmin_command('list-javamail-resources')} #{new_resource.target} | grep -x -- '#{new_resource.jndi_name}'"
     user node['glassfish']['user']
     group node['glassfish']['group']
     code asadmin_command(command.join(' '))
@@ -45,11 +45,11 @@ end
 notifying_action :delete do
   command = []
   command << "delete-javamail-resource"
-  command << "--target" << new_resource.target if new_resource.target
+  command << asadmin_target_flag
   command << new_resource.jndi_name
 
   bash "asadmin_delete-javamail-resource #{new_resource.jndi_name}" do
-    only_if "#{asadmin_command('list-javamail-resources')} | grep -x -- '#{new_resource.jndi_name}'"
+    only_if "#{asadmin_command('list-javamail-resources')} #{new_resource.target} | grep -x -- '#{new_resource.jndi_name}'"
     user node['glassfish']['user']
     group node['glassfish']['group']
     code asadmin_command(command.join(' '))

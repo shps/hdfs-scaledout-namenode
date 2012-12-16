@@ -19,8 +19,8 @@ actions :create, :delete
 attribute :jndi_name, :kind_of => String, :name_attribute => true
 attribute :raname, :kind_of => String, :required => true
 attribute :restype, :kind_of => String, :required => true
-attribute :enabled, :equal_to => [true, false, 'true', 'false'], :default => nil
-attribute :target, :kind_of => String, :default => nil
+attribute :enabled, :equal_to => [true, false, 'true', 'false'], :default => true
+attribute :target, :kind_of => String, :default => 'server'
 attribute :classname, :kind_of => String, :default => nil
 attribute :description, :kind_of => String, :default => nil
 attribute :properties, :kind_of => Hash, :default => {}
@@ -30,10 +30,7 @@ attribute :terse, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :echo, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :username, :kind_of => String, :default => nil
 attribute :password_file, :kind_of => String, :default => nil
-attribute :secure, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :secure, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :admin_port, :kind_of => Integer, :default => 4848
 
-def initialize( *args )
-  super
-  @action = :create
-end
+default_action :create

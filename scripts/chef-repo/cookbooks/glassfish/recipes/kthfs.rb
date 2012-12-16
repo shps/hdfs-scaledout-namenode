@@ -13,297 +13,196 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+#include_recipe "ark"
 include_recipe "glassfish::default"
 
-    glassfish_domain "kthfs" do
-      username "admin"
-      password "admin"
-      port 8080
-      admin_port 4848
-      extra_libraries ['http://mirrors.ibiblio.org/pub/mirrors/maven2/mysql/mysql-connector-java/3.1.12/mysql-connector-java-3.1.12.jar']
-      logging_properties {
-        "handlers" => "java.util.logging.ConsoleHandler, gelf4j.logging.GelfHandler",
-        ".level" => "INFO",
-        "java.util.logging.ConsoleHandler.level" => "INFO",
-        "gelf4j.logging.GelfHandler.level" => "ALL",
-        "gelf4j.logging.GelfHandler.host" => 'graylog.example.org',
-        "gelf4j.logging.GelfHandler.defaultFields" => '{"environment": "' + node.chef_environment + '", "facility": "MyDomain"}',
-        "gelf4j.logging.GelfHandler.compressedChunking" => false,
-      }
-    end
+domain_name="domain1"
+admin_port=4848
+port=8080
+secure=true
+username="admin"
+password="admin"
+password_file="#{node['glassfish']['domains_dir']}/#{domain_name}_admin_passwd"
 
+glassfish_domain "#{domain_name}" do
+  username username
+  password password
+  password_file username ? "#{node['glassfish']['domains_dir']}/#{domain_name}_admin_passwd" : nil
+  port port 
+  admin_port admin_port
+  secure secure 
+  echo true
+  terse false
+  max_memory 3500
+  max_stack_size 1024
+  max_perm_size 1024
+  action :create
+end
+#  remote_access false
+ # extra_libraries ['http://lucan.sics.se/kthfs/mysql-connector-java-5.1.22-bin.jar']
 
-./asadmin -u admin -W ../domains/domain1_admin_passwd enable-secure-admin
+glassfish_library "http://lucan.sics.se/kthfs/mysql-connector-java-5.1.22-bin.jar" do
+  domain_name domain_name
+  admin_port admin_port 
+  username username 
+  password_file password_file 
+  secure false
+  action :add
+end
 
-./asadmin -u admin -W ../domains/domain1_admin_passwd restart-domain
+glassfish_secure_admin domain_name do
+   domain_name domain_name
+   username username
+   password_file password_file 
+   admin_port admin_port
+   secure false
+   echo true
+   terse false
+   action :enable
+end
 
-
-
-# node['glassfish']['domains'].each_pair do |domain_key, definition|
-#   domain_key = domain_key.to_s
-
-#   Chef::Log.info "Defining GlassFish Domain #{domain_key}"
-
-#   admin_port = definition['config']['admin_port']
-#   username = definition['config']['username']
-#   secure = definition['config']['secure']
-#   password_file = username ? "#{node['glassfish']['domains_dir']}/#{domain_key}_admin_passwd" : nil
-
-#   if (definition['config']['port'] && definition['config']['port'] < 1024) || (admin_port && admin_port < 1024)
-#     include_recipe "authbind"
-#   end
-
-#   glassfish_domain domain_key do
-#     max_memory definition['config']['max_memory'] if definition['config']['max_memory']
-#     max_perm_size definition['config']['max_perm_size'] if definition['config']['max_perm_size']
-#     max_stack_size definition['config']['max_stack_size'] if definition['config']['max_stack_size']
-#     port definition['config']['port'] if definition['config']['port']
-#     admin_port admin_port if admin_port
-#     username username if username
-#     password_file password_file if password_file
-#     secure secure if secure
-#     password definition['config']['password'] if definition['config']['password']
-#     extra_libraries definition['extra_libraries'].values if definition['extra_libraries']
-#     logging_properties definition['logging_properties'] if definition['logging_properties']
-#     realm_types definition['realm_types'] if definition['realm_types']
-#     extra_jvm_options definition['config']['jvm_options'] if definition['config']['jvm_options']
-#     env_variables definition['config']['environment'] if definition['config']['environment']
-#   end
-
-#   glassfish_secure_admin "#{domain_key}: secure_admin" do
-#     domain_name domain_key
-#     admin_port admin_port if admin_port
-#     username username if username
-#     password_file password_file if password_file
-#     secure secure if secure
-#     action ('true' == definition['config']['remote_access'].to_s) ? :enable : :disable
-#   end
-
-#   if definition['properties']
-#     definition['properties'].each_pair do |key, value|
-#       glassfish_property "#{key}=#{value}" do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         key key
-#         value value
-#       end
-#     end
-#   end
-
-#   ##
-#   ## Deploy all OSGi bundles prior to attempting to setup resources as they are likely to be the things
-#   ## that are provided by OSGi
-#   ##
-#   if definition['deployables']
-#     definition['deployables'].each_pair do |component_name, configuration|
-#       if configuration['type'] && configuration['type'].to_s == 'osgi'
-#         glassfish_deployable component_name.to_s do
-#           domain_name domain_key
-#           admin_port admin_port if admin_port
-#           username username if username
-#           password_file password_file if password_file
-#           secure secure if secure
-#           version configuration['version']
-#           url configuration['url']
-#           type :osgi
-#         end
-#       end
-#     end
-#   end
-
-#   if definition['realms']
-#     definition['realms'].each_pair do |key, configuration|
-#       glassfish_auth_realm key.to_s do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         target configuration['target'] if configuration['target']
-#         classname configuration['classname'] if configuration['classname']
-#         jaas_context configuration['jaas-context'] if configuration['jaas-context']
-#         assign_groups configuration['assign-groups'] if configuration['assign-groups']
-#         properties configuration['properties'] if configuration['properties']
-#       end
-#     end
-#   end
-
-#   if definition['jdbc_connection_pools']
-#     definition['jdbc_connection_pools'].each_pair do |key, configuration|
-#       key = key.to_s
-#       glassfish_jdbc_connection_pool key do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         configuration['config'].each_pair do |config_key, value|
-#           self.send(config_key, value)
-#         end if configuration['config']
-#       end
-#       if configuration['resources']
-#         configuration['resources'].each_pair do |resource_name, resource_configuration|
-#           glassfish_jdbc_resource resource_name.to_s do
-#             domain_name domain_key
-#             admin_port admin_port if admin_port
-#             username username if username
-#             password_file password_file if password_file
-#             secure secure if secure
-#             connectionpoolid key
-#             resource_configuration.each_pair do |config_key, value|
-#               self.send(config_key, value)
-#             end
-#           end
-#         end
-#       end
-#     end
-#   end
-
-#   if definition['resource_adapters']
-#     definition['resource_adapters'].each_pair do |resource_adapter_key, resource_configuration|
-#       resource_adapter_key = resource_adapter_key.to_s
-#       glassfish_resource_adapter resource_adapter_key do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         resource_configuration['config'].each_pair do |config_key, value|
-#           self.send(config_key, value)
-#         end if resource_configuration['config']
-#       end
-#       if resource_configuration['connection_pools']
-#         resource_configuration['connection_pools'].each_pair do |pool_key, pool_configuration|
-#           pool_key = pool_key.to_s
-#           glassfish_connector_connection_pool pool_key do
-#             domain_name domain_key
-#             admin_port admin_port if admin_port
-#             username username if username
-#             password_file password_file if password_file
-#             secure secure if secure
-#             raname resource_adapter_key
-#             pool_configuration['config'].each_pair do |config_key, value|
-#               self.send(config_key, value)
-#             end if pool_configuration['config']
-#           end
-#           if pool_configuration['resources']
-#             pool_configuration['resources'].each_pair do |resource_name, resource_configuration|
-#               glassfish_connector_resource resource_name.to_s do
-#                 domain_name domain_key
-#                 admin_port admin_port if admin_port
-#                 username username if username
-#                 password_file password_file if password_file
-#                 secure secure if secure
-#                 poolname pool_key.to_s
-#                 resource_configuration.each_pair do |config_key, value|
-#                   self.send(config_key, value)
-#                 end
-#               end
-#             end
-#           end
-#         end
-#       end
-#       if resource_configuration['admin-objects']
-#         resource_configuration['admin-objects'].each_pair do |admin_object_key, admin_object_configuration|
-#           admin_object_key = admin_object_key.to_s
-#           glassfish_admin_object admin_object_key do
-#             domain_name domain_key
-#             admin_port admin_port if admin_port
-#             username username if username
-#             password_file password_file if password_file
-#             secure secure if secure
-#             raname resource_adapter_key
-#             admin_object_configuration.each_pair do |config_key, value|
-#               self.send(config_key, value)
-#             end
-#           end
-#         end
-#       end
-#     end
-#   end
-
-#   if definition['custom_resources']
-#     definition['custom_resources'].each_pair do |key, value|
-#       hash = value.is_a?(Hash) ? value : {'value' => value}
-#       glassfish_custom_resource key.to_s do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         target hash['target'] if hash['target']
-#         enabled hash['enabled'] if hash['enabled']
-#         description hash['description'] if hash['description']
-#         properties hash['properties'] if hash['properties']
-#         restype hash['restype'] if hash['restype']
-#         restype hash['factoryclass'] if hash['factoryclass']
-#         value hash['value'] if hash['value']
-#       end
-#     end
-#   end
-
-#   if definition['javamail_resources']
-#     definition['javamail_resources'].each_pair do |key, javamail_configuration|
-#       glassfish_javamail_resource key.to_s do
-#         domain_name domain_key
-#         admin_port admin_port if admin_port
-#         username username if username
-#         password_file password_file if password_file
-#         secure secure if secure
-#         javamail_configuration.each_pair do |config_key, value|
-#           self.send(config_key, value)
-#         end
-#       end
-#     end
-#   end
-
-#   if definition['deployables']
-#     definition['deployables'].each_pair do |component_name, configuration|
-#       if configuration['type'].nil? || configuration['type'].to_s != 'osgi'
-#         glassfish_deployable component_name.to_s do
-#           domain_name domain_key
-#           admin_port admin_port if admin_port
-#           username username if username
-#           password_file password_file if password_file
-#           secure secure if secure
-#           version configuration['version']
-#           url configuration['url']
-#           context_root configuration['context_root'] if configuration['context_root']
-#           target configuration['target'] if configuration['target']
-#           enabled configuration['enabled'] if configuration['enabled']
-#           generate_rmi_stubs configuration['generate_rmi_stubs'] if configuration['generate_rmi_stubs']
-#           virtual_servers configuration['virtual_servers'] if configuration['virtual_servers']
-#           availability_enabled configuration['availability_enabled'] if configuration['availability_enabled']
-#           keep_state configuration['keep_state'] if configuration['keep_state']
-#           verify configuration['verify'] if configuration['verify']
-#           precompile_jsp configuration['precompile_jsp'] if configuration['precompile_jsp']
-#           async_replication configuration['async_replication'] if configuration['async_replication']
-#           properties configuration['properties'] if configuration['properties']
-#           descriptors configuration['descriptors'] if configuration['descriptors']
-#           lb_enabled configuration['lb_enabled'] if configuration['lb_enabled']
-#         end
-#         if configuration['web_env_entries']
-#           configuration['web_env_entries'].each_pair do |key, value|
-#             hash = value.is_a?(Hash) ? value : {'value' => value}
-#             glassfish_web_env_entry "#{domain_key}: #{component_name} set #{key}" do
-#               domain_name domain_key
-#               admin_port admin_port if admin_port
-#               username username if username
-#               password_file password_file if password_file
-#               secure secure if secure
-#               webapp component_name
-#               name key
-#               type hash['type'] if hash['type']
-#               value hash['value'] if hash['value']
-#               description hash['description'] if hash['description']
-#             end
-#           end
-#         end
-#       end
-#     end
-#   end
+# bash "asadmin_enable-secure-admin" do
+#   user node['glassfish']['user']
+#   group node['glassfish']['group']
+#   ignore_failure true
+#   code <<-EOF
+# # netstat -npl | grep 8686
+#   echo "Bash enabling secure admin "
+#    #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd enable-secure-admin
+#   EOF
+#   not_if "{node['glassfish']['base_dir']}/glassfish/bin/asadmin get secure-admin.enabled | grep -x -- 'secure-admin.enabled=true'"
 # end
+
+# #TODO - this should only get executed on the first install
+ #  bash "asadmin_restart-server" do
+ #   user node['glassfish']['user']
+ #   group node['glassfish']['group']
+ #   ignore_failure true
+ #   code <<-EOF
+ #   echo "Bash restarting domain "
+ #   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd restart-domain
+ #   EOF
+ # end
+
+
+
+
+  # asadmin --user admin --passwordfile gfpass create-jdbc-connection-pool
+  #    --datasourceclassname com.derby.jdbc.jdbcDataSource
+  #    --property user=dbuser:passwordfile=dbpasswordfile:
+  #    DatabaseName=jdbc\\:derby:server=http\\://localhost\\:9092 javadb-pool
+
+
+
+#glassfish_auth_realm "Authentication Real" do
+#   action :enable
+#end
+kthfs_db = "kthfs"
+
+#  glassfish_jdbc_connection_pool kthfs_db do
+#    domain_name domain_name
+#    admin_port admin_port 
+#    username username 
+#    password_file password_file 
+#    secure false
+#    restype "javax.sql.DataSource"
+#    datasourceclassname "com.mysql.jdbc.jdbc2.optional.MysqlDataSource"
+#    validationmethod "auto-commit"
+#    isolationlevel "read-committed"
+#    maxpoolsize 32
+#    steadypoolsize 16
+#    poolresize 2
+#    idletimeout 300
+# #   properties { "user=root:password=kthfs:databaseName=kthfs:port=3306:serverName=localhost:url=\\\"jdbc\\:mysql\\://localhost\\:3306/kthfs\\\""}
+#    properties { "user=root:password=kthfs:databaseName=kthfs:port=3306:serverName=localhost"}
+#  end
+
+ bash "install_jdbc" do
+   user node['glassfish']['user']
+   group node['glassfish']['group']
+   code <<-EOF
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin create-jdbc-connection-pool -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd --datasourceclassname com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource --restype javax.sql.DataSource --nontransactionalconnections=true --creationretryattempts=1 --creationretryinterval=2 --validationmethod=auto-commit --isconnectvalidatereq=true --isolationlevel=read-committed --property user=root:password=kthfs:databaseName=kthfs:portNumber=3306:serverName=localhost:url="jdbc\\:mysql\\://localhost\\:3306/kthfs" #{kthfs_db}
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd create-jdbc-resource --connectionpoolid #{kthfs_db} --enabled=true jdbc/#{kthfs_db}
+   EOF
+   not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-jdbc-connection-pools | grep -i #{kthfs_db}"
+ end
+
+
+ # glassfish_jdbc_resource "jdbc/#{kthfs_db}" do
+ #   domain_name domain_name
+ #   admin_port admin_port 
+ #   username username 
+ #   password_file password_file 
+ #   secure false
+ #   connectionpoolid "#{kthfs_db}"
+ # end
+
+# <auth-realm name="DBRealm" classname="com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm">
+#   <property name="jaas-context" value="jdbcRealm"></property>
+#   <property name="password-column" value="PASSWORD"></property>
+#   <property name="assign-groups" value="ADMIN,USER"></property>
+#   <property name="datasource-jndi" value="jdbc/kthfs"></property>
+#   <property name="group-table" value="USERS_GROUPS"></property>
+#   <property name="user-table" value="USERS"></property>
+#   <property name="group-name-column" value="groupname"></property>
+#   <property name="digestrealm-password-enc-algorithm" value="none"></property>
+#   <property name="group-table-user-name-column" value="email"></property>
+#   <property name="digest-algorithm" value="none"></property>
+#   <property name="user-name-column" value="EMAIL"></property>
+#   <property name="encoding" value="Hex"></property>
+#   <property name="db-user" value="root"></property>
+#   <property name="db-password" value="kthfs"></property>
+# </auth-realm>
+
+ # glassfish_auth_realm "DBRealm" do
+ #   jaas_context "jdbcRealm"
+ #   classname "com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm"
+ #   assign_groups { "ADMIN,USER,AGENT" }
+ #  properties { "datasource-jndi=jdbc/#{kthfs_db}:group-table=USERS_GROUPS:user-table=USERS:group-name-column=groupname:digest-algorithm=none:user-name-column=EMAIL:encoding=Hex:db-user=root:db-password=kthfs"}
+ # end
+
+# See http://docs.oracle.com/cd/E26576_01/doc.312/e24938/create-auth-realm.htm
+
+
+ bash "jdbc_auth_realm" do
+   user node['glassfish']['user']
+   group node['glassfish']['group']
+#   ignore_failure true
+   code <<-EOF
+   echo "Creating jdbc realm"
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd create-auth-realm --classname com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm --property "jaas-context=jdbcRealm:datasource-jndi=jdbc/#{kthfs_db}:group-table=USERS_GROUPS:user-table=USERS:group-name-column=GROUPNAME:digest-algorithm=none:user-name-column=EMAIL:encoding=Hex:password-column=PASSWORD:assign-groups=ADMIN,USER,AGENT:group-table-user-name-column=EMAIL:digestrealm-password-enc-algorithm= :db-user=root:db-password=kthfs" DBRealm
+#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd set server-config.security-service.default-realm=DBRealm 
+
+# chmod +w ../domains/domain1/config/logging.properties 
+# #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd set-log-level javax.enterprise.system.core.security=FINEST
+   EOF
+   not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-auth-realms | grep DBRealm"
+ end
+
+
+kthfsmgr_url = node['kthfs']['mgr']
+kthfsmgr_filename = File.basename(kthfsmgr_url)
+cached_kthfsmgr_filename = "#{Chef::Config[:file_cache_path]}/#{kthfsmgr_filename}"
+
+Chef::Log.info "Downloading #{cached_kthfsmgr_filename} from #{kthfsmgr_url} "
+
+remote_file cached_kthfsmgr_filename do
+    source kthfsmgr_url
+    mode 00755
+    owner node['glassfish']['user']
+    group node['glassfish']['group']
+    mode '0600'
+    action :create_if_missing
+end
+
+Chef::Log.info "Installing KTHFS Dashboard "
+
+bash "unpack_kthfsmgr" do
+  user node['glassfish']['user']
+  group node['glassfish']['group']
+ code <<-EOF
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd deploy --force=true --name KTHFSDashboard #{cached_kthfsmgr_filename}
+#  --keepstate=true
+ EOF
+  not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-applications --type ejb | grep -w 'KTHFSDashboard'"
+end

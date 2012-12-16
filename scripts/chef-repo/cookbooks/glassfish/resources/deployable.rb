@@ -18,7 +18,7 @@ actions :deploy, :undeploy, :enable, :disable
 
 attribute :component_name, :kind_of => String, :name_attribute => true
 attribute :version, :kind_of => String, :default => nil
-attribute :target, :kind_of => String, :default => nil
+attribute :target, :kind_of => String, :default => 'server'
 attribute :url, :kind_of => String, :required => true
 attribute :enabled, :equal_to => [true, false, 'true', 'false'], :default => true
 attribute :type, :equal_to => [:osgi, 'osgi', nil], :default => nil
@@ -39,10 +39,7 @@ attribute :terse, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :echo, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :username, :kind_of => String, :default => nil
 attribute :password_file, :kind_of => String, :default => nil
-attribute :secure, :kind_of => [TrueClass, FalseClass], :default => true
+attribute :secure, :kind_of => [TrueClass, FalseClass], :default => false
 attribute :admin_port, :kind_of => Integer, :default => 4848
 
-def initialize( *args )
-  super
-  @action = :deploy
-end
+default_action :deploy

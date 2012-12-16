@@ -102,6 +102,15 @@ end
 
 def default_jvm_options
   [
+    # Don't rely on the JVMs default encoding
+    "-Dfile.encoding=UTF-8",
+
+    # Glassfish should be headless by default
+    "-Djava.awt.headless=true",
+
+    # Remove the "Server" header altogether
+    "-Dproduct.name=",
+
     # JVM options
     "-XX:+UnlockDiagnosticVMOptions",
     "-XX:MaxPermSize=#{new_resource.max_perm_size}m",
@@ -165,7 +174,7 @@ notifying_action :create do
 
   service "glassfish-#{new_resource.domain_name}" do
     provider Chef::Provider::Service::Upstart
-    supports :start => true, :restart => true, :stop => true
+    supports :start => true, :restart => true, :stop => true, :status => true
     action :nothing
   end
 
@@ -179,7 +188,7 @@ notifying_action :create do
   args << "-instancename"
   args << "server"
   args << "-verbose"
-  args << "false"
+  args << "true"
   args << "-debug"
   args << "false"
   args << "-upgrade"
@@ -188,11 +197,11 @@ notifying_action :create do
   args << "DAS"
   args << "-domaindir"
   args << domain_dir_path
-
   template "/etc/init/glassfish-#{new_resource.domain_name}.conf" do
     source "glassfish-upstart.conf.erb"
     mode "0644"
     cookbook 'glassfish'
+
     variables(:resource => new_resource, :args => args, :authbind => requires_authbind, :listen_ports => [new_resource.admin_port, new_resource.port])
     notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :delayed
   end
@@ -231,6 +240,7 @@ notifying_action :create do
     not_if "#{asadmin_command('list-domains')} #{domain_dir_arg}| grep -- '#{new_resource.domain_name} '"
 
     args = []
+    args << "--checkports=false"
     args << "--instanceport #{new_resource.port}"
     args << "--adminport #{new_resource.admin_port}"
     args << "--nopassword=false" if new_resource.username
@@ -242,7 +252,6 @@ notifying_action :create do
     command_string << replace_in_domain_file("%%%MAX_STACK_SIZE%%%", new_resource.max_stack_size)
     command_string << replace_in_domain_file("%%%MAX_MEM_SIZE%%%", new_resource.max_memory)
     command_string << replace_in_domain_file("%%%MIN_MEM_SIZE%%%", new_resource.min_memory)
-    command_string << replace_in_domain_file("%%%BIND_ADDRESS%%%", node['bind_address'])
     command_string << asadmin_command("verify-domain-xml #{new_resource.domain_name}", false)
 
     user node['glassfish']['user']
@@ -252,12 +261,6 @@ notifying_action :create do
 
   file "#{domain_dir_path}/docroot/index.html" do
     action :delete
-  end
-
-  service "glassfish-#{new_resource.domain_name}" do
-    provider Chef::Provider::Service::Upstart
-    supports :start => true, :restart => true, :stop => true
-    action [:start]
   end
 
   template "#{domain_dir_path}/config/logging.properties" do
@@ -280,23 +283,7 @@ notifying_action :create do
     notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :delayed
   end
 
-  if new_resource.extra_libraries
-    new_resource.extra_libraries.each do |extra_library|
-      library_location = "#{domain_dir_path}/lib/ext/#{::File.basename(extra_library)}"
-      remote_file library_location do
-        source extra_library
-        mode "0640"
-        owner node['glassfish']['user']
-        group node['glassfish']['group']
-        action :create_if_missing
-        notifies :restart, resources(:service => "glassfish-#{new_resource.domain_name}"), :delayed
-      end
-    end
-  end
-
   service "glassfish-#{new_resource.domain_name}" do
-    provider Chef::Provider::Service::Upstart
-    supports :start => true, :restart => true, :stop => true
     action [:start]
   end
 end
