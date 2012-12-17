@@ -47,8 +47,8 @@ end
 
 # content = File.read("#{node[:kthfs][:base_dir]}/config.ini")
 # ini_file = IniFile.new(content, :comment => ';')
-
 #ini_file = IniFile.load("#{node[:kthfs][:base_dir]}/config.ini", :comment => ';#')
+
 ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
 
 if ini_file.has_section?('hdfs1-mysqlcluster')
