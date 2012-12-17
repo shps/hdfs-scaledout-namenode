@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./stop-agent.sh
+<%= node[:kthfs][:base_dir] %>/stop-agent.sh
 sleep 1
-./start-agent.sh
+<%= node[:kthfs][:base_dir] %>/start-agent.sh
 exit $?
