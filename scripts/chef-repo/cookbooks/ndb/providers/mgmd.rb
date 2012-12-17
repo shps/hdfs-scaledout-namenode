@@ -1,5 +1,4 @@
-
-notifying_action :init do
+action :init do
   bash "init-#{new_resource.name}" do
     code <<-EOF
     node[ndb:][:scripts_dir]/ndbd-init.sh
@@ -8,7 +7,7 @@ notifying_action :init do
   end
 end
 
-notifying_action :start do
+action :start do
   bash "start-#{new_resource.name}" do
     code <<-EOF
     node[ndb:][:scripts_dir]/ndbd-start.sh
@@ -16,7 +15,7 @@ notifying_action :start do
   end
 end
 
-notifying_action :stop do
+action :stop do
   bash "stop-#{new_resource.name}" do
     code <<-EOF
     node[ndb:][:scripts_dir]/ndbd-stop.sh
@@ -24,7 +23,7 @@ notifying_action :stop do
   end
 end
 
-notifying_action :restart do
+action :restart do
   bash "restart-#{new_resource.name}" do
     code <<-EOF
     node[ndb:][:scripts_dir]/ndbd-restart.sh
