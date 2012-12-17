@@ -67,8 +67,8 @@ end
 
 service "kthfsagent" do
   provider Chef::Provider::Service::Init
-  supports :restart => true, :enable => true
-  action [ :enable ]
+  supports :restart => true
+  action [ :nothing ]
 end
 
 template "/etc/init.d/kthfsagent" do
@@ -76,6 +76,7 @@ template "/etc/init.d/kthfsagent" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0655
+  notifies :enable, resources(:service => "kthfsagent")
   notifies :restart, resources(:service => "kthfsagent")
 end
 
