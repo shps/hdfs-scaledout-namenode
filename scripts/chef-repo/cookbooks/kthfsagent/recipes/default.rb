@@ -67,8 +67,8 @@ end
 
 service "kthfsagent" do
   provider Chef::Provider::Service::Init
-  supports :restart => true
-  action [ :nothing ]
+  supports :restart => true, :enable => true
+  action [ :enable ]
 end
 
 template "/etc/init.d/kthfsagent" do
