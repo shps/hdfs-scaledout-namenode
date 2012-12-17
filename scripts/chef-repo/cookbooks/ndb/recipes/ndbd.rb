@@ -95,6 +95,12 @@ for script in node[:ndb][:scripts]
   end
 end 
 
+service "ndbd" do
+  provider Chef::Provider::Service::Init
+  supports :restart => true, :stop => true, :start => true
+  action [ :nothing ]
+end
+
 template "/etc/init.d/ndbd" do
   source "ndbd.erb"
   owner node[:ndb][:user]
@@ -106,8 +112,8 @@ template "/etc/init.d/ndbd" do
               :connect_string => node[:ndb][:connect_string],
               :node_id => id
             })
+  notifies :restart, resources(:service => "ndbd")
 end
-
 
 # create symbolic link from /var/lib/mysql-cluster/ndb-* to 'ndb'. Same for /usr/local/mysql-* to mysql
 # Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs

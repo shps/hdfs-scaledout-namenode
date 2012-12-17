@@ -24,6 +24,12 @@ for script in node[:mgm][:scripts]
   end
 end 
 
+service "ndb_mgmd" do
+  provider Chef::Provider::Service::Init
+  supports :restart => true, :stop => true, :start => true
+  action [ :nothing ]
+end
+
 template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
@@ -35,8 +41,8 @@ template "/etc/init.d/ndb_mgmd" do
               :connect_string => node[:ndb][:connect_string],
               :node_id => @id
             })
+  notifies :restart, resources(:service => "ndb_mgmd")
 end
-
 
 
 # content = File.read("#{node[:kthfs][:base_dir]}/config.ini")

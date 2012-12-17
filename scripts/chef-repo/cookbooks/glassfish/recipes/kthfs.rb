@@ -173,6 +173,9 @@ kthfs_db = "kthfs"
    #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd create-auth-realm --classname com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm --property "jaas-context=jdbcRealm:datasource-jndi=jdbc/#{kthfs_db}:group-table=USERS_GROUPS:user-table=USERS:group-name-column=GROUPNAME:digest-algorithm=none:user-name-column=EMAIL:encoding=Hex:password-column=PASSWORD:assign-groups=ADMIN,USER,AGENT:group-table-user-name-column=EMAIL:digestrealm-password-enc-algorithm= :db-user=root:db-password=kthfs" DBRealm
 #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd set server-config.security-service.default-realm=DBRealm 
 
+# Make sure mysql connections are validated by Glassfish
+#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd set domain.resources.jdbc-connection-pool.#{kthfs_db}.is-connection-validation-required=true domain.resources.jdbc-connection-pool.#{kthfs_db}.is-connection-validation-required=true
+
 # chmod +w ../domains/domain1/config/logging.properties 
 # #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd set-log-level javax.enterprise.system.core.security=FINEST
    EOF

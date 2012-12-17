@@ -19,6 +19,28 @@ template "mysql.cnf" do
   notifies :restart, resources(:service => "mysql")
 end
 
+service "mysqld" do
+  provider Chef::Provider::Service::Init
+  supports :restart => true, :stop => true, :start => true
+  action [ :nothing ]
+end
+
+template "/etc/init.d/mysqld" do
+  source "ndbd.erb"
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode 0655
+  variables({
+              :ndb_dir => node[:ndb][:base_dir],
+              :mysql_dir => node[:mysql][:base_dir],
+              :connect_string => node[:ndb][:connect_string],
+              :node_id => id
+            })
+  notifies :restart, resources(:service => "mysqld")
+end
+
+
+
 for script in node[:mysql][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
