@@ -118,9 +118,7 @@ end
 # create symbolic link from /var/lib/mysql-cluster/ndb-* to 'ndb'. Same for /usr/local/mysql-* to mysql
 # Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs
 
-content = File.read("/var/lib/kthfsagent/config.ini")
-ini_file = IniFile.new(content, :comment => ';#')
-#ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
+ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
 
 if ini_file.has_section?("hdfs1-ndb")
   Chef::Log.warn "A data node (ndbd) already exists in the ini file"

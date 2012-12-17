@@ -45,11 +45,7 @@ template "/etc/init.d/ndb_mgmd" do
 end
 
 
-# content = File.read("#{node[:kthfs][:base_dir]}/config.ini")
-# ini_file = IniFile.new(content, :comment => ';')
-#ini_file = IniFile.load("#{node[:kthfs][:base_dir]}/config.ini", :comment => ';#')
-
-ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
+ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
 
 if ini_file.has_section?('hdfs1-mysqlcluster')
   Chef::Log.warn "mysqlcluster already exists in the ini file"
