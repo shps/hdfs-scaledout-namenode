@@ -2,6 +2,9 @@ include_recipe "ndb"
 require 'fileutils'
 require 'inifile'
 
+package "libaio1" do
+    action :install
+end
 
 directory "#{node[:ndb][:base_dir]}/mysql/data" do
   owner node[:ndb][:user]
@@ -69,7 +72,9 @@ end
 bash 'mysq_install_db' do
     code <<-EOF
 # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-#{node[:mysql][:base_dir]}/scripts/mysql_install_db --config=#{node[:ndb][:base_dir]}/my.cnf --force 
+cd #{node[:mysql][:base_dir]}
+#{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+# --datadir=#{node[:ndb][:mysql_data_dir]} 
 EOF
 #  not_if { ::File.exists?( node['glassfish']['base_dir'] ) }
 end
