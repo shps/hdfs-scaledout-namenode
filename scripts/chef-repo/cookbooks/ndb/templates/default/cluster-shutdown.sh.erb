@@ -1,7 +1,7 @@
 #!/bin/sh 
 
 
-MGM_CONN=<%= @connection_string %>
+MGM_CONN=<%= @connect_string %>
 SKIP_MYSQLDS=0
 
 while [ $# -gt 0 ]; do
@@ -29,5 +29,5 @@ done
 
 
 <%= @mysql_dir %>/bin/ndb_mgm -c $MGM_CONN -e "shutdown"
-# <%= @ndb_dir %>/scripts/mysql-stop.sh
-                 
+
+               

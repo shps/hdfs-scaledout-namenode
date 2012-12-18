@@ -68,11 +68,11 @@ end
 
 
 
-ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
-# if ini_file.has_section?('hdfs1-mysqld')
-#   Chef::Log.info "Over-writing an existing section in the ini file."
-#   ini_file.delete_section("hdfs1-mysqld")
-# end
+ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
+ if ini_file.has_section?('hdfs1-mysqld')
+   Chef::Log.info "Over-writing an existing section in the ini file."
+   ini_file.delete_section("hdfs1-mysqld")
+ end
 
 ini_file["hdfs1-mysqld"] = {
   'status' => 'Stopped',
@@ -86,4 +86,4 @@ ini_file["hdfs1-mysqld"] = {
   'start-time'  => ''
 } 
 ini_file.save
-
+Chef::Log.info "Saved an updated copy of services file at the kthfsagent."

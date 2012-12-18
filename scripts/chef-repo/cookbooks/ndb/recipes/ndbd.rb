@@ -34,7 +34,7 @@ end
 
 
 found_id = -1
-id = 0
+id = 1
 # if no default IP is set, then look around for the IP 
 if node.attribute?('ipaddress') != true
   Chef::Log.warn "Node has no default IP address specified!"
@@ -115,15 +115,21 @@ template "/etc/init.d/ndbd" do
   notifies :restart, resources(:service => "ndbd")
 end
 
-# create symbolic link from /var/lib/mysql-cluster/ndb-* to 'ndb'. Same for /usr/local/mysql-* to mysql
-# Symbolic link is by kthfs-agent to stop/start ndbds, invoke programs
+file node[:ndb][:kthfs_services] do
+  owner "root"
+  group "root"
+  mode 00755
+  action :create_if_missing
+end
 
-ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
+ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
+Chef::Log.info "Loaded services for agent into ini-file."
 
-# if ini_file.has_section?("hdfs1-ndb")
-#   Chef::Log.info "Over-writing an existing section in the ini file."
-#   ini_file.delete_section("hdfs1-ndb")
-# end
+ if ini_file.has_section?("hdfs1-ndb")
+   Chef::Log.info "Over-writing an existing section in the ini file."
+   ini_file.delete_section("hdfs1-ndb")
+ end
+  ini_file["test"] = ['a','b']
   ini_file["hdfs1-ndb"] = {
     'status' => 'Stopped',
     'instance' => 'hdfs1',
@@ -137,4 +143,4 @@ ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
     'start-time'  => ''
   } 
   ini_file.save
-
+Chef::Log.info "Saved an updated copy of services file at the kthfsagent."

@@ -17,7 +17,9 @@ case $1 in
         ;;
 esac 
 
-echo "Starting backup..."
-RES=<%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string %> -e "start backup"
-exit $RES
+echo "Starting backup at: @connect_string"
+<%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string %> -e "start backup"
+
+# TODO - need to return backup-id to the client
+exit $?
 

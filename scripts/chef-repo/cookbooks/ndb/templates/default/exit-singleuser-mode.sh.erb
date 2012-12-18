@@ -1,5 +1,5 @@
 #!/bin/sh
 
-  <%= @mysql_dir %>/bin/ndb_mgm -c <%=  %> -e "EXIT SINGLE USER MODE $1"
-
+<%= @mysql_dir %>/bin/ndb_mgm -c <%= @connect_string  %> -e "EXIT SINGLE USER MODE"
+echo $?
 
