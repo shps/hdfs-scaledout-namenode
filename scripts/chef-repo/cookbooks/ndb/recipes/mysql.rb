@@ -28,7 +28,7 @@ template "/etc/init.d/mysqld" do
   source "ndbd.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
-  mode 0655
+  mode 0755
   variables({
               :ndb_dir => node[:ndb][:base_dir],
               :mysql_dir => node[:mysql][:base_dir],
@@ -46,12 +46,12 @@ for script in node[:mysql][:scripts]
     source "#{script}.erb"
     owner "root"
     group "root"
-    mode 0644
+    mode 0774
     variables({
        :user => node[:ndb][:user],
        :ndb_dir => node[:ndb][:base_dir],
        :mysql_dir => node[:mysql][:base_dir],
-       :ndb_mysql_dir => node[:ndb][:mysql_dir],
+       :ndb_mysql_dir => node[:ndb][:mysql_server_dir],
        :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
        :connect_string => node[:ndb][:connect_string],
        :mysql_port => node[:ndb][:mysql_port],
