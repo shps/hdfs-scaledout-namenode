@@ -1,4 +1,5 @@
 include_recipe "ndb"
+
 require 'fileutils'
 require 'inifile'
 
@@ -25,7 +26,6 @@ for script in node[:mgm][:scripts] do
 end 
 
 service "ndb_mgmd" do
-  provider Chef::Provider::Service::Init
   supports :restart => true, :stop => true, :start => true
   action [ :nothing ]
 end
@@ -41,22 +41,23 @@ template "/etc/init.d/ndb_mgmd" do
               :connect_string => node[:ndb][:connect_string],
               :node_id => @id
             })
+  notifies :enable, resources(:service => "ndb_mgmd")
   notifies :restart, resources(:service => "ndb_mgmd")
 end
 
-if File.exist?(node[:ndb][:kthfs_config]) then
-    ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
-    if ini_file.has_section?('hdfs1-mysqlcluster') then
-      Chef::Log.info "Over-writing an existing mysqlcluster section in the ini file."
-      ini_file.delete_section("hdfs1-mysqlcluster")
-    end
-    if ini_file.has_section?('hdfs1-mgmserver') then
-      Chef::Log.info "Over-writing an existing mgmserver section in the ini file."
-      ini_file.delete_section("hdfs1-mgmserver")
-    end
-else 
-  ini_file = IniFile.new(:filename => #{node[:ndb][:kthfs_config]})
-end
+# if File.exist?(node[:ndb][:kthfs_config]) then
+#     ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
+#     if ini_file.has_section?('hdfs1-mysqlcluster') then
+#       Chef::Log.info "Over-writing an existing mysqlcluster section in the ini file."
+#       ini_file.delete_section("hdfs1-mysqlcluster")
+#     end
+#     if ini_file.has_section?('hdfs1-mgmserver') then
+#       Chef::Log.info "Over-writing an existing mgmserver section in the ini file."
+#       ini_file.delete_section("hdfs1-mgmserver")
+#     end
+# else 
+#   ini_file = IniFile.new(:filename => #{node[:ndb][:kthfs_config]})
+# end
 
 # ini_file['hdfs1-mysqlcluster'] = {
 #   'status' => 'Stopped',
@@ -82,4 +83,4 @@ end
 #   'start-time'  => ''
 # } 
 
-ini_file.save
+# ini_file.save

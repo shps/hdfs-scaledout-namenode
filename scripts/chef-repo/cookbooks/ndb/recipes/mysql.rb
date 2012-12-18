@@ -20,7 +20,6 @@ template "mysql.cnf" do
 end
 
 service "mysqld" do
-  provider Chef::Provider::Service::Init
   supports :restart => true, :stop => true, :start => true
   action [ :nothing ]
 end
@@ -36,6 +35,7 @@ template "/etc/init.d/mysqld" do
               :connect_string => node[:ndb][:connect_string],
               :node_id => id
             })
+  notifies :enable, resources(:service => "mysqld")
   notifies :restart, resources(:service => "mysqld")
 end
 

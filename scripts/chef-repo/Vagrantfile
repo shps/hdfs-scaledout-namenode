@@ -25,7 +25,7 @@ Vagrant::Config.run do |config|
      chef.log_level = :info
      chef.add_recipe "collectd::server"
      chef.add_recipe "kthfsagent"
-     chef.add_recipe "ndb"
+     chef.add_recipe "ndb::ndbd"
   end 
 
 end
