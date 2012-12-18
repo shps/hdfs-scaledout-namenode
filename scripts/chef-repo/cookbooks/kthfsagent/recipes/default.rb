@@ -67,7 +67,6 @@ end
 
 service "kthfsagent" do
   supports :restart => true
-  action [ :enable ]
 end
 
 template "/etc/init.d/kthfsagent" do
@@ -75,6 +74,7 @@ template "/etc/init.d/kthfsagent" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0655
+  notifies :enable, resources(:service => "kthfsagent")
   notifies :restart, resources(:service => "kthfsagent")
 end
 
