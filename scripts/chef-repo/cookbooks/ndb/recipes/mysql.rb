@@ -10,18 +10,19 @@ directory "#{node[:ndb][:base_dir]}/mysql/data" do
   recursive true  
 end
 
+service "mysqld" do
+  supports :restart => true, :stop => true, :start => true
+  action [ :nothing ]
+end
+
+
 template "mysql.cnf" do
   path "#{node[:ndb][:base_dir]}/my.cnf"
   source "my.cnf.erb"
   owner "root"
   group "root"
   mode "0644"
-  notifies :restart, resources(:service => "mysql")
-end
-
-service "mysqld" do
-  supports :restart => true, :stop => true, :start => true
-  action [ :nothing ]
+  notifies :restart, resources(:service => "mysqld")
 end
 
 template "/etc/init.d/mysqld" do
@@ -65,6 +66,13 @@ end
 # mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
 
 # mysql_install_db --config=my.cnf...
+bash 'mysq_install_db' do
+    code <<-EOF
+# --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
+#{node[:mysql][:base_dir]}/scripts/mysql_install_db --config=#{node[:ndb][:base_dir]}/my.cnf --force 
+EOF
+#  not_if { ::File.exists?( node['glassfish']['base_dir'] ) }
+end
 
 
 

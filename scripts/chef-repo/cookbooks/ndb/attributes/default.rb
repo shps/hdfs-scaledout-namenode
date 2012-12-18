@@ -20,7 +20,7 @@ default[:ndb][:num_replicas] = 1
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
-default[:mysql][:scripts] = %w{ mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
+default[:mysql][:scripts] = %w{ mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh } # mysql-client.sh }
 
 default[:ndb][:version] = #{versionStr}
 default[:ndb][:base_dir] = "/var/lib/mysql-cluster/ndb-#{versionStr}"
