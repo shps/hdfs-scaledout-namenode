@@ -9,4 +9,6 @@ version          "0.1"
   supports os
 end
 
+depends 'python'
+
 recipe "kthfsagent::default", "Installs and configures the KTHFS agent"

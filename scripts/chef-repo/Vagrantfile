@@ -1,9 +1,8 @@
 Vagrant::Config.run do |config|
   config.vm.box = "precise64"
   config.vm.customize ["modifyvm", :id, "--memory", 5000]
-
 # config.vm.network :hostonly, "192.168.111.113"
-  config.vm.network :bridged, [:adapter, "1"] 
+  config.vm.network :bridged
   config.vm.forward_port 8080, 8080
   config.vm.forward_port 8181, 8181
   config.vm.forward_port 8686, 8686
@@ -18,7 +17,7 @@ Vagrant::Config.run do |config|
      chef.log_level = :debug
      chef.add_recipe "authbind"
      chef.add_recipe "java"
-     chef.add_recipe "mysql"
+#     chef.add_recipe "mysql"
      chef.add_recipe "openssh"
      chef.add_recipe "openssl"
      chef.log_level = :debug
@@ -26,6 +25,7 @@ Vagrant::Config.run do |config|
      chef.log_level = :info
      chef.add_recipe "collectd::server"
      chef.add_recipe "kthfsagent"
+     chef.add_recipe "ndb"
   end 
 
 end

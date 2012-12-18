@@ -120,9 +120,10 @@ end
 
 ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
 
-if ini_file.has_section?("hdfs1-ndb")
-  Chef::Log.warn "A data node (ndbd) already exists in the ini file"
-end
+# if ini_file.has_section?("hdfs1-ndb")
+#   Chef::Log.info "Over-writing an existing section in the ini file."
+#   ini_file.delete_section("hdfs1-ndb")
+# end
   ini_file["hdfs1-ndb"] = {
     'status' => 'Stopped',
     'instance' => 'hdfs1',

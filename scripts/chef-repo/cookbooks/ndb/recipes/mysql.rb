@@ -68,12 +68,12 @@ end
 
 
 
-ini_file = IniFile.load("/var/lib/kthfsagent/config.ini", :comment => ';#')
+ini_file = IniFile.load(node[:ndb][:kthfs_config], :comment => ';#')
+# if ini_file.has_section?('hdfs1-mysqld')
+#   Chef::Log.info "Over-writing an existing section in the ini file."
+#   ini_file.delete_section("hdfs1-mysqld")
+# end
 
-if ini_file.has_section?('hdfs1-mysqld')
-  Chef::Log.warn "mysqld section already exists in the ini file"
-end
-# I assume, this will write over any existing section with the same name.
 ini_file["hdfs1-mysqld"] = {
   'status' => 'Stopped',
   'instance' => 'hdfs1',

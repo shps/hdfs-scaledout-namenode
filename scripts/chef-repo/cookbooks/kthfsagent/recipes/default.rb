@@ -66,9 +66,8 @@ directory node[:kthfs][:base_dir] do
 end
 
 service "kthfsagent" do
-  provider Chef::Provider::Service::Init
   supports :restart => true
-  action [ :nothing ]
+  action [ :enable ]
 end
 
 template "/etc/init.d/kthfsagent" do
@@ -76,7 +75,6 @@ template "/etc/init.d/kthfsagent" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0655
-  notifies :enable, resources(:service => "kthfsagent")
   notifies :restart, resources(:service => "kthfsagent")
 end
 
@@ -111,11 +109,3 @@ end
     notifies :restart, resources(:service => "kthfsagent")
   end
 end 
-
-if platform?(%w{debian ubuntu})
- bash "install-initd-service" do
-    code <<-EOF
-#    update-rc.d kthfsagent default
- EOF
- end
-end

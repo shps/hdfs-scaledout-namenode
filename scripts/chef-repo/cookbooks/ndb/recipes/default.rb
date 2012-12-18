@@ -1,9 +1,20 @@
 include_recipe "kthfsagent"
 
-bash "install_ruby_libs" do
-    code <<-EOF
-  gem install inifile
-EOF
+inifile_url = node[:ndb][:inifile_gem]
+inifile_filename = File.basename(inifile_url)
+cached_inifile_filename = "#{Chef::Config[:file_cache_path]}/#{inifile_filename}"
+
+# Chef::Log.info "Downloading #{cached_inifile_filename} from #{inifile_url} "
+
+remote_file cached_inifile_filename do
+    source inifile_url
+    mode "0755"
+    action :create_if_missing
+end
+
+gem_package "inifile" do
+ source cached_inifile_filename
+ action :install
 end
 
 user node[:ndb][:user] do
@@ -67,8 +78,3 @@ cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
 EOF
   not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
 end
-
-#service "ndb" do
-#  action [:enable, :start]
-##  action :start, :immediately
-#end
