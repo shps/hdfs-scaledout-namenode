@@ -47,7 +47,4 @@ end
 
 ndb_kthfs_services node[:ndb][:kthfs_services] do
  action :install_ndbd
-    variables({
-       :node_id => id
-    })
 end
