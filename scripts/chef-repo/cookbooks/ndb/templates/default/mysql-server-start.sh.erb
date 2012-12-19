@@ -47,15 +47,14 @@ fi
 
 echo "Test if a mysql server is already running on this host."
 
-MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysqld-1-socket.sh`
-<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -s -u root ping 
+MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
+#<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -s -u root ping 
 # Don't redirect error, as this will give a '0' return result &> /dev/null
-if [ $? -eq 0 ] ; then
- echo "A MySQL Server is already running at socket . Not starting another MySQL Server at this socket."
- exit 1
-fi
+#if [ $? -eq 0 ] ; then
+# echo "A MySQL Server is already running at socket . Not starting another MySQL Server at this socket."
+# exit 1
+#fi
 
-<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/mysql_1/my-7-2-8.cnf 1> <%= @ndb_dir %>/logs/mysql-stdout-1.log 2>&1 &
-RES=`echo $?`
-exit $RES
+<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= @ndb_dir %>/log/mysql-stdout-1.log 2>&1 &
+exit $?
 

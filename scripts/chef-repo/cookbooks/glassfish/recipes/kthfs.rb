@@ -121,7 +121,7 @@ kthfs_db = "kthfs"
    user node['glassfish']['user']
    group node['glassfish']['group']
    code <<-EOF
-   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin create-jdbc-connection-pool -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd --datasourceclassname com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource --restype javax.sql.DataSource --nontransactionalconnections=true --creationretryattempts=1 --creationretryinterval=2 --validationmethod=auto-commit --isconnectvalidatereq=true --isolationlevel=read-committed --property user=root:password=kthfs:databaseName=kthfs:portNumber=3306:serverName=localhost:url="jdbc\\:mysql\\://localhost\\:3306/kthfs" #{kthfs_db}
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin create-jdbc-connection-pool -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd --datasourceclassname com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource --restype javax.sql.DataSource --nontransactionalconnections=true --creationretryattempts=1 --creationretryinterval=2 --validationmethod=auto-commit --isconnectvalidatereq=true --isolationlevel=read-committed --property user=root:password=kthfs:databaseName=kthfs:portNumber=3307:serverName=localhost:url="jdbc\\:mysql\\://localhost\\:3307/kthfs" #{kthfs_db}
    #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd create-jdbc-resource --connectionpoolid #{kthfs_db} --enabled=true jdbc/#{kthfs_db}
    EOF
    not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-jdbc-connection-pools | grep -i #{kthfs_db}"

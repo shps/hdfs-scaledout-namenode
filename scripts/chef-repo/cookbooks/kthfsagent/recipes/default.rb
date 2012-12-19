@@ -12,6 +12,7 @@ cookbook_file "#{Chef::Config[:file_cache_path]}/#{inifile_gem}" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0755
+  action :create_if_missing
 end
 
 gem_package "inifile" do
@@ -19,15 +20,34 @@ gem_package "inifile" do
   action :install
 end
 
-easy_install_package "requests" do
-  options "-U"
-  action :install
+requests="requests-1.0.3"
+cookbook_file "#{Chef::Config[:file_cache_path]}/#{requests}.tar.gz" do
+  source "#{requests}.tar.gz"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0755
+  action :create_if_missing
 end
 
-easy_install_package "bottle" do
-  options "-U"
-  action :install
+bottle="bottle-0.11.4"
+cookbook_file "#{Chef::Config[:file_cache_path]}/#{bottle}.tar.gz" do
+  source "#{bottle}.tar.gz"
+  owner node[:kthfs][:user]
+  group node[:kthfs][:user]
+  mode 0755
+  action :create_if_missing
 end
+
+
+# easy_install_package "requests" do
+#   options "-U"
+#   action :install
+# end
+
+# easy_install_package "bottle" do
+#   options "-U"
+#   action :install
+# end
 
 cherry="CherryPy-3.2.2"
 cookbook_file "#{Chef::Config[:file_cache_path]}/#{cherry}.tar.gz" do
@@ -43,10 +63,19 @@ cookbook_file "#{Chef::Config[:file_cache_path]}/#{openSsl}.tar.gz" do
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
   mode 0755
+  action :create_if_missing
 end
 
  bash "install_python" do
     code <<-EOF
+  tar zxf "#{Chef::Config[:file_cache_path]}/#{bottle}.tar.gz"
+  cd #{bottle}
+  python setup.py install
+  cd ..
+  tar zxf "#{Chef::Config[:file_cache_path]}/#{requests}.tar.gz"
+  cd #{requests}
+  python setup.py install
+  cd ..
   tar zxf "#{Chef::Config[:file_cache_path]}/#{cherry}.tar.gz"
   cd #{cherry}
   python setup.py install

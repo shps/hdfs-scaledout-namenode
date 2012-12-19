@@ -45,43 +45,6 @@ template "/etc/init.d/ndb_mgmd" do
   notifies :restart, resources(:service => "ndb_mgmd")
 end
 
-if File.exist?(node[:ndb][:kthfs_services]) then
-    ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
-    if ini_file.has_section?('hdfs1-mysqlcluster') then
-      Chef::Log.info "Over-writing an existing mysqlcluster section in the ini file."
-      ini_file.delete_section("hdfs1-mysqlcluster")
-    end
-    if ini_file.has_section?('hdfs1-mgmserver') then
-      Chef::Log.info "Over-writing an existing mgmserver section in the ini file."
-      ini_file.delete_section("hdfs1-mgmserver")
-    end
-else 
-  ini_file = IniFile.new(:filename => #{node[:ndb][:kthfs_services]})
+ndb_kthfs_services node[:ndb][:kthfs_services] do
+ action :install_ndbd
 end
-
-ini_file['hdfs1-mysqlcluster'] = {
-  'status' => 'Stopped',
-  'instance' => 'hdfs1',
-  'service-group'  => 'mysqlcluster',
-  'stop-script'  => "#{node[:ndb][:scripts_dir]}/cluster-shutdown.sh",
-  'start-script'  => "",
-  'pid-file'  => "",
-  'stdout-file'  => "#{node[:ndb][:log_dir]}/cluster.log",
-  'stderr-file'  => "",
-  'start-time'  => ''
-} 
-
-ini_file['hdfs1-mgmserver'] = {
-  'status' => '',
-  'instance' => '',
-  'service-group'  => 'mysqlcluster',
-  'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
-  'start-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-start.sh",
-  'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_63.pid",
-  'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
-  'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
-  'start-time'  => ''
-} 
-
-ini_file.save
-Chef::Log.info "Saved an updated copy of services file at the kthfsagent." # 

@@ -1,16 +1,16 @@
 #!/bin/sh
 
-if [ "$1" = "-h" ] ; then
-   echo "Usage: mysql-client-1.sh [-s] [database_name]"
-   echo "[-S] connects the mysql client using a socket, instead of tcp protocol."
-   echo "[-e] executes and SQL statement and the client then exits."
-   exit 0
-fi
-SOCKET=0
-if [ "$1" = "-S" ] ; then
-    shift
-    SOCKET=1
-fi
+# if [ "$1" = "-h" ] ; then
+#    echo "Usage: mysql-client.sh [-s] [database_name]"
+#    echo "[-S] connects the mysql client using a socket, instead of tcp protocol."
+#    echo "[-e] executes and SQL statement and the client then exits."
+#    exit 0
+# fi
+# SOCKET=0
+# if [ "$1" = "-S" ] ; then
+#     shift
+#     SOCKET=1
+# fi
 
 EXECUTE_SQL=0
 if [ "$1" = "-e" ] ; then
@@ -18,16 +18,11 @@ if [ "$1" = "-e" ] ; then
     EXECUTE_SQL=1
 fi
 
-if [ $SOCKET -eq 1 ] ; then
-    MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
-   if [ $EXECUTE_SQL -eq 1 ] ; then
-    <%= @mysql_dir %>/bin/mysql -u root -S $MYSQL_SOCKET -e "$@"
-   else
-    <%= @mysql_dir %>/bin/mysql -u root -S $MYSQL_SOCKET 
-   fi
+MYSQL_SOCKET=`<%= node[:ndb][:scripts_dir] %>/get-mysql-socket.sh`
+echo "Using socket: $MYSQL_SOCKET"
+if [ $EXECUTE_SQL -eq 1 ] ; then
+    <%= node[:mysql][:base_dir] %>/bin/mysql -u root -S $MYSQL_SOCKET -e "$@"
 else
-    PORT=`<%= @ndb_dir %>/scripts/get-mysql-port.sh`
-    <%= @mysql_dir %>/bin/mysql -u root --protocol=tcp -h <%= [:ndb][:mgm_server] %> --port=$PORT $EXECUTE_SQL
+    <%= node[:mysql][:base_dir] %>/bin/mysql -u root -S $MYSQL_SOCKET 
 fi
 exit $?
-

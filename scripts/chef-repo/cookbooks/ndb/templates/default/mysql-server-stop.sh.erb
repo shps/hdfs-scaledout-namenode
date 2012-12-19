@@ -1,8 +1,21 @@
 #!/bin/sh 
 
-MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysqld-1-socket.sh`
-<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -u root --wait=30 shutdown
+MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
 
-RES=`echo $?`
-exit $RES
+# <%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -u root -p status 
+#<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -u root --wait=30 shutdown
+
+if [ ! -f <%= node[:ndb][:log_dir] %>/mysql.pid ] ; then 
+    # No pid file, assume mysql server is not running
+    exit 0
+fi
+PID=`cat <%= node[:ndb][:log_dir] %>/mysql.pid`
+kill -TERM $PID
+RES=$?
+if [ $RES -ne 0 ] ; then
+ kill -9 $PID 
+else
+ exit 0
+fi
+exit $?
 

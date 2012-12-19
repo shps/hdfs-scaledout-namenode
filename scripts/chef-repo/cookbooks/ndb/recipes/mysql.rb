@@ -1,9 +1,25 @@
 include_recipe "ndb"
 require 'fileutils'
-require 'inifile'
+libpath = File.expand_path '../../libraries', __FILE__
+require File.join(libpath, 'inifile')
 
-package "libaio1" do
-    action :install
+
+libaio1="libaio1_0.3.109-2ubuntu1_amd64.deb"
+cached_libaio1 = "#{Chef::Config[:file_cache_path]}/#{libaio1}"
+Chef::Log.info "Installing libaio1 to #{cached_libaio1}"
+
+cookbook_file "#{cached_libaio1}" do
+    source "#{libaio1}"
+    owner "root"
+    group "root"
+    mode "0755"
+    action :create_if_missing
+end
+
+package "#{libaio1}" do
+   provider Chef::Provider::Package::Dpkg
+   source "#{cached_libaio1}"
+   action :install
 end
 
 directory "#{node[:ndb][:base_dir]}/mysql/data" do
@@ -27,6 +43,7 @@ template "mysql.cnf" do
   mode "0644"
   notifies :restart, resources(:service => "mysqld")
 end
+
 
 template "/etc/init.d/mysqld" do
   source "ndbd.erb"
@@ -64,39 +81,7 @@ for script in node[:mysql][:scripts]
   end
 end 
 
-# load the users using distributed privileges
-# http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-privilege-distribution.html
-# mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
 
-# mysql_install_db --config=my.cnf...
-bash 'mysq_install_db' do
-    code <<-EOF
-# --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-cd #{node[:mysql][:base_dir]}
-#{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
-# --datadir=#{node[:ndb][:mysql_data_dir]} 
-EOF
-#  not_if { ::File.exists?( node['glassfish']['base_dir'] ) }
+ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do
+ action :install_mysqld
 end
-
-
-
-ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
- if ini_file.has_section?('hdfs1-mysqld')
-   Chef::Log.info "Over-writing an existing section in the ini file."
-   ini_file.delete_section("hdfs1-mysqld")
- end
-
-ini_file["hdfs1-mysqld"] = {
-  'status' => 'Stopped',
-  'instance' => 'hdfs1',
-  'service-group'  => 'mysqlcluster',
-  'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
-  'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
-  'pid-file'  => "#{node[:ndb][:log_dir]}/.pid",
-  'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
-  'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
-  'start-time'  => ''
-} 
-ini_file.save
-Chef::Log.info "Saved an updated copy of services file at the kthfsagent."

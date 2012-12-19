@@ -115,32 +115,6 @@ template "/etc/init.d/ndbd" do
   notifies :restart, resources(:service => "ndbd")
 end
 
-file node[:ndb][:kthfs_services] do
-  owner "root"
-  group "root"
-  mode 00755
-  action :create_if_missing
+ndb_kthfs_service "#{node[:ndb][:kthfs_services]}" do
+ action :install_ndbd
 end
-
-ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
-Chef::Log.info "Loaded services for agent into ini-file."
-
- if ini_file.has_section?("hdfs1-ndb")
-   Chef::Log.info "Over-writing an existing section in the ini file."
-   ini_file.delete_section("hdfs1-ndb")
- end
-  ini_file["test"] = ['a','b']
-  ini_file["hdfs1-ndb"] = {
-    'status' => 'Stopped',
-    'instance' => 'hdfs1',
-    'service-group'  => 'mysqlcluster',
-    'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
-    'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
-    'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.err.log",
-    'start-time'  => ''
-  } 
-  ini_file.save
-Chef::Log.info "Saved an updated copy of services file at the kthfsagent."
