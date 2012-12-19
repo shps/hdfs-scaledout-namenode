@@ -18,7 +18,8 @@
 #
 include_recipe "ndb"
 require 'fileutils'
-require 'inifile'
+libpath = File.expand_path '../../libraries', __FILE__
+require File.join(libpath, 'inifile')
 
 
 Chef::Log.info "Hostname is: #{node['hostname']}"
