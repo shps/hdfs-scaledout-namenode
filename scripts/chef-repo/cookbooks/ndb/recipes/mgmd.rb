@@ -39,7 +39,6 @@ template "/etc/init.d/ndb_mgmd" do
               :ndb_dir => node[:ndb][:base_dir],
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string],
-              :node_id => @id
             })
   notifies :enable, resources(:service => "ndb_mgmd")
   notifies :restart, resources(:service => "ndb_mgmd")
@@ -47,4 +46,7 @@ end
 
 ndb_kthfs_services node[:ndb][:kthfs_services] do
  action :install_ndbd
+    variables({
+       :node_id => id
+    })
 end

@@ -115,6 +115,7 @@ template "/etc/init.d/ndbd" do
   notifies :restart, resources(:service => "ndbd")
 end
 
+node[:ndb][:ndbd_id]=found_id
 ndb_kthfs_service "#{node[:ndb][:kthfs_services]}" do
  action :install_ndbd
 end

@@ -14,9 +14,9 @@ action :install_ndbd do
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{found_id}.err.log",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.err.log",
     'start-time'  => ''
   } 
   ini_file.save
@@ -81,8 +81,8 @@ action :install_mysqld do
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/mysql.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql.err.log",
     'start-time'  => ''
   } 
   ini_file.save
@@ -103,6 +103,5 @@ cd #{node[:mysql][:base_dir]}
 EOF
 #  not_if { ::File.exists?( "#{node[:ndb][:mysql_data_dir]}" ) }
 end
-
 
 end
