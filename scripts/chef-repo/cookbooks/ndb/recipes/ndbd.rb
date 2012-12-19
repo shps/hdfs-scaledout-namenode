@@ -72,7 +72,7 @@ end
     Chef::Log.info "Could not find matching IP address is list of data nodes."
   end
 
-directory "#{node[:ndb][:data_dir]}/#{id}" do
+directory "#{node[:ndb][:data_dir]}/#{found_id}" do
   owner node[:ndb][:user]
   mode "755"
   action :create

@@ -41,6 +41,11 @@ template "mysql.cnf" do
   owner "root"
   group "root"
   mode "0644"
+  variables({
+              :ndb_dir => node[:ndb][:base_dir],
+              :mysql_dir => node[:mysql][:base_dir],
+              :connect_string => node[:ndb][:connect_string]
+            })
   notifies :restart, resources(:service => "mysqld")
 end
 

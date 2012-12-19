@@ -25,7 +25,8 @@ if [ ! -e <%= @mysql_dir %>/bin/ndb_mgmd ] ; then
     exit 3
 fi
 
-<%= @mysql_dir %>/bin/ndb_mgmd -f  <%= @ndb_dir %>/config.ini  --configdir=<%= @ndb_dir %>/mgmd --reload --no-nodeid-checks
+<%= @mysql_dir %>/bin/ndb_mgmd -f  <%= @ndb_dir %>/config.ini  --configdir=<%= @ndb_dir %>/mgmd --reload 
+#--no-nodeid-checks
 RES=`echo $?`
 if [ $RES -ne 0 ] ; then
     echo ""
