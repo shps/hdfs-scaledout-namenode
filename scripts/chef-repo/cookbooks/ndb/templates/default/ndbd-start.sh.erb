@@ -37,4 +37,3 @@ echo "Starting Data Node <%= @node_id %>."
 <%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>
 RES=`echo $?`
 exit $RES
-

@@ -104,7 +104,6 @@ template "/etc/init.d/kthfsagent" do
   group node[:kthfs][:user]
   mode 0655
   notifies :enable, resources(:service => "kthfsagent")
-  notifies :restart, resources(:service => "kthfsagent")
 end
 
 cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do

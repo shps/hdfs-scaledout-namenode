@@ -8,16 +8,15 @@ action :install_ndbd do
   end
   ini_file["hdfs1-ndb"] = {
     'status' => 'Stopped',
-    'instance' => 'hdfs1',
+    'instance' => "#{node[:ndb][:instance]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'ndb',
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.err.log",
-    'start-time'  => ''
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}_out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}_err.log"
   } 
   ini_file.save
   Chef::Log.info "Saved an updated copy of services file at the kthfsagent."
@@ -38,28 +37,26 @@ action :install_mgmd do
 
   ini_file['hdfs1-mysqlcluster'] = {
     'status' => 'Stopped',
-    'instance' => 'hdfs1',
+    'instance' => "#{node[:ndb][:instance]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mysqlcluster',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/cluster-shutdown.sh",
     'start-script'  => "",
     'pid-file'  => "",
     'stdout-file'  => "#{node[:ndb][:log_dir]}/cluster.log",
-    'stderr-file'  => "",
-    'start-time'  => ''
+    'stderr-file'  => ""
   } 
 
   ini_file['hdfs1-mgmserver'] = {
     'status' => '',
-    'instance' => '',
+    'instance' => "#{node[:ndb][:instance]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mgmserver',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_63.pid",
     'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log",
-    'start-time'  => ''
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log"
   } 
 
   ini_file.save
@@ -78,15 +75,14 @@ action :install_mysqld do
 
   ini_file["hdfs1-mysqld"] = {
     'status' => 'Stopped',
-    'instance' => 'hdfs1',
+    'instance' => "#{node[:ndb][:instance]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mysqld',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/mysql.pid",
     'stdout-file'  => "#{node[:ndb][:log_dir]}/mysql.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql.err.log",
-    'start-time'  => ''
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql.err.log"
   } 
   ini_file.save
   Chef::Log.info "Saved an updated copy of services file at the kthfsagent."

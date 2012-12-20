@@ -5,7 +5,7 @@
 [mysqld]
 user           = <%= @user %>
 basedir         = <%= node[:mysql][:base_dir] %>
-datadir         = <%= node[:ndb][:mysq_server_dir] %>
+datadir         = <%= node[:ndb][:mysql_server_dir] %>
 port            = <%= node[:ndb][:mysql_port] %>
 socket          = <%= node[:ndb][:mysql_socket] %>
 bind-address    = <%= node['ipaddress'] %>
