@@ -13,9 +13,9 @@ action :install_ndbd do
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.err.log",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.err.log",
     'start-time'  => ''
   } 
   ini_file.save
