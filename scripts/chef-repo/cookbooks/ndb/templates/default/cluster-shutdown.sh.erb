@@ -27,7 +27,5 @@ while [ $# -gt 0 ]; do
   shift       
 done
 
-
+<%= node[:ndb][:scripts_dir] %>/mysql-server.stop.sh
 <%= @mysql_dir %>/bin/ndb_mgm -c $MGM_CONN -e "shutdown"
-
-               

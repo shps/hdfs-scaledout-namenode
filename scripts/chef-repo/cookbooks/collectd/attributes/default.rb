@@ -23,8 +23,8 @@ default[:collectd][:plugin_dir] = "/usr/lib/collectd"
 default[:collectd][:types_db] = ["/usr/share/collectd/types.db"]
 default[:collectd][:interval] = 10
 default[:collectd][:read_threads] = 5
-default[:collectd][:server] = "cloud9.sics.se"
+default[:collectd][:server] = "localhost"
 
 default[:collectd][:collectd_web][:path] = "/srv/collectd_web"
 #default[:collectd][:collectd_web][:hostname] = "collectd"
-default[:collectd][:collectd_web][:hostname] = "http://cloud9.sics.se:8888/KTHFSDashboard/rest/collectd"
+default[:collectd][:collectd_web][:hostname] = "http://localhost:8888/KTHFSDashboard/rest/collectd"

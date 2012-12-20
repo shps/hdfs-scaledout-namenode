@@ -10,8 +10,8 @@ Chef::Log.info "Installing libaio1 to #{cached_libaio1}"
 
 cookbook_file "#{cached_libaio1}" do
     source "#{libaio1}"
-    owner "root"
-    group "root"
+    owner node[:ndb][:user]
+    group node[:ndb][:group]
     mode "0755"
     action :create_if_missing
 end
@@ -22,8 +22,9 @@ package "#{libaio1}" do
    action :install
 end
 
-directory "#{node[:ndb][:base_dir]}/mysql/data" do
+directory node[:ndb][:mysql_server_dir] do
   owner node[:ndb][:user]
+  group node[:ndb][:group]
   mode "0755"
   action :create
   recursive true  

@@ -10,6 +10,7 @@ action :install_ndbd do
     'status' => 'Stopped',
     'instance' => 'hdfs1',
     'service-group'  => 'mysqlcluster',
+    'service'  => 'ndb',
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
@@ -39,6 +40,7 @@ action :install_mgmd do
     'status' => 'Stopped',
     'instance' => 'hdfs1',
     'service-group'  => 'mysqlcluster',
+    'service'  => 'mysqlcluster',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/cluster-shutdown.sh",
     'start-script'  => "",
     'pid-file'  => "",
@@ -51,6 +53,7 @@ action :install_mgmd do
     'status' => '',
     'instance' => '',
     'service-group'  => 'mysqlcluster',
+    'service'  => 'mgmserver',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_63.pid",
@@ -77,6 +80,7 @@ action :install_mysqld do
     'status' => 'Stopped',
     'instance' => 'hdfs1',
     'service-group'  => 'mysqlcluster',
+    'service'  => 'mysqld',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
     'pid-file'  => "#{node[:ndb][:log_dir]}/mysql.pid",
@@ -96,7 +100,7 @@ action :install_mysqld do
     #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
 
     EOF
-    #  not_if { ::File.exists?( "#{node[:ndb][:mysql_data_dir]}" ) }
+      not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
   end
 
 
@@ -126,7 +130,7 @@ action :install_mysqld do
      echo "Verifying successful conversion of tables.."
      #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded" 
     EOF
-    not_if { #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded" }
+    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded"` }
   end
 
 end
