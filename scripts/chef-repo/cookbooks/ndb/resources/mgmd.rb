@@ -1,4 +1,4 @@
-actions :init, :start, :stop, :restart
+actions :start, :stop, :restart
 
 attribute :mgm_server, :kind_of => String, :name_attribute => true
 attribute :restype, :kind_of => String, :required => true

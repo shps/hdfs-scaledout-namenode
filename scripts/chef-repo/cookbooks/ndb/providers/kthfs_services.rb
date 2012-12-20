@@ -6,7 +6,6 @@ action :install_ndbd do
     Chef::Log.info "Over-writing an existing section in the ini file."
     ini_file.delete_section("hdfs1-ndb")
   end
-  ini_file["test"] = ['a','b']
   ini_file["hdfs1-ndb"] = {
     'status' => 'Stopped',
     'instance' => 'hdfs1',
@@ -14,9 +13,9 @@ action :install_ndbd do
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{node[:ndbd_id]}.err.log",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{:node_id}.err.log",
     'start-time'  => ''
   } 
   ini_file.save
@@ -80,7 +79,7 @@ action :install_mysqld do
     'service-group'  => 'mysqlcluster',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/.pid",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/mysql.pid",
     'stdout-file'  => "#{node[:ndb][:log_dir]}/mysql.out.log",
     'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql.err.log",
     'start-time'  => ''
@@ -89,19 +88,45 @@ action :install_mysqld do
   Chef::Log.info "Saved an updated copy of services file at the kthfsagent."
 
 
-# load the users using distributed privileges
-# http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-privilege-distribution.html
-# mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
-
-# mysql_install_db --config=my.cnf...
-bash 'mysq_install_db' do
+  bash 'mysq_install_db' do
     code <<-EOF
-#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh
-cd #{node[:mysql][:base_dir]}
-# --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-#{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
-EOF
-#  not_if { ::File.exists?( "#{node[:ndb][:mysql_data_dir]}" ) }
-end
+
+    cd #{node[:mysql][:base_dir]}
+    # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
+    #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+
+    EOF
+    #  not_if { ::File.exists?( "#{node[:ndb][:mysql_data_dir]}" ) }
+  end
+
+
+  # mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
+  # SELECT ROUTINE_NAME, ROUTINE_SCHEMA, ROUTINE_TYPE 
+  # ->     FROM INFORMATION_SCHEMA.ROUTINES 
+  # ->     WHERE ROUTINE_NAME LIKE 'mysql_cluster%'
+  # ->     ORDER BY ROUTINE_TYPE;
+  # load the users using distributed privileges
+  # http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-privilege-distribution.html
+  distusers="ndb_dist_priv.sql"
+  cached_distusers = "#{Chef::Config[:file_cache_path]}/#{distusers}"
+  Chef::Log.info "Installing #{distusers} to #{cached_distusers}"
+
+  cookbook_file "#{cached_distusers}" do
+    source "#{distusers}"
+    owner "root"
+    group "root"
+    mode "0755"
+    action :create_if_missing
+  end
+
+  bash 'create_distributed_privileges' do
+   code <<-EOF
+     #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{cached_distusers}
+     #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "CALL mysql.mysql_cluster_move_privileges" mysql
+     echo "Verifying successful conversion of tables.."
+     #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded" 
+    EOF
+    not_if { #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded" }
+  end
 
 end

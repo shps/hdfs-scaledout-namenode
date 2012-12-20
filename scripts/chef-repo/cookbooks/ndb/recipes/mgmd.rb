@@ -46,5 +46,6 @@ template "/etc/init.d/ndb_mgmd" do
 end
 
 ndb_kthfs_services node[:ndb][:kthfs_services] do
- action :install_ndbd
+ node_id 63
+ action :install_mgmd
 end

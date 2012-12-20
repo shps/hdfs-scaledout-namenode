@@ -3,7 +3,7 @@ action :init do
     code <<-EOF
     node[ndb:][:scripts_dir]/ndbd-init.sh
   EOF
-#    not_if "#{[ndb:][:scripts_dir]}/ndbd-running.sh"
+    not_if "#{[ndb:][:scripts_dir]}/ndbd-running.sh"
   end
 end
 
