@@ -75,6 +75,10 @@ except Exception, e:
     sys.exit(1)
 
 #logging
+try:
+    os.remove(LOG_FILE + '.1')
+except:
+    pass    
 with open(LOG_FILE, 'w'): #clear log file
     pass
 logger = logging.getLogger('agent')
