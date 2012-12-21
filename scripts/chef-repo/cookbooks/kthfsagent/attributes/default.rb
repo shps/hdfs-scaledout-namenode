@@ -10,6 +10,8 @@ default[:kthfs][:watch_interval] = 2
 default[:kthfs][:rest_user] = "kthfsagent@sics.se"
 default[:kthfs][:rest_password] = "kthfsagent"
 default[:kthfs][:pid_file] =  "#{Dir.tmpdir}/kthfs-agent.pid"
+default[:kthfs][:logging_level] = "INFO"
+default[:kthfs][:max_log_size] = "10000000"
 
 default[:kthfs][:agent_user] = "kthfsagent@sics.se"
 default[:kthfs][:agent_password] = "kthfsagent"

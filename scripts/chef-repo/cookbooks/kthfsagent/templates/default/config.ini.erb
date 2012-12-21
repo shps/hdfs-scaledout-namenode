@@ -12,4 +12,5 @@ watch-interval = <%= node[:kthfs][:watch_interval] %>
 pid-file = <%= node[:kthfs][:pid_file] %>
 username = <%= node[:kthfs][:agent_user] %>
 password = <%= node[:kthfs][:agent_password] = "kthfsagent" %>
-
+logging-level = <%= node[:kthfs][:logging_level] %>
+max-log-size = <%= node[:kthfs][:max_log_size] %>
