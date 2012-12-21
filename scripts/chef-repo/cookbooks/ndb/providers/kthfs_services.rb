@@ -74,10 +74,6 @@ action :install_mysqld do
 
   Chef::Log.info "Loading ini-file: #{node[:ndb][:kthfs_services]}"
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
-  # if ini_file.has_section?('hdfs1-mysqld')
-  #   Chef::Log.info "Over-writing an existing section in the ini file."
-  #   ini_file.delete_section("hdfs1-mysqld")
-  # end
 
   ini_file["hdfs1-mysqld"] = {
     'status' => 'Stopped',
@@ -176,9 +172,9 @@ action :install_mysqld do
      args << "  </Database>\n"
      args << "</Plugin>\n"
      args << "\n"
-     echo $args >> node[:collectd][:conf] 
+     echo $args >> #{node[:collectd][:conf]}
     EOF
-    not_if { `grep #{new_resource.name} node[:collectd][:conf]` }
+    not_if { `grep #{new_resource.name} #{node[:collectd][:conf]}` }
   end
 
   # TODO - UPDATE mysql.user SET Password = PASSWORD('#{node[:mysql][:password]}') User = 'root';
