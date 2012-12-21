@@ -26,7 +26,7 @@ default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-serv
 default[:ndb][:version] = #{versionStr}
 default[:ndb][:base_dir] = "/var/lib/mysql-cluster/ndb-#{versionStr}"
 default[:ndb][:log_dir] = "#{default[:ndb][:base_dir]}" + "/log"
-default[:ndb][:data_dir] = "#{default[:ndb][:base_dir]}" + "/ndb_data"
+default[:ndb][:data_dir] = "/var/lib/mysql-cluster/ndb_data"
 default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
 default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
 
