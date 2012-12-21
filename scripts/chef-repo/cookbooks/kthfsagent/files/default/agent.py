@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-Created on 12 December 2012
+Created on 21 December 2012
 
 @author: Hamidreza Afzali <afzali@kth.se>
 '''
@@ -19,7 +19,7 @@ import subprocess
 import os, sys
 import ConfigParser
 import requests
-import logging
+import logging.handlers
 import json
 from bottle import Bottle, run, get, post, request, HTTPResponse, server_names, ServerAdapter  
 
@@ -41,21 +41,9 @@ service_commands["mgmserver"] =     ["start", "stop"]
 
 config_filename = "config.ini"
 services_filename = "services"
+LOG_FILE = "agent.log"
 CERT_FILE = "kthfs.pem"
 KEY_FILE = "kthfs.key"
-
-#logging
-logger = logging.getLogger('agent')
-logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-logger_file_handler = logging.FileHandler('agent.log') 
-logger_stream_handler = logging.StreamHandler()
-logger_file_handler.setFormatter(logger_formatter)
-logger_stream_handler.setFormatter(logger_formatter)
-logger.addHandler(logger_file_handler)
-logger.addHandler(logger_stream_handler)
-logger.setLevel(logging.INFO)
-
-logger.info("KTHFS-Agent started.")
 
 cores = multiprocessing.cpu_count()
 
@@ -67,6 +55,8 @@ try:
     server_username = config.get('server', 'username')
     server_password = config.get('server', 'password')
     
+    logging_level = config.get('agent', 'logging-level').upper()
+    max_log_size = config.getint('agent', 'max-log-size')    
     agent_username = config.get('agent', 'username')
     agent_password = config.get('agent', 'password')          
     agent_pidfile = config.get('agent','pid-file')
@@ -80,11 +70,24 @@ try:
     rack = config.get("agent", "rack")
     ip = socket.gethostbyname(name)
     
-    print server_username, server_password
-    
 except Exception, e:
-    logger.error("Exception while reading {0} file: {1}".format(config_filename, e))
+    print "Exception while reading {0} file: {1}".format(config_filename, e)
     sys.exit(1)
+
+#logging
+with open(LOG_FILE, 'w'): #clear log file
+    pass
+logger = logging.getLogger('agent')
+logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+logger_file_handler = logging.handlers.RotatingFileHandler(LOG_FILE, "w", maxBytes=max_log_size, backupCount=1)
+logger_stream_handler = logging.StreamHandler()
+logger_file_handler.setFormatter(logger_formatter)
+logger_stream_handler.setFormatter(logger_formatter)
+logger.addHandler(logger_file_handler)
+logger.addHandler(logger_stream_handler)
+logger.setLevel(logging.INFO)
+
+logger.info("KTHFS-Agent started.")
 
 # reading services
 try:
@@ -94,7 +97,25 @@ try:
 except Exception, e:
     logger.error("Exception while reading {0} file: {1}".format(services_filename, e))
     sys.exit(1)    
+ 
+
+class Util():
     
+    def readPid(self, pid_file):
+        with open(pid_file, 'r') as f:
+            pid = str(f.readline()).strip()
+            return pid
+
+    def loggingLevel(self, level):
+        return {
+                'INFO': logging.INFO,
+                'WARN': logging.WARN,
+                'WARNING': logging.WARNING,
+                'ERROR': logging.ERROR, 
+                'DEBUG' : logging.DEBUG,
+                'CRITICAL': logging.CRITICAL,        
+                }.get(level, logging.NOTSET)  
+
 
 class Heartbeat():
     daemon_threads = True 
@@ -137,6 +158,7 @@ class Heartbeat():
                     payload["init"] = "true"
                     logger.info("Sending Init Heartbeat...")
                 else:
+                    print "test"
                     logger.info("Sending Heartbeat...")
                 
                 auth = (server_username, server_password)     
@@ -156,6 +178,7 @@ class MemUsage(object):
         self.init_data()
 
     def init_data(self):
+        #todo there is a problem here!
         command = "free"
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
         stdout_list = process.communicate()[0].split('\n')
@@ -168,6 +191,7 @@ class MemUsage(object):
                     self.free = int(data[3]) * 1024
                     self.buffers = int(data[5]) * 1024
                     self.cached = int(data[6]) * 1024
+                    break
             except IndexError:
                 continue
         
@@ -199,21 +223,14 @@ class ExtProcess(): # external process
 
             except :# raised if cannot read pid file (IOError), or manually, if pid is not running
                 
-                logger.info("Proccess.watch: Process is not running: {0}/{1}".format(instance, service))
+                logger.warn("Proccess.watch: Process is not running: {0}/{1}".format(instance, service))
                 if Config().get(section, 'status') == 'Started':
                     logger.info("Process failed: {0}/{1}".format(instance, service))
                     Service().failed(instance, service)
 
             finally:                    
                 sleep(watch_interval)
-
-class Util():
-    
-    def readPid(self, pid_file):
-        with open(pid_file, 'r') as f:
-            pid = str(f.readline()).strip()
-            return pid
-            
+                  
 
 class Config(): 
 
@@ -519,7 +536,11 @@ if __name__ == '__main__':
     #write pidfile
     agent_pid = str(os.getpid())
     file(agent_pidfile, 'w').write(agent_pid)
-    logger.info( "KTHFS-Agent PID: {0}".format(agent_pid))    
+    
+    logger.info( "KTHFS-Agent PID: {0}".format(agent_pid))
+
+    #set logging level
+    logger.setLevel( Util().loggingLevel(logging_level)) 
     
     cert_dir = os.path.dirname(os.path.abspath(__file__))
     if (os.path.isfile(cert_dir + CERT_FILE) == False or os.path.isfile(cert_dir + KEY_FILE) == False ):
@@ -611,5 +632,4 @@ if __name__ == '__main__':
 
     logger.info("RESTful service started.")
     run(host='0.0.0.0', port=agent_restport, server='sslcherrypy')
-
 
