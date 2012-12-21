@@ -11,6 +11,7 @@ FQDNLookup true
 BaseDir "<%= @node[:collectd][:base_dir] %>"
 PluginDir "<%= @node[:collectd][:plugin_dir] %>"
 TypesDB "<%= @node[:collectd][:types_db].join('", "') %>"
+# TODO - move interval to recipes, as ndb::mysqld will query less frequently than other nodes.
 Interval <%= @node[:collectd][:interval] %>
 ReadThreads <%= @node[:collectd][:read_threads] %>
 

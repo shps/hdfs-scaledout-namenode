@@ -12,17 +12,17 @@
 #     SOCKET=1
 # fi
 
-# EXECUTE_SQL=0
-# if [ "$1" = "-e" ] ; then
-#     shift
-#     EXECUTE_SQL=1
-# fi
+ EXECUTE_SQL=0
+ if [ "$1" = "-e" ] ; then
+     shift
+     EXECUTE_SQL=1
+ fi
 
 MYSQL_SOCKET=`<%= node[:ndb][:scripts_dir] %>/get-mysql-socket.sh`
 echo "Using socket: $MYSQL_SOCKET"
-# if [ $EXECUTE_SQL -eq 1 ] ; then
-#     <%= node[:mysql][:base_dir] %>/bin/mysql -u root -S $MYSQL_SOCKET -e "$@"
-# else
+ if [ $EXECUTE_SQL -eq 1 ] ; then
+     <%= node[:mysql][:base_dir] %>/bin/mysql -u root -S $MYSQL_SOCKET -e "$@"
+ else
     <%= node[:mysql][:base_dir] %>/bin/mysql -u root -S $MYSQL_SOCKET $@
-# fi
+ fi
 exit $?
