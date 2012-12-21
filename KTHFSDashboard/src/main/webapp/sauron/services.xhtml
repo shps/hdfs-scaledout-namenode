@@ -6,6 +6,7 @@
       xmlns:h="http://java.sun.com/jsf/html"
       xmlns:ui="http://java.sun.com/jsf/facelets"
       xmlns:p="http://primefaces.org/ui"
+      xmlns:fn="http://java.sun.com/jsp/jstl/functions"      
       >
 
     <ui:composition template="layout.xhtml">
@@ -28,8 +29,8 @@
             </h:form>
             <!--Navigation Bar - End-->
 
-            <h3>Services:</h3>
-            <p><h:outputText value="Request params: #{serviceController.requestParams()}"/></p>
+            <div class="services-header">#{fn:length(serviceController.kthfsInstances)} Service(s) Under Management:</div>
+
             <p:panel header="KTHFS Instances">  
                 <h:form id="formServices">  
 

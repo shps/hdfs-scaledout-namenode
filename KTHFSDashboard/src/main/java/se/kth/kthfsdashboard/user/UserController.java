@@ -1,9 +1,11 @@
 package se.kth.kthfsdashboard.user;
 
+import java.security.Principal;
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  *
@@ -29,5 +31,16 @@ public class UserController {
 
     public void logout() {
         addMessage("Logout not implemented!");
+    }    
+    
+    
+    public String getLoginName() {
+        FacesContext context = FacesContext.getCurrentInstance();
+        HttpServletRequest request = (HttpServletRequest) context.getExternalContext().getRequest();
+
+        Principal principal = request.getUserPrincipal();
+
+        return  principal.getName();
     }
+    
 }

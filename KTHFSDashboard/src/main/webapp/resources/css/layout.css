@@ -260,6 +260,16 @@ body {
     font-weight: bold;
 }
 
+
+/*div services-header*/
+.services-header {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-size:   14px;
+    font-weight: bold;
+}
+
+
 /*innerDataTable*/
 .ui-datatable.innerDataTable .ui-datatable-data  {
     border-style: hidden;
