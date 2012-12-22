@@ -33,7 +33,7 @@ done
 
 
 echo "Starting Data Node <%= @node_id %>."
-
-<%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>
+# --connect-retries == -1 implies that the ndbd keeps trying forever to connect to the ndb_mgmd
+<%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>  --connect-retries=-1 --connect-delay=10
 RES=`echo $?`
 exit $RES

@@ -26,15 +26,18 @@ default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-serv
 default[:ndb][:version] = #{versionStr}
 default[:ndb][:base_dir] = "/var/lib/mysql-cluster/ndb-#{versionStr}"
 default[:ndb][:log_dir] = "#{default[:ndb][:base_dir]}" + "/log"
-default[:ndb][:data_dir] = "#{default[:ndb][:base_dir]}" + "/ndb_data"
+default[:ndb][:data_dir] = "/var/lib/mysql-cluster/ndb_data"
 default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
 default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
-default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
 
 default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
 default[:ndb][:inifile_gem] = "http://lucan.sics.se/kthfs/inifile-2.0.2.gem"
-#default[:ndb][:libaoi1] = "http://lucan.sics.se/kthfs/libaio1_0.3.109-2ubuntu1_amd64.deb"
 default[:ndb][:instance] = "hdfs1"
+
+default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
+default[:mysql][:user]      = "kthfs"
+default[:mysql][:password]  = "kthfs"
+default[:collectd][:conf] = "/etc/collectd/collectd.conf"

@@ -52,15 +52,14 @@ end
 
 
 template "/etc/init.d/mysqld" do
-  source "ndbd.erb"
+  source "mysqld.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0755
   variables({
               :ndb_dir => node[:ndb][:base_dir],
               :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string],
-              :node_id => id
+              :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "mysqld")
   notifies :restart, resources(:service => "mysqld")
