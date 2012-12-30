@@ -1,5 +1,5 @@
 #!/bin/sh
-ID=63
+ID=<%= node[:mgm][:id] %>
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
 PID=`cat $PID_FILE`
 echo ""

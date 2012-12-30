@@ -4,6 +4,9 @@
  */
 package se.kth.kthfsdashboard.user;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -127,4 +130,5 @@ public class AuthBackingBean {
     public void setPassword(String password) {
         this.password = password;
     }
+        
 }

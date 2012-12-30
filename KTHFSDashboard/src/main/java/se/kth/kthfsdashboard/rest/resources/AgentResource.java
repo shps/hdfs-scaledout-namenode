@@ -60,6 +60,7 @@ public class AgentResource {
          json.put("load5", host.getLoad5());
          json.put("load15", host.getLoad15());
       } catch (Exception ex) {
+          // TODO - Should log all exceptions 
          return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
       }
       return Response.ok(json).build();

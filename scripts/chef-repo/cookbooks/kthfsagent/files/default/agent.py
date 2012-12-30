@@ -67,6 +67,7 @@ try:
         name = config.get("agent", "name")
     else:
         name = socket.gethostbyaddr(socket.gethostname())[0]
+#        name = Util().getHostName()
     rack = config.get("agent", "rack")
     ip = socket.gethostbyname(name)
     
@@ -105,6 +106,22 @@ except Exception, e:
 
 class Util():
     
+    def getHostName():
+        ips = os.popen( "/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk \'{print $2}\'|tr -d \"addr:\" ").read()
+        logger.info("Possible IP addresses: {0}".format(ips))
+        ip = ips[:-1]
+        hostname = ip
+        try:
+            hostInfo = socket.gethostbyaddr(ip)
+            hostname = hostInfo[0]
+        except:
+            print "failed to reverse query hostname from ip address"
+            print "setup ip address as hostname"
+            os.system('hostname %s' % hostname)
+        return hostname
+
+
+
     def readPid(self, pid_file):
         with open(pid_file, 'r') as f:
             pid = str(f.readline()).strip()

@@ -1,0 +1,2 @@
+default[:chefclient][:gems] = %w{ bunny-0.8.0 net-ssh-2.6.2 chef-10.16.4 net-ssh-gateway-1.1.0 erubis-2.7.0 net-ssh-multi-1.1 highline-1.6.15 ohai-6.14.0 ipaddress-0.8.0 polyglot-0.3.3 json-1.7.5 rake-10.0.3 mime-types-1.19 rdoc-3.12 minitest-4.3.3 rest-client-1.6.7 mixlib-authentication-1.3.0 ruby-shadow-2.1.4 mixlib-cli-1.2.2 systemu-2.5.2 mixlib-config-1.1.2 treetop-1.4.12 mixlib-log-1.4.1 uuidtools-2.1.3 moneta-0.7.1 yajl-ruby-1.1.0 }
+

@@ -56,7 +56,7 @@ ReceiveBufferMemory=2M
 
  
 [NDB_MGMD]
-NodeId=63
+NodeId=<%= node[:mgm][:id] %>
 HostName=<%= node[:ndb][:mgm_server] %>
 PortNumber=<%= node[:ndb][:port] %>
 DataDir=<%= node[:ndb][:log_dir] %>
@@ -78,7 +78,7 @@ ServerPort=<%= 10000 + id %>
 <% end %>
 
 [MYSQLD]
-NodeId=62
+NodeId=<%= node[:mysql][:id] %>
 
 [MYSQLD]
 

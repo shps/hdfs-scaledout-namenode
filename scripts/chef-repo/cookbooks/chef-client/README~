@@ -1,0 +1,4 @@
+knife bootstrap
+
+A bootstrap is a process that installs Chef on a target system so that it can run as a chef-client and communicate with a Chef server.
+http://docs.opscode.com/knife_bootstrap.html

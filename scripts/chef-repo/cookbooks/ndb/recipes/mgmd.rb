@@ -45,7 +45,3 @@ template "/etc/init.d/ndb_mgmd" do
   notifies :restart, resources(:service => "ndb_mgmd")
 end
 
-ndb_kthfs_services node[:ndb][:kthfs_services] do
- node_id 63
- action :install_mgmd
-end

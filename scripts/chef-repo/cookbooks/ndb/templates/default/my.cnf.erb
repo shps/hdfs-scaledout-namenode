@@ -9,7 +9,7 @@ datadir         = <%= node[:ndb][:mysql_server_dir] %>
 port            = <%= node[:ndb][:mysql_port] %>
 socket          = <%= node[:ndb][:mysql_socket] %>
 bind-address    = <%= node['ipaddress'] %>
-pid-file        = <%= node[:ndb][:log_dir] %>/mysql.pid
+pid-file        = <%= node[:ndb][:log_dir] %>/mysql_<%= node[:mysql][:id] %>.pid
 tmpdir          = /tmp
 
 # use NDB storage engine and make NDB the default table type

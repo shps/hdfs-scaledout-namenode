@@ -41,3 +41,6 @@ default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
+
+default[:mgm][:id] = 62
+default[:mysql][:id] = 63

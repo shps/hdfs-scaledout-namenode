@@ -86,8 +86,3 @@ for script in node[:mysql][:scripts]
   end
 end 
 
-
-ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do
- node_id 62
- action :install_mysqld
-end

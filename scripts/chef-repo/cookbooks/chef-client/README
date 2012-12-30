@@ -1,0 +1,12 @@
+knife bootstrap
+
+A bootstrap is a process that installs Chef on a target system so that it can run as a chef-client and communicate with a Chef server.
+http://docs.opscode.com/knife_bootstrap.html
+Neesd the IP address of the node:
+knife bootstrap IP_ADDRESS
+
+Could use 
+(1a) JCloud to create VMs or
+(1b) Knife to create VMs
+(2)  then use knife to install Chef-Client
+(3)  then use knife to install chef roles on nodes

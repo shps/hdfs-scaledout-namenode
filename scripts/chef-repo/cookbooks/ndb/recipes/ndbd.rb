@@ -109,14 +109,9 @@ template "/etc/init.d/ndbd" do
   variables({
               :ndb_dir => node[:ndb][:base_dir],
               :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string],
-              :node_id => id
+              :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "ndbd")
   notifies :restart, resources(:service => "ndbd")
 end
 
-ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do
- node_id found_id
- action :install_ndbd
-end

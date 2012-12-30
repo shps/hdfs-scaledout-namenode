@@ -1,3 +1,4 @@
+
 action :install_ndbd do
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
   Chef::Log.info "Loaded services for agent into ini-file."
@@ -57,9 +58,9 @@ action :install_mgmd do
     'service'  => 'mgmserver',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_63.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_63.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_63.err.log"
+    'pid-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/ndb_#{new_resource.node_id}.err.log"
   } 
 
   ini_file.save
@@ -82,9 +83,9 @@ action :install_mysqld do
     'service'  => 'mysqld',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/mysql.pid",
-    'stdout-file'  => "#{node[:ndb][:log_dir]}/mysql.out.log",
-    'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql.err.log"
+    'pid-file'  => "#{node[:ndb][:log_dir]}/mysql_#{new_resource.node_id}.pid",
+    'stdout-file'  => "#{node[:ndb][:log_dir]}/mysql_#{new_resource.node_id}.out.log",
+    'stderr-file'  => "#{node[:ndb][:log_dir]}/mysql_#{new_resource.node_id}.err.log"
   } 
   ini_file.save
   Chef::Log.info "Saved an updated copy of services file at the kthfsagent."

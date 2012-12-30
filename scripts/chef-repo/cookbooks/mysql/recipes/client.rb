@@ -43,11 +43,11 @@ when "mac_os_x"
 end
 
 # apt-get update
-execute "update package index" do
-  command "apt-get update"
-  ignore_failure true
-  action :nothing
-end.run_action(:run)
+# execute "update package index" do
+#   command "apt-get update"
+#   ignore_failure true
+#   action :nothing
+# end.run_action(:run)
 
 node['mysql']['client']['packages'].each do |mysql_pack|
   package mysql_pack do
