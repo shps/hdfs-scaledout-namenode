@@ -29,341 +29,364 @@ import se.kth.kthfsdashboard.util.WebCommunication;
 @ManagedBean
 @RequestScoped
 public class ServiceController {
-    @EJB
-    private HostEJB hostEJB;
-    @EJB
-    private ServiceEJB serviceEJB;
-    @ManagedProperty("#{param.hostname}")
-    private String hostname;
-    @ManagedProperty("#{param.service}")
-    private String service;
-    @ManagedProperty("#{param.servicegroup}")
-    private String serviceGroup;
-    @ManagedProperty("#{param.kthfsinstance}")
-    private String kthfsInstance;
-    @ManagedProperty("#{param.status}")
-    private String status;
-    @ManagedProperty("#{param.jmxparam}")
-    private String jmxParam;
-    private HashMap<String, KthfsInstanceInfo> kthfsInstances = new HashMap<String, KthfsInstanceInfo>();
-    private HashMap<String, InstanceInfo> instances = new HashMap<String, InstanceInfo>();
-    private static Logger log = Logger.getLogger(ServiceController.class.getName());
-    
-    public static String NOT_AVAILABLE = "Not available.";
 
-    public ServiceController() {
+   @EJB
+   private HostEJB hostEJB;
+   @EJB
+   private ServiceEJB serviceEJB;
+   @ManagedProperty("#{param.hostname}")
+   private String hostname;
+   @ManagedProperty("#{param.service}")
+   private String service;
+   @ManagedProperty("#{param.servicegroup}")
+   private String serviceGroup;
+   @ManagedProperty("#{param.kthfsinstance}")
+   private String kthfsInstance;
+   @ManagedProperty("#{param.status}")
+   private String status;
+   @ManagedProperty("#{param.jmxparam}")
+   private String jmxParam;
+   private HashMap<String, KthfsInstanceInfo> kthfsInstances = new HashMap<String, KthfsInstanceInfo>();
+   private HashMap<String, InstanceInfo> instances = new HashMap<String, InstanceInfo>();
+   private static Logger log = Logger.getLogger(ServiceController.class.getName());
+   public static String NOT_AVAILABLE = "Not available.";
 
-        kthfsInstances.put("hdfs1", new KthfsInstanceInfo("hdfs1", "HDFS", "started?", "?"));
+   public ServiceController() {
+
+      kthfsInstances.put("hdfs1", new KthfsInstanceInfo("hdfs1", "HDFS", "started?", "?"));
 //        kthfsInstances.put("hdfs2", new KthfsInstanceInfo("hdfs2", "HDFS", "started?", "?"));
-    }
+   }
 
-    public String getService() {
-        return service;
-    }
+   public String getService() {
+      return service;
+   }
 
-    public void setService(String service) {
-        this.service = service;
-    }
+   public void setService(String service) {
+      this.service = service;
+   }
 
-    public String getServiceGroup() {
-        return serviceGroup;
-    }
+   public String getServiceGroup() {
+      return serviceGroup;
+   }
 
-    public void setServiceGroup(String serviceGroup) {
-        this.serviceGroup = serviceGroup;
-    }
+   public void setServiceGroup(String serviceGroup) {
+      this.serviceGroup = serviceGroup;
+   }
 
-    public String getHostname() {
-        return hostname;
-    }
+   public String getHostname() {
+      return hostname;
+   }
 
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
+   public void setHostname(String hostname) {
+      this.hostname = hostname;
+   }
 
-    public void setKthfsInstance(String kthfsInstance) {
-        this.kthfsInstance = kthfsInstance;
-    }
+   public void setKthfsInstance(String kthfsInstance) {
+      this.kthfsInstance = kthfsInstance;
+   }
 
-    public String getKthfsInstance() {
-        return kthfsInstance;
-    }
+   public String getKthfsInstance() {
+      return kthfsInstance;
+   }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+   public void setStatus(String status) {
+      this.status = status;
+   }
 
-    public String getStatus() {
-        return status;
-    }
-    
-    public void setJmxParam(String jmxParam) {
-        this.jmxParam = jmxParam;
-    }
+   public String getStatus() {
+      return status;
+   }
 
-    public String getJmxParam() {
-        return jmxParam;
-    }
+   public void setJmxParam(String jmxParam) {
+      this.jmxParam = jmxParam;
+   }
 
-    public List<KthfsInstanceInfo> getKthfsInstances() {
-        List<KthfsInstanceInfo> allKthfsInstances = new ArrayList<KthfsInstanceInfo>();
-        allKthfsInstances.addAll(kthfsInstances.values());
-        return allKthfsInstances;
-    }
+   public String getJmxParam() {
+      return jmxParam;
+   }
 
-    public String requestParams() {
-        FacesContext context = FacesContext.getCurrentInstance();
-        HttpServletRequest request = (HttpServletRequest) context.getExternalContext().getRequest();
+   public List<KthfsInstanceInfo> getKthfsInstances() {
+      List<KthfsInstanceInfo> allKthfsInstances = new ArrayList<KthfsInstanceInfo>();
+      allKthfsInstances.addAll(kthfsInstances.values());
+      return allKthfsInstances;
+   }
 
-        Principal principal = request.getUserPrincipal();
+   public String requestParams() {
+      FacesContext context = FacesContext.getCurrentInstance();
+      HttpServletRequest request = (HttpServletRequest) context.getExternalContext().getRequest();
+
+      Principal principal = request.getUserPrincipal();
 //           log.info("Authenticated user: " + principal.getName());  
 
-        return request.getAuthType().toString() + " - "
-                + principal.getName();
+      return request.getAuthType().toString() + " - "
+              + principal.getName();
 
-    }
+   }
 
-    public List<InstanceInfo> getInstances() {
-        List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
-        List<Service> services = serviceEJB.findAllInstances();
-        for (Service s : services) {
-            instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
-        }
-        return instances;
-    }
+   public List<InstanceInfo> getInstances() {
+      List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
+      List<Service> services = serviceEJB.findAllInstances();
+      for (Service s : services) {
+         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+      }
+      return instances;
+   }
 
-    public List<InstanceInfo> getInstance() {
-        List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
-        List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
-        for (Service s : services) {
-            instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
-        }
-        return instances;
-    }
+   public List<InstanceInfo> getInstance() {
+      List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
+      List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
+      for (Service s : services) {
+         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+      }
+      return instances;
+   }
 
-    public List<InstanceFullInfo> getInstanceFullInfo() {
-        List<InstanceFullInfo> instances = new ArrayList<InstanceFullInfo>();
-        List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
-        for (Service s : services) {
-            InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
-            i.setPid(s.getPid());
-            i.setUptime(Formatter.time(s.getUptime() * 1000));
-            instances.add(i);
-        }
-        return instances;
-    }
+   public List<InstanceFullInfo> getInstanceFullInfo() {
+      List<InstanceFullInfo> instances = new ArrayList<InstanceFullInfo>();
+      List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
+      for (Service s : services) {
+         InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
+         i.setPid(s.getPid());
+         i.setUptime(Formatter.time(s.getUptime() * 1000));
+         instances.add(i);
+      }
+      return instances;
+   }
 
-    public String doGotoService() {
+   public String doGotoService() {
 
 //        FacesContext context = FacesContext.getCurrentInstance();
 //        String kthfsInstance = context.getApplication().evaluateExpressionGet(context, "#{kthfsInstance.name}", String.class);
 
-        return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
-    }
+      return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
+   }
 
-    public String doGotoService(String kthfsInstance) {
-        return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
-    }
-    
-    public String gotoServiceInstance() {
-        return "services-instances-status?faces-redirect=true&hostname=" + 
-                hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
-    }
+   public String doGotoService(String kthfsInstance) {
+      return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
+   }
 
-    public String gotoServiceStatus() {
-        return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
-    }
+   public String gotoServiceInstance() {
+      return "services-instances-status?faces-redirect=true&hostname="
+              + hostname + "&kthfsinstance=" + kthfsInstance + "&service=" + service;
+   }
 
-    public String gotoServiceCommands() {
-        return "services-commands?faces-redirect=true&kthfsinstance=" + kthfsInstance;
-    }
+   public String gotoServiceStatus() {
+      return "services-status?faces-redirect=true&kthfsinstance=" + kthfsInstance;
+   }
 
-    public String gotoServiceInstanceStatus() {
-        return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
-                kthfsInstance + "&hostname=" + hostname + "&service=" + service + 
-                "&servicegroup=" + serviceGroup;
-    }
-    
-    public String gotoParentServiceInstanceStatus() {
-       String parentHostname = "";
-       if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
-            //There is one mysqlcluster per kthfs instance
-            Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
-            parentHostname = s.getHostname();
-       }
-       return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
-               kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup;
-    }    
+   public String gotoServiceCommands() {
+      return "services-commands?faces-redirect=true&kthfsinstance=" + kthfsInstance;
+   }
 
-    public String gotoServiceInstanceSubservices() {
-        String url = "services-instances-subservices?faces-redirect=true&kthfsinstance=" + 
-                kthfsInstance + "&hostname=" + hostname;
-        if (service != null) {
-            url += "&service=" + service;
-        }
-        if (serviceGroup != null) {
-            url += "&servicegroup=" + serviceGroup;
-        }
-        return url;
-    }
+   public String gotoServiceInstanceStatus() {
+      return "services-instances-status?faces-redirect=true&kthfsinstance="
+              + kthfsInstance + "&hostname=" + hostname + "&service=" + service
+              + "&servicegroup=" + serviceGroup;
+   }
 
-    public String gotoServiceInstanceSubservicesInstance() {
-        return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance=" 
-                + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
-    }
+   public String gotoParentServiceInstanceStatus() {
+      String parentHostname = "";
+      if (serviceGroup.equalsIgnoreCase("mysqlcluster") || serviceGroup.equalsIgnoreCase("yarn")) {
+         //There is one mysqlcluster per kthfs instance
+         Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
+         parentHostname = s.getHostname();
+      }
+      return "services-instances-status?faces-redirect=true&kthfsinstance="
+              + kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup +
+              "&servicegroup=" + serviceGroup;
+   }
 
-    public String getServiceInstanceStatusUrl() {
-        return "services-instances-status.xhtml";
-    }
+   public String gotoServiceInstanceSubservices() {
+      String url = "services-instances-subservices?faces-redirect=true&kthfsinstance="
+              + kthfsInstance + "&hostname=" + hostname;
+      if (service != null) {
+         url += "&service=" + service;
+      }
+      if (serviceGroup != null) {
+         url += "&servicegroup=" + serviceGroup;
+      }
+      return url;
+   }
 
-    public String getServiceInstanceSubserviceInstanceUrl() {
-        return "services-instances-subservices-instance.xhtml";
-    }
+   public String gotoServiceInstanceSubservicesInstance() {
+      return "services-instances-subservices-instance?faces-redirect=true&kthfsinstance="
+              + kthfsInstance + "&hostname=" + hostname + "&service=" + service + "&servicegroup=" + serviceGroup;
+   }
 
-    public String getHostUrl() {
-        return "host.xhtml";
-    }
+   public String getServiceInstanceStatusUrl() {
+      return "services-instances-status.xhtml";
+   }
 
-    public String gotoServiceInstances() {
-        String url = "services-instances?faces-redirect=true";
-        if (hostname != null) {
-            url += "&hostname=" + hostname;
-        }
-        if (kthfsInstance != null) {
-            url += "&kthfsinstance=" + kthfsInstance;
-        }
-        if (service != null) {
-            url += "&service=" + service;
-        }
-        if (status != null) {
-           url += "&status=" + status; 
-        }
-        return url;
-    }
+   public String getServiceInstanceSubserviceInstanceUrl() {
+      return "services-instances-subservices-instance.xhtml";
+   }
 
-    public String gotoSubserviceInstances() {
+   public String getHostUrl() {
+      return "host.xhtml";
+   }
 
-        String url = "services-instances-subservices?faces-redirect=true";
-        if (hostname != null) {
-            url += "&hostname=" + hostname;
-        }
-        if (kthfsInstance != null) {
-            url += "&kthfsinstance=" + kthfsInstance;
-        }
-        if (service != null) {
-            url += "&service=" + service;
-        }
-        url += "&servicegroup=" + serviceGroup;
-        return url;
-    }
+   public String gotoServiceInstances() {
+      String url = "services-instances?faces-redirect=true";
+      if (hostname != null) {
+         url += "&hostname=" + hostname;
+      }
+      if (kthfsInstance != null) {
+         url += "&kthfsinstance=" + kthfsInstance;
+      }
+      if (service != null) {
+         url += "&service=" + service;
+      }
+      if (status != null) {
+         url += "&status=" + status;
+      }
+      return url;
+   }
 
-    public List<ServiceRoleInfo> getServiceRoles() {
-        List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-        String instance = "hdfs1";
-        int started, stopped, failed, good, bad;
-        if (kthfsInstance.equalsIgnoreCase(instance)) {
-            List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
-            roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
-            roles.add(new ServiceRoleInfo("NameNode", "namenode"));
-            roles.add(new ServiceRoleInfo("DataNode", "datanode"));
-            for (ServiceRoleInfo role : roles) {
-                started = getStartedServiceCount(instance, role.getShortName(), false);
-                stopped = getStoppedServiceCount(instance, role.getShortName(), false);
-                failed = getFailedServiceCount(instance, role.getShortName(), false);
-                good = started + stopped;
-                bad = failed;
-                role.setStatusStarted(started + " Started");
-                role.setStatusStopped((stopped + failed) + " Stopped");
-                role.setHealth(String.format("%d Good, %d Bad", good, bad));
-                serviceRoles.add(role);
-            }
-        }
-        return serviceRoles;
-    }
+   public String gotoSubserviceInstances() {
 
-    public List<ServiceRoleInfo> getMysqlClusterSuberviceRoles() {
-        List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-        String instance = "hdfs1";
-        int started, stopped, failed, good, bad;
-        if (kthfsInstance.equalsIgnoreCase(instance)) {
+      String url = "services-instances-subservices?faces-redirect=true";
+      if (hostname != null) {
+         url += "&hostname=" + hostname;
+      }
+      if (kthfsInstance != null) {
+         url += "&kthfsinstance=" + kthfsInstance;
+      }
+      if (service != null) {
+         url += "&service=" + service;
+      }
+      url += "&servicegroup=" + serviceGroup;
+      return url;
+   }
+
+   public List<ServiceRoleInfo> getServiceRoles() {
+      List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
+      String instance = "hdfs1";
+      int started, stopped, failed, good, bad;
+      if (kthfsInstance.equalsIgnoreCase(instance)) {
+         List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
+         roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
+         roles.add(new ServiceRoleInfo("NameNode", "namenode"));
+         roles.add(new ServiceRoleInfo("DataNode", "datanode"));
+         roles.add(new ServiceRoleInfo("YARN", "yarn"));
+         for (ServiceRoleInfo role : roles) {
+            started = getStartedServiceCount(instance, role.getShortName(), false);
+            stopped = getStoppedServiceCount(instance, role.getShortName(), false);
+            failed = getFailedServiceCount(instance, role.getShortName(), false);
+            good = started + stopped;
+            bad = failed;
+            role.setStatusStarted(started + " Started");
+            role.setStatusStopped((stopped + failed) + " Stopped");
+            role.setHealth(String.format("%d Good, %d Bad", good, bad));
+            serviceRoles.add(role);
+         }
+      }
+      return serviceRoles;
+   }
+
+   public List<ServiceRoleInfo> getSuberviceRoles() {
+
+      List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
+      String instance = "hdfs1";
+      int started, stopped, failed, good, bad;
+
+      if (kthfsInstance.equalsIgnoreCase(instance)) {
+
+         if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
             List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
             roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
             roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
             roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
             for (ServiceRoleInfo role : roles) {
-                started = getStartedServiceCount(instance, role.getShortName(), true);
-                stopped = getStoppedServiceCount(instance, role.getShortName(), true);
-                failed = getFailedServiceCount(instance, role.getShortName(), true);
-                good = started + stopped;
-                bad = failed;
-                role.setStatusStarted(started + " Started");
-                role.setStatusStopped((stopped + failed) + " Stopped");
-                role.setHealth(String.format("%d Good, %d Bad", good, bad));
-                serviceRoles.add(role);
+               started = getStartedServiceCount(instance, role.getShortName(), true);
+               stopped = getStoppedServiceCount(instance, role.getShortName(), true);
+               failed = getFailedServiceCount(instance, role.getShortName(), true);
+               good = started + stopped;
+               bad = failed;
+               role.setStatusStarted(started + " Started");
+               role.setStatusStopped((stopped + failed) + " Stopped");
+               role.setHealth(String.format("%d Good, %d Bad", good, bad));
+               serviceRoles.add(role);
             }
-        }
-        return serviceRoles;
-    }
 
-    public int getStartedServiceCount(String kthfsInstance, String service, boolean subService) {
-        return serviceEJB.getStartedServicesCount(kthfsInstance, service, subService);
-    }
+         } else if (serviceGroup.equalsIgnoreCase("yarn")) {
+            List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
+            roles.add(new ServiceRoleInfo("Resource Manager", "resourcemanager"));
+            roles.add(new ServiceRoleInfo("Node Manager", "nodemanager"));
+            for (ServiceRoleInfo role : roles) {
+               started = getStartedServiceCount(instance, role.getShortName(), true);
+               stopped = getStoppedServiceCount(instance, role.getShortName(), true);
+               failed = getFailedServiceCount(instance, role.getShortName(), true);
+               good = started + stopped;
+               bad = failed;
+               role.setStatusStarted(started + " Started");
+               role.setStatusStopped((stopped + failed) + " Stopped");
+               role.setHealth(String.format("%d Good, %d Bad", good, bad));
+               serviceRoles.add(role);
+            }
+         }
+      }
+      return serviceRoles;
+   }
 
-    public int getFailedServiceCount(String kthfsInstance, String service, boolean subService) {
-        return serviceEJB.getFailedServicesCount(kthfsInstance, service, subService);
-    }
+   public int getStartedServiceCount(String kthfsInstance, String service, boolean subService) {
+      return serviceEJB.getStartedServicesCount(kthfsInstance, service, subService);
+   }
 
-    public int getStoppedServiceCount(String kthfsInstance, String service, boolean subService) {
-        return serviceEJB.getStoppedServicesCount(kthfsInstance, service, subService);
-    }
+   public int getFailedServiceCount(String kthfsInstance, String service, boolean subService) {
+      return serviceEJB.getFailedServicesCount(kthfsInstance, service, subService);
+   }
 
-    public void addMessage(String summary) {
-        FacesMessage message = new FacesMessage(FacesMessage.SEVERITY_INFO, summary, null);
-        FacesContext.getCurrentInstance().addMessage(null, message);
-    }
+   public int getStoppedServiceCount(String kthfsInstance, String service, boolean subService) {
+      return serviceEJB.getStoppedServicesCount(kthfsInstance, service, subService);
+   }
 
-    public void startService() {
-        addMessage("Start not implemented!");
-    }
+   public void addMessage(String summary) {
+      FacesMessage message = new FacesMessage(FacesMessage.SEVERITY_INFO, summary, null);
+      FacesContext.getCurrentInstance().addMessage(null, message);
+   }
 
-    public void stopService() {
-        addMessage("Stop not implemented!");
-    }
+   public void startService() {
+      addMessage("Start not implemented!");
+   }
 
-    public void restartService() {
-        addMessage("Restart not implemented!");
-    }
+   public void stopService() {
+      addMessage("Stop not implemented!");
+   }
 
-    public void deleteService() {
-        addMessage("Delete not implemented!");
-    }
-    
-    public boolean hasWebUI(){
-       
+   public void restartService() {
+      addMessage("Restart not implemented!");
+   }
 
-       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
-       if (s.getWebPort() == null) {
-          return false;
-       }
-       return true;
-    }
+   public void deleteService() {
+      addMessage("Delete not implemented!");
+   }
 
-    public String showStdoutLog(int n) {
+   public boolean hasWebUI() {
+
+      
+      Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
+      if (s.getWebPort() == null) {
+         return false;
+      }
+      return true;
+   }
+
+   public String showStdoutLog(int n) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getStdOut(n);
-    }
+   }
 
-    public String showStderrLog(int n) {
+   public String showStderrLog(int n) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getStdErr(n);
-    }
+   }
 
-    public String showConfig() throws Exception {
+   public String showConfig() throws Exception {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
       return webComm.getConfig();
-    }
-    
-    public String getNotAvailable(){
-        return NOT_AVAILABLE;
-    }
+   }
+
+   public String getNotAvailable() {
+      return NOT_AVAILABLE;
+   }
 }

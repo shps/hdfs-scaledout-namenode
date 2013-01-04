@@ -51,6 +51,7 @@
                                 <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
                                 <f:param name="hostname" value="#{serviceController.hostname}"/>
                                 <f:param name="service" value="#{serviceController.serviceGroup}"/>
+                            <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                
                             </p:commandLink> 
                             <h:outputText value=" &raquo; "/>
 
@@ -69,12 +70,14 @@
                             <h:outputText value="#{serviceController.serviceGroup} (#{serviceController.hostname})"/>
                             <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
                             <f:param name="service" value="#{serviceController.serviceGroup}"/>
+                            <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>
                             <f:param name="hostname" value="#{serviceController.hostname}"/>
                         </p:commandLink>
 
                         <p:commandButton value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceInstanceStatus()}" ajax="false">
                             <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
                             <f:param name="service" value="#{serviceController.serviceGroup}"/>
+                            <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>
                             <f:param name="hostname" value="#{serviceController.hostname}"/>                          
                         </p:commandButton>  
 
@@ -129,7 +132,7 @@
                                  widgetVar="instancesTable" filteredValue="#{serviceInstanceController.filteredInstances}" >
 
                         <p:column id="Name" headerText="Name" filterBy="#{instance.name}" filterMatchMode="contains" 
-                                  filterOptions="#{serviceInstanceController.mysqlClusterRoleOptions}" filterPosition="top">
+                                  filterOptions="#{serviceInstanceController.subServiceRoleOptions}" filterPosition="top">
 
                             <h:outputLink id="link1" value="#{serviceController.serviceInstanceSubserviceInstanceUrl}">
                                 <h:outputText value="#{instance.name}"/>
