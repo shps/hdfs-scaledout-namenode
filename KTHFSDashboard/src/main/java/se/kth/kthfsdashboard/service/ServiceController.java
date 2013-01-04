@@ -12,6 +12,7 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
 import javax.servlet.http.HttpServletRequest;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import se.kth.kthfsdashboard.host.Host;
 import se.kth.kthfsdashboard.host.HostEJB;
 import se.kth.kthfsdashboard.struct.InstanceFullInfo;
@@ -144,7 +145,7 @@ public class ServiceController {
         List<InstanceFullInfo> instances = new ArrayList<InstanceFullInfo>();
         List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
         for (Service s : services) {
-            InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString());
+            InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
             i.setPid(s.getPid());
             i.setUptime(Formatter.time(s.getUptime() * 1000));
             instances.add(i);
@@ -179,7 +180,8 @@ public class ServiceController {
 
     public String gotoServiceInstanceStatus() {
         return "services-instances-status?faces-redirect=true&kthfsinstance=" + 
-                kthfsInstance + "&hostname=" + hostname + "&service=" + service;
+                kthfsInstance + "&hostname=" + hostname + "&service=" + service + 
+                "&servicegroup=" + serviceGroup;
     }
     
     public String gotoParentServiceInstanceStatus() {
@@ -334,6 +336,16 @@ public class ServiceController {
 
     public void deleteService() {
         addMessage("Delete not implemented!");
+    }
+    
+    public boolean hasWebUI(){
+       
+
+       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
+       if (s.getWebPort() == null) {
+          return false;
+       }
+       return true;
     }
 
     public String showStdoutLog(int n) {
