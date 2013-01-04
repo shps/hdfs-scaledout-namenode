@@ -32,12 +32,14 @@ from os.path import exists, join
 config_mutex = Lock()
 
 service_commands = {}
-service_commands["namenode"] =      ["init", "start", "stop"]
-service_commands["datanode"] =      ["init", "start", "stop"]
-service_commands["mysqlcluster"] =  ["init", "start", "stop"]
-service_commands["ndb"] =           ["init", "start", "stop"]
-service_commands["mysqld"] =        ["start", "stop"]
-service_commands["mgmserver"] =     ["start", "stop"]
+service_commands["namenode"] =          ["init", "start", "stop"]
+service_commands["datanode"] =          ["init", "start", "stop"]
+service_commands["mysqlcluster"] =      ["init", "start", "stop"]
+service_commands["ndb"] =               ["init", "start", "stop"]
+service_commands["mysqld"] =            ["start", "stop"]
+service_commands["mgmserver"] =         ["start", "stop"]
+service_commands["resourcemanager"] =   ["start", "stop"]
+service_commands["nodemanager"] =       ["start", "stop"]
 
 config_filename = "config.ini"
 services_filename = "services"
