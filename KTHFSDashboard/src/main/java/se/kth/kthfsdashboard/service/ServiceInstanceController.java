@@ -200,6 +200,9 @@ public class ServiceInstanceController implements Serializable {
    }
 
    public boolean getShowConfiguration() {
+      if (service == null) {
+         return false;
+      }
       if (service.contains("mysqlcluster")) {
          return true;
       }
