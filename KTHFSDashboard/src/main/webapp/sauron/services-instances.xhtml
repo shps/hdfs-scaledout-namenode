@@ -101,7 +101,7 @@
                             <h:outputLink id="link1" value="#{serviceController.serviceInstanceStatusUrl}">
                                 <h:outputText value="#{instance.name}"/>
                                 <f:param name="hostname" value="#{instance.host}"/>
-                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                                <f:param name="kthfsinstance" value="#{instance.kthfsInstance}"/>
                                 <f:param name="service" value="#{instance.service}"/>
                                 <f:param name="servicegroup" value="#{instance.serviceGroup}"/>
                             </h:outputLink>

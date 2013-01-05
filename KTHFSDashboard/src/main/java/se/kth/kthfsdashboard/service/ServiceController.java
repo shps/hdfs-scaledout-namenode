@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
@@ -12,8 +13,6 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
 import javax.servlet.http.HttpServletRequest;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-import se.kth.kthfsdashboard.host.Host;
 import se.kth.kthfsdashboard.host.HostEJB;
 import se.kth.kthfsdashboard.struct.InstanceFullInfo;
 import se.kth.kthfsdashboard.struct.InstanceInfo;
@@ -50,11 +49,29 @@ public class ServiceController {
    private HashMap<String, InstanceInfo> instances = new HashMap<String, InstanceInfo>();
    private static Logger log = Logger.getLogger(ServiceController.class.getName());
    public static String NOT_AVAILABLE = "Not available.";
+   public static Map<String, List<ServiceRoleInfo>> rolesMap = new HashMap<String, List<ServiceRoleInfo>>();
 
    public ServiceController() {
 
-      kthfsInstances.put("hdfs1", new KthfsInstanceInfo("hdfs1", "HDFS", "started?", "?"));
-//        kthfsInstances.put("hdfs2", new KthfsInstanceInfo("hdfs2", "HDFS", "started?", "?"));
+      List<ServiceRoleInfo> roles;
+
+      roles = new ArrayList<ServiceRoleInfo>();
+      roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
+      roles.add(new ServiceRoleInfo("NameNode", "namenode"));
+      roles.add(new ServiceRoleInfo("DataNode", "datanode"));
+      roles.add(new ServiceRoleInfo("YARN", "yarn"));
+      rolesMap.put("hadoop", roles);
+
+      roles = new ArrayList<ServiceRoleInfo>();
+      roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
+      roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
+      roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
+      rolesMap.put("mysqlcluster", roles);
+
+      roles = new ArrayList<ServiceRoleInfo>();
+      roles.add(new ServiceRoleInfo("Resource Manager", "resourcemanager"));
+      roles.add(new ServiceRoleInfo("Node Manager", "nodemanager"));
+      rolesMap.put("yarn", roles);
    }
 
    public String getService() {
@@ -106,51 +123,56 @@ public class ServiceController {
    }
 
    public List<KthfsInstanceInfo> getKthfsInstances() {
+
       List<KthfsInstanceInfo> allKthfsInstances = new ArrayList<KthfsInstanceInfo>();
-      allKthfsInstances.addAll(kthfsInstances.values());
+
+
+      // TODO: Insert correct Infor for Service Types, ...
+      // service instances
+
+      List<String> instances = serviceEJB.findDistinctInstances();
+      for (String instance : instances) {
+         allKthfsInstances.add(new KthfsInstanceInfo(instance, "HDFS", "started?", "?"));
+      }
       return allKthfsInstances;
    }
 
    public String requestParams() {
       FacesContext context = FacesContext.getCurrentInstance();
       HttpServletRequest request = (HttpServletRequest) context.getExternalContext().getRequest();
-
       Principal principal = request.getUserPrincipal();
-//           log.info("Authenticated user: " + principal.getName());  
 
-      return request.getAuthType().toString() + " - "
-              + principal.getName();
-
+      return request.getAuthType().toString() + " - " + principal.getName();
    }
 
    public List<InstanceInfo> getInstances() {
       List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
       List<Service> services = serviceEJB.findAllInstances();
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
 
    public List<InstanceInfo> getInstance() {
-      List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
+      List<InstanceInfo> instanceInfoList = new ArrayList<InstanceInfo>();
       List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instanceInfoList.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
-      return instances;
+      return instanceInfoList;
    }
 
    public List<InstanceFullInfo> getInstanceFullInfo() {
-      List<InstanceFullInfo> instances = new ArrayList<InstanceFullInfo>();
+      List<InstanceFullInfo> instanceInfoList = new ArrayList<InstanceFullInfo>();
       List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
       for (Service s : services) {
          InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
          i.setPid(s.getPid());
          i.setUptime(Formatter.time(s.getUptime() * 1000));
-         instances.add(i);
+         instanceInfoList.add(i);
       }
-      return instances;
+      return instanceInfoList;
    }
 
    public String doGotoService() {
@@ -187,13 +209,13 @@ public class ServiceController {
    public String gotoParentServiceInstanceStatus() {
       String parentHostname = "";
       if (serviceGroup.equalsIgnoreCase("mysqlcluster") || serviceGroup.equalsIgnoreCase("yarn")) {
-         //There is one mysqlcluster per kthfs instance
+         //There is one mysqlcluster/yarn per kthfs instance
          Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
          parentHostname = s.getHostname();
       }
       return "services-instances-status?faces-redirect=true&kthfsinstance="
-              + kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup +
-              "&servicegroup=" + serviceGroup;
+              + kthfsInstance + "&hostname=" + parentHostname + "&service=" + serviceGroup
+              + "&servicegroup=" + serviceGroup;
    }
 
    public String gotoServiceInstanceSubservices() {
@@ -259,26 +281,10 @@ public class ServiceController {
    }
 
    public List<ServiceRoleInfo> getServiceRoles() {
+
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-      String instance = "hdfs1";
-      int started, stopped, failed, good, bad;
-      if (kthfsInstance.equalsIgnoreCase(instance)) {
-         List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
-         roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
-         roles.add(new ServiceRoleInfo("NameNode", "namenode"));
-         roles.add(new ServiceRoleInfo("DataNode", "datanode"));
-         roles.add(new ServiceRoleInfo("YARN", "yarn"));
-         for (ServiceRoleInfo role : roles) {
-            started = getStartedServiceCount(instance, role.getShortName(), false);
-            stopped = getStoppedServiceCount(instance, role.getShortName(), false);
-            failed = getFailedServiceCount(instance, role.getShortName(), false);
-            good = started + stopped;
-            bad = failed;
-            role.setStatusStarted(started + " Started");
-            role.setStatusStopped((stopped + failed) + " Stopped");
-            role.setHealth(String.format("%d Good, %d Bad", good, bad));
-            serviceRoles.add(role);
-         }
+      for (ServiceRoleInfo role : rolesMap.get("hadoop")) {
+         serviceRoles.add(setStatus(kthfsInstance, role, false));
       }
       return serviceRoles;
    }
@@ -286,46 +292,25 @@ public class ServiceController {
    public List<ServiceRoleInfo> getSuberviceRoles() {
 
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-      String instance = "hdfs1";
-      int started, stopped, failed, good, bad;
-
-      if (kthfsInstance.equalsIgnoreCase(instance)) {
-
-         if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
-            List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
-            roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
-            roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
-            roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
-            for (ServiceRoleInfo role : roles) {
-               started = getStartedServiceCount(instance, role.getShortName(), true);
-               stopped = getStoppedServiceCount(instance, role.getShortName(), true);
-               failed = getFailedServiceCount(instance, role.getShortName(), true);
-               good = started + stopped;
-               bad = failed;
-               role.setStatusStarted(started + " Started");
-               role.setStatusStopped((stopped + failed) + " Stopped");
-               role.setHealth(String.format("%d Good, %d Bad", good, bad));
-               serviceRoles.add(role);
-            }
-
-         } else if (serviceGroup.equalsIgnoreCase("yarn")) {
-            List<ServiceRoleInfo> roles = new ArrayList<ServiceRoleInfo>();
-            roles.add(new ServiceRoleInfo("Resource Manager", "resourcemanager"));
-            roles.add(new ServiceRoleInfo("Node Manager", "nodemanager"));
-            for (ServiceRoleInfo role : roles) {
-               started = getStartedServiceCount(instance, role.getShortName(), true);
-               stopped = getStoppedServiceCount(instance, role.getShortName(), true);
-               failed = getFailedServiceCount(instance, role.getShortName(), true);
-               good = started + stopped;
-               bad = failed;
-               role.setStatusStarted(started + " Started");
-               role.setStatusStopped((stopped + failed) + " Stopped");
-               role.setHealth(String.format("%d Good, %d Bad", good, bad));
-               serviceRoles.add(role);
-            }
+      if (serviceGroup != null) { // serviceGroup = mysqlcluster/yarn
+         for (ServiceRoleInfo role : rolesMap.get(serviceGroup)) {
+         serviceRoles.add(setStatus(kthfsInstance, role, true));
          }
       }
       return serviceRoles;
+   }
+
+   private ServiceRoleInfo setStatus(String kthfsInstance, ServiceRoleInfo role, boolean isSubSevice) {
+      int started, stopped, failed, good, bad;
+      started = getStartedServiceCount(kthfsInstance, role.getShortName(), isSubSevice);
+      stopped = getStoppedServiceCount(kthfsInstance, role.getShortName(), isSubSevice);
+      failed = getFailedServiceCount(kthfsInstance, role.getShortName(), isSubSevice);
+      good = started + stopped;
+      bad = failed;
+      role.setStatusStarted(started + " Started");
+      role.setStatusStopped((stopped + failed) + " Stopped");
+      role.setHealth(String.format("%d Good, %d Bad", good, bad));
+      return role;
    }
 
    public int getStartedServiceCount(String kthfsInstance, String service, boolean subService) {
@@ -363,7 +348,7 @@ public class ServiceController {
 
    public boolean hasWebUI() {
 
-      
+
       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
       if (s.getWebPort() == null) {
          return false;

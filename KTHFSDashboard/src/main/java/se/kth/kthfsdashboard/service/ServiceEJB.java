@@ -20,6 +20,12 @@ public class ServiceEJB {
     public ServiceEJB() {
     }
 
+    public List<String> findDistinctInstances() {
+
+        TypedQuery<String> query = em.createNamedQuery("findDistinctInstances", String.class);
+        return query.getResultList();
+    }    
+    
     public List<Service> findAllInstances() {
 
         TypedQuery<Service> query = em.createNamedQuery("findAllServices", Service.class);

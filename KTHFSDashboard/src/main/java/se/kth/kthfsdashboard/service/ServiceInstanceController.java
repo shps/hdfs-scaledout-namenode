@@ -135,7 +135,7 @@ public class ServiceInstanceController implements Serializable {
          services = serviceEJB.findSubserviceByInstance(cookie.read("instance"));
       }
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
@@ -157,7 +157,7 @@ public class ServiceInstanceController implements Serializable {
          services = serviceEJB.findByInstance(cookie.read("instance"));
       }
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
@@ -214,7 +214,6 @@ public class ServiceInstanceController implements Serializable {
 
    public boolean getShowConfiguration() {
       
-      System.err.println("#################### " + service);
       if (service == null) {
          return false;
       }

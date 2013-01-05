@@ -13,7 +13,7 @@ import javax.persistence.*;
 @Table(name = "Services")
 @NamedQueries({
    
-//    @NamedQuery(name = "findInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
+    @NamedQuery(name = "findDistinctInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
     
     @NamedQuery(name = "findAllServices", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service"),
     @NamedQuery(name = "findAllSubservices", query = "SELECT s FROM Service s WHERE NOT s.serviceGroup = s.service"),
