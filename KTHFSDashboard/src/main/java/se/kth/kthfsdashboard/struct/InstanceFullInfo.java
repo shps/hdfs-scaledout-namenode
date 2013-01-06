@@ -17,8 +17,9 @@ public class InstanceFullInfo implements Serializable {
     private String health;
     private int pid;
     private String uptime;
+    private Integer webPort;
 
-    public InstanceFullInfo(String service, String host, String rack, Service.Status status, String health) {
+    public InstanceFullInfo(String service, String host, Integer webPort, String rack, Service.Status status, String health) {
 
         this.name = service + " (" + host + ")";
         this.host = host;
@@ -26,6 +27,7 @@ public class InstanceFullInfo implements Serializable {
         this.rack = rack;
         this.status = status;
         this.health = health;
+        this.webPort = webPort;
     }
 
     public String getName() {
@@ -67,4 +69,12 @@ public class InstanceFullInfo implements Serializable {
     public void setUptime(String uptime) {
         this.uptime = uptime;
     }
+
+   public Integer getWebPort() {
+      return webPort;
+   }
+
+   public void setWebPort(Integer webPort) {
+      this.webPort = webPort;
+   }
 }

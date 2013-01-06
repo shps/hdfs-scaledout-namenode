@@ -20,6 +20,12 @@ public class ServiceEJB {
     public ServiceEJB() {
     }
 
+    public List<String> findDistinctInstances() {
+
+        TypedQuery<String> query = em.createNamedQuery("findDistinctInstances", String.class);
+        return query.getResultList();
+    }    
+    
     public List<Service> findAllInstances() {
 
         TypedQuery<Service> query = em.createNamedQuery("findAllServices", Service.class);
@@ -74,6 +80,12 @@ public class ServiceEJB {
         TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup-Service", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
         return query.getResultList();
     }
+    
+    public Service findServices(String hostname, String kthfsInstance, String serviceGroup, String service) {
+
+        TypedQuery<Service> query = em.createNamedQuery("findService", Service.class).setParameter("hostname", hostname).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
+        return query.getSingleResult();
+    }    
 
     public void persistService(Service service) {
         em.persist(service);

@@ -261,7 +261,8 @@ public class HostController implements Serializable {
          if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
             c.succeeded();
             String messageText = "";
-            Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+//            Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
+            Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
             
             if (command.equalsIgnoreCase("init")) {
 //               Todo:

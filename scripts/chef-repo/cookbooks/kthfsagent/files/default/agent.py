@@ -32,12 +32,14 @@ from os.path import exists, join
 config_mutex = Lock()
 
 service_commands = {}
-service_commands["namenode"] =      ["init", "start", "stop"]
-service_commands["datanode"] =      ["init", "start", "stop"]
-service_commands["mysqlcluster"] =  ["init", "start", "stop"]
-service_commands["ndb"] =           ["init", "start", "stop"]
-service_commands["mysqld"] =        ["start", "stop"]
-service_commands["mgmserver"] =     ["start", "stop"]
+service_commands["namenode"] =          ["init", "start", "stop"]
+service_commands["datanode"] =          ["init", "start", "stop"]
+service_commands["mysqlcluster"] =      ["init", "start", "stop"]
+service_commands["ndb"] =               ["init", "start", "stop"]
+service_commands["mysqld"] =            ["start", "stop"]
+service_commands["mgmserver"] =         ["start", "stop"]
+service_commands["resourcemanager"] =   ["start", "stop"]
+service_commands["nodemanager"] =       ["start", "stop"]
 
 config_filename = "config.ini"
 services_filename = "services"
@@ -179,7 +181,6 @@ class Heartbeat():
                     payload["init"] = "true"
                     logger.info("Sending Init Heartbeat...")
                 else:
-                    print "test"
                     logger.info("Sending Heartbeat...")
                 
                 auth = (server_username, server_password)     
@@ -199,7 +200,7 @@ class MemUsage(object):
         self.init_data()
 
     def init_data(self):
-        #todo there is a problem here!
+        #TODO: There is a problem with ubuntu 12.04 (Exception AttributeError)
         command = "free"
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
         stdout_list = process.communicate()[0].split('\n')
@@ -238,7 +239,11 @@ class ExtProcess(): # external process
                 if ExtProcess.isRunning(pid) == True:
                     if not Config().get(section, 'status') == 'Started':
                         logger.info("Process started: {0}/{1} pid={2}".format(instance, service, pid))
-                        Service().started(instance, service, pid)            
+                        Service().started(instance, service, pid)
+                        
+                    if not Config().get(section, 'pid') == pid:
+                        Config().edit(section, {'pid': pid}, {})
+                        
                 else:
                     raise Exception("Process {0} is not running for {1}/{2}".format(pid, instance, service))
 

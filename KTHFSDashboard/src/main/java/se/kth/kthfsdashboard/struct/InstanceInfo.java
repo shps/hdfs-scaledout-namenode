@@ -11,16 +11,18 @@ public class InstanceInfo implements Serializable {
 
     private String name;
     private String host;
+    private String kthfsInstance;
     private String service;
     private String serviceGroup;
     private String rack;
     private Service.Status status;
     private String health;
 
-    public InstanceInfo(String serviceGroup, String service, String host, String rack, Service.Status status, String health) {
+    public InstanceInfo(String kthfsInstance, String serviceGroup, String service, String host, String rack, Service.Status status, String health) {
 
         this.name = service + " (" + host + ")";
         this.host = host;
+        this.kthfsInstance = kthfsInstance;
         this.serviceGroup = serviceGroup;
         this.service = service;
         this.rack = rack;
@@ -55,5 +57,13 @@ public class InstanceInfo implements Serializable {
     public String getServiceGroup(){
        return serviceGroup;
     }
+
+   public String getKthfsInstance() {
+      return kthfsInstance;
+   }
+
+   public void setKthfsInstance(String kthfsInstance) {
+      this.kthfsInstance = kthfsInstance;
+   }
             
 }

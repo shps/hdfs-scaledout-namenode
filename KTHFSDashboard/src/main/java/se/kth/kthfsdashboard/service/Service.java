@@ -13,10 +13,12 @@ import javax.persistence.*;
 @Table(name = "Services")
 @NamedQueries({
    
-//    @NamedQuery(name = "findInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
+    @NamedQuery(name = "findDistinctInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
     
     @NamedQuery(name = "findAllServices", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service"),
     @NamedQuery(name = "findAllSubservices", query = "SELECT s FROM Service s WHERE NOT s.serviceGroup = s.service"),
+    @NamedQuery(name = "findService", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
+
     
     @NamedQuery(name = "findServiceBy-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname"),
     @NamedQuery(name = "findServiceBy-Instance", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.instance = :instance"),
@@ -43,6 +45,7 @@ import javax.persistence.*;
 })
 public class Service implements Serializable {
 
+
     public enum Status {
 
         Started, Stopped, Failed, None, All
@@ -68,16 +71,27 @@ public class Service implements Serializable {
     @Column(nullable = false)
     private Status status;
     private int pid;
+    @Column(name = "web_port")
+    private Integer webPort;
 
     public Service() {
     }
 
-    public Service(String hostname, String instance, String serviceGroup, String service, Service.Status status) {
+    public Service(String hostname, String instance, String serviceGroup, String service, Integer webPort, Service.Status status) {
         this.hostname = hostname;
         this.instance = instance;
         this.serviceGroup = serviceGroup;
         this.service = service;
         this.status = status;
+        this.webPort = webPort;
+    }
+
+    public Service(String hostname, String instance, String serviceGroup, String service, Integer webPort) {
+        this.hostname = hostname;
+        this.instance = instance;
+        this.serviceGroup = serviceGroup;
+        this.service = service;
+        this.webPort = webPort;
     }
 
     public Service(String hostname, String instance, String serviceGroup, String service) {
@@ -86,7 +100,7 @@ public class Service implements Serializable {
         this.serviceGroup = serviceGroup;
         this.service = service;
     }
-
+    
     public static Status getServiceStatus(String status) {
         try {
             return Status.valueOf(status);
@@ -158,7 +172,16 @@ public class Service implements Serializable {
     public void setPid(int pid) {
         this.pid = pid;
     }
+    
+    public Integer getWebPort() {
+      return webPort;
+    }
 
+   public void setWebPort(Integer webPort) {
+      this.webPort = webPort;
+   }
+
+   
     public String getUptimeInSeconds() {
 
         DecimalFormat df = new DecimalFormat("#,###,##0.0");
@@ -172,6 +195,8 @@ public class Service implements Serializable {
         }
         return Health.Good;
     }
+    
+    
 //
 //    public String getDiskInfo() {
 //        Formatter f = new Formatter();

@@ -38,10 +38,12 @@ public class ServiceInstanceController implements Serializable {
    private SelectItem[] statusOptions;
    private SelectItem[] roleOptions;
    private SelectItem[] healthOptions;
-   private SelectItem[] mysqlClusterRoleOptions;
+   private SelectItem[] mysqlclusterRoleOptions;
+   private SelectItem[] yarnRoleOptions;
    private final static String[] statusStates;
    private final static String[] roles;
    private final static String[] mysqlClusterRoles;
+   private final static String[] yarnRoles;
    private final static String[] healthStates;
    private CookieTools cookie = new CookieTools();
 
@@ -51,8 +53,9 @@ public class ServiceInstanceController implements Serializable {
       statusStates[1] = Service.Status.Stopped.toString();
       statusStates[2] = Service.Status.Failed.toString();
 
-      roles = new String[]{"namenode", "datanode", "mysqlcluster"};
+      roles = new String[]{"namenode", "datanode", "mysqlcluster", "yarn"};
       mysqlClusterRoles = new String[]{"ndb", "mgmserver", "mysqld"};
+      yarnRoles = new String[]{"resourcemanager", "nodemanager"};
       healthStates = new String[]{"Good", "Bad"};
    }
 
@@ -60,8 +63,11 @@ public class ServiceInstanceController implements Serializable {
 
       statusOptions = createFilterOptions(statusStates);
       roleOptions = createFilterOptions(roles);
-      mysqlClusterRoleOptions = createFilterOptions(mysqlClusterRoles);
+      mysqlclusterRoleOptions = createFilterOptions(mysqlClusterRoles);
+      yarnRoleOptions = createFilterOptions(yarnRoles);
       healthOptions = createFilterOptions(healthStates);
+
+
    }
 
    public String getService() {
@@ -121,15 +127,15 @@ public class ServiceInstanceController implements Serializable {
          cookie.write("instance", kthfsInstance);
       } else if (kthfsInstance != null && serviceGroup != null) {
          services = serviceEJB.findByInstanceServiceGroup(kthfsInstance, serviceGroup);
-         cookie.write("instance", kthfsInstance);         
+         cookie.write("instance", kthfsInstance);
       } else if (kthfsInstance != null) {
          services = serviceEJB.findByInstance(kthfsInstance);
-         cookie.write("instance", kthfsInstance);            
+         cookie.write("instance", kthfsInstance);
       } else {
          services = serviceEJB.findSubserviceByInstance(cookie.read("instance"));
       }
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
@@ -143,15 +149,15 @@ public class ServiceInstanceController implements Serializable {
          cookie.write("instance", kthfsInstance);
       } else if (kthfsInstance != null && service != null) {
          services = serviceEJB.findByInstanceService(kthfsInstance, service);
-         cookie.write("instance", kthfsInstance);         
+         cookie.write("instance", kthfsInstance);
       } else if (kthfsInstance != null) {
          services = serviceEJB.findByInstance(kthfsInstance);
-         cookie.write("instance", kthfsInstance);         
+         cookie.write("instance", kthfsInstance);
       } else {
          services = serviceEJB.findByInstance(cookie.read("instance"));
       }
       for (Service s : services) {
-         instances.add(new InstanceInfo(s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
@@ -175,8 +181,15 @@ public class ServiceInstanceController implements Serializable {
       return roleOptions;
    }
 
-   public SelectItem[] getMysqlClusterRoleOptions() {
-      return mysqlClusterRoleOptions;
+   public SelectItem[] getSubServiceRoleOptions() {
+
+      if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
+         return mysqlclusterRoleOptions;
+      } else if (serviceGroup.equalsIgnoreCase("yarn")) {
+         return yarnRoleOptions;
+      } else {
+         return new SelectItem[]{};
+      }
    }
 
    public SelectItem[] getHealthOptions() {
@@ -185,7 +198,7 @@ public class ServiceInstanceController implements Serializable {
 
    public boolean getShowSubservices() {
 
-      if (service.equalsIgnoreCase("mysqlcluster")) {
+      if (service.equalsIgnoreCase("mysqlcluster") || service.equalsIgnoreCase("yarn")) {
          return true;
       }
       return false;
@@ -200,6 +213,7 @@ public class ServiceInstanceController implements Serializable {
    }
 
    public boolean getShowConfiguration() {
+      
       if (service == null) {
          return false;
       }

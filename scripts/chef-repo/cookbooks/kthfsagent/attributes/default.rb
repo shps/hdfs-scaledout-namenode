@@ -16,6 +16,5 @@ default[:kthfs][:max_log_size] = "10000000"
 default[:kthfs][:agent_user] = "kthfsagent@sics.se"
 default[:kthfs][:agent_password] = "kthfsagent"
 default[:kthfs][:certificate_file] = "server.pem"
-default[:kthfs][:use_ssl] = "yes"
 default[:kthfs][:instance] = "hdfs1"
 

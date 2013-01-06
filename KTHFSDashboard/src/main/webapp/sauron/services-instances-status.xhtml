@@ -52,7 +52,7 @@
                 <p:toolbar styleClass="SecondToolbarGood">  
                     <p:toolbarGroup align="left">  
                         <p:commandLink  action="#{serviceController.gotoServiceInstanceStatus()}" ajax="false">
-                            <h:outputText value="#{serviceController.service} (#{serviceController.hostname})"/>
+                           <h:outputText value="#{serviceController.service} (#{serviceController.hostname})"/>
                             <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
                             <f:param name="service" value="#{serviceController.service}"/>
                             <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                              
@@ -129,6 +129,9 @@
                         </p:column>
                         <p:column headerText="Pid"><h:outputText value="#{instance.pid}"/></p:column>
                         <p:column headerText="Uptime"><h:outputText value="#{instance.uptime}"/></p:column>
+                        <p:column headerText="Web UI" rendered="#{serviceController.hasWebUI()}">
+                           <h:outputLink target="_blank" value="http://#{instance.host}:#{instance.webPort}">#{instance.host}:#{instance.webPort}</h:outputLink>
+                        </p:column>
                     </p:dataTable> 
                 </p:panel>                    
             </h:form>
@@ -138,7 +141,7 @@
             <h:form styleClass="styleInfoPanel" rendered="#{serviceInstanceController.showSubservices}">
                 <p:panel header="Subservices Summary">
 
-                    <p:dataTable id="serviceRole" var="serviceRole" value="#{serviceController.mysqlClusterSuberviceRoles}">
+                    <p:dataTable id="serviceRole" var="serviceRole" value="#{serviceController.suberviceRoles}">
                         <p:column headerText="">
                             <p:commandLink action="#{serviceController.gotoSubserviceInstances()}" ajax="false">
                                 <h:outputText value="#{serviceRole.name}"/>

@@ -130,6 +130,9 @@ public class AgentResource {
             service.setService(s.getString("service"));
             service.setServiceGroup(s.getString("service-group"));
             service.setInstance(s.getString("instance"));
+            if (s.has("web-port")) {
+               service.setWebPort(s.getInt("web-port"));
+            }
             service.setPid(s.has("pid") ? s.getInt("pid") : 0);
             if (s.has("stop-time")) {
                service.setUptime(s.getLong("stop-time") - s.getLong("start-time"));
