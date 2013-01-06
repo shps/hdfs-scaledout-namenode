@@ -513,6 +513,7 @@ ln -sni $CHEF_HOMEBASE/knife /home/#{node[:chef][:user]}/.chef
 #      {username}.pem
 #      {organization}-validator.pem
 
+rm -rf $CHEF_HOMEBASE/knife/credentials
 mv $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/credentials/knife-user-#{node[:chef][:user]}.rb
 cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
