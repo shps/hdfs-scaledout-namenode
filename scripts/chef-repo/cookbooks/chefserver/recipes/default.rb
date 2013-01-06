@@ -493,8 +493,8 @@ if [ `grep 'CHEF_USERNAME' /home/#{node[:chef][:user]}/.bashrc` -ne 0  ] ; then
 fi
 
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
-echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/.chef" >> /home/#{node[:chef][:user]}/.ironfan_bashrc
-source /home/#{node[:chef][:user]}/.bashrc
+echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /home/#{node[:chef][:user]}/.ironfan_bashrc
+CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase
 
 cd /home/#{node[:chef][:user]}
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
