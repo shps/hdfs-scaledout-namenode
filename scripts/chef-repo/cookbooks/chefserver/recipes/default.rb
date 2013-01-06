@@ -246,17 +246,18 @@ sudo apt-get -y -q update
 EOF
 end
 
-for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server opscode-keyring }
-   package "#{install_package}" do
-     action :install
-   end
-end
+# for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server opscode-keyring }
+#    package "#{install_package}" do
+#      action :install
+#    end
+# end
 
 
 # install some packages
 for install_package in "curl build-essential couchdb zlib1g-dev libxml2-dev install nginx opscode-keyring libgecode-dev rabbitmq-server"
   package "#{install_package}" do
    action :install
+#   options "--force-yes"
   end
 end
 
