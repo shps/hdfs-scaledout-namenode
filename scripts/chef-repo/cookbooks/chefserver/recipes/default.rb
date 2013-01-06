@@ -531,7 +531,7 @@ EOF
 not_if "`test -f /home/#{node[:chef][:user]}/homebase/.installed`"
 end
 
-template "/home/#{node[:chef][:user]}/.chef/credentials/knife-user-#{node[:chef][:user]}.rb" do
+template "/home/#{node[:chef][:user]}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
   source "knife-user.rb.erb"
   owner node[:chef][:user]
   group node[:chef][:user]
