@@ -290,14 +290,17 @@ code <<-EOF
 
 # install rvm
 # http://beginrescueend.com/rvm/install/
-#if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ]
-if [ ! -e /usr/local/rvm ]
+if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ]
+#if [ ! -e /usr/local/rvm/scripts/rvm ]
 then
-  sudo bash -s stable < <(curl \
+#  sudo bash -s stable < <(curl \
+  bash -s stable < <(curl \
     -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
 fi
-sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
-sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+#sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
+#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default
+rvm install 1.9.2; rvm use 1.9.2 --default
 EOF
 end
 
@@ -309,15 +312,15 @@ ignore_failure false
 code <<-EOF
 
 # install these ruby libs (if we don't already have them)
-# . /home/#{node[:chef][:user]}/.rvm/scripts/rvm
-# [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
-# [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libssl.so ] || rvm pkg install openssl
-# [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
+ . /home/#{node[:chef][:user]}/.rvm/scripts/rvm
+ [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
+ [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libssl.so ] || rvm pkg install openssl
+ [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
 
-. /usr/local/rvm/scripts/rvm
-[ -e /usr/local/rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
-[ -e /usr/local/rvm/usr/lib/libssl.so ] || rvm pkg install openssl
-[ -e /usr/local/rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
+# . /usr/local/rvm/scripts/rvm
+# [ -e /usr/local/rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
+# [ -e /usr/local/rvm/usr/lib/libssl.so ] || rvm pkg install openssl
+# [ -e /usr/local/rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
 
 
 EOF
