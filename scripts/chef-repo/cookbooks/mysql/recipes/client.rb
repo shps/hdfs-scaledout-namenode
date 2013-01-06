@@ -42,7 +42,6 @@ when "mac_os_x"
   include_recipe 'homebrew'
 end
 
- apt-get update
  execute "update package index" do
    command "apt-get update"
    ignore_failure true
