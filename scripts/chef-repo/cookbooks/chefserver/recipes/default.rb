@@ -290,9 +290,8 @@ code <<-EOF
 
 # install rvm
 # http://beginrescueend.com/rvm/install/
-if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ]
-#if [ ! -e /usr/local/rvm/scripts/rvm ]
-then
+#if [ ! -e /usr/local/rvm/scripts/rvm ] ; then
+if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ] ; then
 #  sudo bash -s stable < <(curl \
   bash -s stable < <(curl \
     -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
