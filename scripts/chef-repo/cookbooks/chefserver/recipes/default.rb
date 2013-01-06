@@ -246,11 +246,11 @@ sudo apt-get -y -q update
 EOF
 end
 
-# for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server opscode-keyring }
-#    package "#{install_package}" do
-#      action :install
-#    end
-# end
+for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server opscode-keyring }
+   package "#{install_package}" do
+     action :install
+   end
+end
 
 
 # install some packages
@@ -294,9 +294,13 @@ then
   bash -s stable < <(curl \
     -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
 fi
-
-sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
-sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+rvm user all
+rvm install 1.9.3
+rvm use 1.9.3 --default
+rvm install 1.9.2
+rvm use 1.9.2 --default
+#sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
+#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
 EOF
 end
 
