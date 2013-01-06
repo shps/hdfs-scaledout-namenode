@@ -407,8 +407,8 @@ chef-solr-installer -f
 [ ${CHEF_SERVER_USER} ] || CHEF_SERVER_USER=#{node[:chef][:user]}
 # the chef gems supply some upstart scripts, but they run everything as root
 # we'd rather run as whatever chef user we're using
-#for file in `find /home/#{node[:chef][:user]}/.rvm/ | grep debian/etc/init/ | grep -v client`
-for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
+for file in `find /home/#{node[:chef][:user]}/.rvm/ | grep debian/etc/init/ | grep -v client`
+#for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
