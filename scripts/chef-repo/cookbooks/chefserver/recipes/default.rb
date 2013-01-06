@@ -330,8 +330,8 @@ code <<-EOF
 # check if have the right version of ruby with the correct libs available,
 # if not we reinstall
 
-found=0
-/home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3
+#found=0
+#home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3
 # if [ $res == "0" ] ; then
 #   res=`/home/#{node[:chef][:user]}/.rvm/bin/ruby -e  "require 'openssl' ; require 'zlib'"`
 #   if [ $res == "0"  ] ; then
