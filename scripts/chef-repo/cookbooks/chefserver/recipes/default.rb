@@ -292,9 +292,8 @@ code <<-EOF
 # http://beginrescueend.com/rvm/install/
 #if [ ! -e /usr/local/rvm/scripts/rvm ] ; then
 if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ] ; then
-#  sudo bash -s stable < <(curl \
-  bash -s stable < <(curl \
-    -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+#  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+ bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
 fi
 #sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
 #sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
