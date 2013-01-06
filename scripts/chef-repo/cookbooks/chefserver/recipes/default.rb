@@ -91,7 +91,7 @@ for install_package in %w{build-essential openssl libreadline6 libreadline6-dev 
    end
 end
 
-for install_package in %w{ couchdb nginx openjdk-7-jre-headless opscode-keyring libgecode-dev rabbitmq-server }
+for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server }
    package "#{install_package}" do
      action :install
    end
@@ -229,6 +229,7 @@ echo "EXPORTING KEYS"
 gpg --export packages@opscode.com | \
   sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
 
+sudo apt-get install opscode-keyring 
 EOF
 end
 
