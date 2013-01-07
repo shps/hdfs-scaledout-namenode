@@ -242,7 +242,7 @@ fi
 
 EOF
 # Test file exists and has a size greater than zero.
-# not_if `test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
+not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
 end
 
 bash "install_chef_server1b" do
