@@ -318,9 +318,9 @@ sudo usermod -a -G rvm #{node[:chef][:user]}
 source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
-if [ `grep rvm /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
-   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bashrc
-   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bashrc
+if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
+   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
+   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
 fi
 
 EOF
@@ -351,7 +351,7 @@ EOF
   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
 end
 
-for install_gem in node[:chef][:gems]
+for install_gem in %w{node[:chef][:gems]}
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
     source "#{install_gem}.gem"
     owner node[:chef][:user]
@@ -359,12 +359,33 @@ for install_gem in node[:chef][:gems]
     mode 0755
     action :create_if_missing
   end
-  gem_package "#{install_gem}" do
-    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-    action :install
-  end
+  # gem_package "#{install_gem}" do
+  #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+  #   action :install
+  # end
 end
 
+AllGems="#{node[:chef][:gems]}"
+
+bash "install_chef_server2e" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+
+# install the chef gems (if we don't already have them)
+echo "GEMS: #{AllGems}"
+
+ for gem in "#{AllGems}"
+ do
+   if [ ! "`gem list | grep \"${gem} \"`" ]
+   then
+     echo "INSTALLING: ${gem}"
+     gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc --force -y
+   fi
+ done
+
+EOF
+end
 
 bash "install_chef_server3" do
 user "#{node[:chef][:user]}"
@@ -491,9 +512,7 @@ bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-if [ `grep ironfan_bashrc /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
-   echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bashrc
-fi
+echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
 
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
 echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /home/#{node[:chef][:user]}/.ironfan_bashrc
