@@ -381,7 +381,7 @@ echo "GEMS: #{AllGems}"
    if [ ! "`gem list | grep \"${gem} \"`" ]
    then
      echo "INSTALLING: ${gem}"
-     gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc --force -y
+     sudo gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc --force 
    fi
  done
 
