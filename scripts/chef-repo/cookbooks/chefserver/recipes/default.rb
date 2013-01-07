@@ -297,7 +297,7 @@ sudo service rabbitmq-server restart
 EOF
 end
 
-# RvmBaseDir=/home/#{node[:chef][:user]}/.rvm
+RubyBaseDir="/home/#{node[:chef][:user]}/.rvm"
 RvmBaseDir="/usr/local/rvm"
 
 bash "install_chef_server2b" do
@@ -306,7 +306,7 @@ ignore_failure false
 code <<-EOF
 
 # install rvm
-p# http://beginrescueend.com/rvm/install/
+# http://beginrescueend.com/rvm/install/
 
 if [ ! -e #{RvmBaseDir}/scripts/rvm ]
 then
@@ -319,8 +319,12 @@ source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
 # source #{RvmBaseDir}/scripts/rvm
+if [ `grep "scripts/rvm" /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
+   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bashrc
+fi
 
 EOF
+not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
 end
 
 bash "install_chef_server2d" do
@@ -333,41 +337,34 @@ sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.
 
 # install these ruby libs (if we don't already have them)
  . #{RvmBaseDir}/scripts/rvm
- [ -e #{RvmBaseDir}/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
- [ -e #{RvmBaseDir}/usr/lib/libssl.so ] || rvm pkg install openssl
- [ -e #{RvmBaseDir}/usr/lib/libyaml.so ] || rvm pkg install libyaml
+ [ -e #{RubyBaseDir}/usr/lib/libz.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install zlib --verify-downloads 1"
+ [ -e #{RubyBaseDir}/usr/lib/libssl.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install openssl"
+ [ -e #{RubyBaseDir}/usr/lib/libyaml.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install libyaml"
 
 
 # check if have the right version of ruby with the correct libs available,
 # if not we reinstall
 
- ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RvmBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
-
-##{RvmBaseDir}/bin/rvm use 1.9.3
-#   res=`#{RvmBaseDir}/bin/ruby -e  "require 'openssl' ; require 'zlib'"`
-
-# if [ "$res" != "0" ] ; then
-#  #{RvmBaseDir}/bin/rvm reinstall 1.9.3
-p#  #{RvmBaseDir}/bin/rvm use 1.9.3 --default
-# fi
+# ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RubyBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && sudo #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
 
 EOF
-not_if "#{RvmBaseDir}/bin/ruby -version"
+  not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
 end
 
- for install_gem in node[:chef][:gems]
-   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-     source "#{install_gem}.gem"
-     owner node[:chef][:user]
-     group node[:chef][:user]
-     mode 0755
-     action :create_if_missing
-   end
-   gem_package "#{install_gem}" do
-     source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-     action :install
-   end
- end
+for install_gem in node[:chef][:gems]
+  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+    source "#{install_gem}.gem"
+    owner node[:chef][:user]
+    group node[:chef][:user]
+    mode 0755
+    action :create_if_missing
+  end
+  gem_package "#{install_gem}" do
+    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+#    gem_binary "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+    action :install
+  end
+end
 
 
 bash "install_chef_server3" do
@@ -411,7 +408,7 @@ chef-solr-installer -f
 # we'd rather run as whatever chef user we're using
 # $GEM_HOME
 #for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
-for file in `find #{RvmBaseDir}/ | grep debian/etc/init/ | grep -v client`
+for file in `find #{RubyBaseDir}/ | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
@@ -495,7 +492,7 @@ bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-if [ `grep 'CHEF_USERNAME' /home/#{node[:chef][:user]}/.bashrc` -ne 0  ] ; then
+if [ `grep ironfan_bashrc /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
    echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bashrc
 fi
 
