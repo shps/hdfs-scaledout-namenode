@@ -270,12 +270,12 @@ not_if "`sudo apt-key list | grep Rabbit`"
 end
 
 # openjdk-7-jre-headless 
- for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
-    package "#{install_package}" do
-      action :install
-   options "--force-yes"
-    end
- end
+for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
+  package "#{install_package}" do
+    action :install
+    options "--force-yes"
+  end
+end
 
 
 bash "install_chef_server2a" do
