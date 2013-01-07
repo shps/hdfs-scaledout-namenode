@@ -352,7 +352,7 @@ EOF
   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
 end
 
-for install_gem in %w{#{node[:chef][:gems]}}
+for install_gem in node[:chef][:gems]
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
     source "#{install_gem}.gem"
     owner node[:chef][:user]
