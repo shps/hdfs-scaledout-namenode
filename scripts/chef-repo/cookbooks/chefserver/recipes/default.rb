@@ -266,6 +266,7 @@ fi
 # update apt to tell it about the new opscode and rabbitmq repos
 sudo apt-get -y -q update
 EOF
+not_if "`sudo apt-key list | grep Rabbit`"
 end
 
 # openjdk-7-jre-headless 
