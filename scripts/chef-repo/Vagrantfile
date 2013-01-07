@@ -30,7 +30,7 @@ Vagrant::Config.run do |config|
      chef.log_level = :debug
      chef.add_recipe "authbind"
      chef.add_recipe "java"
-     chef.add_recipe "mysql"
+     #chef.add_recipe "mysql"
      chef.add_recipe "openssh"
      chef.add_recipe "openssl"
      chef.log_level = :debug

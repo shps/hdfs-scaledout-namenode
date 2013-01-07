@@ -382,7 +382,7 @@ echo "GEMS: #{AllGems}"
    if [ ! "`gem list | grep \"${gem} \"`" ]
    then
      echo "INSTALLING: ${gem}"
-     sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc " # --force
+     sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc " # --force
    fi
  done
 
@@ -397,13 +397,13 @@ code <<-EOF
 source /etc/profile.d/rvm.sh
 
 # install the chef gems (if we don't already have them)
- for gem in chef-server chef-server-api chef-solr chef-server-webui
- do
-   if [ ! "`gem list | grep \"${gem} \"`" ]
-   then
-     gem install ${gem} --no-ri --no-rdoc --force -y
-   fi
- done
+ # for gem in chef-server chef-server-api chef-solr chef-server-webui
+ # do
+ #   if [ ! "`gem list | grep \"${gem} \"`" ]
+ #   then
+ #     gem install ${gem} --no-ri --no-rdoc --force -y
+ #   fi
+ # done
 
 # install the chef config file
 # sudo mkdir -p /etc/chef
@@ -432,7 +432,8 @@ chef-solr-installer -f
 # we'd rather run as whatever chef user we're using
 # $GEM_HOME
 #for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
-for file in `find #{RubyBaseDir}/ | grep debian/etc/init/ | grep -v client`
+#for file in `find #{RubyBaseDir}/ | grep debian/etc/init/ | grep -v client`
+for file in `find /opt/vagrant_ruby/lib/ | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
