@@ -416,30 +416,20 @@ source /etc/profile.d/rvm.sh
 #   | sudo tee /etc/chef/server.rb > /dev/null
 
 # run the solr installer
-# NOTE: THIS WILL NUKE ANY EXISTING CHEF SOLR CONFIGURATION AND DATA
-# sudo mkdir -p /var/chef
-# sudo chown -R #{node[:chef][:user]} /var/chef
-
 chef-solr-installer -f
 
-# we do this so we don't have to run as root
-# sudo mkdir -p /var/log/chef
-# sudo chown -R  #{node[:chef][:user]} /var/log/chef
-
 # setup the services
-[ ${CHEF_SERVER_USER} ] || CHEF_SERVER_USER=#{node[:chef][:user]}
 # the chef gems supply some upstart scripts, but they run everything as root
 # we'd rather run as whatever chef user we're using
-# $GEM_HOME
-#for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
-#for file in `find #{RubyBaseDir}/ | grep debian/etc/init/ | grep -v client`
-for file in `find /opt/vagrant_ruby/lib | grep debian/etc/init/ | grep -v client`
+for file in `find /opt/vagrant_ruby/lib/gems | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
+rm /etc/init.d/${outfile}
+rm /etc/init/${service}
 
 # horrendous sed monster to make these jobs run as our user 
-  cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
+cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
 
 # symlinking here means we get tab-complete in 'service foo start'-type stuff
 # (among other things, I'm sure)
