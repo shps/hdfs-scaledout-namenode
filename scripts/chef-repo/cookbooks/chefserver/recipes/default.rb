@@ -373,6 +373,7 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 
+source /etc/profile.d/rvm.sh
 # install the chef gems (if we don't already have them)
 echo "GEMS: #{AllGems}"
 
@@ -381,7 +382,7 @@ echo "GEMS: #{AllGems}"
    if [ ! "`gem list | grep \"${gem} \"`" ]
    then
      echo "INSTALLING: ${gem}"
-     sudo gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc --force 
+     gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-ri --no-rdoc --force 
    fi
  done
 
@@ -392,6 +393,8 @@ bash "install_chef_server3" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+
+source /etc/profile.d/rvm.sh
 
 # install the chef gems (if we don't already have them)
  for gem in chef-server chef-server-api chef-solr chef-server-webui
