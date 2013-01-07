@@ -161,6 +161,7 @@ CREATE TABLE `Services` (
   `SERVICEGROUP` varchar(48) NOT NULL,
   `STATUS` int(11) NOT NULL,
   `UPTIME` bigint(20) DEFAULT NULL,
+  `web_port` int(11)  DEFAULT NULL, 
   PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
