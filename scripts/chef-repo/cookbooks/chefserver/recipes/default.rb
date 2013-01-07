@@ -405,16 +405,6 @@ source /etc/profile.d/rvm.sh
  #   fi
  # done
 
-# install the chef config file
-# sudo mkdir -p /etc/chef
-# sudo chown -R #{node[:chef][:user]} /etc/chef
-# [ ${WEBUI_PASSWORD} ] || WEBUI_PASSWORD='password'
-# [ ${SERVERNAME} ] || SERVERNAME=`ip -f inet -o addr | grep eth0 \
-#   | tr -s ' ' ' ' | cut -d ' ' -f 4 | cut -d '/' -f 1`
-# cat #{Chef::Config[:file_cache_path]}/server.rb | sed "s:SERVERNAME:${SERVERNAME}:" \
-#   | sed "s:PASSWORD:${WEBUI_PASSWORD}:" \
-#   | sudo tee /etc/chef/server.rb > /dev/null
-
 # run the solr installer
 chef-solr-installer -f
 
@@ -429,7 +419,8 @@ rm /etc/init.d/${outfile}
 rm /etc/init/${service}
 
 # horrendous sed monster to make these jobs run as our user 
-cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
+# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} 
+cat ${file} | sudo tee /etc/init/${outfile} 
 
 # symlinking here means we get tab-complete in 'service foo start'-type stuff
 # (among other things, I'm sure)
