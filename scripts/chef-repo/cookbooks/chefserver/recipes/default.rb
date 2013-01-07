@@ -227,8 +227,14 @@ fi
 #   done
 # fi
 echo "EXPORTING KEYS"
+if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+  rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+fi
+
 gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
 EOF
+# Test file exists and has a size greater than zero.
+not_if `-s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
 end
 
 bash "install_chef_server1b" do
