@@ -212,9 +212,11 @@ ignore_failure false
 code <<-EOF
 gpg --list-keys | grep 83EF826A
 if [ $? -ne 0 ] ; then
+  echo "Couldn't find opscode key"
   gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
   if [ $? -ne 0 ] ; then
-     gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
+    echo "Re-trying opscode key"
+    gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
   fi
 fi
 # if [ ! "`gpg --list-keys | grep 83EF826A`" ]
