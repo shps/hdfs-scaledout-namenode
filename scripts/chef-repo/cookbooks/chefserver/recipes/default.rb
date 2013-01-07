@@ -419,7 +419,9 @@ rm /etc/init.d/${outfile}
 rm /etc/init/${service}
 
 # horrendous sed monster to make these jobs run as our user 
-# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} 
+# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | \
+# sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} 
+
 cat ${file} | sudo tee /etc/init/${outfile} 
 
 # symlinking here means we get tab-complete in 'service foo start'-type stuff
@@ -428,19 +430,6 @@ cat ${file} | sudo tee /etc/init/${outfile}
 # actually start the thing
   sudo service ${service} start 2> /dev/null || sudo service ${service} restart
 done
-
-# set up the nginx vhosts to proxy this stuff
-#cd #{Chef::Config[:file_cache_path]}
-#for file in `ls`
-#do
-#  NAME=`echo ${file} | tr "[:lower:]" "[:upper:]"`NAME
-## @OrganizedGang explained this indirect reference voodoo to me
-#  REPLACEMENT=${!NAME}
-#  [ ${REPLACEMENT} ] || REPLACEMENT=${file}
-#  cat ${file} | sed "s:${NAME}:${REPLACEMENT}:" |\
-#    sudo tee /etc/nginx/sites-available/${REPLACEMENT} > /dev/null
-#done
-
 
 for line in "chef-server:4000:chef chef-webui:4040:chefwebui" 
 do
