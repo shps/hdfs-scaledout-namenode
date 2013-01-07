@@ -433,7 +433,7 @@ chef-solr-installer -f
 # $GEM_HOME
 #for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
 #for file in `find #{RubyBaseDir}/ | grep debian/etc/init/ | grep -v client`
-for file in `find /opt/vagrant_ruby/lib/ | grep debian/etc/init/ | grep -v client`
+for file in `find /opt/vagrant_ruby/lib | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
@@ -441,8 +441,8 @@ do
 # horrendous sed monster to make these jobs run as our user 
   cat ${file} | \
     sed "s:    :  :g" | \
-    sed "s:test -x .* || \(.*\):su - ${CHEF_SERVER_USER} -c \"which ${service}\" || \1:" | \
-    sed "s:exec /usr/bin/${service} \(.*\):script\n  su - ${CHEF_SERVER_USER} -c \"${service} \1\"\nend script:" | \
+sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | \
+    sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | \
     sudo tee /etc/init/${outfile} > /dev/null
 
 # symlinking here means we get tab-complete in 'service foo start'-type stuff
