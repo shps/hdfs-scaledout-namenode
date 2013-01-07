@@ -352,7 +352,7 @@ EOF
   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
 end
 
-for install_gem in %w{node[:chef][:gems]}
+for install_gem in %w{#{node[:chef][:gems]}}
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
     source "#{install_gem}.gem"
     owner node[:chef][:user]
@@ -366,7 +366,7 @@ for install_gem in %w{node[:chef][:gems]}
   # end
 end
 
-AllGems="#{node[:chef][:gems]}"
+AllGems=node[:chef][:gems].join(" ")
 
 bash "install_chef_server2e" do
 user "#{node[:chef][:user]}"
@@ -376,7 +376,7 @@ code <<-EOF
 # install the chef gems (if we don't already have them)
 echo "GEMS: #{AllGems}"
 
- for gem in "#{AllGems}"
+ for gem in #{AllGems}
  do
    if [ ! "`gem list | grep \"${gem} \"`" ]
    then
