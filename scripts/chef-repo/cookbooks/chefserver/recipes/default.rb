@@ -164,6 +164,13 @@ template "/etc/chef/server.rb" do
   mode 0755
 end
 
+# template "/etc/chef/solr.rb" do
+#   source "solr.rb.erb"
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode 0755
+# end
+
 
 # template "#{node[:chef][:base_dir]}/knife-config.sh" do
 #   source "knife-config.sh.erb"
@@ -393,22 +400,19 @@ bash "install_chef_server3" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+source /etc/profile.d/rvm.sh
+sudo chown -R #{node[:chef][:user]} /var/chef/
+# run the solr installer
+chef-solr-installer -f -u #{node[:chef][:user]} 
+EOF
+end
 
+bash "install_chef_server3a" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
 source /etc/profile.d/rvm.sh
 
-# install the chef gems (if we don't already have them)
- # for gem in chef-server chef-server-api chef-solr chef-server-webui
- # do
- #   if [ ! "`gem list | grep \"${gem} \"`" ]
- #   then
- #     gem install ${gem} --no-ri --no-rdoc --force -y
- #   fi
- # done
-
-# run the solr installer
-chef-solr-installer -f
-
-# setup the services
 # the chef gems supply some upstart scripts, but they run everything as root
 # we'd rather run as whatever chef user we're using
 for file in `find /opt/vagrant_ruby/lib/gems | grep debian/etc/init/ | grep -v client`
@@ -416,21 +420,26 @@ do
   outfile=`basename ${file}`
   service=${outfile%.conf}
 
-rm /etc/init.d/${outfile}
-rm /etc/init/${service}
+  rm /etc/init.d/${outfile}
+  rm /etc/init/${service}
 
 # horrendous sed monster to make these jobs run as our user 
-#cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" \
+# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" \
 # | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
 
-cat ${file} | sudo tee /etc/init/${outfile} 
+  cat ${file} | sudo tee /etc/init/${outfile} 
 
-# symlinking here means we get tab-complete in 'service foo start'-type stuff
-# (among other things, I'm sure)
   sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
-# actually start the thing
   sudo service ${service} start 2> /dev/null || sudo service ${service} restart
 done
+EOF
+end
+
+bash "install_chef_server3b" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+source /etc/profile.d/rvm.sh
 
 for line in "chef-server:4000:chef chef-webui:4040:chefwebui" 
 do
@@ -449,13 +458,12 @@ done
 
 sudo service nginx restart
 
-# end
-
 echo
 echo "Chef-server is at ${CHEFSERVER}"
 echo "Chef WebUI is at ${WEBUI}"
 #echo "WebUI login: admin/${WEBUI_PASSWORD}"
 echo
+
 EOF
 end
 
@@ -466,14 +474,11 @@ end
 # mkdir -p /home/#{node[:chef][:user]}/.chef
 # sudo cp /etc/chef/validation.pem /etc/chef/webui.pem /home/#{node[:chef][:user]}/.chef
 # sudo chown -R #{node[:chef][:user]} /home/#{node[:chef][:user]}/.chef
-
 # # Next run the knife configure command, and pass the -i flag so the initial client that will be used to authenticate with the API.
 # #cd #{node[:chef][:base_dir]}
 # # ./knife-config.sh
 # cd /home/#{node[:chef][:user]}
 # /opt/vagrant_ruby/bin/knife --config #{node[:chef][:base_dir]}/knife.rb
-
-
 # # verify knife can talk to the server
 # knife client list
 # knife cookbook list
