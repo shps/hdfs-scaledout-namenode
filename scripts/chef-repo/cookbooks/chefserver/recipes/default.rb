@@ -211,16 +211,16 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 gpg --list-keys | grep 83EF826A
-if [ $? -ne 0 ] ; then
-  echo "Couldn't find opscode key"
+#if [ $? -ne 0 ] ; then
+#  echo "Couldn't find opscode key"
   gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
   if [ $? -ne 0 ] ; then
     echo "Re-trying opscode key"
     gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
   fi
-fi
+#fi
 # if [ ! "`gpg --list-keys | grep 83EF826A`" ]
-# then
+    # then
 #   EXITSTATUS=2
 #   while [ ${EXITSTATUS} == 2 ]
 #   do
@@ -229,13 +229,17 @@ fi
 #   done
 # fi
 echo "EXPORTING KEYS"
-if [ -f /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-   if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-     rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
-   fi
-fi
+# if [ -f /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+#    if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+#      rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+#    fi
+# fi
 
 gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+   mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+fi
+
 EOF
 # Test file exists and has a size greater than zero.
 not_if `-s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
@@ -259,6 +263,7 @@ then
   sudo apt-key add rabbitmq-signing-key-public.asc
 fi
 
+# update apt to tell it about the new opscode and rabbitmq repos
 sudo apt-get -y -q update
 EOF
 end
