@@ -35,13 +35,11 @@ Vagrant::Config.run do |config|
      chef.add_recipe "openssl"
      chef.log_level = :debug
      chef.add_recipe "glassfish::kthfs"
-     chef.log_level = :info
      chef.add_recipe "collectd::server"
      chef.add_recipe "kthfsagent"
      chef.add_recipe "ndb::mgmd"
      chef.add_recipe "ndb::ndbd"
      chef.add_recipe "ndb::mysqld"
-     chef.log_level = :debug
 #     chef.add_recipe "ndb::mgmd-bootstrap"
 #     chef.add_recipe "ndb::ndbd-bootstrap"
 #     chef.add_recipe "ndb::mysqld-bootstrap"
