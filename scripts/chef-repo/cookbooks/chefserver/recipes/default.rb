@@ -386,7 +386,7 @@ echo "GEMS: #{AllGems}"
  done
 touch /home/#{node[:chef][:user]}/.rvm/.gems_installed
 EOF
-not_if "-f /home/#{node[:chef][:user]}/.rvm/.gems_installed"
+not_if "test -f /home/#{node[:chef][:user]}/.rvm/.gems_installed"
 end
 
 bash "install_chef_server3" do
