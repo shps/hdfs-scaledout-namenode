@@ -40,7 +40,7 @@ sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
 EOF
 end
 
-for install_file in %w{vhost.template} # server.rb 
+for install_file in %w{vhost.template rvm-installer} # server.rb 
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
     source "#{install_file}"
     owner node[:chef][:user]
@@ -97,7 +97,7 @@ end
 end
 
 # for install_gem in node[:chef][:gems]
-#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+#   cookbook_fil e"#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
 #     source "#{install_gem}.gem"
 #     owner node[:chef][:user]
 #     group node[:chef][:user]
@@ -199,8 +199,7 @@ code <<-EOF
 PATH=${PATH}:/usr/local/sbin:/usr/sbin:/sbin
 
 # add the opscode repo
-echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | \
-  sudo tee /etc/apt/sources.list.d/opscode.list > /dev/null
+echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list > /dev/null
 # and their key
 sudo mkdir -p /etc/apt/trusted.gpg.d
 echo "TRYING TO LIST KEYS"
@@ -211,17 +210,39 @@ bash "install_chef_server1a" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-gpg --list-keys | grep 83EF826A
-if [ $? -ne 0 ] 
-then
-   echo "INSTALLING KEYS"
-    gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+sudo gpg --list-keys | grep 83EF826A
+#if [ $? -ne 0 ] ; then
+#  echo "Couldn't find opscode key"
+sudo gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+if [ $? -ne 0 ] ; then
+    echo "Re-trying opscode key"
+    sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
 fi
+#fi
+# if [ ! "`gpg --list-keys | grep 83EF826A`" ]
+    # then
+#   EXITSTATUS=2
+#   while [ ${EXITSTATUS} == 2 ]
+#   do
+#     gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+#     EXITSTATUS=$?
+#   done
+# fi
 echo "EXPORTING KEYS"
-gpg --export packages@opscode.com | \
-  sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+# if [ -f /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+#    if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+#      rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+#    fi
+# fi
+
+sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+   sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+fi
 
 EOF
+# Test file exists and has a size greater than zero.
+not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
 end
 
 bash "install_chef_server1b" do
@@ -242,24 +263,18 @@ then
   sudo apt-key add rabbitmq-signing-key-public.asc
 fi
 
+# update apt to tell it about the new opscode and rabbitmq repos
 sudo apt-get -y -q update
 EOF
 end
 
-# for install_package in %w{ couchdb nginx openjdk-7-jre-headless libgecode-dev rabbitmq-server opscode-keyring }
-#    package "#{install_package}" do
-#      action :install
-#    end
-# end
-
-
-# install some packages
-for install_package in "curl build-essential couchdb zlib1g-dev libxml2-dev install nginx opscode-keyring libgecode-dev rabbitmq-server"
-  package "#{install_package}" do
-   action :install
-#   options "--force-yes"
-  end
-end
+# openjdk-7-jre-headless 
+ for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
+    package "#{install_package}" do
+      action :install
+   options "--force-yes"
+    end
+ end
 
 
 bash "install_chef_server2a" do
@@ -282,44 +297,28 @@ sudo service rabbitmq-server restart
 EOF
 end
 
+# RvmBaseDir=/home/#{node[:chef][:user]}/.rvm
+RvmBaseDir="/usr/local/rvm"
+
 bash "install_chef_server2b" do
 user "#{node[:chef][:user]}"
-# user "root"
 ignore_failure false
 code <<-EOF
 
 # install rvm
-# http://beginrescueend.com/rvm/install/
-#if [ ! -e /usr/local/rvm/scripts/rvm ] ; then
-if [ ! -e /home/#{node[:chef][:user]}/.rvm/scripts/rvm ] ; then
-#  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
- bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+p# http://beginrescueend.com/rvm/install/
+
+if [ ! -e #{RvmBaseDir}/scripts/rvm ]
+then
+  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
 fi
-#sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
-#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
-rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default
-rvm install 1.9.2; rvm use 1.9.2 --default
-EOF
-end
 
+sudo usermod -a -G rvm #{node[:chef][:user]}
+source /etc/profile.d/rvm.sh
+umask u=rwx,g=rwx,o=rx
 
-bash "install_chef_server2c" do
-#user "#{node[:chef][:user]}"
-user "root"
-ignore_failure false
-code <<-EOF
-
-# install these ruby libs (if we don't already have them)
- . /home/#{node[:chef][:user]}/.rvm/scripts/rvm
- [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
- [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libssl.so ] || rvm pkg install openssl
- [ -e /home/#{node[:chef][:user]}/.rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
-
-# . /usr/local/rvm/scripts/rvm
-# [ -e /usr/local/rvm/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
-# [ -e /usr/local/rvm/usr/lib/libssl.so ] || rvm pkg install openssl
-# [ -e /usr/local/rvm/usr/lib/libyaml.so ] || rvm pkg install libyaml
-
+# source #{RvmBaseDir}/scripts/rvm
 
 EOF
 end
@@ -328,27 +327,32 @@ bash "install_chef_server2d" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+
+sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
+#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+
+# install these ruby libs (if we don't already have them)
+ . #{RvmBaseDir}/scripts/rvm
+ [ -e #{RvmBaseDir}/usr/lib/libz.so ] || rvm pkg install zlib --verify-downloads 1
+ [ -e #{RvmBaseDir}/usr/lib/libssl.so ] || rvm pkg install openssl
+ [ -e #{RvmBaseDir}/usr/lib/libyaml.so ] || rvm pkg install libyaml
+
+
 # check if have the right version of ruby with the correct libs available,
 # if not we reinstall
 
-#found=0
-#home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3
-# if [ $res == "0" ] ; then
-#   res=`/home/#{node[:chef][:user]}/.rvm/bin/ruby -e  "require 'openssl' ; require 'zlib'"`
-#   if [ $res == "0"  ] ; then
-#        found=1
-#   fi
-# fi
+ ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RvmBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
 
-# if [ $found -eq 0 ] ; then
-#  /home/#{node[:chef][:user]}/.rvm/bin/rvm reinstall 1.9.3
-#  /home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3 --default
-# fi
+##{RvmBaseDir}/bin/rvm use 1.9.3
+#   res=`#{RvmBaseDir}/bin/ruby -e  "require 'openssl' ; require 'zlib'"`
 
-# ! (/home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3 && /home/#{node[:chef][:user]}/.rvm/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) \
-#  && /home/#{node[:chef][:user]}/.rvm/bin/rvm reinstall 1.9.3 && /home/#{node[:chef][:user]}/.rvm/bin/rvm use 1.9.3 --default
+# if [ "$res" != "0" ] ; then
+#  #{RvmBaseDir}/bin/rvm reinstall 1.9.3
+p#  #{RvmBaseDir}/bin/rvm use 1.9.3 --default
+# fi
 
 EOF
+not_if "#{RvmBaseDir}/bin/ruby -version"
 end
 
  for install_gem in node[:chef][:gems]
@@ -376,7 +380,7 @@ code <<-EOF
  do
    if [ ! "`gem list | grep \"${gem} \"`" ]
    then
-     gem install ${gem} --no-ri --no-rdoc
+     gem install ${gem} --no-ri --no-rdoc --force -y
    fi
  done
 
@@ -405,8 +409,9 @@ chef-solr-installer -f
 [ ${CHEF_SERVER_USER} ] || CHEF_SERVER_USER=#{node[:chef][:user]}
 # the chef gems supply some upstart scripts, but they run everything as root
 # we'd rather run as whatever chef user we're using
-for file in `find /home/#{node[:chef][:user]}/.rvm/ | grep debian/etc/init/ | grep -v client`
+# $GEM_HOME
 #for file in `find /usr/local/rvm/ | grep debian/etc/init/ | grep -v client`
+for file in `find #{RvmBaseDir}/ | grep debian/etc/init/ | grep -v client`
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
