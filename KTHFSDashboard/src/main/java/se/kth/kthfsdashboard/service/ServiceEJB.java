@@ -21,68 +21,62 @@ public class ServiceEJB {
     }
 
     public List<String> findDistinctInstances() {
-
         TypedQuery<String> query = em.createNamedQuery("findDistinctInstances", String.class);
         return query.getResultList();
-    }    
+    }
+
+    public Service.ServiceClass findServiceClass(String instance) {
+        TypedQuery<Service.ServiceClass> query = em.createNamedQuery("findServiceClass", Service.ServiceClass.class).setParameter("instance", instance);
+        return query.getResultList().get(0);
+    }  
     
     public List<Service> findAllInstances() {
-
         TypedQuery<Service> query = em.createNamedQuery("findAllServices", Service.class);
         return query.getResultList();
     }
 
     public List<Service> findByInstanceServiceStatus(String kthfsInstance, String service, Service.Status status) {
-
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", kthfsInstance).setParameter("service", service).setParameter("status", status);
         return query.getResultList();
     }
 
     public List<Service> findByInstanceService(String kthfsInstance, String service) {
-
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service", Service.class).setParameter("instance", kthfsInstance).setParameter("service", service);
         return query.getResultList();
     }
 
     public List<Service> findByInstance(String kthfsInstance) {
-
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance", Service.class).setParameter("instance", kthfsInstance);
         return query.getResultList();
     }
 
     public List<Service> findSubserviceByInstance(String kthfsInstance) {
-
         TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance", Service.class).setParameter("instance", kthfsInstance);
         return query.getResultList();
     }
 
     public List<Service> findInstances(String kthfsInstance, String host, String service) {
-
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Hostname", Service.class).setParameter("hostname", host).setParameter("service", service).setParameter("instance", kthfsInstance);
         return query.getResultList();
     }
 
     
     public List<Service> findServiceByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
-
         TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-ServiceGroup", Service.class).setParameter("serviceGroup", serviceGroup).setParameter("instance", kthfsInstance);
         return query.getResultList();
     }
     
     public List<Service> findByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
-
         TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup);
         return query.getResultList();
     }
 
     public List<Service> findByInstanceServiceGroup(String kthfsInstance, String serviceGroup, String service) {
-
         TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup-Service", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
         return query.getResultList();
     }
     
     public Service findServices(String hostname, String kthfsInstance, String serviceGroup, String service) {
-
         TypedQuery<Service> query = em.createNamedQuery("findService", Service.class).setParameter("hostname", hostname).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
         return query.getSingleResult();
     }    
@@ -122,7 +116,6 @@ public class ServiceEJB {
     }
 
     public int getStoppedServicesCount(String instance, String service, boolean subService) {
-
         TypedQuery<Service> query;
         if (subService) {
             query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);

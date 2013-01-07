@@ -12,213 +12,196 @@ import javax.persistence.*;
 //@IdClass(ServiceId.class)
 @Table(name = "Services")
 @NamedQueries({
+   @NamedQuery(name = "findDistinctInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
+   @NamedQuery(name = "findServiceClass", query = "SELECT DISTINCT s.serviceClass FROM Service s WHERE s.instance = :instance"),   
    
-    @NamedQuery(name = "findDistinctInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
-    
-    @NamedQuery(name = "findAllServices", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service"),
-    @NamedQuery(name = "findAllSubservices", query = "SELECT s FROM Service s WHERE NOT s.serviceGroup = s.service"),
-    @NamedQuery(name = "findService", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
-
-    
-    @NamedQuery(name = "findServiceBy-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname"),
-    @NamedQuery(name = "findServiceBy-Instance", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.instance = :instance"),
-    @NamedQuery(name = "findServiceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.serviceGroup = :serviceGroup AND s.instance = :instance"),
-    
-    @NamedQuery(name = "findSubserviceBy-Instance", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance"),    
-    @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup"),
-    @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
-    
-    @NamedQuery(name = "findServiceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
-    @NamedQuery(name = "findServiceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
-    @NamedQuery(name = "findServiceBy-Instance-Service-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.service = :service"),
-    
-    @NamedQuery(name = "findSubserviceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
-    @NamedQuery(name = "findSubserviceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
-    @NamedQuery(name = "findSubserviceBy-Instance-Service-Hostname", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.hostname = :hostname AND s.instance = :instance AND s.service = :service"),
-
-    
-    
-    
-    @NamedQuery(name = "deleteServicesByHostname", query = "DELETE FROM Service s WHERE s.hostname = :hostname"),
-    @NamedQuery(name = "findService-Filter-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (:instance is null OR s.instance = :instance) AND (:service is null OR s.service = :service) AND (s.status = :status)"),
-    @NamedQuery(name = "findService-Filter-Instance-Service", query = "SELECT s FROM Service s WHERE (:instance is null OR  s.instance = :instance) AND (:service is null OR s.service = :service)")
+   @NamedQuery(name = "findAllServices", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service"),
+   @NamedQuery(name = "findAllSubservices", query = "SELECT s FROM Service s WHERE NOT s.serviceGroup = s.service"),
+   
+   @NamedQuery(name = "findService", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
+   @NamedQuery(name = "findServiceBy-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname"),
+   @NamedQuery(name = "findServiceBy-Instance", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.instance = :instance"),
+   @NamedQuery(name = "findServiceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.serviceGroup = :serviceGroup AND s.instance = :instance"),
+   
+   @NamedQuery(name = "findSubserviceBy-Instance", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance"),
+   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup"),
+   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
+   
+   @NamedQuery(name = "findServiceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
+   @NamedQuery(name = "findServiceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
+   @NamedQuery(name = "findServiceBy-Instance-Service-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.service = :service"),
+   
+   @NamedQuery(name = "findSubserviceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
+   @NamedQuery(name = "findSubserviceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
+   @NamedQuery(name = "findSubserviceBy-Instance-Service-Hostname", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.hostname = :hostname AND s.instance = :instance AND s.service = :service"),
+   
+   @NamedQuery(name = "deleteServicesByHostname", query = "DELETE FROM Service s WHERE s.hostname = :hostname"),
+   @NamedQuery(name = "findService-Filter-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (:instance is null OR s.instance = :instance) AND (:service is null OR s.service = :service) AND (s.status = :status)"),
+   @NamedQuery(name = "findService-Filter-Instance-Service", query = "SELECT s FROM Service s WHERE (:instance is null OR  s.instance = :instance) AND (:service is null OR s.service = :service)")
 })
 public class Service implements Serializable {
 
+   public enum Status {
+      Started, Stopped, Failed, None, All
+   }
 
-    public enum Status {
+   public enum Health {
+      Good, Bad
+   }
 
-        Started, Stopped, Failed, None, All
-    }
-
-    public enum Health {
-
-        Good, Bad
-    }
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
-    @Column(name = "host_name", nullable = false, length = 128)
-    private String hostname;
-    @Column(nullable = false, length = 48)
-    private String serviceGroup;
-    @Column(nullable = false, length = 48)
-    private String service;
-    @Column(nullable = false, length = 48)
-    private String instance;
-    private long uptime;
+   public enum ServiceClass {
+      KTHFS, YARN
+   }   
+   
+   @Id
+   @GeneratedValue(strategy = GenerationType.SEQUENCE)
+   private Long id;
+   @Column(name = "host_name", nullable = false, length = 128)
+   private String hostname;
+   @Column(nullable = false)
+   private ServiceClass serviceClass;
+   @Column(nullable = false, length = 48)
+   private String serviceGroup;
+   @Column(nullable = false, length = 48)
+   private String service;
+   @Column(nullable = false, length = 48)
+   private String instance;
+   private long uptime;
 //    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status;
-    private int pid;
-    @Column(name = "web_port")
-    private Integer webPort;
+   @Column(nullable = false)
+   private Status status;
+   private int pid;
+   private Integer webPort;
 
-    public Service() {
-    }
+   public Service() {
+   }
 
-    public Service(String hostname, String instance, String serviceGroup, String service, Integer webPort, Service.Status status) {
-        this.hostname = hostname;
-        this.instance = instance;
-        this.serviceGroup = serviceGroup;
-        this.service = service;
-        this.status = status;
-        this.webPort = webPort;
-    }
+   public Service(String hostname, String instance, ServiceClass serviceClass, String serviceGroup, String service, Integer webPort, Service.Status status) {
+      this.hostname = hostname;
+      this.instance = instance;
+      this.serviceClass = serviceClass;
+      this.serviceGroup = serviceGroup;
+      this.service = service;
+      this.status = status;
+      this.webPort = webPort;
+   }
 
-    public Service(String hostname, String instance, String serviceGroup, String service, Integer webPort) {
-        this.hostname = hostname;
-        this.instance = instance;
-        this.serviceGroup = serviceGroup;
-        this.service = service;
-        this.webPort = webPort;
-    }
+   public Service(String hostname, String instance, ServiceClass serviceClass, String serviceGroup, String service, Integer webPort) {
+      this.hostname = hostname;
+      this.instance = instance;
+      this.serviceClass = serviceClass;
+      this.serviceGroup = serviceGroup;
+      this.service = service;
+      this.webPort = webPort;
+   }
 
-    public Service(String hostname, String instance, String serviceGroup, String service) {
-        this.hostname = hostname;
-        this.instance = instance;
-        this.serviceGroup = serviceGroup;
-        this.service = service;
-    }
-    
-    public static Status getServiceStatus(String status) {
-        try {
-            return Status.valueOf(status);
-        } catch (Exception ex) {
-            return Status.None;
-        }
-    }
+   public Service(String hostname, String instance, ServiceClass serviceClass, String serviceGroup, String service) {
+      this.hostname = hostname;
+      this.instance = instance;
+      this.serviceClass = serviceClass;
+      this.serviceGroup = serviceGroup;
+      this.service = service;
+   }
 
-    public Long getId() {
-        return id;
-    }
+   public static Status getServiceStatus(String status) {
+      try {
+         return Status.valueOf(status);
+      } catch (Exception ex) {
+         return Status.None;
+      }
+   }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+   public Long getId() {
+      return id;
+   }
 
-    public String getHostname() {
-        return hostname;
-    }
+   public void setId(Long id) {
+      this.id = id;
+   }
 
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
+   public String getHostname() {
+      return hostname;
+   }
 
-    public String getServiceGroup() {
-        return serviceGroup;
-    }
+   public void setHostname(String hostname) {
+      this.hostname = hostname;
+   }
 
-    public void setServiceGroup(String serviceGroup) {
-        this.serviceGroup = serviceGroup;
-    }
+   public ServiceClass getServiceClass() {
+      return serviceClass;
+   }
 
-    public String getService() {
-        return service;
-    }
+   public void setServiceClass(ServiceClass serviceClass) {
+      this.serviceClass = serviceClass;
+   }
 
-    public void setService(String service) {
-        this.service = service;
-    }
+   public String getServiceGroup() {
+      return serviceGroup;
+   }
 
-    public String getInstance() {
-        return instance;
-    }
+   public void setServiceGroup(String serviceGroup) {
+      this.serviceGroup = serviceGroup;
+   }
 
-    public void setInstance(String instance) {
-        this.instance = instance;
-    }
+   public String getService() {
+      return service;
+   }
 
-    public long getUptime() {
-        return uptime;
-    }
+   public void setService(String service) {
+      this.service = service;
+   }
 
-    public void setUptime(long uptime) {
-        this.uptime = uptime;
-    }
+   public String getInstance() {
+      return instance;
+   }
 
-    public Status getStatus() {
-        return status;
-    }
+   public void setInstance(String instance) {
+      this.instance = instance;
+   }
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
+   public long getUptime() {
+      return uptime;
+   }
 
-    public int getPid() {
-        return pid;
-    }
+   public void setUptime(long uptime) {
+      this.uptime = uptime;
+   }
 
-    public void setPid(int pid) {
-        this.pid = pid;
-    }
-    
-    public Integer getWebPort() {
+   public Status getStatus() {
+      return status;
+   }
+
+   public void setStatus(Status status) {
+      this.status = status;
+   }
+
+   public int getPid() {
+      return pid;
+   }
+
+   public void setPid(int pid) {
+      this.pid = pid;
+   }
+
+   public Integer getWebPort() {
       return webPort;
-    }
+   }
 
    public void setWebPort(Integer webPort) {
       this.webPort = webPort;
    }
 
-   
-    public String getUptimeInSeconds() {
+   public String getUptimeInSeconds() {
 
-        DecimalFormat df = new DecimalFormat("#,###,##0.0");
-        return df.format(uptime / 1000);
-    }
+      DecimalFormat df = new DecimalFormat("#,###,##0.0");
+      return df.format(uptime / 1000);
+   }
 
-    public Health getHealth() {
+   public Health getHealth() {
 
-        if (status == Status.Failed) {
-            return Health.Bad;
-        }
-        return Health.Good;
-    }
-    
-    
-//
-//    public String getDiskInfo() {
-//        Formatter f = new Formatter();
-//        return f.storage(diskUsed) + " / " + f.storage(diskCapacity);
-//    }
-//    public String getUptimeInSeconds() {
-//
-////        return String.format("%1.1f", ((double) ((new Date()).getTime() - getLastHeartbeat())) / 1000);
-//        DecimalFormat df = new DecimalFormat("#,###,##0.0");
-//        return df.format(((double) ((new Date()).getTime() - getLastHeartbeat())) / 1000);
-//    }
-//    public String getMemoryInfo() {
-//
-//        String h = hostname;
-//        CollectdTools ct = new CollectdTools();
-//        Long free = ct.getLatestMemoryStatus(h, "free");
-//        Long used = ct.getLatestMemoryStatus(h, "used");
-//        Long cached = ct.getLatestMemoryStatus(h, "cached");
-//        Long buffered = ct.getLatestMemoryStatus(h, "buffered");
-//        MemoryInfo m = new MemoryInfo(used, cached, buffered, free);
-//
-////        String.format("%1$,.2f", doubleVal);
-//        return String.format("%1.1f", m.getFreePercentage()) + "% used";
-//    }
+      if (status == Status.Failed) {
+         return Health.Bad;
+      }
+      return Health.Good;
+   }
 }

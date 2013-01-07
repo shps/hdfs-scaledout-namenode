@@ -59,8 +59,7 @@ public class ServiceController {
       roles.add(new ServiceRoleInfo("MySQL Cluster", "mysqlcluster"));
       roles.add(new ServiceRoleInfo("NameNode", "namenode"));
       roles.add(new ServiceRoleInfo("DataNode", "datanode"));
-      roles.add(new ServiceRoleInfo("YARN", "yarn"));
-      rolesMap.put("hadoop", roles);
+      rolesMap.put(Service.ServiceClass.KTHFS.toString(), roles);
 
       roles = new ArrayList<ServiceRoleInfo>();
       roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
@@ -71,7 +70,7 @@ public class ServiceController {
       roles = new ArrayList<ServiceRoleInfo>();
       roles.add(new ServiceRoleInfo("Resource Manager", "resourcemanager"));
       roles.add(new ServiceRoleInfo("Node Manager", "nodemanager"));
-      rolesMap.put("yarn", roles);
+      rolesMap.put(Service.ServiceClass.YARN.toString(), roles);
    }
 
    public String getService() {
@@ -132,7 +131,21 @@ public class ServiceController {
 
       List<String> instances = serviceEJB.findDistinctInstances();
       for (String instance : instances) {
-         allKthfsInstances.add(new KthfsInstanceInfo(instance, "HDFS", "started?", "?"));
+         
+         
+         KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "Started ?", "?");
+         
+         List<Service> services = serviceEJB.findByInstance(instance);
+         for (Service s: services) {
+            if (instanceInfo.getRoleCounts().containsKey(s.getService())) {
+               Integer count = (Integer) instanceInfo.getRoleCounts().get(s.getService());
+                instanceInfo.putToRoleCounts(s.getService(), count + 1);
+            } else {
+               instanceInfo.putToRoleCounts(s.getService(), 1);
+            }
+         }
+         
+         allKthfsInstances.add(instanceInfo);
       }
       return allKthfsInstances;
    }
@@ -208,8 +221,8 @@ public class ServiceController {
 
    public String gotoParentServiceInstanceStatus() {
       String parentHostname = "";
-      if (serviceGroup.equalsIgnoreCase("mysqlcluster") || serviceGroup.equalsIgnoreCase("yarn")) {
-         //There is one mysqlcluster/yarn per kthfs instance
+      if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
+         //There is one mysqlcluster per kthfs instance
          Service s = serviceEJB.findServiceByInstanceServiceGroup(kthfsInstance, serviceGroup).get(0);
          parentHostname = s.getHostname();
       }
@@ -283,7 +296,8 @@ public class ServiceController {
    public List<ServiceRoleInfo> getServiceRoles() {
 
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-      for (ServiceRoleInfo role : rolesMap.get("hadoop")) {
+      Service.ServiceClass serviceClass = serviceEJB.findServiceClass(kthfsInstance);
+      for (ServiceRoleInfo role : rolesMap.get(serviceClass.toString())) {
          serviceRoles.add(setStatus(kthfsInstance, role, false));
       }
       return serviceRoles;
@@ -292,7 +306,7 @@ public class ServiceController {
    public List<ServiceRoleInfo> getSuberviceRoles() {
 
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-      if (serviceGroup != null) { // serviceGroup = mysqlcluster/yarn
+      if (serviceGroup != null) { // serviceGroup = mysqlcluster
          for (ServiceRoleInfo role : rolesMap.get(serviceGroup)) {
          serviceRoles.add(setStatus(kthfsInstance, role, true));
          }
