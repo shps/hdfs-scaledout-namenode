@@ -229,8 +229,10 @@ fi
 #   done
 # fi
 echo "EXPORTING KEYS"
-if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-  rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+if [ -f /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+   if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+     rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+   fi
 fi
 
 gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
