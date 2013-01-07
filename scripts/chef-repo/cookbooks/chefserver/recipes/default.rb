@@ -210,13 +210,13 @@ bash "install_chef_server1a" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-gpg --list-keys | grep 83EF826A
+sudo gpg --list-keys | grep 83EF826A
 #if [ $? -ne 0 ] ; then
 #  echo "Couldn't find opscode key"
-gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+sudo gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
 if [ $? -ne 0 ] ; then
     echo "Re-trying opscode key"
-    gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
+    sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
 fi
 #fi
 # if [ ! "`gpg --list-keys | grep 83EF826A`" ]
@@ -235,14 +235,14 @@ echo "EXPORTING KEYS"
 #    fi
 # fi
 
-gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
 if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-   mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+   sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
 fi
 
 EOF
 # Test file exists and has a size greater than zero.
-# not_if `-s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
+not_if `test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
 end
 
 bash "install_chef_server1b" do
