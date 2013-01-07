@@ -318,9 +318,9 @@ sudo usermod -a -G rvm #{node[:chef][:user]}
 source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
-# source #{RvmBaseDir}/scripts/rvm
-if [ `grep "scripts/rvm" /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
+if [ `grep rvm /home/#{node[:chef][:user]}/.bashrc` != "0"  ] ; then
    echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bashrc
+   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bashrc
 fi
 
 EOF
@@ -361,7 +361,6 @@ for install_gem in node[:chef][:gems]
   end
   gem_package "#{install_gem}" do
     source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-#    gem_binary "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
     action :install
   end
 end
