@@ -552,7 +552,7 @@ cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]
 # done
 touch /home/#{node[:chef][:user]}/homebase/.installed
 EOF
-not_if "`test -f /home/#{node[:chef][:user]}/homebase/.installed`"
+not_if "test -f /home/#{node[:chef][:user]}/homebase/.installed"
 end
 
 template "/home/#{node[:chef][:user]}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
