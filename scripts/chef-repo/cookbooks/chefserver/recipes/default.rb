@@ -376,7 +376,6 @@ code <<-EOF
 source /etc/profile.d/rvm.sh
 # install the chef gems (if we don't already have them)
 echo "GEMS: #{AllGems}"
-
  for gem in #{AllGems}
  do
    if [ ! "`gem list | grep \"${gem} \"`" ]
@@ -385,8 +384,9 @@ echo "GEMS: #{AllGems}"
      sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc " # --force
    fi
  done
-
+touch /home/#{node[:chef][:user]}/.rvm/.gems_installed
 EOF
+not_if "-f /home/#{node[:chef][:user]}/.rvm/.gems_installed"
 end
 
 bash "install_chef_server3" do
@@ -439,11 +439,7 @@ do
   service=${outfile%.conf}
 
 # horrendous sed monster to make these jobs run as our user 
-  cat ${file} | \
-    sed "s:    :  :g" | \
-sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | \
-    sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | \
-    sudo tee /etc/init/${outfile} > /dev/null
+  cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
 
 # symlinking here means we get tab-complete in 'service foo start'-type stuff
 # (among other things, I'm sure)
