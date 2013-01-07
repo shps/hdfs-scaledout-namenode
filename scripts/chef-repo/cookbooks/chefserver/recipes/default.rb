@@ -415,12 +415,13 @@ for file in `find /opt/vagrant_ruby/lib/gems | grep debian/etc/init/ | grep -v c
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
+
 rm /etc/init.d/${outfile}
 rm /etc/init/${service}
 
 # horrendous sed monster to make these jobs run as our user 
-# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" | \
-# sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} 
+#cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" \
+# | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
 
 cat ${file} | sudo tee /etc/init/${outfile} 
 
