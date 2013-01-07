@@ -213,11 +213,11 @@ code <<-EOF
 gpg --list-keys | grep 83EF826A
 #if [ $? -ne 0 ] ; then
 #  echo "Couldn't find opscode key"
-  gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
-  if [ $? -ne 0 ] ; then
+gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+if [ $? -ne 0 ] ; then
     echo "Re-trying opscode key"
     gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
-  fi
+fi
 #fi
 # if [ ! "`gpg --list-keys | grep 83EF826A`" ]
     # then
@@ -242,7 +242,7 @@ fi
 
 EOF
 # Test file exists and has a size greater than zero.
-not_if `-s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
+# not_if `-s /etc/apt/trusted.gpg.d/opscode-keyring.gpg`
 end
 
 bash "install_chef_server1b" do
