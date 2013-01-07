@@ -306,7 +306,7 @@ ignore_failure false
 code <<-EOF
 
 # install rvm
-# http://beginrescueend.com/rvm/install/
+p# http://beginrescueend.com/rvm/install/
 
 if [ ! -e #{RvmBaseDir}/scripts/rvm ]
 then
@@ -348,10 +348,11 @@ sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.
 
 # if [ "$res" != "0" ] ; then
 #  #{RvmBaseDir}/bin/rvm reinstall 1.9.3
-#  #{RvmBaseDir}/bin/rvm use 1.9.3 --default
+p#  #{RvmBaseDir}/bin/rvm use 1.9.3 --default
 # fi
 
 EOF
+not_if "#{RvmBaseDir}/bin/ruby -version"
 end
 
  for install_gem in node[:chef][:gems]
