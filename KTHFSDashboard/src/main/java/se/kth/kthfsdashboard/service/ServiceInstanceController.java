@@ -36,12 +36,12 @@ public class ServiceInstanceController implements Serializable {
    private static Logger log = Logger.getLogger(ServiceInstanceController.class.getName());
    private List<InstanceInfo> filteredInstances;
    private SelectItem[] statusOptions;
-   private SelectItem[] roleOptions;
+   private SelectItem[] hdfsRoleOptions;
    private SelectItem[] healthOptions;
    private SelectItem[] mysqlclusterRoleOptions;
    private SelectItem[] yarnRoleOptions;
    private final static String[] statusStates;
-   private final static String[] roles;
+   private final static String[] hdfsRoles;
    private final static String[] mysqlClusterRoles;
    private final static String[] yarnRoles;
    private final static String[] healthStates;
@@ -53,7 +53,7 @@ public class ServiceInstanceController implements Serializable {
       statusStates[1] = Service.Status.Stopped.toString();
       statusStates[2] = Service.Status.Failed.toString();
 
-      roles = new String[]{"namenode", "datanode", "mysqlcluster", "yarn"};
+      hdfsRoles = new String[]{"namenode", "datanode", "mysqlcluster"};
       mysqlClusterRoles = new String[]{"ndb", "mgmserver", "mysqld"};
       yarnRoles = new String[]{"resourcemanager", "nodemanager"};
       healthStates = new String[]{"Good", "Bad"};
@@ -62,12 +62,10 @@ public class ServiceInstanceController implements Serializable {
    public ServiceInstanceController() {
 
       statusOptions = createFilterOptions(statusStates);
-      roleOptions = createFilterOptions(roles);
+      hdfsRoleOptions = createFilterOptions(hdfsRoles);
       mysqlclusterRoleOptions = createFilterOptions(mysqlClusterRoles);
       yarnRoleOptions = createFilterOptions(yarnRoles);
       healthOptions = createFilterOptions(healthStates);
-
-
    }
 
    public String getService() {
@@ -125,14 +123,13 @@ public class ServiceInstanceController implements Serializable {
       if (kthfsInstance != null && serviceGroup != null && service != null && !service.equals(serviceGroup)) {
          services = serviceEJB.findByInstanceServiceGroup(kthfsInstance, serviceGroup, service);
          cookie.write("instance", kthfsInstance);
+         cookie.write("servicegroup", serviceGroup);
       } else if (kthfsInstance != null && serviceGroup != null) {
          services = serviceEJB.findByInstanceServiceGroup(kthfsInstance, serviceGroup);
          cookie.write("instance", kthfsInstance);
-      } else if (kthfsInstance != null) {
-         services = serviceEJB.findByInstance(kthfsInstance);
-         cookie.write("instance", kthfsInstance);
+         cookie.write("servicegroup", serviceGroup);
       } else {
-         services = serviceEJB.findSubserviceByInstance(cookie.read("instance"));
+         services = serviceEJB.findByInstanceServiceGroup(cookie.read("instance"), cookie.read("servicegroup"));
       }
       for (Service s : services) {
          instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
@@ -178,15 +175,21 @@ public class ServiceInstanceController implements Serializable {
    }
 
    public SelectItem[] getRoleOptions() {
-      return roleOptions;
+      
+      Service.ServiceClass serviceClass = serviceEJB.findServiceClass(kthfsInstance);
+      if (serviceClass.equals(Service.ServiceClass.KTHFS)) {
+         return hdfsRoleOptions;
+      } else if (serviceClass.equals(Service.ServiceClass.YARN)) {
+         return yarnRoleOptions;
+      } else {
+         return new SelectItem[]{};
+      }
    }
 
    public SelectItem[] getSubServiceRoleOptions() {
 
       if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
          return mysqlclusterRoleOptions;
-      } else if (serviceGroup.equalsIgnoreCase("yarn")) {
-         return yarnRoleOptions;
       } else {
          return new SelectItem[]{};
       }

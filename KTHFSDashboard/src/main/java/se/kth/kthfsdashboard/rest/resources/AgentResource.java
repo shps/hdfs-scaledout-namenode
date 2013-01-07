@@ -95,9 +95,11 @@ public class AgentResource {
    @POST
    @Path("/keep-alive")
    @Consumes(MediaType.APPLICATION_JSON)
-   public Response keepAlive(@Context HttpServletRequest req, String jsonStrig) {
+   public Response keepAlive(@Context HttpServletRequest req, String jsonStrig)  {
       try {
          JSONObject json = new JSONObject(jsonStrig);
+         
+//         System.err.println(json);
          long agentTime = json.getLong("agent-time");
 
          Host host = new Host();
@@ -119,27 +121,24 @@ public class AgentResource {
          } else {
             hostEJB.storeHost(host, false);
          }
-
          JSONArray servicesArray = json.getJSONArray("services");
 
          for (int i = 0; i < servicesArray.length(); i++) {
-
             JSONObject s = servicesArray.getJSONObject(i);
             Service service = new Service();
             service.setHostname(host.getName());
-            service.setService(s.getString("service"));
-            service.setServiceGroup(s.getString("service-group"));
             service.setInstance(s.getString("instance"));
-            if (s.has("web-port")) {
-               service.setWebPort(s.getInt("web-port"));
-            }
+            service.setServiceClass(Service.ServiceClass.valueOf(s.getString("service-class")));            
+            service.setServiceGroup(s.getString("service-group"));
+            service.setService(s.getString("service"));
+            service.setWebPort(s.has("web-port") ? s.getInt("web-port"): null);
             service.setPid(s.has("pid") ? s.getInt("pid") : 0);
+            service.setStatus(Service.Status.valueOf(s.getString("status")));            
             if (s.has("stop-time")) {
                service.setUptime(s.getLong("stop-time") - s.getLong("start-time"));
             } else if (s.has("start-time")) {
                service.setUptime(agentTime - s.getLong("start-time"));
             }
-            service.setStatus(Service.Status.valueOf(s.getString("status")));
             serviceEJB.storeService(service);
          }
       } catch (Exception ex) {
