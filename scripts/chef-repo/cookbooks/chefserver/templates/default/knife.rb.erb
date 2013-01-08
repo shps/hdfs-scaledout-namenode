@@ -1,0 +1,9 @@
+log_level                :info
+log_location             STDOUT
+node_name                'vagrant'
+client_key               '/var/lib/chef/.chef/vagrant.pem'
+validation_client_name   'chef-validator'
+validation_key           '/etc/chef/validation.pem'
+chef_server_url          '<%= node[:chef][:server_url] %>'
+cache_type               'BasicFile'
+cache_options( :path => '/var/lib/chef/.chef/checksums' )

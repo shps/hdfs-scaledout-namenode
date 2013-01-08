@@ -70,29 +70,29 @@ directory "/etc/chef" do
   recursive true
 end
 
-directory "#{node[:chef][:base_dir]}" do
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode "755"
-  action :create
-  recursive true
-end
+# directory "#{node[:chef][:base_dir]}" do
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode "755"
+#   action :create
+#   recursive true
+# end
 
-directory "/var/chef" do
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode "755"
-  action :create
-  recursive true
-end
+# directory "/var/chef" do
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode "755"
+#   action :create
+#   recursive true
+# end
 
-directory "/var/log/chef" do
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode "755"
-  action :create
-  recursive true
-end
+# directory "/var/log/chef" do
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode "755"
+#   action :create
+#   recursive true
+# end
 
 
 template "/etc/chef/chef.json" do
@@ -102,6 +102,13 @@ template "/etc/chef/chef.json" do
   mode 0755
 end
 
+# template "/etc/chef/knife.rb" do
+#   source "knife.rb.erb"
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode 0755
+# end
+#
 # template "/etc/chef/solo.rb" do
 #   source "solo.rb.erb"
 #   owner node[:chef][:user]
@@ -310,6 +317,7 @@ bash "configure_knife" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 EOF
 end
@@ -418,8 +426,10 @@ ignore_failure false
 code <<-EOF
 # # echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
 
-echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
-echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /home/#{node[:chef][:user]}/.ironfan_bashrc
+#echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
+echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /etc/profile 
+#/home/#{node[:chef][:user]}/.ironfan_bashrc
+
 CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase
 
 cd /home/#{node[:chef][:user]}
