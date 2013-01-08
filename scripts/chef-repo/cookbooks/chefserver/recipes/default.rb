@@ -101,27 +101,26 @@ template "/etc/chef/chef.json" do
   group node[:chef][:user]
   mode 0755
 end
+ template "/etc/chef/solo.rb" do
+   source "solo.rb.erb"
+   owner node[:chef][:user]
+   group node[:chef][:user]
+   mode 0755
+ end
 
-# template "/etc/chef/knife.rb" do
-#   source "knife.rb.erb"
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode 0755
-# end
-#
-# template "/etc/chef/solo.rb" do
-#   source "solo.rb.erb"
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode 0755
-# end
+template "/etc/chef/server.rb" do
+  source "server.rb.erb"
+  owner node[:chef][:user]
+  group node[:chef][:user]
+  mode 0755
+end
 
-# template "/etc/chef/server.rb" do
-#   source "server.rb.erb"
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode 0755
-# end
+template "/etc/chef/webui.rb" do
+  source "webui.rb.erb"
+  owner node[:chef][:user]
+  group node[:chef][:user]
+  mode 0755
+end
 
 # template "/etc/chef/solr.rb" do
 #   source "solr.rb.erb"
@@ -130,12 +129,13 @@ end
 #   mode 0755
 # end
 
-# template "/etc/chef/webui.rb" do
-#   source "webui.rb.erb"
+# template "/etc/chef/knife.rb" do
+#   source "knife.rb.erb"
 #   owner node[:chef][:user]
 #   group node[:chef][:user]
 #   mode 0755
 # end
+#
 
 bash "install_chef_server1" do
 user "#{node[:chef][:user]}"
@@ -202,7 +202,7 @@ EOF
 not_if "`sudo apt-key list | grep Rabbit`"
 end
 
-for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
+for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring ruby1.9.1-full rubygems1.9.1}
   package "#{install_package}" do
     action :install
     options "--force-yes"
@@ -239,56 +239,56 @@ GemBaseDir="/opt/vagrant_ruby"
 
 
 
-# bash "install_chef_server2b" do
-# user "#{node[:chef][:user]}"
-# ignore_failure false
-# code <<-EOF
+bash "install_rvm" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
 
-# # install rvm
-# # http://beginrescueend.com/rvm/install/
+# install rvm
+# http://beginrescueend.com/rvm/install/
 
-# if [ ! -e #{RvmBaseDir}/scripts/rvm ]
-# then
-#   sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
-# #  #{Chef::Config[:file_cache_path]}/rvm-installer stable
-# fi
+if [ ! -e #{RvmBaseDir}/scripts/rvm ]
+then
+  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
+fi
 
-# sudo usermod -a -G rvm #{node[:chef][:user]}
-# source /etc/profile.d/rvm.sh
-# umask u=rwx,g=rwx,o=rx
+sudo usermod -a -G rvm #{node[:chef][:user]}
+source /etc/profile.d/rvm.sh
+umask u=rwx,g=rwx,o=rx
 
-# if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
-#    echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
-#    echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
-# fi
+if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
+   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
+   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
+fi
 
-# EOF
-# not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
-# end
+EOF
+not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
+end
 
-# bash "install_chef_server2d" do
-# user "#{node[:chef][:user]}"
-# ignore_failure false
-# code <<-EOF
+bash "install_chef_ruby" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
 
-# sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
-# #sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
+#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
 
-# # install these ruby libs (if we don't already have them)
-#  . #{RvmBaseDir}/scripts/rvm
-#  [ -e #{RubyBaseDir}/usr/lib/libz.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install zlib --verify-downloads 1"
-#  [ -e #{RubyBaseDir}/usr/lib/libssl.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install openssl"
-#  [ -e #{RubyBaseDir}/usr/lib/libyaml.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install libyaml"
+# install these ruby libs (if we don't already have them)
+ . #{RvmBaseDir}/scripts/rvm
+ [ -e #{RubyBaseDir}/usr/lib/libz.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install zlib --verify-downloads 1"
+ [ -e #{RubyBaseDir}/usr/lib/libssl.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install openssl"
+ [ -e #{RubyBaseDir}/usr/lib/libyaml.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install libyaml"
 
 
-# # check if have the right version of ruby with the correct libs available,
-# # if not we reinstall
+# check if have the right version of ruby with the correct libs available,
+# if not we reinstall
 
-# # ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RubyBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && sudo #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
+# ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RubyBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && sudo #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
 
-# EOF
-#   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
-# end
+EOF
+  not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
+end
 
 
 
@@ -296,10 +296,12 @@ bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+source /etc/profile.d/rvm.sh
+
 sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
-chef-client -v
+chef-solo -v
 EOF
-not_if "chef-client -v"
+not_if "chef-solo -v"
 end
 
 
@@ -308,7 +310,6 @@ bash "install_chef_server_from_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-#source /etc/profile.d/rvm.sh
 sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
 end
@@ -353,7 +354,7 @@ end
 # ignore_failure false
 # code <<-EOF
 
-# source /etc/profile.d/rvm.sh
+
 # # install the chef gems (if we don't already have them)
 # # echo "GEMS: #{AllGems}"
 # #  for gem in #{AllGems}
