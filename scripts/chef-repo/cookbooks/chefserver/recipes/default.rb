@@ -40,7 +40,7 @@ sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
 EOF
 end
 
-for install_file in %w{vhost.template rvm-installer install-chef-solo.sh knife-config.sh} 
+for install_file in %w{vhost.template rvm-installer install-chef-solo.sh} 
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
     source "#{install_file}"
     owner node[:chef][:user]
@@ -308,9 +308,17 @@ bash "install_chef_server_from_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-source /etc/profile.d/rvm.sh
+#source /etc/profile.d/rvm.sh
 sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
+end
+
+
+template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
+  source "knife-config.sh.erb"
+  owner node[:chef][:user]
+  group node[:chef][:user]
+  mode 0755
 end
 
 bash "configure_knife" do
