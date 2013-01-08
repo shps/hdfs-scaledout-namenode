@@ -1,6 +1,6 @@
 { 
   "chef_server": {
-    "server_url": "http://localhost:4000",
+    "server_url": "<%= node[:chef][:server_url] %>",
     "webui_enabled": true,
     "init_style": "init"
   },

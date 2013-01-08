@@ -5,6 +5,7 @@ default[:chef][:base_dir] = "/var/lib/chefserver"
 default[:chef][:port] = 4000
 default[:chef][:client] = "webui"
 default[:chef][:org] = "kth"
+default[:chef][:server_url] = "http://lucan.sics.se:4000"
 
 default[:aws][:user] = "jdowling"
 default[:aws][:key_id] = "AKIAJRR5Z45K4ZSIFYWQ"

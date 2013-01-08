@@ -1,3 +1,7 @@
+user <%= node[:chef][:user] %>
+group <%= node[:chef][:user] %>
+pid_file "/var/chef/chef-server.pid"
+
 log_level          :info
 log_location       STDOUT
 ssl_verify_mode    :verify_none

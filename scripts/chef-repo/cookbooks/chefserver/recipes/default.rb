@@ -40,7 +40,7 @@ sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
 EOF
 end
 
-for install_file in %w{vhost.template rvm-installer} # server.rb 
+for install_file in %w{vhost.template rvm-installer install-chef-solo.sh knife-config.sh} 
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
     source "#{install_file}"
     owner node[:chef][:user]
@@ -50,40 +50,11 @@ for install_file in %w{vhost.template rvm-installer} # server.rb
   end
 end
 
-
-# package "make" do
-#   action :install
-# end
-
-# package "g++" do
-#   action :install
-# end
-
-# # For amqp
-# bash "install_libgecode" do
-# code <<-EOF
-#     curl http://apt.opscode.com/packages@opscode.com.gpg.key | sudo apt-key add -
-#     sudo apt-get update -y
-#     sudo apt-get install libgecode-dev -y
-# EOF
-# end
-
-# # For Nokogiri
-# package "libxml2-dev" do
-#   action :install
-# end
-# # For Nokogiri
-# package "libxslt-dev" do
-#   action :install
-# end
-
 for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget}
    package "#{install_package}" do
      action :install
    end
 end
-
-
 
 for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion}
    package "#{install_package}" do
@@ -91,25 +62,6 @@ for install_package in %w{build-essential openssl libreadline6 libreadline6-dev 
    end
 end
  
- package "openjdk-6-jdk" do
-  action :install
-#  not_if "java -version 2> /dev/null"
-end
-
-# for install_gem in node[:chef][:gems]
-#   cookbook_fil e"#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-#     source "#{install_gem}.gem"
-#     owner node[:chef][:user]
-#     group node[:chef][:user]
-#     mode 0755
-#     action :create_if_missing
-#   end
-#   gem_package "#{install_gem}" do
-#     source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-#     action :install
-#   end
-# end 
-
 directory "/etc/chef" do
   owner node[:chef][:user]
   group node[:chef][:user]
@@ -150,19 +102,19 @@ template "/etc/chef/chef.json" do
   mode 0755
 end
 
-template "/etc/chef/solo.rb" do
-  source "solo.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
+# template "/etc/chef/solo.rb" do
+#   source "solo.rb.erb"
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode 0755
+# end
 
-template "/etc/chef/server.rb" do
-  source "server.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
+# template "/etc/chef/server.rb" do
+#   source "server.rb.erb"
+#   owner node[:chef][:user]
+#   group node[:chef][:user]
+#   mode 0755
+# end
 
 # template "/etc/chef/solr.rb" do
 #   source "solr.rb.erb"
@@ -171,29 +123,12 @@ end
 #   mode 0755
 # end
 
-
-# template "#{node[:chef][:base_dir]}/knife-config.sh" do
-#   source "knife-config.sh.erb"
+# template "/etc/chef/webui.rb" do
+#   source "webui.rb.erb"
 #   owner node[:chef][:user]
 #   group node[:chef][:user]
 #   mode 0755
 # end
-
-# directory "/home/#{node[:chef][:user]}/.chef" do
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode "755"
-#   action :create
-#   recursive true
-# end
-
-# template "/home/#{node[:chef][:user]}/.chef/knife.rb" do
-#   source "knife.rb.erb"
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode 0755
-# end
-
 
 bash "install_chef_server1" do
 user "#{node[:chef][:user]}"
@@ -225,22 +160,6 @@ if [ $? -ne 0 ] ; then
     echo "Re-trying opscode key"
     sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
 fi
-#fi
-# if [ ! "`gpg --list-keys | grep 83EF826A`" ]
-    # then
-#   EXITSTATUS=2
-#   while [ ${EXITSTATUS} == 2 ]
-#   do
-#     gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
-#     EXITSTATUS=$?
-#   done
-# fi
-echo "EXPORTING KEYS"
-# if [ -f /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-#    if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-#      rm /etc/apt/trusted.gpg.d/opscode-keyring.gpg
-#    fi
-# fi
 
 sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
 if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
@@ -276,13 +195,14 @@ EOF
 not_if "`sudo apt-key list | grep Rabbit`"
 end
 
-# openjdk-7-jre-headless 
 for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
   package "#{install_package}" do
     action :install
     options "--force-yes"
   end
 end
+
+
 
 
 bash "install_chef_server2a" do
@@ -303,185 +223,192 @@ sudo rabbitmq-plugins enable rabbitmq_management
 sudo service rabbitmq-server restart
 
 EOF
+not_if "sudo rabbitmqctl -q status 2> /dev/null"
 end
 
 RubyBaseDir="/home/#{node[:chef][:user]}/.rvm"
 RvmBaseDir="/usr/local/rvm"
-
-bash "install_chef_server2b" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-# install rvm
-# http://beginrescueend.com/rvm/install/
-
-if [ ! -e #{RvmBaseDir}/scripts/rvm ]
-then
-  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
-#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
-fi
-
-sudo usermod -a -G rvm #{node[:chef][:user]}
-source /etc/profile.d/rvm.sh
-umask u=rwx,g=rwx,o=rx
-
-if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
-   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
-   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
-fi
-
-EOF
-not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
-end
-
-bash "install_chef_server2d" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
-#sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
-
-# install these ruby libs (if we don't already have them)
- . #{RvmBaseDir}/scripts/rvm
- [ -e #{RubyBaseDir}/usr/lib/libz.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install zlib --verify-downloads 1"
- [ -e #{RubyBaseDir}/usr/lib/libssl.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install openssl"
- [ -e #{RubyBaseDir}/usr/lib/libyaml.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install libyaml"
+GemBaseDir="/opt/vagrant_ruby"
 
 
-# check if have the right version of ruby with the correct libs available,
-# if not we reinstall
 
-# ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RubyBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && sudo #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
-
-EOF
-  not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
-end
-
-for install_gem in node[:chef][:gems]
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-    source "#{install_gem}.gem"
-    owner node[:chef][:user]
-    group node[:chef][:user]
-    mode 0755
-    action :create_if_missing
-  end
-  # gem_package "#{install_gem}" do
-  #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-  #   action :install
-  # end
-end
-
-AllGems=node[:chef][:gems].join(" ")
-
-bash "install_chef_server2e" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-source /etc/profile.d/rvm.sh
-# install the chef gems (if we don't already have them)
-echo "GEMS: #{AllGems}"
- for gem in #{AllGems}
- do
-   if [ ! "`gem list | grep \"${gem} \"`" ]
-   then
-     echo "INSTALLING: ${gem}"
-     sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc " # --force
-   fi
- done
-touch /home/#{node[:chef][:user]}/.rvm/.gems_installed
-EOF
-not_if "test -f /home/#{node[:chef][:user]}/.rvm/.gems_installed"
-end
-
-bash "install_chef_server3" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-source /etc/profile.d/rvm.sh
-sudo chown -R #{node[:chef][:user]} /var/chef/
-# run the solr installer
-chef-solr-installer -f -u #{node[:chef][:user]} 
-EOF
-end
-
-bash "install_chef_server3a" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-source /etc/profile.d/rvm.sh
-
-# the chef gems supply some upstart scripts, but they run everything as root
-# we'd rather run as whatever chef user we're using
-for file in `find /opt/vagrant_ruby/lib/gems | grep debian/etc/init/ | grep -v client`
-do
-  outfile=`basename ${file}`
-  service=${outfile%.conf}
-
-  rm /etc/init.d/${outfile}
-  rm /etc/init/${service}
-
-# horrendous sed monster to make these jobs run as our user 
-# cat ${file} | sed "s:    :  :g" | sed "s:test -x .* || \(.*\):su - #{node[:chef][:user]} -c \"which ${service}\" || \1:" \
-# | sed "s:exec /usr/bin/${service} \(.*\):script\n  su - #{node[:chef][:user]} -c \"${service} \1\"\nend script:" | sudo tee /etc/init/${outfile} > /dev/null
-
-  cat ${file} | sudo tee /etc/init/${outfile} 
-
-  sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
-  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
-done
-EOF
-end
-
-bash "install_chef_server3b" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-source /etc/profile.d/rvm.sh
-
-for line in "chef-server:4000:chef chef-webui:4040:chefwebui" 
-do
-  UPSTREAM=`echo ${line} | cut -d ':' -f 1`
-  PORT=`echo ${line} | cut -d ':' -f 2`
-  SERVERNAME=`echo ${line} | cut -d ':' -f 3`.`hostname -f`
-  cat #{Chef::Config[:file_cache_path]}/vhost.template |\
-    sed "s:UPSTREAM:${UPSTREAM}:" |\
-    sed "s:PORT:${PORT}:" |\
-    sed "s:SERVERNAME:${SERVERNAME}:" |\
-    sudo tee /etc/nginx/sites-available/${SERVERNAME} > /dev/null
-  [ ${PORT} == "4040" ] && WEBUI="http://${SERVERNAME}"
-  [ ${PORT} == "4000" ] && CHEFSERVER="http://${SERVERNAME}:4000"
-  sudo ln -sf /etc/nginx/sites-available/${SERVERNAME} /etc/nginx/sites-enabled
-done
-
-sudo service nginx restart
-
-echo
-echo "Chef-server is at ${CHEFSERVER}"
-echo "Chef WebUI is at ${WEBUI}"
-#echo "WebUI login: admin/${WEBUI_PASSWORD}"
-echo
-
-EOF
-end
-
-# bash "configure_knife" do
+# bash "install_chef_server2b" do
 # user "#{node[:chef][:user]}"
 # ignore_failure false
 # code <<-EOF
-# mkdir -p /home/#{node[:chef][:user]}/.chef
-# sudo cp /etc/chef/validation.pem /etc/chef/webui.pem /home/#{node[:chef][:user]}/.chef
-# sudo chown -R #{node[:chef][:user]} /home/#{node[:chef][:user]}/.chef
-# # Next run the knife configure command, and pass the -i flag so the initial client that will be used to authenticate with the API.
-# #cd #{node[:chef][:base_dir]}
-# # ./knife-config.sh
-# cd /home/#{node[:chef][:user]}
-# /opt/vagrant_ruby/bin/knife --config #{node[:chef][:base_dir]}/knife.rb
-# # verify knife can talk to the server
-# knife client list
-# knife cookbook list
+
+# # install rvm
+# # http://beginrescueend.com/rvm/install/
+
+# if [ ! -e #{RvmBaseDir}/scripts/rvm ]
+# then
+#   sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+# #  #{Chef::Config[:file_cache_path]}/rvm-installer stable
+# fi
+
+# sudo usermod -a -G rvm #{node[:chef][:user]}
+# source /etc/profile.d/rvm.sh
+# umask u=rwx,g=rwx,o=rx
+
+# if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
+#    echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
+#    echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
+# fi
+
+# EOF
+# not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
+# end
+
+# bash "install_chef_server2d" do
+# user "#{node[:chef][:user]}"
+# ignore_failure false
+# code <<-EOF
+
+# sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
+# #sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
+
+# # install these ruby libs (if we don't already have them)
+#  . #{RvmBaseDir}/scripts/rvm
+#  [ -e #{RubyBaseDir}/usr/lib/libz.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install zlib --verify-downloads 1"
+#  [ -e #{RubyBaseDir}/usr/lib/libssl.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install openssl"
+#  [ -e #{RubyBaseDir}/usr/lib/libyaml.so ] || sudo su -l #{node[:chef][:user]} -c "rvm pkg install libyaml"
+
+
+# # check if have the right version of ruby with the correct libs available,
+# # if not we reinstall
+
+# # ! (#{RvmBaseDir}/bin/rvm use 1.9.3 && #{RubyBaseDir}/bin/ruby -e "require 'openssl' ; require 'zlib'" 2> /dev/null) && sudo #{RvmBaseDir}/bin/rvm reinstall 1.9.3 && #{RvmBaseDir}/bin/rvm use 1.9.3 --default
+
+# EOF
+#   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
+# end
+
+
+
+bash "install_chef_solo" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+chef-client -v
+EOF
+not_if "chef-client -v"
+end
+
+
+
+bash "install_chef_server_from_solo" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+source /etc/profile.d/rvm.sh
+sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+EOF
+end
+
+bash "configure_knife" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+#{Chef::Config[:file_cache_path]}/knife-config.sh
+EOF
+end
+
+
+
+# for install_gem in node[:chef][:gems]
+#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+#     source "#{install_gem}.gem"
+#     owner node[:chef][:user]
+#     group node[:chef][:user]
+#     mode 0755
+#     action :create_if_missing
+#   end
+#    # gem_package "#{install_gem}" do
+#    #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+#    #   action :install
+#    # end
+# end
+
+# AllGems=node[:chef][:gems].join(" ")
+
+# bash "install_chef_server2e" do
+# user "#{node[:chef][:user]}"
+# ignore_failure false
+# code <<-EOF
+
+# source /etc/profile.d/rvm.sh
+# # install the chef gems (if we don't already have them)
+# # echo "GEMS: #{AllGems}"
+# #  for gem in #{AllGems}
+# #  do
+# #    if [ ! "`gem list | grep \"${gem} \"`" ]
+# #    then
+# #      echo "INSTALLING: ${gem}"
+# #      sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc " # --force
+# #    fi
+# #  done
+#  for gem in chef-server chef-solr chef-expander chef-server-webui
+#  do
+#    if [ ! "`gem list | grep \"${gem} \"`" ]
+#    then
+#      echo "INSTALLING: ${gem}"
+#      sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri" # 
+#    fi
+#  done    source "#{upstartService}.erb"
+#     owner "root"
+#     group "root"
+#     mode 0644
+#   end
+# end
+
+# bash "install_chef_server3" do
+# user "#{node[:chef][:user]}"
+# ignore_failure false
+# code <<-EOF
+# source /etc/profile.d/rvm.sh
+# sudo chown -R #{node[:chef][:user]} /var/chef/
+# # run the solr installer
+# sudo su -l #{node[:chef][:user]} -c "chef-solr-installer -f -u #{node[:chef][:user]}"
+
+# for file in chef-server chef-solr chef-expander chef-server-webui
+# do
+#   outfile=`basename ${file}`
+#   service=${outfile%.conf}
+#   sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
+#   sudo service ${service} start 2> /dev/null || sudo service ${service} restart
+# done
+# EOF
+# end
+
+# bash "install_chef_server3b" do
+# user "#{node[:chef][:user]}"
+# ignore_failure false
+# code <<-EOF
+# #source /etc/profile.d/rvm.sh
+
+# for line in "chef-server:4000:chef chef-webui:4040:chefwebui" 
+# do
+#   UPSTREAM=`echo ${line} | cut -d ':' -f 1`
+#   PORT=`echo ${line} | cut -d ':' -f 2`
+#   SERVERNAME=`echo ${line} | cut -d ':' -f 3`.`hostname -f`
+#   cat #{Chef::Config[:file_cache_path]}/vhost.template |\
+#     sed "s:UPSTREAM:${UPSTREAM}:" |\
+#     sed "s:PORT:${PORT}:" |\
+#     sed "s:SERVERNAME:${SERVERNAME}:" |\
+#     sudo tee /etc/nginx/sites-available/${SERVERNAME} > /dev/null
+#   [ ${PORT} == "4040" ] && WEBUI="http://${SERVERNAME}"
+#   [ ${PORT} == "4000" ] && CHEFSERVER="http://${SERVERNAME}:4000"
+#   sudo ln -sf /etc/nginx/sites-available/${SERVERNAME} /etc/nginx/sites-enabled
+# done
+
+# sudo service nginx restart
+
+# echo
+# echo "Chef-server is at ${CHEFSERVER}"
+# echo "Chef WebUI is at ${WEBUI}"
+# echo
+
 # EOF
 # end
 
@@ -489,7 +416,7 @@ bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
+# # echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
 
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
 echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /home/#{node[:chef][:user]}/.ironfan_bashrc

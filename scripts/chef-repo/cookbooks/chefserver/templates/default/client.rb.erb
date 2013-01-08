@@ -1,0 +1,6 @@
+user <%= node[:chef][:user] %>
+group <%= node[:chef][:user] %>
+pid_file "/var/chef/chef-client.pid"
+chef_server_url "<%= node[:chef][:server_url] %>"
+client_url "http://<%= node['ipaddress'] %>:4042"
+client_registration_retries 10

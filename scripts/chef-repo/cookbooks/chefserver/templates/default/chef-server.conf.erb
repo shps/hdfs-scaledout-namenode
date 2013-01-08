@@ -1,0 +1,20 @@
+# chef-server - Chef Server
+#
+# Chef Server provides the Chef API server
+
+description "Chef Server API"
+
+start on filesystem
+stop on runlevel [!2345]
+
+respawn
+respawn limit 5 30
+
+pre-start script
+  su - <%= node[:chef][:user] %> -c "which chef-server" || { stop; exit 0; }
+end script
+
+script
+  su - <%= node[:chef][:user] %> -c "chef-server -e production -p 4000 -L /var/log/chef/server.log"
+end script
+
