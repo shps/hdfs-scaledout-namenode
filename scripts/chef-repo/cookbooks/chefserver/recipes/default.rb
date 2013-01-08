@@ -155,7 +155,7 @@ echo "TRYING TO LIST KEYS"
 EOF
 end
 
-bash "install_chef_server1a" do
+bash "install_opscode_apt_keys" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
@@ -178,7 +178,7 @@ EOF
 not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
 end
 
-bash "install_chef_server1b" do
+bash "install_rabbitmq_apt_keys" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
@@ -202,14 +202,12 @@ EOF
 not_if "`sudo apt-key list | grep Rabbit`"
 end
 
-for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring ruby1.9.1-full rubygems1.9.1}
+for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
   package "#{install_package}" do
     action :install
     options "--force-yes"
   end
 end
-
-
 
 
 bash "install_chef_server2a" do
@@ -237,8 +235,6 @@ RubyBaseDir="/home/#{node[:chef][:user]}/.rvm"
 RvmBaseDir="/usr/local/rvm"
 GemBaseDir="/opt/vagrant_ruby"
 
-
-
 bash "install_rvm" do
 user "#{node[:chef][:user]}"
 ignore_failure false
@@ -263,7 +259,7 @@ if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
 fi
 
 EOF
-not_if "`grep rvm /home/#{node[:chef][:user]}/.bashrc`"
+not_if "test -f /home/#{node[:chef][:user]}/.bash_aliases || `grep rvm /home/#{node[:chef][:user]}/.bash_aliases`"
 end
 
 bash "install_chef_ruby" do
