@@ -299,7 +299,7 @@ source /etc/profile.d/rvm.sh
 sudo true && #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 chef-solo -v
 EOF
-not_if "chef-solo -v"
+not_if "which chef-solo"
 end
 
 
