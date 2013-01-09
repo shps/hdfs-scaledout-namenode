@@ -259,25 +259,7 @@ for install_file in %w{vhost.template install-chef-solo.sh}
   end
 end
 
-
-bash "install_chef_solo" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-#sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
-
-# Following doesn't work
-# sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
-sudo apt-get -y -q update
-sudo apt-get install -y -q chef
-
-#sudo usermod -s /bin/bash #{node[:chef][:user]}
-#sudo chef-solo -v
-EOF
-#not_if "test -f /etc/sudoers.d/#{node[:chef][:user]}"
-end
-
-bash "install_chef_solo" do
+bash "install_chef_ruby" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
@@ -298,8 +280,28 @@ sudo update-alternatives --config gem
 
 # now try
 ruby --version
+
+#sudo apt-get install -y -q chef
+
 EOF
 end
+
+bash "install_chef_solo" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+
+# Following doesn't work
+# sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
+
+
+#sudo usermod -s /bin/bash #{node[:chef][:user]}
+#sudo chef-solo -v
+EOF
+not_if "which chef-solo"
+end
+
 
 bash "install_chef_server_from_solo" do
 user "#{node[:chef][:user]}"
