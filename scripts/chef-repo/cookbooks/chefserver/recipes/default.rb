@@ -318,7 +318,7 @@ sudo apt-get install -y -q chef
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
 EOF
-not_if "which chef-solo"
+#not_if "which chef-solo"
 end
 
 
