@@ -297,7 +297,7 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 #source /etc/profile.d/rvm.sh
-#sudo usermod -s /bin/sh #{[:chef][:user]}
+#sudo usermod -s /bin/sh #{node[:chef][:user]}
 sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
 
 # Following doesn't work
