@@ -165,7 +165,6 @@ end
 
 RubyBaseDir="#{HomeDir}/.rvm"
 RvmBaseDir="/usr/local/rvm"
-GemBaseDir="/opt/vagrant_ruby"
 
 bash "install_rvm" do
   user "#{node[:chef][:user]}"
@@ -188,7 +187,7 @@ if [ ! -e #{RvmBaseDir}/scripts/rvm ]
      #if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
      echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
      echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
-     echo "export PATH=$PATH:#{GemBaseDir}/bin"
+     echo "export PATH=$PATH:#{node[:ruby][:base_dir]}/bin" >> #{HomeDir}/.bash_aliases
      #fi
 
      EOF
@@ -291,7 +290,8 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
-sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+
+sudo #{node[:ruby][:base_dir]}/bin/chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
 not_if "which chef-server"
 end
