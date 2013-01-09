@@ -364,19 +364,19 @@ end
 
 
 
-for install_gem in node[:chef][:gems]
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-    source "#{install_gem}.gem"
-    owner node[:chef][:user]
-    group node[:chef][:user]
-    mode 0755
-    action :create_if_missing
-  end
-   # gem_package "#{install_gem}" do
-   #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-   #   action :install
-   # end
-end
+# for install_gem in node[:chef][:gems]
+#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+#     source "#{install_gem}.gem"
+#     owner node[:chef][:user]
+#     group node[:chef][:user]
+#     mode 0755
+#     action :create_if_missing
+#   end
+#    # gem_package "#{install_gem}" do
+#    #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+#    #   action :install
+#    # end
+# end
 
 AllGems=node[:chef][:gems].join(" ")
 
@@ -514,7 +514,7 @@ mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
 
 touch $CHEF_HOMEBASE/tmp/.installed
 EOF
-not_if "test -f #{HomeDir}/homebase/tmp/.installed"
+#not_if "test -f #{HomeDir}/homebase/tmp/.installed"
 end
 
 template "#{HomeDir}/homebase/knife/credentials/knife-org.rb" do
