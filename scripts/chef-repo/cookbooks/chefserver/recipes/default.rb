@@ -469,9 +469,8 @@ ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
 #      {organization}-validator.pem
 
 #rm -rf $CHEF_HOMEBASE/knife/credentials
-#mv $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 #mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/credentials/knife-user-#{node[:chef][:user]}.rb
-mkdir -p $CHEF_HOMEBASE/knife/credentials 
+cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
