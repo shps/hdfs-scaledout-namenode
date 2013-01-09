@@ -28,8 +28,8 @@
 HomeDir="/var/lib/chef"
 user  node[:chef][:user] do
   action :create
-  shell "/bin/sh"
-#  shell "/bin/bash"
+#  shell "/bin/sh"
+  shell "/bin/bash"
   supports :manage_home=>true
   home "#{HomeDir}"
 #  home "/home/#{node[:chef][:user]}"
@@ -205,6 +205,7 @@ code <<-EOF
 if [ ! -e #{RvmBaseDir}/scripts/rvm ]
 then
   sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
 fi
 
 sudo usermod -a -G rvm #{node[:chef][:user]}
@@ -212,12 +213,12 @@ source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
 #if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
-   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.profile #.bash_aliases
-   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.profile #.bash_aliases
+   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
+   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
 #fi
 
 EOF
-not_if "test -f #{HomeDir}/.profile || `grep rvm #{HomeDir}/.profile`"
+#not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
 end
 
 bash "install_chef_ruby" do
