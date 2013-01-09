@@ -415,19 +415,12 @@ bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-# # echo "source #{HomeDir}/.ironfan_bashrc" >> #{HomeDir}/.bash_aliases
-
-#echo "export CHEF_USERNAME=#{node[:chef][:user]}" > #{HomeDir}/.ironfan_bashrc
-#echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
-##{HomeDir}/.ironfan_bashrc
-# CHEF_HOMEBASE=#{HomeDir}/homebase
-
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
-
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> /etc/profile 
 echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
 cd $CHEF_HOME
+
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 sudo bundle install
@@ -456,18 +449,18 @@ mkdir data_bag_keys
 mkdir ec2_certs
 mkdir ec2_keys
 
-# Copy my cookbooks and roles to homebase
+# TODO: Copy my cookbooks and roles to homebase
 
 mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
- cd $CHEF_HOMEBASE
- knife cookbook upload -a
- for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
- do 
-   knife role from file $role 
- done
-touch $CHEF_HOMEBASE/.installed
+ # cd $CHEF_HOMEBASE
+ # knife cookbook upload -a
+ # for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
+ # do 
+ #   knife role from file $role 
+ # done
+touch $CHEF_HOMEBASE/tmp/.installed
 EOF
-not_if "test -f #{HomeDir}/homebase/.installed"
+not_if "test -f #{HomeDir}/homebase/tmp/.installed"
 end
 
 template "#{HomeDir}/homebase/knife/credentials/knife-org.rb" do
@@ -484,7 +477,7 @@ template "#{HomeDir}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}
   mode 0755
 end
 
-template "#{HomeDir}/clusters/test_cluster.rb" do
+template "#{HomeDir}/homebase/clusters/test_cluster.rb" do
   source "test_cluster.rb.erb"
   owner node[:chef][:user]
   group node[:chef][:user]
@@ -498,11 +491,20 @@ end
 # knife cluster bootstrap test_cluster-web-0 
 # knife cluster bootstrap test_cluster-database-0 
 
-bash "configure_ironfan" do
+bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+cd #{HomeDir}/homebase
+rake upload_cookbooks
+rake roles
 
+if [ `knife environment show dev` != "0" ]
+then
+  knife environment create dev
+fi
+
+touch #{HomeDir}/homebase/tmp/.uploads_complete
 EOF
-not_if "test -f #{HomeDir}/homebase/.cookbooks_up"
+not_if "test -f #{HomeDir}/homebase/tmp/.uploads_complete"
 end
