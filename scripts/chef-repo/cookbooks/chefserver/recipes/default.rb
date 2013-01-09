@@ -268,7 +268,7 @@ code <<-EOF
 
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
-
+sudo apt-get -y -q update
 sudo apt-get install -y -q chef
 
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
