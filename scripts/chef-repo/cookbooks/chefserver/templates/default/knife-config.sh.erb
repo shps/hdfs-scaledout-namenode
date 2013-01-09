@@ -1,9 +1,5 @@
 #!/usr/bin/expect
 
-cd <%= node[:chef][:base_dir] %>
-mkdir .chef
-
-#spawn <%= node[:ruby][:base_dir] %>/bin/knife configure -i 
 spawn knife configure -i 
 
 # Where should I put the config file? [/var/lib/chef/.chef/knife.rb]         
@@ -17,16 +13,25 @@ spawn knife configure -i
 
 expect "Where should I put the config file?"
 send "\n"
+
+expect "Please enter the chef server URL:"
+send "http://<%= node[:chef][:server_url] %>\n"
+
 expect "Please enter a clientname for the new client:"
 send "\n"
+
 expect "Please enter the existing admin clientname:"
 send "\n"
+
 expect "Please enter the location of the existing admin client's private key:"
 send "\n"
+
 expect "Please enter the validation clientname:"
 send "\n"
+
 expect "Please enter the location of the validation key:"
 send "\n"
+
 expect "Please enter the path to a chef repository (or leave blank):"
 send "\n"
 
