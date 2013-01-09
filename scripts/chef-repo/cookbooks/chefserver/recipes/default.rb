@@ -169,7 +169,7 @@ for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-k
 end
 
 
-bash "install_chef_server2a" do
+bash "install_chef_rabbitmq_install" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
@@ -215,10 +215,11 @@ umask u=rwx,g=rwx,o=rx
 #if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
    echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
    echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
+   echo "export PATH=$PATH:#{GemBaseDir}/bin"
 #fi
 
 EOF
-#not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
+not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
 end
 
 bash "install_chef_ruby" do
@@ -297,7 +298,9 @@ ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
 
+#sudo usermod -s /bin/sh #{[:chef][:user]}
 sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 
