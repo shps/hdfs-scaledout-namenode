@@ -26,59 +26,32 @@
 # end
 
 HomeDir="/var/lib/chef"
-user  node[:chef][:user] do
+user node[:chef][:user] do
   action :create
-#  shell "/bin/sh"
   shell "/bin/bash"
   supports :manage_home=>true
   home "#{HomeDir}"
-#  home "/home/#{node[:chef][:user]}"
 end
 
 bash "add_chef_user_sudoers" do
-user "root"
-code <<-EOF
-echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
-sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
-EOF
+  user "root"
+  code <<-EOF
+  echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
+  sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
+  EOF
 end
 
 for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget}
-   package "#{install_package}" do
-     action :install
-   end
+  package "#{install_package}" do
+    action :install
+  end
 end
 
 for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion}
-   package "#{install_package}" do
-     action :install
-   end
+  package "#{install_package}" do
+    action :install
+  end
 end
- 
-
-# directory "#{node[:chef][:base_dir]}" do
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode "755"
-#   action :create
-#   recursive true
-# end
-
-# directory "/var/chef" do
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode "755"
-#   action :create
-#   recursive true
-# end
-
-# directory "/var/log/chef" do
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
-#   mode "755"
-#   action :create
-#   recursive true
-# end
 
 
 # template "/etc/chef/solr.rb" do
@@ -97,9 +70,9 @@ end
 #
 
 bash "install_chef_keys" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
+  user "#{node[:chef][:user]}"
+  ignore_failure false
+  code <<-EOF
 # mostly following this
 # http://wiki.opscode.com/display/chef/Installing+Chef+Server+Manually
 
@@ -115,32 +88,32 @@ EOF
 end
 
 bash "install_opscode_apt_keys" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
+  user "#{node[:chef][:user]}"
+  ignore_failure false
+  code <<-EOF
 sudo gpg --list-keys | grep 83EF826A
 #if [ $? -ne 0 ] ; then
 #  echo "Couldn't find opscode key"
 sudo gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
 if [ $? -ne 0 ] ; then
-    echo "Re-trying opscode key"
-    sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
-fi
+  echo "Re-trying opscode key"
+  sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
+  fi
 
-sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
-if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-   sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
-fi
+  sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+  if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+    sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+    fi
 
-EOF
-# Test file exists and has a size greater than zero.
-not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
-end
+    EOF
+    # Test file exists and has a size greater than zero.
+    not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
+  end
 
-bash "install_rabbitmq_apt_keys" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
+  bash "install_rabbitmq_apt_keys" do
+    user "#{node[:chef][:user]}"
+    ignore_failure false
+    code <<-EOF
 
 echo "RabbitMQ KEYS"
 # RabbitMQ repo
@@ -153,12 +126,12 @@ then
   wget http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
   echo "Installing RabbitMQ KEYS"
   sudo apt-key add rabbitmq-signing-key-public.asc
-fi
+  fi
 
-# update apt to tell it about the new opscode and rabbitmq repos
-sudo apt-get -y -q update
-EOF
-not_if "`sudo apt-key list | grep Rabbit`"
+  # update apt to tell it about the new opscode and rabbitmq repos
+  sudo apt-get -y -q update
+  EOF
+  not_if "`sudo apt-key list | grep Rabbit`"
 end
 
 for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
@@ -170,9 +143,9 @@ end
 
 
 bash "install_chef_rabbitmq_install" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
+  user "#{node[:chef][:user]}"
+  ignore_failure false
+  code <<-EOF
 
 `java -version 2> /dev/null` || sudo apt-get -y -q install openjdk-6-jdk
 
@@ -187,7 +160,7 @@ sudo rabbitmq-plugins enable rabbitmq_management
 sudo service rabbitmq-server restart
 
 EOF
-not_if "sudo rabbitmqctl -q status 2> /dev/null"
+  not_if "sudo rabbitmqctl -q status 2> /dev/null"
 end
 
 RubyBaseDir="#{HomeDir}/.rvm"
@@ -195,32 +168,32 @@ RvmBaseDir="/usr/local/rvm"
 GemBaseDir="/opt/vagrant_ruby"
 
 bash "install_rvm" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
+  user "#{node[:chef][:user]}"
+  ignore_failure false
+  code <<-EOF
 
 # install rvm
 # http://beginrescueend.com/rvm/install/
 
 if [ ! -e #{RvmBaseDir}/scripts/rvm ]
-then
-  sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
-#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
-fi
+   then
+     sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
+     #  #{Chef::Config[:file_cache_path]}/rvm-installer stable
+     fi
 
-sudo usermod -a -G rvm #{node[:chef][:user]}
-source /etc/profile.d/rvm.sh
-umask u=rwx,g=rwx,o=rx
+     sudo usermod -a -G rvm #{node[:chef][:user]}
+     source /etc/profile.d/rvm.sh
+     umask u=rwx,g=rwx,o=rx
 
-#if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
-   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
-   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
-   echo "export PATH=$PATH:#{GemBaseDir}/bin"
-#fi
+     #if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
+     echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
+     echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
+     echo "export PATH=$PATH:#{GemBaseDir}/bin"
+     #fi
 
-EOF
-not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
-end
+     EOF
+     not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
+   end
 
 bash "install_chef_ruby" do
 user "#{node[:chef][:user]}"
