@@ -264,22 +264,22 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 
-# sudo apt-get install -y -q ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
+sudo apt-get install -y -q ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
 
-# sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
-#                         /usr/share/man/man1/ruby1.9.1.1.gz \
-#         --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
-#         --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
-#         --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
+sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
+                        /usr/share/man/man1/ruby1.9.1.1.gz \
+        --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
+        --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
+        --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
 
-# # choose your interpreter
-# # changes symlinks for /usr/bin/ruby , /usr/bin/gem
-# # /usr/bin/irb, /usr/bin/ri and man (1) ruby
-# sudo update-alternatives --config ruby
-# sudo update-alternatives --config gem
+# choose your interpreter
+# changes symlinks for /usr/bin/ruby , /usr/bin/gem
+# /usr/bin/irb, /usr/bin/ri and man (1) ruby
+sudo update-alternatives --config ruby
+sudo update-alternatives --config gem
 
 # now try
-#ruby --version
+ruby --version
 
 EOF
 end
@@ -465,7 +465,8 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 
-sudo su -l #{node[:chef][:user]} -c "gem install ironfan --no-rdoc --no-ri"
+#sudo su -l #{node[:chef][:user]} -c "gem install ironfan --no-rdoc --no-ri"
+sudo gem install ironfan --no-rdoc --no-ri
 
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
