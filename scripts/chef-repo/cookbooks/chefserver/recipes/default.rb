@@ -445,12 +445,12 @@ code <<-EOF
 
 #echo "export CHEF_USERNAME=#{node[:chef][:user]}" > #{HomeDir}/.ironfan_bashrc
 #echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
-echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
 ##{HomeDir}/.ironfan_bashrc
 # CHEF_HOMEBASE=#{HomeDir}/homebase
 
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
+echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
 cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
@@ -468,14 +468,14 @@ ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
 #      {username}.pem
 #      {organization}-validator.pem
 
-rm -rf $CHEF_HOMEBASE/knife/credentials
-mv $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
-mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/credentials/knife-user-#{node[:chef][:user]}.rb
+#rm -rf $CHEF_HOMEBASE/knife/credentials
+#mv $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
+#mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/credentials/knife-user-#{node[:chef][:user]}.rb
+mkdir -p $CHEF_HOMEBASE/knife/credentials 
 cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
-
-#cp $CHEF_HOMEBASE/src/kthfs-ws/distribute/.chef/knife.rb #{HomeDir}/.chef
-#mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
+sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
+mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
 # cd $CHEF_HOMEBASE
 # knife cookbook upload -a
 # for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
