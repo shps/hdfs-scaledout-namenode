@@ -271,12 +271,10 @@ code <<-EOF
 
 sudo apt-get install chef
 
-echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
-sudo chmod 0440 /etc/sudoers.d/chef
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
 EOF
-not_if "test -f /etc/sudoers.d/#{node[:chef][:user]}"
+#not_if "test -f /etc/sudoers.d/#{node[:chef][:user]}"
 end
 
 bash "install_chef_solo" do
