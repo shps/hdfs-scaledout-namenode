@@ -296,7 +296,7 @@ code <<-EOF
 source /etc/profile.d/rvm.sh
 
 #sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
-sudo true && #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
+sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 chef-solo -v
 EOF
 #not_if "which chef-solo"
@@ -308,6 +308,7 @@ bash "install_chef_server_from_solo" do
 user "chef"
 ignore_failure false
 code <<-EOF
+source /etc/profile.d/rvm.sh
 sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
 #not_if "which chef-server"
