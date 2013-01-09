@@ -281,6 +281,9 @@ sudo update-alternatives --config gem
 # now try
 ruby --version
 
+EOF
+end
+
   directory "/var/cache/local/preseeding" do
     owner "root"
     mode 0755
@@ -300,15 +303,12 @@ ruby --version
   end
 
 
-sudo apt-get install -y -q chef
-
-EOF
-end
-
 bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+sudo apt-get install -y -q chef
+
 #sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
 
 # Following doesn't work
