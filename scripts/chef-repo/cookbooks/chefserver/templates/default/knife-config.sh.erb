@@ -1,9 +1,9 @@
 #!/usr/bin/expect
 
-# cd <%= node[:chef][:base_dir] %>
-cd /home/<%= node[:chef][:user] %>
+cd <%= node[:chef][:base_dir] %>
 
-spawn /opt/vagrant_ruby/bin/knife configure -i 
+#spawn <%= node[:ruby][:base_dir] %>/bin/knife configure -i 
+spawn knife configure -i 
 
 # Where should I put the config file? [/var/lib/chef/.chef/knife.rb]         
 # Please enter the chef server URL: [http://precise64:4000] http://localhost:4000

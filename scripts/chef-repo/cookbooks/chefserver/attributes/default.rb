@@ -7,6 +7,8 @@ default[:chef][:client] = "webui"
 default[:chef][:org] = "kth"
 default[:chef][:server_url] = "http://localhost:4000"
 
+default[:ruby][:base_dir] = "/opt/vagrant_ruby/"
+
 default[:aws][:user] = "jdowling"
 default[:aws][:key_id] = "AKIAJRR5Z45K4ZSIFYWQ"
 default[:aws][:secret] = "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"

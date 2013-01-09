@@ -473,11 +473,11 @@ mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/c
 cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 
-#cp #{HomeDir}/src/kthfs-ws/distribute/.chef/knife.rb #{HomeDir}/.chef
-#mkdir -p /home/node[:chef][:user]/tmp/.ironfan-clusters
-# cd #{HomeDir}/
+#cp $CHEF_HOMEBASE/src/kthfs-ws/distribute/.chef/knife.rb #{HomeDir}/.chef
+#mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
+# cd $CHEF_HOMEBASE
 # knife cookbook upload -a
-# for role in /home/node[:chef][:user]/cookbooks/roles/*.rb
+# for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
 # do 
 #   knife role from file $role 
 # done
