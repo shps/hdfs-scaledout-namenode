@@ -235,19 +235,19 @@ end
   mode 0755
  end
 
-template "/etc/chef/server.rb" do
-  source "server.rb.erb"
-  owner "chef"
-  group "chef"
-  mode 0755
-end
+# template "/etc/chef/server.rb" do
+#   source "server.rb.erb"
+#   owner "chef"
+#   group "chef"
+#   mode 0755
+# end
 
-template "/etc/chef/webui.rb" do
-  source "webui.rb.erb"
-  owner "chef"
-  group "chef"
-  mode 0755
-end
+# template "/etc/chef/webui.rb" do
+#   source "webui.rb.erb"
+#   owner "chef"
+#   group "chef"
+#   mode 0755
+# end
 
 for install_file in %w{vhost.template install-chef-solo.sh} 
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
@@ -302,6 +302,18 @@ end
     notifies :run, resources(:execute => "preseed chef"), :immediately
   end
 
+  execute "preseed chef-server" do
+    command "debconf-set-selections /var/cache/local/preseeding/chef-server.seed"
+    action :nothing
+  end
+
+  template "/var/cache/local/preseeding/chef-server.seed" do
+    source "chef-server.seed.erb"
+    owner "root"
+    mode "0600"
+    notifies :run, resources(:execute => "preseed chef-server"), :immediately
+  end
+
 
 bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
@@ -326,10 +338,11 @@ bash "install_chef_server_from_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+#chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 #sudo #{node[:ruby][:base_dir]}/bin/chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+sudo apt-get install -y -q chef-server chef-server-api chef-server-webui chef-solr
 EOF
-not_if "which chef-server"
+#not_if "which chef-server"
 end
 
 
