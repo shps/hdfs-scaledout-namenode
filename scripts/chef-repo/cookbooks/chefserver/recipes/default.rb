@@ -495,7 +495,6 @@ end
 # knife cluster launch test_cluster
 # knife cluster sync test_cluster
 # knife cluster bootstrap test_cluster
-or
 # knife cluster bootstrap test_cluster-web-0 
 # knife cluster bootstrap test_cluster-database-0 
 
