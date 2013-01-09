@@ -295,8 +295,9 @@ ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
 
-#sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
-sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
+sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+# Following doesn't work
+# sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 chef-solo -v
 EOF
 #not_if "which chef-solo"
