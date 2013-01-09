@@ -205,28 +205,25 @@ code <<-EOF
 if [ ! -e #{RvmBaseDir}/scripts/rvm ]
 then
   sudo bash -s stable < <(curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer)
-#  #{Chef::Config[:file_cache_path]}/rvm-installer stable
 fi
 
 sudo usermod -a -G rvm #{node[:chef][:user]}
 source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
-if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
-   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
-   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
-fi
+#if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
+   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.profile #.bash_aliases
+   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.profile #.bash_aliases
+#fi
 
 EOF
-not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
+not_if "test -f #{HomeDir}/.profile || `grep rvm #{HomeDir}/.profile`"
 end
 
 bash "install_chef_ruby" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-source /etc/profile.d/rvm.sh
-
 sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
 #sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
 
