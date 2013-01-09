@@ -185,13 +185,13 @@ if [ ! -e #{RvmBaseDir}/scripts/rvm ]
      umask u=rwx,g=rwx,o=rx
 
      #if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
-     echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
-     echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
+#     echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
+#     echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
      echo "export PATH=$PATH:#{node[:ruby][:base_dir]}/bin" >> #{HomeDir}/.bash_aliases
      #fi
 
      EOF
-  not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
+  not_if "test -f #{HomeDir}/.bash_aliases || `grep ruby #{HomeDir}/.bash_aliases`"
 end
 
 bash "install_chef_ruby" do
@@ -484,6 +484,7 @@ template "#{HomeDir}/homebase/clusters/test_cluster.rb" do
   mode 0755
 end
 
+# knife cluster list
 # knife cluster show test_cluster
 # knife cluster launch test_cluster
 # knife cluster sync test_cluster
