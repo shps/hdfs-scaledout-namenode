@@ -25,15 +25,18 @@
 #   end
 # end
 
+HomeDir="/var/lib/chef"
 user  node[:chef][:user] do
   action :create
-  shell "/bin/bash"
+  shell "/bin/sh"
+#  shell "/bin/bash"
   supports :manage_home=>true
-  home "/home/#{node[:chef][:user]}"
+  home "#{HomeDir}"
+#  home "/home/#{node[:chef][:user]}"
 end
 
 bash "add_chef_user_sudoers" do
-#user "root"
+user "root"
 code <<-EOF
 echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
 sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
@@ -93,7 +96,7 @@ end
 # end
 #
 
-bash "install_chef_server1" do
+bash "install_chef_keys" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
@@ -187,7 +190,7 @@ EOF
 not_if "sudo rabbitmqctl -q status 2> /dev/null"
 end
 
-RubyBaseDir="/home/#{node[:chef][:user]}/.rvm"
+RubyBaseDir="#{HomeDir}/.rvm"
 RvmBaseDir="/usr/local/rvm"
 GemBaseDir="/opt/vagrant_ruby"
 
@@ -209,13 +212,13 @@ sudo usermod -a -G rvm #{node[:chef][:user]}
 source /etc/profile.d/rvm.sh
 umask u=rwx,g=rwx,o=rx
 
-if [ ! -f /home/#{node[:chef][:user]}/.bash_aliases  ] ; then
-   echo "umask u=rwx,g=rwx,o=rx" >> /home/#{node[:chef][:user]}/.bash_aliases
-   echo "source /etc/profile.d/rvm.sh" >> /home/#{node[:chef][:user]}/.bash_aliases
+if [ ! -f #{HomeDir}/.bash_aliases  ] ; then
+   echo "umask u=rwx,g=rwx,o=rx" >> #{HomeDir}/.bash_aliases
+   echo "source /etc/profile.d/rvm.sh" >> #{HomeDir}/.bash_aliases
 fi
 
 EOF
-not_if "test -f /home/#{node[:chef][:user]}/.bash_aliases || `grep rvm /home/#{node[:chef][:user]}/.bash_aliases`"
+not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
 end
 
 bash "install_chef_ruby" do
@@ -290,7 +293,7 @@ end
 
 
 bash "install_chef_solo" do
-user "chef"
+user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
@@ -298,7 +301,11 @@ source /etc/profile.d/rvm.sh
 sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
-chef-solo -v
+
+echo "chef ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/chef
+sudo chmod 0440 /etc/sudoers.d/chef
+
+sudo chef-solo -v
 EOF
 #not_if "which chef-solo"
 end
@@ -306,7 +313,7 @@ end
 
 
 bash "install_chef_server_from_solo" do
-user "chef"
+user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
@@ -324,7 +331,7 @@ template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
 end
 
 bash "configure_knife" do
-user "chef"
+user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 #{Chef::Config[:file_cache_path]}/knife-config.sh
@@ -430,18 +437,18 @@ end
 # end
 
 bash "configure_ironfan" do
-user "chef"
+user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-# # echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
+# # echo "source #{HomeDir}/.ironfan_bashrc" >> #{HomeDir}/.bash_aliases
 
-#echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
-#echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /etc/profile 
-echo "export CHEF_HOMEBASE=/var/lib/chef/homebase" >> /etc/profile 
-#/home/#{node[:chef][:user]}/.ironfan_bashrc
-# CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase
+#echo "export CHEF_USERNAME=#{node[:chef][:user]}" > #{HomeDir}/.ironfan_bashrc
+#echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
+echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
+##{HomeDir}/.ironfan_bashrc
+# CHEF_HOMEBASE=#{HomeDir}/homebase
 
-CHEF_HOME=/var/lib/chef
+CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
 cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
@@ -466,9 +473,9 @@ mv $CHEF_HOMEBASE/knife/credentials/knife-user-example.rb $CHEF_HOMEBASE/knife/c
 cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 
-#cp /home/#{node[:chef][:user]}/src/kthfs-ws/distribute/.chef/knife.rb /home/#{node[:chef][:user]}/.chef
+#cp #{HomeDir}/src/kthfs-ws/distribute/.chef/knife.rb #{HomeDir}/.chef
 #mkdir -p /home/node[:chef][:user]/tmp/.ironfan-clusters
-# cd /home/#{node[:chef][:user]}/
+# cd #{HomeDir}/
 # knife cookbook upload -a
 # for role in /home/node[:chef][:user]/cookbooks/roles/*.rb
 # do 
@@ -476,10 +483,10 @@ cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]
 # done
 touch $CHEF_HOMEBASE/.installed
 EOF
-not_if "test -f /var/lib/chef/homebase/.installed"
+not_if "test -f #{HomeDir}/homebase/.installed"
 end
 
-template "/home/#{node[:chef][:user]}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
+template "#{HomeDir}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
   source "knife-user.rb.erb"
   owner node[:chef][:user]
   group node[:chef][:user]
