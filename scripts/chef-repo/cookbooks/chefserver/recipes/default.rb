@@ -310,7 +310,7 @@ ignore_failure false
 code <<-EOF
 sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
-not_if "chef-server -v"
+not_if "which chef-server"
 end
 
 
