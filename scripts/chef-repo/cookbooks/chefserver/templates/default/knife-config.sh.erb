@@ -18,7 +18,7 @@ expect "Please enter the chef server URL:"
 send "<%= node[:chef][:server_url] %>\n"
 
 expect "Please enter a clientname for the new client:"
-send "\n"
+send "<%= node[:chef][:user] %>\n"
 
 expect "Please enter the existing admin clientname:"
 send "\n"

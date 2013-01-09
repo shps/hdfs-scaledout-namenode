@@ -275,6 +275,9 @@ sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --s
 # choose your interpreter
 # changes symlinks for /usr/bin/ruby , /usr/bin/gem
 # /usr/bin/irb, /usr/bin/ri and man (1) ruby
+
+sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
+
 sudo update-alternatives --config ruby
 sudo update-alternatives --config gem
 
@@ -325,10 +328,27 @@ sudo apt-get install -y -q chef
 
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
-
-
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
+
+
+sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
+                        /usr/share/man/man1/ruby1.9.1.1.gz \
+        --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
+        --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
+        --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
+
+# choose your interpreter
+# changes symlinks for /usr/bin/ruby , /usr/bin/gem
+# /usr/bin/irb, /usr/bin/ri and man (1) ruby
+
+sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
+
+sudo update-alternatives --config ruby
+sudo update-alternatives --config gem
+
+
+
 EOF
 #not_if "which chef-solo"
 end
@@ -357,9 +377,12 @@ bash "configure_knife" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-# #{Chef::Config[:file_cache_path]}/knife-config.sh
+rm -rf #{HomeDir}/.chef
+#{Chef::Config[:file_cache_path]}/knife-config.sh
+mv #{HomeDir}/.chef/chef.pem #{HomeDir}/chef.pem
+rm -rf #{HomeDir}/.chef
 EOF
-#not_if "test -f #{HomeDir}/knife.rb"
+#not_if "test -f #{HomeDir}/homebase/knife/chef.pem"
 end
 
 
@@ -470,8 +493,8 @@ sudo gem install ironfan --no-rdoc --no-ri
 
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
-echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> /etc/profile 
-echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> /etc/profile 
+echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
+echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
 cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
@@ -501,6 +524,7 @@ mkdir client_keys
 mkdir data_bag_keys
 mkdir ec2_certs
 mkdir ec2_keys
+mv #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/
 
 # TODO: Copy my cookbooks and roles to homebase
 
