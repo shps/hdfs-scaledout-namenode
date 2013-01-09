@@ -269,19 +269,20 @@ code <<-EOF
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 
-echo "chef ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/chef
+sudo apt-get install chef
+
+echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
 sudo chmod 0440 /etc/sudoers.d/chef
-sudo usermod -s /bin/bash #{node[:chef][:user]}
+#sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
 EOF
-not_if "test -f /etc/sudoers.d/chef"
+not_if "test -f /etc/sudoers.d/#{node[:chef][:user]}"
 end
 
 bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-sudo apt-get install chef
 
 sudo apt-get install ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
 
