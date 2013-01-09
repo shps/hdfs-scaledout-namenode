@@ -192,8 +192,8 @@ if [ ! -e #{RvmBaseDir}/scripts/rvm ]
      #fi
 
      EOF
-     not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
-   end
+  not_if "test -f #{HomeDir}/.bash_aliases || `grep rvm #{HomeDir}/.bash_aliases`"
+end
 
 bash "install_chef_ruby" do
 user "#{node[:chef][:user]}"
@@ -456,13 +456,15 @@ mkdir data_bag_keys
 mkdir ec2_certs
 mkdir ec2_keys
 
+# Copy my cookbooks and roles to homebase
+
 mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
-# cd $CHEF_HOMEBASE
-# knife cookbook upload -a
-# for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
-# do 
-#   knife role from file $role 
-# done
+ cd $CHEF_HOMEBASE
+ knife cookbook upload -a
+ for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
+ do 
+   knife role from file $role 
+ done
 touch $CHEF_HOMEBASE/.installed
 EOF
 not_if "test -f #{HomeDir}/homebase/.installed"
@@ -480,4 +482,28 @@ template "#{HomeDir}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}
   owner node[:chef][:user]
   group node[:chef][:user]
   mode 0755
+end
+
+template "#{HomeDir}/clusters/test_cluster.rb" do
+  source "test_cluster.rb.erb"
+  owner node[:chef][:user]
+  group node[:chef][:user]
+  mode 0755
+end
+
+# knife cluster show test_cluster
+# knife cluster launch test_cluster
+# knife cluster sync test_cluster
+# knife cluster bootstrap test_cluster
+or
+# knife cluster bootstrap test_cluster-web-0 
+# knife cluster bootstrap test_cluster-database-0 
+
+bash "configure_ironfan" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+code <<-EOF
+
+EOF
+not_if "test -f #{HomeDir}/homebase/.cookbooks_up"
 end

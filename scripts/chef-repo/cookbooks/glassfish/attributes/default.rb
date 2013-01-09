@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-default['glassfish']['user'] = "glassfish"
+default['glassfish']['user'] = "chef"
 default['glassfish']['group'] = "glassfish-admin"
 
 version = "3.1.2.2"
