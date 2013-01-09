@@ -40,16 +40,6 @@ sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
 EOF
 end
 
-for install_file in %w{vhost.template rvm-installer install-chef-solo.sh} 
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
-    source "#{install_file}"
-    owner node[:chef][:user]
-    group node[:chef][:user]
-    mode 0755
-    action :create_if_missing
-  end
-end
-
 for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget}
    package "#{install_package}" do
      action :install
@@ -62,13 +52,6 @@ for install_package in %w{build-essential openssl libreadline6 libreadline6-dev 
    end
 end
  
-directory "/etc/chef" do
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode "755"
-  action :create
-  recursive true
-end
 
 # directory "#{node[:chef][:base_dir]}" do
 #   owner node[:chef][:user]
@@ -94,33 +77,6 @@ end
 #   recursive true
 # end
 
-
-template "/etc/chef/chef.json" do
-  source "chef.json.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
- template "/etc/chef/solo.rb" do
-   source "solo.rb.erb"
-   owner node[:chef][:user]
-   group node[:chef][:user]
-   mode 0755
- end
-
-template "/etc/chef/server.rb" do
-  source "server.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
-
-template "/etc/chef/webui.rb" do
-  source "webui.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
 
 # template "/etc/chef/solr.rb" do
 #   source "solr.rb.erb"
@@ -287,14 +243,60 @@ EOF
 end
 
 
+directory "/etc/chef" do
+  owner "chef"
+  group "chef"
+  mode "755"
+  action :create
+  recursive true
+end
+
+template "/etc/chef/chef.json" do
+  source "chef.json.erb"
+  owner "chef"
+  group "chef"
+  mode 0755
+end
+ template "/etc/chef/solo.rb" do
+  source "solo.rb.erb"
+  owner "chef"
+  group "chef"
+  mode 0755
+ end
+
+template "/etc/chef/server.rb" do
+  source "server.rb.erb"
+  owner "chef"
+  group "chef"
+  mode 0755
+end
+
+template "/etc/chef/webui.rb" do
+  source "webui.rb.erb"
+  owner "chef"
+  group "chef"
+  mode 0755
+end
+
+for install_file in %w{vhost.template install-chef-solo.sh} 
+  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
+    source "#{install_file}"
+    owner "chef"
+    group "chef"
+    mode 0755
+    action :create_if_missing
+  end
+end
+
 
 bash "install_chef_solo" do
-user "#{node[:chef][:user]}"
+user "chef"
 ignore_failure false
 code <<-EOF
 source /etc/profile.d/rvm.sh
 
-sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+#sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+sudo true && #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
 chef-solo -v
 EOF
 not_if "chef-solo -v"
@@ -303,26 +305,26 @@ end
 
 
 bash "install_chef_server_from_solo" do
-user "#{node[:chef][:user]}"
+user "chef"
 ignore_failure false
 code <<-EOF
 sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 EOF
+not_if "chef-server -v"
 end
 
 
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
   source "knife-config.sh.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
+  owner "chef"
+  group "chef"
   mode 0755
 end
 
 bash "configure_knife" do
-user "#{node[:chef][:user]}"
+user "chef"
 ignore_failure false
 code <<-EOF
-
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 EOF
 end
@@ -426,26 +428,28 @@ end
 # end
 
 bash "configure_ironfan" do
-user "#{node[:chef][:user]}"
+user "chef"
 ignore_failure false
 code <<-EOF
 # # echo "source /home/#{node[:chef][:user]}/.ironfan_bashrc" >> /home/#{node[:chef][:user]}/.bash_aliases
 
 #echo "export CHEF_USERNAME=#{node[:chef][:user]}" > /home/#{node[:chef][:user]}/.ironfan_bashrc
-echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /etc/profile 
+#echo "export CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase" >> /etc/profile 
+echo "export CHEF_HOMEBASE=/var/lib/chef/homebase" >> /etc/profile 
 #/home/#{node[:chef][:user]}/.ironfan_bashrc
+# CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase
 
-CHEF_HOMEBASE=/home/#{node[:chef][:user]}/homebase
-
-cd /home/#{node[:chef][:user]}
+CHEF_HOME=/var/lib/chef
+CHEF_HOMEBASE=$CHEF_HOME/homebase
+cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
-rm -rf /home/#{node[:chef][:user]}/.chef
-ln -sni $CHEF_HOMEBASE/knife /home/#{node[:chef][:user]}/.chef
+rm -rf $CHEF_HOME/.chef
+ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
 
 # Add these files to homebase:
 # knife/
@@ -468,9 +472,9 @@ cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]
 # do 
 #   knife role from file $role 
 # done
-touch /home/#{node[:chef][:user]}/homebase/.installed
+touch $CHEF_HOMEBASE/.installed
 EOF
-not_if "test -f /home/#{node[:chef][:user]}/homebase/.installed"
+not_if "test -f /var/lib/chef/homebase/.installed"
 end
 
 template "/home/#{node[:chef][:user]}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
