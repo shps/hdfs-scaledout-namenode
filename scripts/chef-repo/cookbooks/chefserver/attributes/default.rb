@@ -1,7 +1,7 @@
 # Default values for configuration parameters
 default[:chef][:user] = "chef"
 default[:chef][:password] = "kthfs"
-default[:chef][:base_dir] = "/var/lib/chefserver"
+default[:chef][:base_dir] = "/var/lib/chef"
 default[:chef][:port] = 4000
 default[:chef][:client] = "webui"
 default[:chef][:org] = "kth"
