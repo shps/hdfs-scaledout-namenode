@@ -41,7 +41,7 @@ bash "add_chef_user_sudoers" do
   EOF
 end
 
-for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget}
+for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget debconf}
   package "#{install_package}" do
     action :install
   end
@@ -281,7 +281,26 @@ sudo update-alternatives --config gem
 # now try
 ruby --version
 
-#sudo apt-get install -y -q chef
+  directory "/var/cache/local/preseeding" do
+    owner "root"
+    mode 0755
+    recursive true
+  end
+
+  execute "preseed chef" do
+    command "debconf-set-selections /var/cache/local/preseeding/chef.seed"
+    action :nothing
+  end
+
+  template "/var/cache/local/preseeding/chef.seed" do
+    source "chef.seed.erb"
+    owner "root"
+    mode "0600"
+    notifies :run, resources(:execute => "preseed chef"), :immediately
+  end
+
+
+sudo apt-get install -y -q chef
 
 EOF
 end
@@ -290,7 +309,7 @@ bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+#sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
 
 # Following doesn't work
 # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
