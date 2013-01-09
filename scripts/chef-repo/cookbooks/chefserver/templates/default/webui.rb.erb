@@ -52,6 +52,9 @@ openid_store_path  "/var/lib/chef/openid/store"
 
 openid_cstore_path "/var/lib/chef/openid/cstore"
 
+
+authorized_openid_providers {"https://www.google.com/accounts/o8/id"}
+
 # Mixlib::Log::Formatter.show_time specifies whether the chef-client log should
 # contain timestamps.
 # valid values are true or false. The printed timestamp is rfc2822, for example:

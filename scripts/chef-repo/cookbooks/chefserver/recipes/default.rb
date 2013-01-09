@@ -336,6 +336,7 @@ ignore_failure false
 code <<-EOF
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 EOF
+not_if "test -f #{HomeDir}/knife.rb"
 end
 
 
