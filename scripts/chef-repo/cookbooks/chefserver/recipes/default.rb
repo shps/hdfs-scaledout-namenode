@@ -378,11 +378,10 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 rm -rf #{HomeDir}/.chef
-#{Chef::Config[:file_cache_path]}/knife-config.sh
-mv #{HomeDir}/.chef/chef.pem #{HomeDir}/chef.pem
-rm -rf #{HomeDir}/.chef
+{Chef::Config[:file_cache_path]}/knife-config.sh
+mv #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 EOF
-#not_if "test -f #{HomeDir}/homebase/knife/chef.pem"
+not_if "test -f #{HomeDir}/homebase/knife/#{node[:chef][:user]}.pem"
 end
 
 
@@ -489,7 +488,7 @@ ignore_failure false
 code <<-EOF
 
 #sudo su -l #{node[:chef][:user]} -c "gem install ironfan --no-rdoc --no-ri"
-sudo gem install ironfan --no-rdoc --no-ri
+sudo /usr/bin/gem1.9.1 install ironfan --no-rdoc --no-ri
 
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
@@ -524,7 +523,7 @@ mkdir client_keys
 mkdir data_bag_keys
 mkdir ec2_certs
 mkdir ec2_keys
-mv #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/
+mv #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 
 # TODO: Copy my cookbooks and roles to homebase
 
