@@ -489,6 +489,7 @@ code <<-EOF
 
 #sudo su -l #{node[:chef][:user]} -c "gem install ironfan --no-rdoc --no-ri"
 sudo /usr/bin/gem1.9.1 install ironfan --no-rdoc --no-ri
+sudo /usr/bin/gem1.9.1 install bundle --no-rdoc --no-ri
 
 CHEF_HOME=#{HomeDir}
 CHEF_HOMEBASE=$CHEF_HOME/homebase
@@ -498,7 +499,7 @@ cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
-sudo bundle install
+bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
@@ -574,15 +575,21 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 cd #{HomeDir}/homebase
+
+knife environment create dev -y
+
+# This doesn't seem to do anything.
 rake upload_cookbooks
+# Uploading roles to chef server seems to work ok.
 rake roles
 
-if [ `knife environment show dev` != "0" ]
-then
-  knife environment create dev
-fi
+# Copy all of ironfan's recipes to the chef server
+git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
+cd pantry
+knife cookbook upload -a -o cookbooks/
+
 
 touch #{HomeDir}/homebase/tmp/.uploads_complete
 EOF
-not_if "test -f #{HomeDir}/homebase/tmp/.uploads_complete"
+#not_if "test -f #{HomeDir}/homebase/tmp/.uploads_complete"
 end
