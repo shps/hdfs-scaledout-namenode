@@ -180,7 +180,7 @@ public class ServiceController {
       List<InstanceFullInfo> instanceInfoList = new ArrayList<InstanceFullInfo>();
       List<Service> services = serviceEJB.findInstances(kthfsInstance, hostname, service);
       for (Service s : services) {
-         InstanceFullInfo i = new InstanceFullInfo(s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
+         InstanceFullInfo i = new InstanceFullInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
          i.setPid(s.getPid());
          i.setUptime(Formatter.time(s.getUptime() * 1000));
          instanceInfoList.add(i);
@@ -333,6 +333,10 @@ public class ServiceController {
 
    public int getFailedServiceCount(String kthfsInstance, String service, boolean subService) {
       return serviceEJB.getFailedServicesCount(kthfsInstance, service, subService);
+   }
+   
+   public Long getNdbCount() {
+      return serviceEJB.findServiceCount(kthfsInstance, serviceGroup, "ndb");
    }
 
    public int getStoppedServiceCount(String kthfsInstance, String service, boolean subService) {
