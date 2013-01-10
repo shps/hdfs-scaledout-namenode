@@ -27,7 +27,7 @@ Ironfan.cluster 'test_cluster' do
   end
  
   facet :web do
-    instances 1k
+    instances 1
     recipe 'nginx'
     cloud(:ec2) do
       flavor  'm1.small'
