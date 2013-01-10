@@ -37,7 +37,9 @@ import javax.persistence.*;
    
    @NamedQuery(name = "deleteServicesByHostname", query = "DELETE FROM Service s WHERE s.hostname = :hostname"),
    @NamedQuery(name = "findService-Filter-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (:instance is null OR s.instance = :instance) AND (:service is null OR s.service = :service) AND (s.status = :status)"),
-   @NamedQuery(name = "findService-Filter-Instance-Service", query = "SELECT s FROM Service s WHERE (:instance is null OR  s.instance = :instance) AND (:service is null OR s.service = :service)")
+   @NamedQuery(name = "findService-Filter-Instance-Service", query = "SELECT s FROM Service s WHERE (:instance is null OR  s.instance = :instance) AND (:service is null OR s.service = :service)"),
+   
+   @NamedQuery(name = "findServiceCount", query="SELECT COUNT(s) FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service")
 })
 public class Service implements Serializable {
 

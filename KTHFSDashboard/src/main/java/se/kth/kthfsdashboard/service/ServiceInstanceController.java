@@ -201,7 +201,9 @@ public class ServiceInstanceController implements Serializable {
 
    public boolean getShowSubservices() {
 
-      if (service.equalsIgnoreCase("mysqlcluster") || service.equalsIgnoreCase("yarn")) {
+      System.err.println(">>>>" + service);
+      
+      if (service != null && service.equalsIgnoreCase("mysqlcluster")) {
          return true;
       }
       return false;
@@ -209,9 +211,9 @@ public class ServiceInstanceController implements Serializable {
 
    public boolean getShoWLogs() {
 
-//        if (service.equalsIgnoreCase("mysqlcluster")) {
-//            return false;
-//        }
+        if (service != null &&  service.equalsIgnoreCase("mysqlcluster")) {
+            return false;
+        }
       return true;
    }
 
