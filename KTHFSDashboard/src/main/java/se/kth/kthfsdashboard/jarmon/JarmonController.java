@@ -4,6 +4,8 @@ import java.io.Serializable;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
+import org.primefaces.context.RequestContext;
+import org.primefaces.event.TabChangeEvent;
 
 /**
  *
@@ -13,70 +15,110 @@ import javax.faces.bean.RequestScoped;
 @RequestScoped
 public class JarmonController implements Serializable {
 
-    @ManagedProperty("#{param.service}")
-    private String service;
-    @ManagedProperty("#{param.hostname}")
-    private String hostname;
+   @ManagedProperty("#{param.hostname}")
+   private String hostname;
+   @ManagedProperty("#{param.service}")
+   private String service;
+   @ManagedProperty("#{param.servicegroup}")
+   private String serviceGroup;
+   @ManagedProperty("#{param.kthfsinstance}")
+   private String kthfsInstance;
 
-    public JarmonController() {
-    }
+   public JarmonController() {
+   }
 
-    public String getService() {
-        return service;
-    }
+   public String getService() {
+      return service;
+   }
 
-    public void setService(String service) {
-        this.service = service;
-    }
+   public void setService(String service) {
+      this.service = service;
+   }
 
-    public String getHostname() {
-        return hostname;
-    }
+   public String getHostname() {
+      return hostname;
+   }
 
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
+   public void setHostname(String hostname) {
+      this.hostname = hostname;
+   }
 
-    public boolean getShowJarmonChart() {
+   public String getServiceGroup() {
+      return serviceGroup;
+   }
 
-        if (service == null) {
-            return false;
-        }
+   public void setServiceGroup(String serviceGroup) {
+      this.serviceGroup = serviceGroup;
+   }
 
-        if (service.equalsIgnoreCase("namenode") || 
-                service.equalsIgnoreCase("datanode") || 
-                service.equalsIgnoreCase("mysqld")) {
-            return true;
-        }
-        return false;
-    }
+   public void setKthfsInstance(String kthfsInstance) {
+      this.kthfsInstance = kthfsInstance;
+   }
 
-    public String getJarmonUrl() {
+   public String getKthfsInstance() {
+      return kthfsInstance;
+   }
 
-        if (service.equalsIgnoreCase("namenode")) {
-            return "jarmon-" + service + ".xhtml?hostname=" + hostname + "&jmxparam=FSNamesystem";
-        } else if (service.equalsIgnoreCase("datanode")) {
-            return "jarmon-" + service + ".xhtml?hostname=" + hostname + "&jmxparam=DataNodeActivity";
-        } else if (service.equalsIgnoreCase("mysqld")) {
-            return "jarmon-" + service + ".xhtml?hostname=" + hostname;
-        }
-        return null;
-    }
+   public boolean getShowJarmonChartForJmx() {
+      if (service == null) {
+         return false;
+      }
+      if (service.equalsIgnoreCase("namenode")
+              || service.equalsIgnoreCase("datanode")) {
+         return true;
+      }
+      return false;
+   }
 
-    public String gotoNamenodeActivity() {
-        return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=NameNodeActivity";
-    }
+   public boolean getShowJarmonChartForNdbInfo() {
+      if (service == null) {
+         return false;
+      }
+      if (service.equalsIgnoreCase("mysqld")) {
+         return true;
+      }
+      return false;
+   }
 
-    public String gotoFSNamesystem() {
-        return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=FSNamesystem";
-    }
-    
-    public String gotoFSNamesystemState() {
-        return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=FSNamesystemState";
-    }
-    
-    
-    public String gotoDataNodeActivity() {
-        return "jarmon-datanode?faces-redirect=true&hostname=" + hostname + "&jmxparam=DataNodeActivity";
+   public String getJarmonUrlForJmx() {
+
+      if (service.equalsIgnoreCase("namenode")) {
+         return "jarmon-" + service + ".xhtml?hostname=" + hostname + "&jmxparam=FSNamesystem";
+      } else if (service.equalsIgnoreCase("datanode")) {
+         return "jarmon-" + service + ".xhtml?hostname=" + hostname + "&jmxparam=DataNodeActivity";
+      }
+      return null;
+   }
+
+   public String getJarmonUrlForNdb() {
+
+      if (service.equalsIgnoreCase("mysqld")) {
+         return "jarmon-" + service + ".xhtml?hostname=" + hostname + "&kthfsinstance=" + kthfsInstance + "&servicegroup=" + serviceGroup + "&service=" + service;
+      }
+      return null;
+   }
+
+   public String gotoNamenodeActivity() {
+      return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=NameNodeActivity";
+   }
+
+   public String gotoFSNamesystem() {
+      return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=FSNamesystem";
+   }
+
+   public String gotoFSNamesystemState() {
+      return "jarmon-namenode?faces-redirect=true&hostname=" + hostname + "&jmxparam=FSNamesystemState";
+   }
+
+   public String gotoDataNodeActivity() {
+      return "jarmon-datanode?faces-redirect=true&hostname=" + hostname + "&jmxparam=DataNodeActivity";
+   }
+   
+    public void onTabChange(TabChangeEvent event) {
+       String id = event.getTab().getId();
+        System.out.println(id);
+        
+         RequestContext requestContext = RequestContext.getCurrentInstance();  
+         requestContext.execute("reload('" + id + "')");
     }
 }

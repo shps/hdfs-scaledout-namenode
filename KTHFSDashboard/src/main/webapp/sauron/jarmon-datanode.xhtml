@@ -34,18 +34,18 @@
             $(document).ajaxStart (function() {
                 if(self==parent) return false; /* Checks that page is in iframe. */
                 var FramePageHeight = document.getElementById('jarmondiv').offsetHeight + 30 + 'px';
-                parent.document.getElementById("iframejarmon").style.height= FramePageHeight;
+                parent.document.getElementById("iframe-jarmon-jmx").style.height= FramePageHeight;
             });
             
             $(document).ajaxComplete (function() {
                 if(self==parent) return false; /* Checks that page is in iframe. */
                 var FramePageHeight = document.getElementById('jarmondiv').offsetHeight + 30 + 'px';
-                parent.document.getElementById("iframejarmon").style.height= FramePageHeight;
+                parent.document.getElementById("iframe-jarmon-jmx").style.height= FramePageHeight;
             });
         </script>      
     </h:head>
 
-    <body style="border:0;" id="framePage" onload="resizeIframe()">
+    <body style="border:0;" id="framePage">
         <div id="jarmondiv">
             <div class="jarmon chartRangeControl">
                 <form >

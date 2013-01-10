@@ -15,10 +15,12 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
+import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.ws.rs.core.Response.Status.Family;
 import org.codehaus.jettison.json.JSONObject;
+import org.primefaces.context.RequestContext;
 import se.kth.kthfsdashboard.command.Command;
 import se.kth.kthfsdashboard.command.CommandEJB;
 import se.kth.kthfsdashboard.log.Log;
@@ -56,6 +58,10 @@ public class HostController implements Serializable {
    private String serviceGroup;
    @ManagedProperty("#{param.service}")
    private String service;
+   
+   @ManagedProperty(value="#{progress}")
+   private ProgressBean progress;   
+   
    private Host host;
    private boolean currentHostAvailable;
    private long lastUpdate;
@@ -243,7 +249,7 @@ public class HostController implements Serializable {
 
       return collectdTools.typeInstances(hostname, "interface").toString();
    }
-
+   
    public void doCommand(ActionEvent actionEvent) throws NoSuchAlgorithmException, Exception {
 
       //  TODO: If the web application server craches, status will remain 'Running'.
@@ -295,4 +301,37 @@ public class HostController implements Serializable {
       FacesContext.getCurrentInstance().addMessage(null, message);
    }
 
+   
+   
+   
+   
+   public void doCommandTest(ActionEvent actionEvent) {
+
+
+      RequestContext context = RequestContext.getCurrentInstance();
+      context.execute("dlgstartstop.show()");
+
+      context.execute("prog.start()");
+
+      progress = new ProgressBean();
+      progress.setProgress(50);
+
+      System.err.println("####################");       
+      
+//      context.execute("prog.stop()");
+   
+   }   
+
+   public ProgressBean getProgress() {
+      return progress;
+   }
+
+   public void setProgress(ProgressBean progress) {
+      this.progress = progress;
+   }
+
+
+   
+   
+   
 }
