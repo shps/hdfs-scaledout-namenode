@@ -25,7 +25,7 @@
 #   end
 # end
 
-HomeDir=#{node[:chef][:base_dir]}
+HomeDir="#{node[:chef][:base_dir]}"
 user node[:chef][:user] do
   action :create
   shell "/bin/bash"
