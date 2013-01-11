@@ -2,7 +2,7 @@ bash "add_knife_eucalyptus" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-sudo gem install net-ssh net-ssh-multi fog highline --no-rdoc --no-ri --verbose
+sudo gem install knife-eucalyptus --no-rdoc --no-ri --verbose
 
 echo"
 

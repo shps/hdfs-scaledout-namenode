@@ -45,6 +45,7 @@ Vagrant::Config.run do |config|
 #     chef.add_recipe "ndb::mysqld-bootstrap"
      chef.add_recipe "chefserver"
      chef.add_recipe "chefserver::ironfan"
+     chef.add_recipe "chefserver::ec2"
   end 
 
 end
