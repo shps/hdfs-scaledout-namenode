@@ -5,11 +5,11 @@ majorVersion="2"
 minorVersion="9"
 versionStr= "7.2.9"
 
-default[:ndb][:loglevel]  = "notice"
+default[:ndb][:loglevel]   = "notice"
 default[:ndb][:mgm_server] = "10.0.2.15"
-default[:ndb][:user]      = "root"
+default[:ndb][:user]       = "root"
 default[:ndb][:group]      = "root"
-default[:ndb][:port]      = "1186"
+default[:ndb][:port]       = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
 default[:ndb][:package_url] = "http://dev.mysql.com/get/Downloads/MySQL-Cluster-#{version}.#{majorVersion}/mysql-cluster-gpl-#{versionStr}-linux2.6-x86_64.tar.gz"
 default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server]}:#{ default[:ndb][:port]}"
@@ -44,3 +44,5 @@ default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
 default[:mgm][:id] = 62
 default[:mysql][:id] = 63
+
+default[:ndb][:wait_to_start_timeout] = 300
