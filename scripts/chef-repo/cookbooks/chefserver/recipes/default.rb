@@ -364,7 +364,7 @@ ignore_failure false
 code <<-EOF
 rm -rf #{HomeDir}/.chef
 #{Chef::Config[:file_cache_path]}/knife-config.sh
-cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+# cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
