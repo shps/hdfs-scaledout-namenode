@@ -1,6 +1,6 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
-for install_gem in node[:chef][:ironfan_gems]
+for install_gem in node[:ironfan][:gems]
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
     source "#{install_gem}.gem"
     owner node[:chef][:user]
