@@ -1,4 +1,4 @@
-HomeDir=#{node[:chef][:base_dir]}
+HomeDir="#{node[:chef][:base_dir]}"
 
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
@@ -7,16 +7,19 @@ code <<-EOF
 
 sudo gem install ironfan --no-rdoc --no-ri
 sudo gem install bundle --no-rdoc --no-ri
+sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
-CHEF_HOME=#{HomeDir}
-CHEF_HOMEBASE=$CHEF_HOME/homebase
+export CHEF_HOME=#{HomeDir}
+export CHEF_HOMEBASE=$CHEF_HOME/homebase
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
 echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
 cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
-bundle install
+
+# TODO - not working
+sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
@@ -41,10 +44,12 @@ mkdir client_keys
 mkdir data_bag_keys
 mkdir ec2_certs
 mkdir ec2_keys
-mv #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
+# copy instead of move to make the recipe idempotent wrt chefserver installation.
+cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 
-touch $CHEF_HOMEBASE/tmp/.installed
+touch $CHEF_HOMEBASE/.installed
 EOF
+not_if "test -f $CHEF_HOMEBASE/.installed"
 end
 
 template "#{HomeDir}/homebase/knife/credentials/knife-org.rb" do
@@ -94,6 +99,7 @@ git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 cd pantry
 knife cookbook upload -a -o cookbooks/
 
-touch #{HomeDir}/homebase/tmp/.uploads_complete
+touch #{HomeDir}/homebase/.uploads_complete
 EOF
+not_if "test -f #{HomeDir}/homebase/.uploads_complete"
 end
