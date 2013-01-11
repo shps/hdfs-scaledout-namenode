@@ -366,7 +366,7 @@ rm -rf #{HomeDir}/.chef
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 mv #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 EOF
-not_if "test -f #{HomeDir}/homebase/knife/#{node[:chef][:user]}.pem"
+not_if "test -f #{HomeDir}/homebase/knife/knife.rb"
 end
 
 
