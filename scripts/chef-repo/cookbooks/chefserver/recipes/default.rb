@@ -25,7 +25,7 @@
 #   end
 # end
 
-HomeDir="/var/lib/chef"
+HomeDir=#{node[:chef][:base_dir]}
 user node[:chef][:user] do
   action :create
   shell "/bin/bash"
@@ -331,23 +331,8 @@ sudo apt-get install -y -q chef
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
 
-
-sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
-                        /usr/share/man/man1/ruby1.9.1.1.gz \
-        --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
-        --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
-        --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
-
-# choose your interpreter
-# changes symlinks for /usr/bin/ruby , /usr/bin/gem
-# /usr/bin/irb, /usr/bin/ri and man (1) ruby
-
-sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
-
-sudo update-alternatives --config ruby
-sudo update-alternatives --config gem
-
-
+sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
+sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
 EOF
 #not_if "which chef-solo"
@@ -482,114 +467,3 @@ AllGems=node[:chef][:gems].join(" ")
 # EOF
 # end
 
-bash "configure_ironfan" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-#sudo su -l #{node[:chef][:user]} -c "gem install ironfan --no-rdoc --no-ri"
-sudo /usr/bin/gem1.9.1 install ironfan --no-rdoc --no-ri
-sudo /usr/bin/gem1.9.1 install bundle --no-rdoc --no-ri
-
-CHEF_HOME=#{HomeDir}
-CHEF_HOMEBASE=$CHEF_HOME/homebase
-echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
-echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
-cd $CHEF_HOME
-
-git clone https://github.com/infochimps-labs/ironfan-homebase homebase
-cd homebase
-bundle install
-git submodule update --init
-git submodule foreach git checkout master
-
-rm -rf $CHEF_HOME/.chef
-ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
-
-# Add these files to homebase:
-# knife/
-#   credentials/
-#      knife-user-{username}.rb
-#      {username}.pem
-#      {organization}-validator.pem
-
-rm -rf $CHEF_HOMEBASE/knife/credentials
-cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
-cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
-cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
-sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
-cd $CHEF_HOMEBASE/knife/credentials/
-mkdir certificates
-mkdir client_keys
-mkdir data_bag_keys
-mkdir ec2_certs
-mkdir ec2_keys
-mv #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
-
-# TODO: Copy my cookbooks and roles to homebase
-
-mkdir -p $CHEF_HOMEBASE/tmp/.ironfan-clusters
- # cd $CHEF_HOMEBASE
- # knife cookbook upload -a
- # for role in $CHEF_HOMEBASE/cookbooks/roles/*.rb
- # do 
- #   knife role from file $role 
- # done
-
-touch $CHEF_HOMEBASE/tmp/.installed
-EOF
-#not_if "test -f #{HomeDir}/homebase/tmp/.installed"
-end
-
-template "#{HomeDir}/homebase/knife/credentials/knife-org.rb" do
-  source "knife-org.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
-
-template "#{HomeDir}/homebase/knife/credentials/knife-user-#{node[:chef][:user]}.rb" do
-  source "knife-user.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
-
-template "#{HomeDir}/homebase/clusters/test_cluster.rb" do
-  source "test_cluster.rb.erb"
-  owner node[:chef][:user]
-  group node[:chef][:user]
-  mode 0755
-end
-
-# knife cluster list
-# knife cluster show test_cluster
-# knife cluster launch test_cluster
-# knife cluster sync test_cluster
-# knife cluster bootstrap test_cluster
-# knife cluster bootstrap test_cluster-web-0 
-# knife cluster bootstrap test_cluster-database-0 
-
-bash "upload_roles_cookbooks" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-cd #{HomeDir}/homebase
-
-knife environment create dev -y
-
-# This doesn't seem to do anything.
-rake upload_cookbooks
-# Uploading roles to chef server seems to work ok.
-rake roles
-
-# Copy all of ironfan's recipes to the chef server
-git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-cd pantry
-knife cookbook upload -a -o cookbooks/
-
-
-touch #{HomeDir}/homebase/tmp/.uploads_complete
-EOF
-#not_if "test -f #{HomeDir}/homebase/tmp/.uploads_complete"
-end
