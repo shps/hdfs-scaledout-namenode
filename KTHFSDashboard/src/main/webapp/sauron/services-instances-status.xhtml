@@ -30,6 +30,31 @@
                }
             }
          </script>
+         
+         
+<script type="text/javascript">  
+    function start() {  
+        startButton1.disable();  
+        window['progress'] = setInterval(function() {  
+            var oldValue = pbClient.getValue(),  
+            newValue = oldValue + 10;  
+  
+            pbClient.setValue(pbClient.getValue() + 10);  
+  
+            if(newValue == 100) {  
+                clearInterval(window['progress']);  
+            }  
+  
+  
+        }, 1000);  
+    }  
+  
+    function cancel() {  
+        clearInterval(window['progress']);  
+        pbClient.setValue(0);  
+        startButton1.enable();  
+    }  
+</script>           
       </ui:define>
 
 
@@ -129,15 +154,15 @@
 
             <h:outputText value="Commands:" />  <br/><br/>
 
-            <p:progressBar interval="500" widgetVar="prog" ajax="true" value="#{progressBean.progress}" labelTemplate="{value}%" styleClass="animated">  
-
-            </p:progressBar>  
+            
+            <p:progressBar widgetVar="prog1" value="#{executeCommandController.progressValue('a1')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
+            <p:progressBar widgetVar="prog2" value="#{executeCommandController.progressValue('a2')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
 
             </p:dialog>                      
          </h:form>                         
 
          <h:form id="test">                  
-            <p:commandButton id="modalDialogButton" value="Test" onclick="prog.start()" actionListener="#{hostController.doCommandTest}" ajax="true">
+            <p:commandButton id="modalDialogButton" value="Test 2" actionListener="#{executeCommandController.doCommandTest}" ajax="true" onclick="prog1.setValue(0);prog1.setValue(0);dlgstartstop.show();prog1.start();prog2.start();">
                <f:param name="hostname" value="#{hostController.hostname}" />
                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
                <f:param name="service" value="#{hostController.service}" />
