@@ -25,7 +25,7 @@ Vagrant::Config.run do |config|
   #Collectd network plugin
   config.vm.forward_port 25826,25826,{ :protocol => "udp"}
 
-   config.vm.provision :chef_solo, chef.log_level => :debug do |chef|
+   config.vm.provision :chef_solo, :log_level => :debug do |chef|
      chef.log_level = :debug
      chef.cookbooks_path = "cookbooks"
      chef.add_recipe "authbind"
