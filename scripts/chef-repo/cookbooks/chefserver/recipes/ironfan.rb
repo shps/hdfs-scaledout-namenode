@@ -49,6 +49,9 @@ mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 
+# try it again
+bundle install
+
 touch $CHEF_HOMEBASE/.installed
 EOF
 not_if "test -f $CHEF_HOMEBASE/.installed"
@@ -101,7 +104,7 @@ fi
 
 # Copy all of ironfan's recipes to the chef server
 git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-knife cookbook upload -a -o ./pantry/cookbooks/
+knife cookbook upload -a -o ./pantry/cookbooks/ # 
 if (knife cookbook list | wc -l) < 2 ; then
  exit 1
 fi
