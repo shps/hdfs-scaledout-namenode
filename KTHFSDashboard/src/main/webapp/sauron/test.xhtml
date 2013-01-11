@@ -6,31 +6,40 @@
       xmlns:p="http://primefaces.org/ui"
       >
 
-    <h:head>
-        <title>Default title</title>
-        <link rel="stylesheet" type="text/css" href="#{resource['/css/layout.css']}" />
+   <h:head>
+      <title>Test Page</title>
+      <link rel="stylesheet" type="text/css" href="#{resource['/css/layout.css']}" />
 
-    </h:head>
+   </h:head>
 
    <h:body>
-         <p>Test</p>
+      <p>Test</p>
 
-         <h:form>  
+      <h:form>  
+         <p:dataTable var="item" value="#{mySQLController.info}">  
+            <p:column headerText="Node id">  
+               <h:outputText value="#{item.nodeId}" />  
+            </p:column>  
 
-            <p:growl id="growl" />  
+            <p:column headerText="Status">  
+               <h:outputText value="#{item.status}" />  
+            </p:column>  
+            <p:column headerText="Up time">  
+               <h:outputText value="#{item.upTime}" />  
+            </p:column>
+
+            <p:column headerText="Start phase">  
+               <h:outputText value="#{item.startPhase}" />  
+            </p:column>
+            <p:column headerText="Up time">  
+               <h:outputText value="#{item.configGeneration}" />  
+            </p:column>
+         </p:dataTable>
+      </h:form>
 
 
-            <h3>Ajax ProgressBar with Growl Integration</h3>  
-            <p:commandButton value="Start" type="button" onclick="pbAjax.start();startButton2.disable();" widgetVar="startButton2" />  
-            <p:commandButton value="Cancel" actionListener="#{progressBean.progress}" oncomplete="pbAjax.cancel();startButton2.enable();" />  
 
-            <p:progressBar widgetVar="pbAjax" ajax="true" value="#{progressBean.progress}" labelTemplate="{value}%" styleClass="animated" interval="500">  
-               <p:ajax event="complete" listener="#{progressBean.onComplete}" update="growl" oncomplete="startButton2.enable()"/>  
-            </p:progressBar>  
-
-         </h:form>                   
-
-</h:body>
+   </h:body>
 
 </html>
 

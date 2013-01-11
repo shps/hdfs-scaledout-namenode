@@ -116,6 +116,8 @@
 
          <p:spacer width="1" height="10" />
 
+
+
          <h:form id="form_messages" >
             <p:messages id="messages" showDetail="true" autoUpdate="true"/>  
          </h:form>
@@ -187,9 +189,38 @@
 
          <p:accordionPanel id ="acoordion1" activeIndex="-1">
             <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />
-            <p:tab id="ndbinfo" title ="NDB Info" rendered="#{jarmonController.showJarmonChartForNdbInfo}">
+            <p:tab id="ndbinfo" title ="NDB Info" rendered="#{serviceController.showNdbInfo}">
                <iframe id="iframe-jarmon-ndbinfo" src="#{jarmonController.jarmonUrlForNdb}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
             </p:tab>
+
+
+            <p:tab id="nodes" title="NDB Info (Nodes)" rendered="#{serviceController.showNdbInfo}">
+
+               <h:form>  
+                  <p:dataTable var="item" value="#{mySQLController.info}">  
+                     <p:column headerText="Node id">  
+                        <h:outputText value="#{item.nodeId}" />  
+                     </p:column>  
+
+                     <p:column headerText="Status">  
+                        <h:outputText value="#{item.status}" />  
+                     </p:column>  
+                     <p:column headerText="Up time">  
+                        <h:outputText value="#{item.upTime}" />  
+                     </p:column>
+
+                     <p:column headerText="Start phase">  
+                        <h:outputText value="#{item.startPhase}" />  
+                     </p:column>
+                     <p:column headerText="Up time">  
+                        <h:outputText value="#{item.configGeneration}" />  
+                     </p:column>
+                  </p:dataTable>
+               </h:form>
+
+            </p:tab>
+
+
             <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.shoWLogs}">
                <h:form id="logsform">
                   <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs">
@@ -216,6 +247,7 @@
                </h:form>
             </p:tab>                 
          </p:accordionPanel>            
+
 
 
       </ui:define>

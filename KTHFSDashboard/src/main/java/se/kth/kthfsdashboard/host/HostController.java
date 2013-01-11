@@ -1,5 +1,6 @@
 package se.kth.kthfsdashboard.host;
 
+import se.kth.kthfsdashboard.command.ProgressBean;
 import com.sun.jersey.api.client.ClientResponse;
 import java.io.Serializable;
 import java.security.NoSuchAlgorithmException;

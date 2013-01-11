@@ -1,4 +1,4 @@
-package se.kth.kthfsdashboard.host;
+package se.kth.kthfsdashboard.command;
 
   
 import java.io.Serializable;  
