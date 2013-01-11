@@ -2,6 +2,7 @@
 ID=<%= @node_id %>
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
 PID=`cat $PID_FILE`
+PID=`expr $PID + 1`
 echo ""
 echo "Killing ndbd with process-id $PID in file $PID_FILE"
 echo ""
