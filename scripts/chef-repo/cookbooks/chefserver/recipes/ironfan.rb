@@ -1,5 +1,20 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
+for install_gem in node[:chef][:ironfan_gems]
+  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+    source "#{install_gem}.gem"
+    owner node[:chef][:user]
+    group node[:chef][:user]
+    mode 0755
+    action :create_if_missing
+  end
+  gem_package "#{install_gem}" do
+    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+    action :install
+  end
+end
+
+
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
@@ -19,6 +34,16 @@ cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
+
+
+ # for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
+ # do
+ #   if [ ! "`gem list | grep \"${gem} \"`" ]
+ #   then
+ #     echo "INSTALLING: ${gem}"
+ #     sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri" # 
+ #   fi
+ # done
 
 # TODO - not working
 bundle install
@@ -48,9 +73,6 @@ mkdir ec2_certs
 mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
-
-# try it again
-bundle install
 
 touch $CHEF_HOMEBASE/.installed
 EOF
@@ -93,7 +115,6 @@ code <<-EOF
 cd #{HomeDir}/homebase
 source #{HomeDir}/.bashrc
 
-bundle install
 # This doesn't seem to do anything.
 # Uploading roles to chef server seems to work ok.
 rake roles
