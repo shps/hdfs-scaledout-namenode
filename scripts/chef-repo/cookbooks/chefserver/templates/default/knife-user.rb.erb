@@ -8,8 +8,8 @@ Chef::Config.instance_eval do
   # EC2 cloud keys
   #
 
-   knife[:aws_access_key_id]      = "<%= node[:aws][:key_id] %>"
-   knife[:aws_secret_access_key]  = "<%= node[:aws][:secret] %>"
+   knife[:aws_access_key_id]      = "<%= node[:aws_access_key_id] %>"
+   knife[:aws_secret_access_key]  = "<%= node[:aws_secret_access_key] %>"
 
   #
   # Cookbook templating -- only
