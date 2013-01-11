@@ -7,6 +7,7 @@ code <<-EOF
 
 sudo gem install ironfan --no-rdoc --no-ri
 sudo gem install bundle --no-rdoc --no-ri
+sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
@@ -16,7 +17,9 @@ cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
-bundle install
+
+# TODO - not working
+sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
