@@ -70,16 +70,6 @@ public class JarmonController implements Serializable {
       return false;
    }
 
-   public boolean getShowJarmonChartForNdbInfo() {
-      if (service == null) {
-         return false;
-      }
-      if (service.equalsIgnoreCase("mysqld")) {
-         return true;
-      }
-      return false;
-   }
-
    public String getJarmonUrlForJmx() {
 
       if (service.equalsIgnoreCase("namenode")) {
@@ -113,12 +103,10 @@ public class JarmonController implements Serializable {
    public String gotoDataNodeActivity() {
       return "jarmon-datanode?faces-redirect=true&hostname=" + hostname + "&jmxparam=DataNodeActivity";
    }
-   
-    public void onTabChange(TabChangeEvent event) {
-       String id = event.getTab().getId();
-        System.out.println(id);
-        
-         RequestContext requestContext = RequestContext.getCurrentInstance();  
-         requestContext.execute("reload('" + id + "')");
-    }
+
+   public void onTabChange(TabChangeEvent event) {
+      String id = event.getTab().getId();
+      RequestContext requestContext = RequestContext.getCurrentInstance();
+      requestContext.execute("reload('" + id + "')");
+   }
 }

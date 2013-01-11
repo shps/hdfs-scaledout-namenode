@@ -392,4 +392,15 @@ public class ServiceController {
    public String getNotAvailable() {
       return NOT_AVAILABLE;
    }
+   
+   
+      public boolean getShowNdbInfo() {
+      if (service == null) {
+         return false;
+      }
+      if (service.equalsIgnoreCase("mysqld")) {
+         return true;
+      }
+      return false;
+   }
 }
