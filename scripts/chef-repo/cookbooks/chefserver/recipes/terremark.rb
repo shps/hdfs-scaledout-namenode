@@ -1,3 +1,6 @@
+HomeDir="#{node[:chef][:base_dir]}"
+
+
 bash "add_knife_terremark" do
 user "#{node[:chef][:user]}"
 ignore_failure false

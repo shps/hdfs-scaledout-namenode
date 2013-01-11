@@ -1,3 +1,5 @@
+HomeDir="#{node[:chef][:base_dir]}"
+
 bash "add_knife_ec2" do
 user "#{node[:chef][:user]}"
 ignore_failure false
