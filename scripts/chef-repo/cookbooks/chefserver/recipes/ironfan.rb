@@ -35,7 +35,6 @@ cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 
-
  # for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
  # do
  #   if [ ! "`gem list | grep \"${gem} \"`" ]
@@ -45,10 +44,11 @@ cd homebase
  #   fi
  # done
 
-# TODO - not working
+# TODO - bundle not working. Maybe it's a 1.8 version of ruby?
 bundle install
 git submodule update --init
 git submodule foreach git checkout master
+
 
 rm -rf $CHEF_HOME/.chef
 ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
@@ -73,6 +73,7 @@ mkdir ec2_certs
 mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
+
 
 touch $CHEF_HOMEBASE/.installed
 EOF
@@ -112,25 +113,26 @@ bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-cd #{HomeDir}/homebase
 source #{HomeDir}/.bashrc
+cd #{HomeDir}/homebase
+git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 
-# This doesn't seem to do anything.
-# Uploading roles to chef server seems to work ok.
-rake roles
+# 'rake roles' doesn't work, and knife is recommended for uploading roles
+knife role from file roles/*.rb
 
 if (knife role list | wc -l) < 2 ; then
  exit 1
 fi
 
 # Copy all of ironfan's recipes to the chef server
-git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-knife cookbook upload -a -o ./pantry/cookbooks/ # 
+knife cookbook upload -a -o ./pantry/cookbooks/
 if (knife cookbook list | wc -l) < 2 ; then
  exit 1
 fi
 
 #knife environment create dev -y
+#knife environment create prod -y
+#knife environment create stag -y
 touch #{HomeDir}/homebase/.uploads_complete
 EOF
 not_if "test -f #{HomeDir}/homebase/.uploads_complete"
