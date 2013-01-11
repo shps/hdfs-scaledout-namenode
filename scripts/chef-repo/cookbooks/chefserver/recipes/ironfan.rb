@@ -11,15 +11,17 @@ sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
+export EDITOR=vi
 echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
 echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
+echo "export EDITOR=vi" >> #{HomeDir}/.bash_aliases 
 cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 
 # TODO - not working
-sudo bundle install
+bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
@@ -88,17 +90,23 @@ code <<-EOF
 cd #{HomeDir}/homebase
 source #{HomeDir}/.bashrc
 
-knife environment create dev -y
+bundle install
 # This doesn't seem to do anything.
-rake upload_cookbooks
 # Uploading roles to chef server seems to work ok.
 rake roles
 
+if (knife role list | wc -l) < 2 ; then
+ exit 1
+fi
+
 # Copy all of ironfan's recipes to the chef server
 git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-cd pantry
-knife cookbook upload -a -o cookbooks/
+knife cookbook upload -a -o ./pantry/cookbooks/
+if (knife cookbook list | wc -l) < 2 ; then
+ exit 1
+fi
 
+#knife environment create dev -y
 touch #{HomeDir}/homebase/.uploads_complete
 EOF
 not_if "test -f #{HomeDir}/homebase/.uploads_complete"
