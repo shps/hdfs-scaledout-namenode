@@ -334,9 +334,6 @@ sudo apt-get install -y -q chef
 #sudo usermod -s /bin/bash #{node[:chef][:user]}
 #sudo chef-solo -v
 
-sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
-sudo update-alternatives --set gem /usr/bin/gem1.9.1
-
 EOF
 #not_if "which chef-solo"
 end
@@ -349,6 +346,7 @@ code <<-EOF
 #chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 #sudo #{node[:ruby][:base_dir]}/bin/chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
 sudo apt-get install -y -q chef-server chef-server-api chef-server-webui chef-solr
+
 EOF
 #not_if "which chef-server"
 end
@@ -368,7 +366,10 @@ code <<-EOF
 rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
 #{Chef::Config[:file_cache_path]}/knife-config.sh
-# cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
+sudo update-alternatives --set gem /usr/bin/gem1.9.1
+
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
@@ -389,7 +390,7 @@ end
 #    # end
 # end
 
-AllGems=node[:chef][:gems].join(" ")
+#AllGems=node[:chef][:gems].join(" ")
 
 # bash "install_chef_server2e" do
 # user "#{node[:chef][:user]}"
@@ -470,4 +471,3 @@ AllGems=node[:chef][:gems].join(" ")
 
 # EOF
 # end
-
