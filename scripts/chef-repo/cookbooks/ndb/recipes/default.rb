@@ -6,6 +6,18 @@ user node[:ndb][:user] do
   shell "/bin/bash"
 end
 
+directory node[:ndb][:version_dir] do
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode "755"
+  action :create
+  recursive true
+end
+
+link node[:ndb][:base_dir] do
+  to node[:ndb][:version_dir]
+end
+
 directory node[:ndb][:scripts_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]

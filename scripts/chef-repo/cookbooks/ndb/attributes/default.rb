@@ -24,9 +24,12 @@ default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh nd
 default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
 
 default[:ndb][:version] = #{versionStr}
-default[:ndb][:base_dir] = "/var/lib/mysql-cluster/ndb-#{versionStr}"
-default[:ndb][:log_dir] = "#{default[:ndb][:base_dir]}" + "/log"
-default[:ndb][:data_dir] = "/var/lib/mysql-cluster/ndb_data"
+default[:ndb][:root_dir] = "/var/lib/mysql-cluster"
+default[:ndb][:log_dir] = "#{default[:ndb][:root_dir]}" + "/log"
+default[:ndb][:data_dir] = "#{default[:ndb][:root_dir]}" + "/ndb_data"
+default[:ndb][:version_dir] = "#{default[:ndb][:root_dir]}" + "/ndb-#{versionStr}"
+default[:ndb][:base_dir] = "#{default[:ndb][:root_dir]}" + "/ndb"
+
 default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
 default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
 
@@ -34,7 +37,6 @@ default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
-default[:ndb][:inifile_gem] = "http://lucan.sics.se/kthfs/inifile-2.0.2.gem"
 default[:ndb][:instance] = "hdfs1"
 
 default[:ndb][:wait_startup] = 300

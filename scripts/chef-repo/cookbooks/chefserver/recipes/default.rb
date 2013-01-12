@@ -322,8 +322,6 @@ bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
-sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
 sudo apt-get install -y -q chef
 
