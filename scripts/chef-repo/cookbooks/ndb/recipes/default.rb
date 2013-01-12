@@ -55,7 +55,7 @@ end
 
 bash "unpack_mysql_cluster" do
     code <<-EOF
-# cd #{Chef::Config[:file_cache_path]}
+cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
 #rm #{base_package_filename}
 cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
