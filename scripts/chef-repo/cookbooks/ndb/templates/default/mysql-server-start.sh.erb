@@ -55,6 +55,6 @@ MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
 # exit 1
 #fi
 
-<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= @ndb_dir %>/log/mysql.err.log 2> <%= @ndb_dir %>/log/mysql.out.log  &
+<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= node[:ndb][:log_dir] %>/mysql.err.log 2> <%= node[:ndb][:log_dir] %>/mysql.out.log  &
 exit $?
 

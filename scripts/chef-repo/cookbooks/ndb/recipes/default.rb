@@ -1,4 +1,4 @@
-include_recipe "kthfsagent"
+#include_recipe "kthfsagent"
 
 user node[:ndb][:user] do
   action :create
@@ -40,32 +40,14 @@ directory node[:ndb][:log_dir] do
   recursive true
 end
 
-
 directory node[:mysql][:version_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode "755"
+  action :create
   recursive true
 end
 
-link node[:mysql][:base_dir] do
-  action :delete
-  only_if "test -L #{node[:mysql][:base_dir]}"
-end
-
-link node[:mysql][:base_dir] do
-  to node[:mysql][:version_dir]
-end
-
-
-template "#{node[:ndb][:base_dir]}/config.ini" do
-  source "config.ini.erb"
-  owner node[:ndb][:user]
-  group node[:ndb][:user]
-  mode 0644
-  variables({:cores => node[:cpu][:total]})
-#    notifies :restart, resources(:service => "ndbd")
-end
 
 package_url = "#{node[:ndb][:package_url]}/#{node[:ndb][:package_src]}"
 Chef::Log.info "Downloading mysql cluster binaries from #{package_url}"
@@ -87,8 +69,19 @@ bash "unpack_mysql_cluster" do
 cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
 cp -r #{base_package_dirname}/* #{node[:mysql][:version_dir]}
+test -f #{node[:mysql][:base_dir]} && rm -rf #{node[:mysql][:base_dir]}
 EOF
-  not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
+  not_if { ::File.exists?( "#{node[:mysql][:version_dir]}/bin/ndbd" ) }
+end
+
+# Bug - this prevent link from being created
+# link node[:mysql][:base_dir] do
+#   action :delete
+#   only_if "test -L #{node[:mysql][:base_dir]}"
+# end
+
+link node[:mysql][:base_dir] do
+  to node[:mysql][:version_dir]
 end
 
 
@@ -101,4 +94,3 @@ end
 #    append_env_path true
 #    owner node[:ndb][:user] 
 # end
-

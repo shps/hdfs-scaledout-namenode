@@ -33,7 +33,7 @@ start() {
 stop() {
   $EXEC_WITH_USER "$STOP_PROG"
 
-  PID_FILE=<%= node[:ndb][:logs_dir] %> + "/ndb_<%= node[:mgm][:id] %>.pid" 
+  PID_FILE=<%= node[:ndb][:log_dir] %> + "/ndb_<%= node[:mgm][:id] %>.pid" 
   PROCESS_ID=`cat $PID_FILE`
   echo "Shutting down"
   kill $PROCESS_ID

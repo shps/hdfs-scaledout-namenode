@@ -27,6 +27,16 @@ service "ndb_mgmd" do
   action [ :nothing ]
 end
 
+
+template "#{node[:ndb][:base_dir]}/config.ini" do
+  source "config.ini.erb"
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode 0644
+  variables({:cores => node[:cpu][:total]})
+  notifies :restart, resources(:service => "ndb_mgmd")
+end
+
 template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
@@ -38,5 +48,5 @@ template "/etc/init.d/ndb_mgmd" do
               :connect_string => node[:ndb][:connect_string],
             })
   notifies :enable, resources(:service => "ndb_mgmd")
-  notifies :start, resources(:service => "ndb_mgmd")
+  notifies :start, resources(:service => "ndb_mgmd"), :immediately
 end

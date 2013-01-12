@@ -1,3 +1,4 @@
+
 bash "mgmd_start" do
 user "#{node[:ndb][:user]}"
 code <<-EOF
