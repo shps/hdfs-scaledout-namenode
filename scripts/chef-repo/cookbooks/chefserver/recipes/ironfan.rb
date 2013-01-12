@@ -8,10 +8,10 @@ for install_gem in node[:ironfan][:gems]
     mode 0755
     action :create_if_missing
   end
-  gem_package "#{install_gem}" do
-    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-    action :install
-  end
+  # gem_package "#{install_gem}" do
+  #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+  #   action :install
+  # end
 end
 
 
@@ -20,15 +20,26 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 
+
+ for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
+ do
+   if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
+   then
+     echo "INSTALLING: ${gem}"
+     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
+   fi
+ done
+
+
 # sudo gem install ironfan --no-rdoc --no-ri
 # sudo gem install bundle --no-rdoc --no-ri
 # sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
-   if [ ! "`/usr/bin/gem1.9.1 list | grep \"chozo \"`" ]
-   then
-     echo "INSTALLING: chozo"
-     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/chozo-0.3.0.gem --no-rdoc --no-ri" # 
-   fi
+   # if [ ! "`/usr/bin/gem1.9.1 list | grep \"chozo \"`" ]
+   # then
+   #   echo "INSTALLING: chozo"
+   #   sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/chozo-0.3.0.gem --no-rdoc --no-ri" # 
+   # fi
 
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
@@ -40,17 +51,6 @@ cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
-
- # for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
- # do
- #   if [ ! "`gem list | grep \"${gem} \"`" ]
- #   then
- #     echo "INSTALLING: ${gem}"
- #     sudo su -l #{node[:chef][:user]} -c "gem install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri" # 
- #   fi
- # done
-
-
 
 # TODO - bundle not working. Maybe it's a 1.8 version of ruby?
 bundle install
