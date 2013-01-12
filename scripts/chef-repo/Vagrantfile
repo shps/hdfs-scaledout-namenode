@@ -28,11 +28,11 @@ Vagrant::Config.run do |config|
    config.vm.provision :chef_solo do |chef|
      chef.cookbooks_path = "cookbooks"
      chef.log_level = :debug
-     chef.add_recipe "ndb::mgmd"
-     chef.add_recipe "ndb::ndbd"
-     chef.add_recipe "ndb::mysqld"
+#     chef.add_recipe "ndb::mgmd"
+#     chef.add_recipe "ndb::ndbd"
+#     chef.add_recipe "ndb::mysqld"
 #     chef.add_recipe "ndb::wait-cluster-ready"
-#     chef.add_recipe "ndb::mysqld-start"
+     chef.add_recipe "ndb::mysqld-init"
   end 
 
 end
