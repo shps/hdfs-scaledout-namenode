@@ -322,6 +322,9 @@ bash "install_chef_solo" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
+sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
+sudo update-alternatives --set gem /usr/bin/gem1.9.1
+
 sudo apt-get install -y -q chef
 
 #sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
@@ -363,6 +366,7 @@ user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 rm -rf #{HomeDir}/.chef
+cd #{HomeDir}
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 # cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 EOF
