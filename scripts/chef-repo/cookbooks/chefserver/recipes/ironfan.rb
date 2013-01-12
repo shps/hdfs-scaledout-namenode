@@ -44,6 +44,13 @@ cd homebase
  #   fi
  # done
 
+   if [ ! "`/usr/bin/gem1.9.1 list | grep \"chozo \"`" ]
+   then
+     echo "INSTALLING: chozo"
+     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/chozo-0.3.0.gem --no-rdoc --no-ri" # 
+   fi
+
+
 # TODO - bundle not working. Maybe it's a 1.8 version of ruby?
 bundle install
 git submodule update --init
