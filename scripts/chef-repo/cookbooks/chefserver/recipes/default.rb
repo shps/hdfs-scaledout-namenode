@@ -367,8 +367,8 @@ rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
-sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
-sudo update-alternatives --set gem /usr/bin/gem1.9.1
+# sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
+# sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"

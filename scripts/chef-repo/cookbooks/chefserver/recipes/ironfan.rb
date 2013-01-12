@@ -24,11 +24,12 @@ code <<-EOF
 # for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
  for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
  do
-   if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
-   then
-     echo "INSTALLING: ${gem}"
+   # # if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
+   # # then
+   #   echo "INSTALLING: ${gem}"
+#     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
      sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
-   fi
+   # fi
  done
 
 
@@ -36,11 +37,6 @@ code <<-EOF
 # sudo gem install bundle --no-rdoc --no-ri
 # sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
-   # if [ ! "`/usr/bin/gem1.9.1 list | grep \"chozo \"`" ]
-   # then
-   #   echo "INSTALLING: chozo"
-   #   sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/chozo-0.3.0.gem --no-rdoc --no-ri" # 
-   # fi
 
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase

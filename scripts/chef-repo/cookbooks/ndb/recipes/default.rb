@@ -37,9 +37,10 @@ template "#{node[:ndb][:base_dir]}/config.ini" do
   variables({:cores => node[:cpu][:total]})
 #    notifies :restart, resources(:service => "ndbd")
 end
-# 
+
 package_url = "#{node[:ndb][:package_url]}/#{node[:ndb][:package_src]}"
 Chef::Log.info "Downloading mysql cluster binaries from #{package_url}"
+
 base_package_filename =  File.basename(node[:ndb][:package_url])
 Chef::Log.info "Into file #{base_package_filename}"
 base_package_dirname =  File.basename(base_package_filename, ".tar.gz")
@@ -54,7 +55,7 @@ end
 
 bash "unpack_mysql_cluster" do
     code <<-EOF
-cd #{Chef::Config[:file_cache_path]}
+# cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
 #rm #{base_package_filename}
 cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
@@ -63,13 +64,15 @@ EOF
 end
 
 
-ark 'ndb' do
-   url "#{package_url}"
-    path "/tmp/"
-   home_dir "/tmp/ndb"
-   append_env_path false
-   owner node[:ndb][:user] 
-end
+# This doesn't work yet.
+# ark 'mysql' do
+#    version "#{node[:ndb][:version]}"
+#    url "#{package_url}"
+#    path "/usr/local"
+#    home_dir "/usr/local/mysql"
+#    append_env_path true
+#    owner node[:ndb][:user] 
+# end
 
 kthfs_dir = File.dirname(node[:ndb][:kthfs_services])
 
