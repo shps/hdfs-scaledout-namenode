@@ -37,6 +37,8 @@ default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
 default[:ndb][:inifile_gem] = "http://lucan.sics.se/kthfs/inifile-2.0.2.gem"
 default[:ndb][:instance] = "hdfs1"
 
+default[:ndb][:wait_startup] = 300
+
 default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"

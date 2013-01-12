@@ -1,18 +1,5 @@
 include_recipe "kthfsagent"
 
-# inifile_gem = "inifile-2.0.2.gem"
-# cookbook_file "#{Chef::Config[:file_cache_path]}/#{inifile_gem}" do
-#   source "#{inifile_gem}"
-#   owner node[:kthfs][:user]
-#   group node[:kthfs][:user]
-#   mode 0755
-# end
-
-# gem_package "inifile" do
-#   source "#{Chef::Config[:file_cache_path]}/#{inifile_gem}"
-#   action :install
-# end
-
 user node[:ndb][:user] do
   action :create
   system true
@@ -75,6 +62,14 @@ EOF
   not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
 end
 
+
+ark 'ndb' do
+   url "#{package_url}"
+    path "/tmp/"
+   home_dir "/tmp/ndb"
+   append_env_path false
+   owner node[:ndb][:user] 
+end
 
 kthfs_dir = File.dirname(node[:ndb][:kthfs_services])
 
