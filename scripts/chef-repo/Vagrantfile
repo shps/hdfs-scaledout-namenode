@@ -30,11 +30,8 @@ Vagrant::Config.run do |config|
      chef.log_level = :debug
      chef.add_recipe "ndb::mgmd"
      chef.add_recipe "ndb::ndbd"
-     chef.add_recipe "ndb::mysqld"
      chef.add_recipe "ndb::waiter"
-     chef.add_recipe "ndb::mgmd-bootstrap"
-     chef.add_recipe "ndb::ndbd-bootstrap"
-     chef.add_recipe "ndb::mysqld-bootstrap"
+     chef.add_recipe "ndb::mysqld"
   end 
 
 end

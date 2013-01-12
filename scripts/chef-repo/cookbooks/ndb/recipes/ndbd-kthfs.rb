@@ -1,7 +1,7 @@
-require 'fileutils'
-libpath = File.expand_path '../../libraries', __FILE__
-require File.join(libpath, 'inifile')
+include_recipe "kthfs"
 
+
+Chef::Log.info "Trying to infer the ndbd ID by examining the local IP. If it matches the config.ini file, then we have our node."
 
 found_id = -1
 id = 1
@@ -40,6 +40,7 @@ end
   if @found != true
     Chef::Log.info "Could not find matching IP address is list of data nodes."
   end
+
 
 ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do
  node_id found_id

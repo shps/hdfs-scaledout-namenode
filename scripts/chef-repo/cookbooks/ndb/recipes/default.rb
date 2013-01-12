@@ -14,6 +14,12 @@ directory node[:ndb][:version_dir] do
   recursive true
 end
 
+
+link node[:ndb][:base_dir] do
+  action :delete
+  only_if "test -L #{node[:ndb][:base_dir]}"
+end
+
 link node[:ndb][:base_dir] do
   to node[:ndb][:version_dir]
 end
@@ -34,12 +40,23 @@ directory node[:ndb][:log_dir] do
   recursive true
 end
 
-directory node[:mysql][:base_dir] do
+
+directory node[:mysql][:version_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode "755"
   recursive true
 end
+
+link node[:mysql][:base_dir] do
+  action :delete
+  only_if "test -L #{node[:mysql][:base_dir]}"
+end
+
+link node[:mysql][:base_dir] do
+  to node[:mysql][:version_dir]
+end
+
 
 template "#{node[:ndb][:base_dir]}/config.ini" do
   source "config.ini.erb"
@@ -69,8 +86,7 @@ bash "unpack_mysql_cluster" do
     code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
-#rm #{base_package_filename}
-cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
+cp -r #{base_package_dirname}/* #{node[:mysql][:version_dir]}
 EOF
   not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
 end
@@ -86,19 +102,3 @@ end
 #    owner node[:ndb][:user] 
 # end
 
-kthfs_dir = File.dirname(node[:ndb][:kthfs_services])
-
-directory "#{kthfs_dir}" do
-  owner node[:ndb][:user]
-  group node[:ndb][:user]
-  mode "755"
-  action :create
-  recursive true
-end
-
-file node[:ndb][:kthfs_services] do
-  owner "root"
-  group "root"
-  mode 00755
-  action :create_if_missing
-end

@@ -1,9 +1,5 @@
 include_recipe "ndb"
 
-require 'fileutils'
-libpath = File.expand_path '../../libraries', __FILE__
-require File.join(libpath, 'inifile')
-
 directory node[:ndb][:mgm_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]
@@ -42,6 +38,5 @@ template "/etc/init.d/ndb_mgmd" do
               :connect_string => node[:ndb][:connect_string],
             })
   notifies :enable, resources(:service => "ndb_mgmd")
-  notifies :restart, resources(:service => "ndb_mgmd")
+  notifies :start, resources(:service => "ndb_mgmd")
 end
-

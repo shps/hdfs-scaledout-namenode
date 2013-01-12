@@ -17,10 +17,6 @@
 # limitations under the License.
 #
 include_recipe "ndb"
-require 'fileutils'
-libpath = File.expand_path '../../libraries', __FILE__
-require File.join(libpath, 'inifile')
-
 
 Chef::Log.info "Hostname is: #{node['hostname']}"
 Chef::Log.info "IP address is: #{node['ipaddress']}"
@@ -31,8 +27,6 @@ directory node[:ndb][:data_dir] do
   action :create
   recursive true
 end
-
-
 
 found_id = -1
 id = 1
@@ -80,7 +74,6 @@ directory "#{node[:ndb][:data_dir]}/#{found_id}" do
 end
 
 
-
 for script in node[:ndb][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
@@ -112,6 +105,6 @@ template "/etc/init.d/ndbd" do
               :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "ndbd")
-  notifies :restart, resources(:service => "ndbd")
+#  notifies :start, resources(:service => "ndbd")
 end
 

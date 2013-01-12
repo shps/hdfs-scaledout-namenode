@@ -41,7 +41,8 @@ default[:ndb][:instance] = "hdfs1"
 
 default[:ndb][:wait_startup] = 300
 
-default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
+default[:mysql][:version_dir] = "/usr/local/mysql-#{versionStr}"
+default[:mysql][:base_dir] = "/usr/local/mysql"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
