@@ -21,7 +21,8 @@ ignore_failure false
 code <<-EOF
 
 
- for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
+# for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
+ for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
  do
    if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
    then
