@@ -1,9 +1,8 @@
 #!/bin/sh
-
+wait_pid_removed=10
 PID_FILE=<% node[:ndb][:log_dir] %>/memcached.pid
-
 if [ ! -f $PID_FILE  ] ; then 
-    # No pid file, assume memcached is not running
+    # No pid file, assume  not running
     exit 0
 fi
 
@@ -11,9 +10,18 @@ PID=`cat $PID_FILE`
 kill -TERM $PID
 RES=$?
 if [ $RES -ne 0 ] ; then
- kill -9 $PID 
+    timeout=0
+    while [ $timeout -lt $wait_pid_removed ] ; do
+	sleep 1
+	test ! -s $PID_FILE && break
+	echo -n "."
+	timeout=`expr $timeout + 1`
+    done
+    if [ $timeout -eq $wait_pid_removed ] ; then
+	kill -9 $PID
+    fi
 else
- exit 0
+    exit 0
 fi
-exit $?
 
+exit $?

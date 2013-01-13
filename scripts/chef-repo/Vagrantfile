@@ -34,9 +34,9 @@ Vagrant::Config.run do |config|
      chef.add_recipe "ndb::mgmd"
      chef.add_recipe "ndb::ndbd"
      chef.add_recipe "ndb::mysqld"
-#     chef.add_recipe "ndb::wait-cluster-ready"
-#     chef.add_recipe "ndb::mysqld-init"
      chef.add_recipe "ndb::memcached"
+     chef.add_recipe "ndb::mysqld-init"
+     chef.add_recipe "ndb::memcached-init"
   end 
 
 end

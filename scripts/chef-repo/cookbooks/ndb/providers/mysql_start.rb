@@ -26,13 +26,16 @@ bash 'mysql_install_db' do
     # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
     #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
     EOF
-  not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
+#  not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
 end
 
 
   bash "#{new_resource.name}" do
     code <<-EOF
     #{node[:ndb][:scripts_dir]}/mysql-server-start.sh
+    # TODO - look in cluster.log for mysql-server to correctly join the cluster
+    # Temporary hack to wait for mysql-server to start.
+    sleep 5 
     EOF
   end
 
@@ -74,7 +77,6 @@ end
     code <<-EOF
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{memcached}
     EOF
-    not_if { }
   end
 
 
