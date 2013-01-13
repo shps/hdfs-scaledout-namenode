@@ -21,7 +21,7 @@ default[:ndb][:num_replicas] = 1
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
-default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
+default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh memcached-start.sh memcached-stop.sh memcached-restart.sh }
 
 default[:ndb][:version] = #{versionStr}
 default[:ndb][:root_dir] = "/var/lib/mysql-cluster"
@@ -52,9 +52,6 @@ default[:mysql][:id] = 63
 default[:mgm][:id] = 62
 
 
-# Because memcached uses an event-driven model in which each worker thread should be able to saturate a CPU core, 
-# the number of worker threads should be approximately the same as the number of CPU cores that memcached is to use.
-default[:memcached][:num_threads] = 4
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64
 # See examples here for configuration: http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html
