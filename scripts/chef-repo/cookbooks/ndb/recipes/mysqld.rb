@@ -32,6 +32,10 @@ service "mysqld" do
 end
 
 
+ndb_mysql_start "start" do
+  action :nothing
+end
+
 template "mysql.cnf" do
   path "#{node[:ndb][:base_dir]}/my.cnf"
   source "my.cnf.erb"
@@ -46,6 +50,9 @@ template "mysql.cnf" do
   notifies :restart, resources(:service => "mysqld")
 end
 
+ndb_mysql_start "init" do
+  action :nothing
+end
 
 template "/etc/init.d/mysqld" do
   source "mysqld.erb"
@@ -59,6 +66,7 @@ template "/etc/init.d/mysqld" do
             })
   notifies :enable, resources(:service => "mysqld")
   notifies :start, resources(:service => "mysqld"), :immediately
+  notifies :initialize, resources(:ndb_mysql_start => "init")
 end
 
 
@@ -83,3 +91,11 @@ for script in node[:mysql][:scripts]
 end 
 
 
+bash 'mysql_install_db' do
+  code <<-EOF
+    cd #{node[:mysql][:base_dir]}
+    # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
+    #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+    EOF
+  not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
+end

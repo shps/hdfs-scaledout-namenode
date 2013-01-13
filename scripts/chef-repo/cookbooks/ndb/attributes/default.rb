@@ -57,3 +57,6 @@ default[:mgm][:id] = 62
 default[:memcached][:num_threads] = 4
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64
+# See examples here for configuration: http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html
+# options examples: ";dev=role"   or ";dev=role;S:c4,g1,t1" or ";S:c0,g1,t1" ";role=db-only"
+default[:memcached][:options] = ";role=ndb-caching;usec_rtt=250;max_tps=100000"

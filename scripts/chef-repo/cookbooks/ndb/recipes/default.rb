@@ -69,7 +69,9 @@ bash "unpack_mysql_cluster" do
 cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
 cp -r #{base_package_dirname}/* #{node[:mysql][:version_dir]}
-test -f #{node[:mysql][:base_dir]} && rm -rf #{node[:mysql][:base_dir]}
+if [ -L #{node[:mysql][:base_dir]} ] ; then
+ rm -rf #{node[:mysql][:base_dir]}
+fi
 EOF
   not_if { ::File.exists?( "#{node[:mysql][:version_dir]}/bin/ndbd" ) }
 end
