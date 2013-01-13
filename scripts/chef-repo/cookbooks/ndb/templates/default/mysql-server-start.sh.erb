@@ -44,7 +44,7 @@
 # fi  
 
 if [ "$1" = "--force" ] ; then
-    killall mysqld
+    killall -9 mysqld
 fi
 
 echo "Testing if a mysql server is already running on this host..."
@@ -57,6 +57,6 @@ if [ $? -eq 0 ] ; then
  exit 1
 fi
 
-<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= node[:ndb][:log_dir] %>/mysql.err.log 2> <%= node[:ndb][:log_dir] %>/mysql.out.log  &
+<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.err.log 2> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.out.log  &
 exit $?
 

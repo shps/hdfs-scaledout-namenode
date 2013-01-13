@@ -105,6 +105,6 @@ template "/etc/init.d/ndbd" do
               :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "ndbd")
-  notifies :start, resources(:service => "ndbd"), :immediately
+  notifies :restart, resources(:service => "ndbd")
 end
 

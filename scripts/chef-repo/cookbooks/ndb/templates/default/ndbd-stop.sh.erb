@@ -17,7 +17,8 @@ wait_pid_removed=10
 timeout=0
 while [ $timeout -lt $wait_pid_removed ] ; do
     sleep 1
-    test ! -s $PID_FILE && break
+#    test ! -s $PID_FILE && break
+    ! kill -0 $PID && break
     echo -n "."
     timeout=`expr $timeout + 1`
 done

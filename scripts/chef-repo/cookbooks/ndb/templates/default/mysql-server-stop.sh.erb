@@ -3,7 +3,7 @@
 MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
 wait_pid_removed=10
 
-PID_FILE=<%= node[:ndb][:log_dir] %>/mysql_<%= node[:mysql][:id] %>.pid 
+PID_FILE=<%= node[:ndb][:log_dir] %>/mysql__<%= @node_id %>.pid 
 if [ ! -f $PID_FILE  ] ; then 
     # No pid file, assume mysql server is not running
     exit 0

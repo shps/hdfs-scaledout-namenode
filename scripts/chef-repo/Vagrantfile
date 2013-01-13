@@ -31,11 +31,14 @@ Vagrant::Config.run do |config|
    config.vm.provision :chef_solo do |chef|
      chef.cookbooks_path = "cookbooks"
      chef.log_level = :debug
-     chef.add_recipe "ndb::mgmd"
-     chef.add_recipe "ndb::ndbd"
-     chef.add_recipe "ndb::mysqld"
-     chef.add_recipe "ndb::memcached"
-     chef.add_recipe "ndb::mysqld-init"
+
+# 1. First run these NDB recipes to install NDB
+#     chef.add_recipe "ndb::mgmd"
+#     chef.add_recipe "ndb::ndbd"
+#     chef.add_recipe "ndb::mysqld"
+#     chef.add_recipe "ndb::memcached"
+# 2. After ndb recipes have run and finished, re-run 'vagrant provision', uncommenting only the following recipes
+     chef.add_recipe "ndb::mysqld-install"
      chef.add_recipe "ndb::memcached-init"
   end 
 

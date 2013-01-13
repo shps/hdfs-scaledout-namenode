@@ -65,6 +65,7 @@ remote_file cached_package_filename do
 end
 
 bash "unpack_mysql_cluster" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}

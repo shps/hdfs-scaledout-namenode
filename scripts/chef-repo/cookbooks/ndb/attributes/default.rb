@@ -49,7 +49,8 @@ default[:mysql][:password]  = "kthfs"
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
 default[:mysql][:id] = 63
-default[:mgm][:id] = 62
+default[:memcached][:id] = 62
+default[:mgm][:id] = 61
 
 
 # Size in MB of memcached cache

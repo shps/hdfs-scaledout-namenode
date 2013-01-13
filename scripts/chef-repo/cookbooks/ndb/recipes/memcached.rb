@@ -1,3 +1,4 @@
+include_recipe "ndb"
 Chef::Log.info "Memcached for NDB"
 
 service "memcached" do
@@ -16,5 +17,4 @@ template "/etc/init.d/memcached" do
               :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "memcached")
-  notifies :start, resources(:service => "memcached")
 end
