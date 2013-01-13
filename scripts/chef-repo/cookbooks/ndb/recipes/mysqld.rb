@@ -83,22 +83,3 @@ for script in node[:mysql][:scripts]
 end 
 
 
-# mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
-# SELECT ROUTINE_NAME, ROUTINE_SCHEMA, ROUTINE_TYPE 
-# ->     FROM INFORMATION_SCHEMA.ROUTINES 
-# ->     WHERE ROUTINE_NAME LIKE 'mysql_cluster%'
-# ->     ORDER BY ROUTINE_TYPE;
-# load the users using distributed privileges
-# http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-privilege-distribution.html
-distusers="ndb_dist_priv.sql"
-cached_distusers = "#{Chef::Config[:file_cache_path]}/#{distusers}"
-Chef::Log.info "Installing #{distusers} to #{cached_distusers}"
-
-cookbook_file "#{cached_distusers}" do
-  source "#{distusers}"
-  owner "root"
-  group "root"
-  mode "0755"
-  action :create_if_missing
-end
-

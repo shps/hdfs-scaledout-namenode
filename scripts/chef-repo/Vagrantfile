@@ -17,6 +17,9 @@ Vagrant::Config.run do |config|
   config.vm.forward_port 10004, 10004
   config.vm.forward_port 10005, 10005
   config.vm.forward_port 10006, 10006
+#Memcached - ndb
+  config.vm.forward_port 11211, 11211
+
 # Chef ports
   config.vm.forward_port 4000, 4000
   config.vm.forward_port 4040, 4040

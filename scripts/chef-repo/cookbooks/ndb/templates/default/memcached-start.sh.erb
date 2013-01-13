@@ -1,0 +1,8 @@
+#!/bin/sh 
+
+# See full list of configuration options for memcached engine here:
+# http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html
+<%= @mysql_dir %>/bin/memcached -d -p <% node[:ndb][:log_dir] %>/memcached.pid -u <%= node[:ndb][:user]  %> -E <%= @mysql_dir %>/lib/ndb_engine.so -e "connectstring=<%= node[:ndb][:connect_string]  %>,role=dev" -t <%= node[:memcached][:num_threads]  %> -m <%= node[:memcached][:mem_size] %> 1> <%= node[:ndb][:log_dir] %>/memcached.err.log 2> <%= node[:ndb][:log_dir] %>/memcached.out.log  &
+
+exit $?
+

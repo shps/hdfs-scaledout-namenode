@@ -1,0 +1,19 @@
+#!/bin/sh
+
+PID_FILE=<% node[:ndb][:log_dir] %>/memcached.pid
+
+if [ ! -f $PID_FILE  ] ; then 
+    # No pid file, assume memcached is not running
+    exit 0
+fi
+
+PID=`cat $PID_FILE`
+kill -TERM $PID
+RES=$?
+if [ $RES -ne 0 ] ; then
+ kill -9 $PID 
+else
+ exit 0
+fi
+exit $?
+

@@ -45,7 +45,15 @@ default[:mysql][:base_dir] = "/usr/local/mysql"
 default[:mysql][:version_dir] = "#{default[:mysql][:base_dir]}" + "-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
+
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
-default[:mgm][:id] = 62
 default[:mysql][:id] = 63
+default[:mgm][:id] = 62
+
+
+# Because memcached uses an event-driven model in which each worker thread should be able to saturate a CPU core, 
+# the number of worker threads should be approximately the same as the number of CPU cores that memcached is to use.
+default[:memcached][:num_threads] = 4
+# Size in MB of memcached cache
+default[:memcached][:mem_size] = 64

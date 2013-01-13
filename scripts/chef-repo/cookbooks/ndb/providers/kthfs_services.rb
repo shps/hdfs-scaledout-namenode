@@ -1,4 +1,3 @@
-
 action :install_ndbd do
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
   Chef::Log.info "Loaded services for agent into ini-file."
