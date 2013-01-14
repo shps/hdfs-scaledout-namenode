@@ -52,7 +52,7 @@ end
 
 service "mysqld" do
   supports :restart => true, :stop => true, :start => true
-  action :start, :immediately
+  action :nothing
 end
 
 template "mysql.cnf" do
