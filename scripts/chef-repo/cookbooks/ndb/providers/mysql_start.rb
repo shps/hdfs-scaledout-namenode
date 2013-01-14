@@ -1,16 +1,16 @@
-action :initialize do
+# action :initialize do
 
-  bash 'mysql_install_db' do
-    user "#{node[:ndb][:user]}"
-    code <<-EOF
-    cd #{node[:mysql][:base_dir]}
-    # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-    #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
-    EOF
-    not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
-  end
+#   bash 'mysql_install_db' do
+#     user "#{node[:ndb][:user]}"
+#     code <<-EOF
+#     cd #{node[:mysql][:base_dir]}
+#     # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
+#     #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+#     EOF
+#     not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
+#   end
 
-end
+# end
 
 action :install_distributed_privileges do
   # mysql options -uroot mysql < /usr/local/mysql/share/ndb_dist_priv.sql
