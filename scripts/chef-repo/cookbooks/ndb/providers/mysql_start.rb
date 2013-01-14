@@ -43,7 +43,7 @@ action :install_distributed_privileges do
      #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" | grep "Conversion succeeded" 
     EOF
 #    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;"  | grep "Conversion succeeded"` }
-    not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME LIKE 'mysql_cluster%';\"  | grep mysql_cluster`"
+    not_if "#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME LIKE 'mysql_cluster%';\"  | grep mysql_cluster"
   end
 
 
@@ -55,7 +55,7 @@ action :install_distributed_privileges do
     code <<-EOF
    #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "GRANT ALL PRIVILEGES on *.* TO '#{node[:mysql][:user]}'@'%' IDENTIFIED BY '#{node[:mysql][:password]}';"
     EOF
-   not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT User FROM mysql.user;\" | grep #{node[:mysql][:user]}`"
+   not_if "#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT User FROM mysql.user;\" | grep #{node[:mysql][:user]}"
   end
 end
 
