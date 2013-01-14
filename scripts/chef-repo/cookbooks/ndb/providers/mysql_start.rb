@@ -55,7 +55,7 @@ action :install_distributed_privileges do
     code <<-EOF
    #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "GRANT ALL PRIVILEGES on *.* TO '#{node[:mysql][:user]}'@'%' IDENTIFIED BY '#{node[:mysql][:password]}';"
     EOF
-   not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT User FROM mysql.user;" | grep #{node[:mysql][:user]}`"
+   not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT User FROM mysql.user;\" | grep #{node[:mysql][:user]}`"
   end
 end
 
