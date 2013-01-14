@@ -22,11 +22,6 @@ for script in node[:mgm][:scripts] do
   end
 end 
 
-service "ndb_mgmd" do
-  supports :restart => true, :stop => true, :start => true
-  action :start, :immediately
-end
-
 template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
@@ -37,7 +32,6 @@ template "/etc/init.d/ndb_mgmd" do
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string],
             })
-  notifies :enable, resources(:service => "ndb_mgmd")
 end
 
 template "#{node[:ndb][:base_dir]}/config.ini" do
@@ -46,5 +40,11 @@ template "#{node[:ndb][:base_dir]}/config.ini" do
   group node[:ndb][:user]
   mode 0644
   variables({:cores => node[:cpu][:total]})
-  notifies :restart, resources(:service => "ndb_mgmd")
+  # notifies :restart, resources(:service => "ndb_mgmd")
+  # notifies :enable, resources(:service => "ndb_mgmd")
+end
+
+service "ndb_mgmd" do
+  supports :restart => true, :stop => true, :start => true
+  action :enable, :restart, :immediately
 end
