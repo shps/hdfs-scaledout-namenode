@@ -23,7 +23,7 @@ template "/etc/init.d/#{theService}" do
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string]
             })
-  notifies :install_memcached, resources(:ndb_mysql_start => "#{theResource}")
+  notifies :install_memcached, resources(:ndb_mysql_start => "#{theResource}"), :immediately
   notifies :enable, resources(:service => "#{theService}")
   notifies :restart, resources(:service => "#{theService}")
 end
