@@ -46,8 +46,13 @@ for script in node[:mysql][:scripts]
   end
 end 
 
-ndb_mysql_start "init" do
-  action :nothing
+# ndb_mysql_start "init" do
+#   action :nothing
+# end
+
+service "mysqld" do
+  supports :restart => true, :stop => true, :start => true
+  action :start, :immediately
 end
 
 template "mysql.cnf" do
@@ -64,6 +69,16 @@ template "mysql.cnf" do
   notifies :restart, resources(:service => "mysqld")
 end
 
+bash 'mysql_install_db' do
+  user "#{node[:ndb][:user]}"
+  code <<-EOF
+    cd #{node[:mysql][:base_dir]}
+    # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
+    #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+    EOF
+  not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
+end
+
 
 template "/etc/init.d/mysqld" do
   source "mysqld.erb"
@@ -75,23 +90,8 @@ template "/etc/init.d/mysqld" do
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string]
             })
-#  notifies :initialize, resources(:ndb_mysql_start => "init"), :immediately
-  notifies :enable, resources(:service => "mysqld")
+ notifies :enable, resources(:service => "mysqld")
+ notifies :restart, resources(:service => "mysqld"), :immediately
 end
 
-  bash 'mysql_install_db' do
-    user "#{node[:ndb][:user]}"
-    code <<-EOF
-    cd #{node[:mysql][:base_dir]}
-    # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-    #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
-    EOF
-    not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
-  end
-
-
-service "mysqld" do
-  supports :restart => true, :stop => true, :start => true
-  action :start, :immediately
-end
 
