@@ -45,7 +45,7 @@ action :install_distributed_privileges do
 # templates/default/
 
     EOF
-#    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" mysql | grep "Conversion succeeded"` }
+    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;"  | grep "Conversion succeeded"` }
   end
 
 
@@ -57,7 +57,7 @@ action :install_distributed_privileges do
     code <<-EOF
    #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "GRANT ALL PRIVILEGES on *.* TO '#{node[:mysql][:user]}'@'%' IDENTIFIED BY '#{node[:mysql][:password]}';"
     EOF
- #   not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT User FROM mysql.user;" mysql | grep #{node[:mysql][:user]}` }
+   not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT User FROM mysql.user;" | grep #{node[:mysql][:user]}` }
   end
 
 end
@@ -79,6 +79,7 @@ action :install_memcached do
     code <<-EOF
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{memcached}
     EOF
+   not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT * FROM ndbmemcache.ndb_clusters;" | grep cluster_id` }
   end
 
 
