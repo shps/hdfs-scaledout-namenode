@@ -21,12 +21,15 @@ default[:ndb][:num_replicas] = 1
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
-default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
+default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh memcached-start.sh memcached-stop.sh memcached-restart.sh }
 
 default[:ndb][:version] = #{versionStr}
-default[:ndb][:base_dir] = "/var/lib/mysql-cluster/ndb-#{versionStr}"
-default[:ndb][:log_dir] = "#{default[:ndb][:base_dir]}" + "/log"
-default[:ndb][:data_dir] = "/var/lib/mysql-cluster/ndb_data"
+default[:ndb][:root_dir] = "/var/lib/mysql-cluster"
+default[:ndb][:log_dir] = "#{default[:ndb][:root_dir]}" + "/log"
+default[:ndb][:data_dir] = "#{default[:ndb][:root_dir]}" + "/ndb_data"
+default[:ndb][:version_dir] = "#{default[:ndb][:root_dir]}" + "/ndb-#{versionStr}"
+default[:ndb][:base_dir] = "#{default[:ndb][:root_dir]}" + "/ndb"
+
 default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
 default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
 
@@ -34,15 +37,26 @@ default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
-default[:ndb][:inifile_gem] = "http://lucan.sics.se/kthfs/inifile-2.0.2.gem"
 default[:ndb][:instance] = "hdfs1"
 
-default[:mysql][:base_dir] = "/usr/local/mysql-#{versionStr}"
+default[:ndb][:wait_startup] = 300
+
+default[:mysql][:base_dir] = "/usr/local/mysql"
+default[:mysql][:version_dir] = "#{default[:mysql][:base_dir]}" + "-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
+
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
-default[:mgm][:id] = 62
-default[:mysql][:id] = 63
 
-default[:ndb][:wait_to_start_timeout] = 300
+default[:mgm][:id] = 49
+default[:mysql][:id] = 50
+default[:memcached][:id] = 51
+
+
+
+# Size in MB of memcached cache
+default[:memcached][:mem_size] = 64
+# See examples here for configuration: http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html
+# options examples: ";dev=role"   or ";dev=role;S:c4,g1,t1" or ";S:c0,g1,t1" ";role=db-only"
+default[:memcached][:options] = ";role=ndb-caching;usec_rtt=250;max_tps=100000;m=#{default[:memcached][:mem_size]}"

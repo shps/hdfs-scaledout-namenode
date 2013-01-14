@@ -1,8 +1,4 @@
 include_recipe "ndb"
-require 'fileutils'
-libpath = File.expand_path '../../libraries', __FILE__
-require File.join(libpath, 'inifile')
-
 
 libaio1="libaio1_0.3.109-2ubuntu1_amd64.deb"
 cached_libaio1 = "#{Chef::Config[:file_cache_path]}/#{libaio1}"
@@ -35,12 +31,15 @@ service "mysqld" do
   action [ :nothing ]
 end
 
+ndb_mysql_start "init" do
+  action :nothing
+end
 
 template "mysql.cnf" do
+  owner node[:ndb][:user]
+  group node[:ndb][:group]
   path "#{node[:ndb][:base_dir]}/my.cnf"
   source "my.cnf.erb"
-  owner "root"
-  group "root"
   mode "0644"
   variables({
               :ndb_dir => node[:ndb][:base_dir],
@@ -61,17 +60,16 @@ template "/etc/init.d/mysqld" do
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string]
             })
+  notifies :initialize, resources(:ndb_mysql_start => "init"), :immediately
   notifies :enable, resources(:service => "mysqld")
-  notifies :restart, resources(:service => "mysqld")
 end
-
 
 
 for script in node[:mysql][:scripts]
   template "#{node[:ndb][:scripts_dir]}/#{script}" do
     source "#{script}.erb"
-    owner "root"
-    group "root"
+    owner node[:ndb][:user]
+    group node[:ndb][:group]
     mode 0774
     variables({
        :user => node[:ndb][:user],
@@ -81,8 +79,10 @@ for script in node[:mysql][:scripts]
        :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
        :connect_string => node[:ndb][:connect_string],
        :mysql_port => node[:ndb][:mysql_port],
-       :mysql_socket => node[:ndb][:mysql_socket]
+       :mysql_socket => node[:ndb][:mysql_socket],
+       :node_id => node[:mysql][:id]
     })
   end
+
 end 
 

@@ -17,10 +17,6 @@
 # limitations under the License.
 #
 include_recipe "ndb"
-require 'fileutils'
-libpath = File.expand_path '../../libraries', __FILE__
-require File.join(libpath, 'inifile')
-
 
 Chef::Log.info "Hostname is: #{node['hostname']}"
 Chef::Log.info "IP address is: #{node['ipaddress']}"
@@ -31,8 +27,6 @@ directory node[:ndb][:data_dir] do
   action :create
   recursive true
 end
-
-
 
 found_id = -1
 id = 1
@@ -78,7 +72,6 @@ directory "#{node[:ndb][:data_dir]}/#{found_id}" do
   action :create
   recursive true
 end
-
 
 
 for script in node[:ndb][:scripts]

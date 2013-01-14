@@ -1,19 +1,33 @@
 #!/bin/sh 
 
 MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
+wait_pid_removed=10
+ID=<%= @node_id %>
+PID_FILE=<%= node[:ndb][:log_dir] %>/mysql_$ID.pid 
 
-PID_FILE=<%= node[:ndb][:log_dir] %>/mysql_<%= node[:mysql][:id] %>.pid 
-if [ ! -f $PID_FILE  ] ; then 
-    # No pid file, assume mysql server is not running
-    exit 0
-fi
-PID=`cat $PID_FILE`
-kill -TERM $PID
-RES=$?
-if [ $RES -ne 0 ] ; then
- kill -9 $PID 
-else
- exit 0
-fi
+# if [ ! -f $PID_FILE  ] ; then 
+#     echo "No MySQL server to stop - no PID file found at $PID_FILE."
+#     exit 0
+# fi
+# PID=`cat $PID_FILE`
+# kill -TERM $PID
+# RES=$?
+# if [ $RES -ne 0 ] ; then
+#     timeout=0
+#     while [ $timeout -lt $wait_pid_removed ] ; do
+# 	sleep 1
+#         ! kill -0 $PID && break > /dev/null
+# 	echo -n "."
+# 	timeout=`expr $timeout + 1`
+#     done
+#     if [ $timeout -eq $wait_pid_removed ] ; then
+# 	kill -9 $PID
+#     fi
+# else
+#  exit 0
+# fi
+# exit $?
+
+<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh mysql-server $ID $PID_FILE 0
 exit $?
 

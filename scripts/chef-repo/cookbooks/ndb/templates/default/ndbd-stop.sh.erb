@@ -1,19 +1,30 @@
 #!/bin/sh
+
 ID=<%= @node_id %>
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
-PID=`cat $PID_FILE`
-PID=`expr $PID + 1`
-echo ""
-echo "Killing ndbd with process-id $PID in file $PID_FILE"
-echo ""
-kill -9 $PID
-wait_pid_removed=10
-timeout=0
-while [ $timeout -lt $wait_pid_removed ] ; do
-    sleep 1
-    test ! -s $PID_FILE && break
-    echo -n "."
-    timeout=`expr $timeout + 1`
-done
-echo ""
+# if [ ! -f $PID_FILE  ] ; then 
+#     echo "No data node (ndbmtd) process to stop - no PID file found at $PID_FILE."
+#     exit 0
+# fi
 
+# PID=`cat $PID_FILE`
+# PID=`expr $PID + 1`
+# echo ""
+# echo "Killing ndbd with process-id $PID in file $PID_FILE"
+# echo ""
+# kill -TERM $PID
+# wait_pid_removed=10
+# timeout=0
+# while [ $timeout -lt $wait_pid_removed ] ; do
+#     sleep 1
+#     ! kill -0 $PID && break > /dev/null
+#     echo -n "."
+#     timeout=`expr $timeout + 1`
+# done
+# if [ $timeout -eq $wait_pid_removed ] ; then
+#   kill -9 $PIDpp
+# fi
+# echo ""
+
+<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh ndbd $ID $PID_FILE 1
+exit $?

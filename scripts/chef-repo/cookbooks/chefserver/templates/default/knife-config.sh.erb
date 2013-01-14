@@ -12,7 +12,8 @@ spawn knife configure -i
 # Please enter the path to a chef repository (or leave blank): 
 
 expect "Where should I put the config file?"
-send "<%= node[:chef][:base_dir] %>/.chef/knife.rb\n"
+#send "<%= node[:chef][:base_dir] %>/.chef\n"
+send "\n"
 
 expect "Please enter the chef server URL:"
 send "<%= node[:chef][:server_url] %>\n"

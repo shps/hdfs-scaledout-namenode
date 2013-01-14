@@ -1,17 +1,4 @@
-include_recipe "kthfsagent"
-
-# inifile_gem = "inifile-2.0.2.gem"
-# cookbook_file "#{Chef::Config[:file_cache_path]}/#{inifile_gem}" do
-#   source "#{inifile_gem}"
-#   owner node[:kthfs][:user]
-#   group node[:kthfs][:user]
-#   mode 0755
-# end
-
-# gem_package "inifile" do
-#   source "#{Chef::Config[:file_cache_path]}/#{inifile_gem}"
-#   action :install
-# end
+#include_recipe "kthfsagent"
 
 user node[:ndb][:user] do
   action :create
@@ -19,7 +6,25 @@ user node[:ndb][:user] do
   shell "/bin/bash"
 end
 
-directory node[:ndb][:scripts_dir] do
+directory node[:ndb][:version_dir] do
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode "755"
+  action :create
+  recursive true
+end
+
+
+link node[:ndb][:base_dir] do
+  action :delete
+  only_if "test -L #{node[:ndb][:base_dir]}"
+end
+
+link node[:ndb][:base_dir] do
+  to node[:ndb][:version_dir]
+end
+
+directory "#{node[:ndb][:scripts_dir]}/util" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode "755"
@@ -35,24 +40,18 @@ directory node[:ndb][:log_dir] do
   recursive true
 end
 
-directory node[:mysql][:base_dir] do
+directory node[:mysql][:version_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode "755"
+  action :create
   recursive true
 end
 
-template "#{node[:ndb][:base_dir]}/config.ini" do
-  source "config.ini.erb"
-  owner node[:ndb][:user]
-  group node[:ndb][:user]
-  mode 0644
-  variables({:cores => node[:cpu][:total]})
-#    notifies :restart, resources(:service => "ndbd")
-end
-# 
+
 package_url = "#{node[:ndb][:package_url]}/#{node[:ndb][:package_src]}"
 Chef::Log.info "Downloading mysql cluster binaries from #{package_url}"
+
 base_package_filename =  File.basename(node[:ndb][:package_url])
 Chef::Log.info "Into file #{base_package_filename}"
 base_package_dirname =  File.basename(base_package_filename, ".tar.gz")
@@ -66,29 +65,43 @@ remote_file cached_package_filename do
 end
 
 bash "unpack_mysql_cluster" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
 cd #{Chef::Config[:file_cache_path]}
 tar -xzf #{base_package_filename}
-#rm #{base_package_filename}
-cp -r #{base_package_dirname}/* #{node[:mysql][:base_dir]}
+cp -r #{base_package_dirname}/* #{node[:mysql][:version_dir]}
+if [ -L #{node[:mysql][:base_dir]} ] ; then
+ rm -rf #{node[:mysql][:base_dir]}
+fi
 EOF
-  not_if { ::File.exists?( "#{node[:mysql][:base_dir]}/bin/ndbd" ) }
+  not_if { ::File.exists?( "#{node[:mysql][:version_dir]}/bin/ndbd" ) }
+end
+
+# Bug - this prevent link from being created
+# link node[:mysql][:base_dir] do
+#   action :delete
+#   only_if "test -L #{node[:mysql][:base_dir]}"
+# end
+
+link node[:mysql][:base_dir] do
+  to node[:mysql][:version_dir]
 end
 
 
-kthfs_dir = File.dirname(node[:ndb][:kthfs_services])
+# This doesn't work yet.
+# ark 'mysql' do
+#    version "#{node[:ndb][:version]}"
+#    url "#{package_url}"
+#    path "/usr/local"
+#    home_dir "/usr/local/mysql"
+#    append_env_path true
+#    owner node[:ndb][:user] 
+# end
 
-directory "#{kthfs_dir}" do
+
+template "#{node[:ndb][:scripts_dir]}/util/kill-process.sh" do
+  source "kill-process.sh.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
-  mode "755"
-  action :create
-  recursive true
-end
-
-file node[:ndb][:kthfs_services] do
-  owner "root"
-  group "root"
-  mode 00755
-  action :create_if_missing
+  mode 0655
 end

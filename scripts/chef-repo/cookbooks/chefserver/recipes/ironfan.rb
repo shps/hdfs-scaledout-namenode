@@ -1,13 +1,42 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
+for install_gem in node[:ironfan][:gems]
+  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+    source "#{install_gem}.gem"
+    owner node[:chef][:user]
+    group node[:chef][:user]
+    mode 0755
+    action :create_if_missing
+  end
+  # gem_package "#{install_gem}" do
+  #   source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+  #   action :install
+  # end
+end
+
+
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
 
-sudo gem install ironfan --no-rdoc --no-ri
-sudo gem install bundle --no-rdoc --no-ri
-sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
+
+# for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
+ for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
+ do
+   # # if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
+   # # then
+   #   echo "INSTALLING: ${gem}"
+#     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
+     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
+   # fi
+ done
+
+
+# sudo gem install ironfan --no-rdoc --no-ri
+# sudo gem install bundle --no-rdoc --no-ri
+# sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
+
 
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
@@ -20,10 +49,11 @@ cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 
-# TODO - not working
+# TODO - bundle not working. Maybe it's a 1.8 version of ruby?
 bundle install
 git submodule update --init
 git submodule foreach git checkout master
+
 
 rm -rf $CHEF_HOME/.chef
 ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
@@ -49,8 +79,6 @@ mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 
-# try it again
-bundle install
 
 touch $CHEF_HOMEBASE/.installed
 EOF
@@ -90,26 +118,26 @@ bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-cd #{HomeDir}/homebase
 source #{HomeDir}/.bashrc
+cd #{HomeDir}/homebase
+git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 
-bundle install
-# This doesn't seem to do anything.
-# Uploading roles to chef server seems to work ok.
-rake roles
+# 'rake roles' doesn't work, and knife is recommended for uploading roles
+knife role from file roles/*.rb
 
 if (knife role list | wc -l) < 2 ; then
  exit 1
 fi
 
 # Copy all of ironfan's recipes to the chef server
-git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-knife cookbook upload -a -o ./pantry/cookbooks/ # 
+knife cookbook upload -a -o ./pantry/cookbooks/
 if (knife cookbook list | wc -l) < 2 ; then
  exit 1
 fi
 
 #knife environment create dev -y
+#knife environment create prod -y
+#knife environment create stag -y
 touch #{HomeDir}/homebase/.uploads_complete
 EOF
 not_if "test -f #{HomeDir}/homebase/.uploads_complete"

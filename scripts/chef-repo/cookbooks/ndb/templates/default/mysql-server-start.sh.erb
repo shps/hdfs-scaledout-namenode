@@ -1,60 +1,63 @@
 #!/bin/sh 
 
 
-USERID=`id | sed -e 's/).*//; s/^.*(//;'`
-if [ "X$USERID" != "Xroot" ]; then
- if [ "X$USERID" = "Xroot" ]; then
-   echo ""
-   echo "You started cluster as user: 'root'."
-   echo "You should start cluster as user: 'root'."
-   echo "If you continue, you will change ownership of database files"
-   echo "from 'root' to 'root'."
-# TODO: return -2
- else
-   echo ""
-   echo "You started the cluster as user: '$USERID'."
-   echo "You should start the cluster as user: 'root'."
-   echo "If you continue, you will change ownership of database files"
-   echo "from 'root' to '$USERID'."
-# TODO: return -2
- fi
+# USERID=`id | sed -e 's/).*//; s/^.*(//;'`
+# if [ "X$USERID" != "Xroot" ]; then
+#  if [ "X$USERID" = "Xroot" ]; then
+#    echo ""
+#    echo "You started cluster as user: '${USERID}'."
+#    echo "You should start cluster as user: 'root'."
+#    echo "If you continue, you will change ownership of database files"
+#    echo "from 'root' to '${USERID}'."
+# # TODO: exit -2
+#  else
+#    echo ""
+#    echo "You started the cluster as user: '$USERID'."
+#    echo "You should start the cluster as user: 'root'."
+#    echo "If you continue, you will change ownership of database files"
+#    echo "from 'root' to '$USERID'."
+# # TODO: exit -2
+#  fi
  
- echo ""
-start_as_wrong_user() 
-{
-  echo -n "Do you really want to start the cluster as user 'root'? y/n/h(help) "
-  read ACCEPT
-  case $ACCEPT in
-   y | Y)
-      ;;
-   n | N)
-      echo ""
-      echo "Bye.."
-      echo ""
-      exit 1
-      ;;
-    *)
-      echo ""
-      echo -n "Please enter 'y' or 'n'." 
-      start_as_wrong_user
-      ;;
-   esac
-}
-start_as_wrong_user
+#  echo ""
+# start_as_wrong_user() 
+# {
+#   echo -n "Do you really want to start the cluster as user 'root'? y/n/h(help) "
+#   read ACCEPT
+#   case $ACCEPT in
+#    y | Y)
+#       ;;
+#    n | N)
+#       echo ""
+#       echo "Bye.."
+#       echo ""
+#       exit 1
+#       ;;
+#     *)
+#       echo ""
+#       echo -n "Please enter 'y' or 'n'." 
+#       start_as_wrong_user
+#       ;;
+#    esac
+# }
+# start_as_wrong_user
+# fi  
 
+if [ "$1" = "--force" ] ; then
+    killall -9 mysqld
+fi
 
-fi  
-
-echo "Test if a mysql server is already running on this host."
+echo "Testing if a mysql server is already running on this host..."
 
 MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
-#<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -s -u root ping 
+<%= @mysql_dir %>/bin/mysqladmin -S $MYSQL_SOCKET -s -u root ping 
 # Don't redirect error, as this will give a '0' return result &> /dev/null
-#if [ $? -eq 0 ] ; then
-# echo "A MySQL Server is already running at socket . Not starting another MySQL Server at this socket."
-# exit 1
-#fi
+if [ $? -eq 0 ] ; then
+ echo "A MySQL Server is already running at socket. Not starting another MySQL Server at this socket. Use '--force' to kill existing mysql servers at this node."
+ exit 1
+fi
 
-<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= @ndb_dir %>/log/mysql.err.log 2> <%= @ndb_dir %>/log/mysql.out.log  &
+<%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.err.log 2> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.out.log  &
+echo "Mysql Server started."
 exit $?
 

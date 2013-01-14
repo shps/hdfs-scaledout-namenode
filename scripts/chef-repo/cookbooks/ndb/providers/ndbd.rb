@@ -1,5 +1,6 @@
 action :init do
   bash "init-#{new_resource.name}" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
     node[:ndb][:scripts_dir]/ndbd-init.sh
   EOF
@@ -9,6 +10,7 @@ end
 
 action :start do
   bash "start-#{new_resource.name}" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
     node[:ndb][:scripts_dir]/ndbd-start.sh
   EOF
@@ -17,6 +19,7 @@ end
 
 action :stop do
   bash "stop-#{new_resource.name}" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
     node[:ndb][:scripts_dir]/ndbd-stop.sh
   EOF
@@ -25,6 +28,7 @@ end
 
 action :restart do
   bash "restart-#{new_resource.name}" do
+    user "#{node[:ndb][:user]}"
     code <<-EOF
     node[:ndb][:scripts_dir]/ndbd-restart.sh
   EOF

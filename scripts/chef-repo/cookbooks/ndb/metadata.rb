@@ -9,7 +9,5 @@ version          "0.1"
   supports os
 end
 
-depends "kthfsagent"
-
 recipe "ndb::default", "Installs and configures MySQL Cluster"
 
