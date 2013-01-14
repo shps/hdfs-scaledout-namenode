@@ -1,5 +1,5 @@
 Vagrant::Config.run do |config|
-  config.vm.box = "precise64"
+  config.vm.box = "precise64ruby19"
 
   config.vm.customize ["modifyvm", :id, "--memory", 4096]
 

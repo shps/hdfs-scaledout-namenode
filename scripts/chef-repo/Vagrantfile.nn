@@ -1,5 +1,5 @@
 Vagrant::Config.run do |config|
-  config.vm.box = "precise64"
+  config.vm.box = "precise64ruby19"
  config.vm.network :hostonly, "192.168.111.111"
 #  config.vm.network :bridged
   config.vm.forward_port 8080, 8888
