@@ -39,9 +39,12 @@ Vagrant::Config.run do |config|
      chef.add_recipe "ndb::mgmd"
      chef.add_recipe "ndb::ndbd"
      chef.add_recipe "ndb::mysqld"
+     chef.add_recipe "ndb::memcached"
      chef.add_recipe "chefserver"
      chef.add_recipe "chefserver::ironfan"
      chef.add_recipe "chefserver::ec2"
+#     chef.add_recipe "ndb::mysqld-install"
+#     chef.add_recipe "ndb::memcached-install"
   end 
 
 end
