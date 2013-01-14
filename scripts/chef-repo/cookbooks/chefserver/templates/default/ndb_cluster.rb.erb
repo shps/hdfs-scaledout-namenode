@@ -1,0 +1,59 @@
+Ironfan.cluster 'ndb_cluster' do
+ 
+  # This is the Chef environment that the Chef nodes
+  # will be placed under.
+  environment           :_default
+ 
+  # This Chef role comes built in to ironfan. It defines
+  # certain universal behaviors such as installing ntpd,
+  # zsh, and (strangely) emacs
+  role                  :systemwide
+  
+  # Life will be difficult without this
+  role                  :ssh
+ 
+  # These are behaviors that apply to EC2 resources anywhere
+  # in the cluster. cloud(:ec2) statements within each facet
+  # can be used to augment or override these settings
+  cloud(:ec2) do
+    permanent           false
+    availability_zones  ['eu-west-1a', 'eu-west-1b']
+    flavor              't1.micro'
+    backing             'ebs'
+    image_name          'ironfan-natty'
+    chef_client_script  'client.rb'
+    security_group(:ssh).authorize_port_range(22..22)
+    mount_ephemerals
+  end
+ 
+  facet :mgm do
+    instances 1
+    recipe 'ndb::ndbd'
+    cloud(:ec2) do
+      flavor  'm1.small'
+      # Adds a new security group called "web"
+      # Only servers in this facet will be added
+      # to that group
+      security_group(:web) do
+        authorize_port_range(80..80)
+        authorize_port_range(443..443)
+      end
+    end
+  end
+ 
+  facet :ndbd do
+    instances 1
+    recipe 'ndb::mgmd'
+    recipe 'ndb::mysqld'
+    recipe 'ndb::memcached'
+    cloud(:ec2) do
+      flavor 'm1.small'
+    end
+end
+
+  #cluster_role.override_attributes({
+  #  :ndb => {
+  #    :version => '0.17.8',
+  #  },
+  #}) 
+end

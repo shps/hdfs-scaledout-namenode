@@ -2,8 +2,8 @@
 
 version="7"
 majorVersion="2"
-minorVersion="9"
-versionStr= "7.2.9"
+minorVersion="10"
+versionStr= "#{version}.#{majorVersion}.#{minorVersion}"
 
 default[:ndb][:loglevel]   = "notice"
 default[:ndb][:mgm_server] = "10.0.2.15"
