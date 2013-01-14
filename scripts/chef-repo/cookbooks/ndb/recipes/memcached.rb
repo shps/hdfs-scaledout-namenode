@@ -25,5 +25,5 @@ template "/etc/init.d/#{theService}" do
             })
   notifies :enable, resources(:service => "#{theService}")
   notifies :restart, resources(:service => "#{theService}")
-  notifies :install_memcached, resources(:ndb_mysql_start => "#{theResource}"), :immediately
+  notifies :install_memcached, resources(:ndb_mysql_start => "#{theResource}")
 end
