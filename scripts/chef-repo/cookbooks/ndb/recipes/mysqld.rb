@@ -96,7 +96,7 @@ template "/etc/init.d/mysqld" do
             })
  notifies :enable, resources(:service => "mysqld")
  notifies :restart, resources(:service => "mysqld"), :immediately
- notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install"), :immediately
+ notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install")
 end
 
 
