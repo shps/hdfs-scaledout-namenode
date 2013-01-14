@@ -35,6 +35,8 @@ action :install_distributed_privileges do
   bash 'create_distributed_privileges' do
     user "#{node[:ndb][:user]}"
     code <<-EOF
+     # wait for mysqld to start
+     sleep 5
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{cached_distusers}
 
      # Test that it works
