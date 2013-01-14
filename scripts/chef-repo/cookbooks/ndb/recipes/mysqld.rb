@@ -80,7 +80,6 @@ bash 'mysql_install_db' do
 end
 
 ndb_mysql_start "install" do
-#  action :install_distributed_privileges
   action :nothing
 end
 
@@ -97,7 +96,7 @@ template "/etc/init.d/mysqld" do
             })
  notifies :enable, resources(:service => "mysqld")
  notifies :restart, resources(:service => "mysqld"), :immediately
- notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install")
+ notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install"), :immediately
 end
 
 
