@@ -35,6 +35,12 @@ template "/etc/init.d/ndb_mgmd" do
   notifies :enable, resources(:service => "ndb_mgmd")
 end
 
+service "ndb_mgmd" do
+  supports :restart => true, :stop => true, :start => true
+  action :start, :immediately
+end
+
+
 template "#{node[:ndb][:base_dir]}/config.ini" do
   source "config.ini.erb"
   owner node[:ndb][:user]
@@ -42,10 +48,4 @@ template "#{node[:ndb][:base_dir]}/config.ini" do
   mode 0644
   variables({:cores => node[:cpu][:total]})
   notifies :restart, resources(:service => "ndb_mgmd")
-end
-
-service "ndb_mgmd" do
-  supports :restart => true, :stop => true, :start => true
-#  action [ :nothing ]
-  action :start, :immediately
 end
