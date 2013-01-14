@@ -26,10 +26,25 @@ directory node[:ndb][:mysql_server_dir] do
   recursive true  
 end
 
-service "mysqld" do
-  supports :restart => true, :stop => true, :start => true
-  action [ :nothing ]
-end
+for script in node[:mysql][:scripts]
+  template "#{node[:ndb][:scripts_dir]}/#{script}" do
+    source "#{script}.erb"
+    owner node[:ndb][:user]
+    group node[:ndb][:group]
+    mode 0774
+    variables({
+       :user => node[:ndb][:user],
+       :ndb_dir => node[:ndb][:base_dir],
+       :mysql_dir => node[:mysql][:base_dir],
+       :ndb_mysql_dir => node[:ndb][:mysql_server_dir],
+       :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
+       :connect_string => node[:ndb][:connect_string],
+       :mysql_port => node[:ndb][:mysql_port],
+       :mysql_socket => node[:ndb][:mysql_socket],
+       :node_id => node[:mysql][:id]
+    })
+  end
+end 
 
 ndb_mysql_start "init" do
   action :nothing
@@ -64,25 +79,8 @@ template "/etc/init.d/mysqld" do
   notifies :enable, resources(:service => "mysqld")
 end
 
-
-for script in node[:mysql][:scripts]
-  template "#{node[:ndb][:scripts_dir]}/#{script}" do
-    source "#{script}.erb"
-    owner node[:ndb][:user]
-    group node[:ndb][:group]
-    mode 0774
-    variables({
-       :user => node[:ndb][:user],
-       :ndb_dir => node[:ndb][:base_dir],
-       :mysql_dir => node[:mysql][:base_dir],
-       :ndb_mysql_dir => node[:ndb][:mysql_server_dir],
-       :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
-       :connect_string => node[:ndb][:connect_string],
-       :mysql_port => node[:ndb][:mysql_port],
-       :mysql_socket => node[:ndb][:mysql_socket],
-       :node_id => node[:mysql][:id]
-    })
-  end
-
-end 
-
+service "mysqld" do
+  supports :restart => true, :stop => true, :start => true
+#  action [ :nothing ]
+  action :start, :immediately
+end

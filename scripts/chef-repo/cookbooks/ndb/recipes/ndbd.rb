@@ -89,11 +89,6 @@ for script in node[:ndb][:scripts]
   end
 end 
 
-service "ndbd" do
-  supports :restart => true, :stop => true, :start => true
-  action [ :nothing ]
-end
-
 template "/etc/init.d/ndbd" do
   source "ndbd.erb"
   owner node[:ndb][:user]
@@ -105,6 +100,9 @@ template "/etc/init.d/ndbd" do
               :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "ndbd")
-  notifies :restart, resources(:service => "ndbd")
 end
 
+service "ndbd" do
+  supports :restart => true, :stop => true, :start => true
+  action :start, :immediately
+end
