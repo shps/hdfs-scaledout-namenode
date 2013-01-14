@@ -46,10 +46,6 @@ for script in node[:mysql][:scripts]
   end
 end 
 
-# ndb_mysql_start "init" do
-#   action :nothing
-# end
-
 service "mysqld" do
   supports :restart => true, :stop => true, :start => true
   action :nothing
@@ -66,7 +62,7 @@ template "mysql.cnf" do
               :mysql_dir => node[:mysql][:base_dir],
               :connect_string => node[:ndb][:connect_string]
             })
-  notifies :restart, resources(:service => "mysqld")
+#  notifies :restart, resources(:service => "mysqld")
 end
 
 bash 'mysql_install_db' do
