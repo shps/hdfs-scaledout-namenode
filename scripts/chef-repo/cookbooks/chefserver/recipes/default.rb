@@ -276,7 +276,7 @@ sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --s
 # changes symlinks for /usr/bin/ruby , /usr/bin/gem
 # /usr/bin/irb, /usr/bin/ri and man (1) ruby
 
-sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
+# sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
 
 sudo update-alternatives --config ruby
 sudo update-alternatives --config gem
