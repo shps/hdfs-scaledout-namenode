@@ -24,6 +24,6 @@ template "/etc/init.d/#{theService}" do
               :connect_string => node[:ndb][:connect_string]
             })
   notifies :enable, resources(:service => "#{theService}")
-  notifies :restart, resources(:service => "#{theService}")
   notifies :install_memcached, resources(:ndb_mysql_start => "#{theResource}")
+  notifies :restart, resources(:service => "#{theService}")
 end
