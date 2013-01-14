@@ -48,13 +48,14 @@ default[:mysql][:password]  = "kthfs"
 
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
-default[:mysql][:id] = 63
-default[:memcached][:id] = 62
-default[:mgm][:id] = 61
+default[:mgm][:id] = 49
+default[:mysql][:id] = 50
+default[:memcached][:id] = 51
+
 
 
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64
 # See examples here for configuration: http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html
 # options examples: ";dev=role"   or ";dev=role;S:c4,g1,t1" or ";S:c0,g1,t1" ";role=db-only"
-default[:memcached][:options] = ";role=ndb-caching;usec_rtt=250;max_tps=100000"
+default[:memcached][:options] = ";role=ndb-caching;usec_rtt=250;max_tps=100000;m=#{default[:memcached][:mem_size]}"

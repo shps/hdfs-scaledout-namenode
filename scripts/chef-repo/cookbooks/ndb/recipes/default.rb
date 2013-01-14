@@ -24,7 +24,7 @@ link node[:ndb][:base_dir] do
   to node[:ndb][:version_dir]
 end
 
-directory node[:ndb][:scripts_dir] do
+directory "#{node[:ndb][:scripts_dir]}/util" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode "755"
@@ -97,3 +97,11 @@ end
 #    append_env_path true
 #    owner node[:ndb][:user] 
 # end
+
+
+template "#{node[:ndb][:scripts_dir]}/util/kill-process.sh" do
+  source "kill-process.sh.erb"
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode 0655
+end

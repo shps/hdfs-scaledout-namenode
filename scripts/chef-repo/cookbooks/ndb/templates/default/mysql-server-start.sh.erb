@@ -58,5 +58,6 @@ if [ $? -eq 0 ] ; then
 fi
 
 <%= @mysql_dir %>/bin/mysqld --defaults-file=<%= @ndb_dir %>/my.cnf 1> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.err.log 2> <%= node[:ndb][:log_dir] %>/mysql_<%= @node_id %>.out.log  &
+echo "Mysql Server started."
 exit $?
 

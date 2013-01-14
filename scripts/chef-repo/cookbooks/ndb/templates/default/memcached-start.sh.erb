@@ -8,13 +8,13 @@ echo "Testing if a memcached server is already running...."
 PID_FILE=<%= node[:ndb][:log_dir] %>/memcached_<%= @node_id %>.pid
 if [ -f $PID_FILE  ] ; then 
     PID=`cat $PID_FILE`
-    kill -0 $PID
-    if [ $? -ne 0 ] ; then
+    (kill -0 $PID) 2> /dev/null
+    if [ $? -eq 0 ] ; then
 	echo "Memcached server is already running on this node. Run 'memcached-start.sh --force' to kill existing servers and start a new one."
 	exit 1
     fi
 else
-  echo "No process running at PID from: $PID_FILE"
+  echo "No pid file found for memcached at $PID_FILE. Assume it's not running."
 fi
 
 echo "Starting the memcached server...."
@@ -27,7 +27,7 @@ if [ $RES -eq 0 ] ; then
     echo $! > $PID_FILE
 else 
  echo "Problem starting memcached, returned $RES."
- exit 1
+ exit $RES
 fi
 
 exit 0
