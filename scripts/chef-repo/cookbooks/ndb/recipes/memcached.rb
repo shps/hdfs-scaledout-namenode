@@ -10,7 +10,7 @@ service "#{theService}" do
 end
 
 ndb_mysql_start "#{theResource}" do
-  action :install_#{theService}
+  action :install_memcached
 end
 
 template "/etc/init.d/#{theService}" do
