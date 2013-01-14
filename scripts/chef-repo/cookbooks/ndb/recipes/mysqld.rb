@@ -79,6 +79,11 @@ bash 'mysql_install_db' do
   not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
 end
 
+ndb_mysql_start "install" do
+#  action :install_distributed_privileges
+  action :nothing
+end
+
 
 template "/etc/init.d/mysqld" do
   source "mysqld.erb"
@@ -92,6 +97,7 @@ template "/etc/init.d/mysqld" do
             })
  notifies :enable, resources(:service => "mysqld")
  notifies :restart, resources(:service => "mysqld"), :immediately
+ notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install")
 end
 
 
