@@ -43,7 +43,7 @@ action :install_distributed_privileges do
      #{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;" | grep "Conversion succeeded" 
     EOF
 #    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT CONCAT('Conversion ', IF(mysql.mysql_cluster_privileges_are_distributed(), 'succeeded', 'failed'), '.') AS Result;"  | grep "Conversion succeeded"` }
-    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME LIKE 'mysql_cluster%';"  | grep "mysql_cluster"` }
+    not_if { `#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME LIKE 'mysql_cluster%';\"  | grep mysql_cluster` }
   end
 
 
@@ -76,7 +76,6 @@ action :install_memcached do
     code <<-EOF
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{memcached}
     EOF
-#   not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT * FROM ndbmemcache.ndb_clusters;" | grep cluster_id` }
-    not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e "SELECT IF(EXISTS (SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'ndbmemcache'), 'Yes','No')" | grep Yes` }
+    not_if {`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT IF(EXISTS (SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'ndbmemcache'), 'Yes','No')\" | grep Yes` }
   end
 end
