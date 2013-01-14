@@ -4,12 +4,12 @@ Vagrant::Config.run do |config|
 #  config.vm.network :hostonly, "192.168.111.113"
  config.vm.network :bridged
 # Glassfish/webapp ports
-  config.vm.forward_port 8080, 8080
-  config.vm.forward_port 8181, 8181
-  config.vm.forward_port 8686, 8686
-  config.vm.forward_port 4848, 4848
+  config.vm.forward_port 8080, 8888
+  config.vm.forward_port 8181, 8111
+  config.vm.forward_port 8686, 6868
+  config.vm.forward_port 4848, 8484
 # Mysql server port
-  config.vm.forward_port 3306, 3306
+  config.vm.forward_port 3306, 3333
 # Ndb ports
   config.vm.forward_port 10001, 10001
   config.vm.forward_port 10002, 10002
@@ -18,12 +18,12 @@ Vagrant::Config.run do |config|
   config.vm.forward_port 10005, 10005
   config.vm.forward_port 10006, 10006
 # Chef ports
-  config.vm.forward_port 4000, 4000
-  config.vm.forward_port 4040, 4040
-  config.vm.forward_port 8983, 8983
+  config.vm.forward_port 4000, 40000
+  config.vm.forward_port 4040, 40400
+  config.vm.forward_port 8983, 89830
 
   #Collectd network plugin
-  config.vm.forward_port 25826,25826,{ :protocol => "udp"}
+  config.vm.forward_port 25826,55826,{ :protocol => "udp"}
 
    config.vm.provision :chef_solo, :log_level => :debug do |chef|
      chef.log_level = :debug
