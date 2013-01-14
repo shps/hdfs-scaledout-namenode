@@ -22,6 +22,11 @@ for script in node[:mgm][:scripts] do
   end
 end 
 
+service "ndb_mgmd" do
+  supports :restart => true, :stop => true, :start => true
+  action :start, :immediately
+end
+
 template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
@@ -34,12 +39,6 @@ template "/etc/init.d/ndb_mgmd" do
             })
   notifies :enable, resources(:service => "ndb_mgmd")
 end
-
-service "ndb_mgmd" do
-  supports :restart => true, :stop => true, :start => true
-  action :start, :immediately
-end
-
 
 template "#{node[:ndb][:base_dir]}/config.ini" do
   source "config.ini.erb"
