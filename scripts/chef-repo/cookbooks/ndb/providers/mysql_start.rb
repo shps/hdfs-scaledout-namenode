@@ -76,6 +76,6 @@ action :install_memcached do
     code <<-EOF
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{memcached}
     EOF
-    not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=\"ndbmemcache\";\" | grep ndbmemcache`"
+    not_if "`#{node[:ndb][:scripts_dir]}/mysql-client.sh -e \"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=\\\"ndbmemcache\\\";\" | grep ndbmemcache`"
   end
 end
