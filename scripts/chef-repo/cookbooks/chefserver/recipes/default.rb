@@ -66,8 +66,8 @@ end
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
   code <<-EOF
-   sudo gem install chef --no-ri --no-rdoc
    REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
+   sudo gem install chef --no-ri --no-rdoc
    sudo chef-solo -o chef-server::rubygems-install
    sudo /usr/bin/chef-server&
   EOF
