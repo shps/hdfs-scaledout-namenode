@@ -42,7 +42,7 @@ bash "add_user_sudoers" do
 end
 
 
-for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl}
+for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl make}
   package "#{install_package}" do
     action :install
   end
@@ -66,9 +66,10 @@ end
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
   code <<-EOF
+   sudo gem install chef --no-ri --no-rdoc
+   REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
    sudo chef-solo -o chef-server::rubygems-install
-
-   chef-server&
+   sudo /usr/bin/chef-server&
   EOF
 end
 
