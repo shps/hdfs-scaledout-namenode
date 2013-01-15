@@ -47,7 +47,7 @@ for install_package in %w{readline-common libreadline-dev expect expect-dev bind
   end
 end
 
-for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion}
+for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion libmixlib-cli-ruby1.9.1 }
   package "#{install_package}" do
     action :install
   end
@@ -356,6 +356,22 @@ template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
   group "chef"
   mode 0755
 end
+
+
+for install_gem in node[:ironfan][:gems]
+  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+    source "#{install_gem}.gem"
+    owner node[:chef][:user]
+    group node[:chef][:user]
+    mode 0755
+    action :create_if_missing
+  end
+  gem_package "#{install_gem}" do
+    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+    action :install
+  end
+end
+
 
 bash "configure_knife" do
 user "#{node[:chef][:user]}"
