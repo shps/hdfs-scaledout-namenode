@@ -45,10 +45,6 @@ package "package-update" do
   action :update
 end
 
-package "package-update" do
-  action :upgrade
-end
-
 for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl make}
   package "#{install_package}" do
     action :install
