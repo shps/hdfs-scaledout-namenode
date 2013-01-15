@@ -65,6 +65,42 @@ template "/etc/chef/solo.rb" do
   source "solo.rb.erb"
   mode 0755
 end
+ template "/etc/chef/solr.rb" do
+   source "solr.rb.erb"
+   owner node[:chef][:user]
+   group node[:chef][:user]
+   mode 0755
+ end
+template "/etc/chef/chef.json" do
+  source "chef.json.erb"
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  mode 0755
+end
+
+template "/etc/chef/server.rb" do
+  source "server.rb.erb"
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  mode 0755
+end
+
+template "/etc/chef/webui.rb" do
+  source "webui.rb.erb"
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  mode 0755
+end
+
+# chef-expander 
+for install_service in %w{ chef-server chef-solr chef-server-webui  }
+  template "/etc/init/#{install_service}.conf" do
+    source "#{install_service}.conf.erb"
+    owner "#{node[:chef][:user]}"
+    group "#{node[:chef][:user]}"
+    mode 0755
+  end
+end
 
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
@@ -74,18 +110,18 @@ bash "install_chef_server" do
    sudo chef-solo -o chef-server::rubygems-install
    sudo gem install chef-server-webui --no-ri --no-rdoc
    sudo gem install chef-server-api --no-ri --no-rdoc
-   sudo /usr/bin/chef-server&
-   sudo /usr/bin/chef-server-webui&
+   sudo gem install chef-expander --no-ri --no-rdoc
+
+for file in chef-server chef-solr chef-expander chef-server-webui
+do
+  outfile=`basename ${file}`
+  service=${outfile%.conf}
+  sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
+  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
+done
+
   EOF
 end
-
-
- template "/etc/chef/solr.rb" do
-   source "solr.rb.erb"
-   owner node[:chef][:user]
-   group node[:chef][:user]
-   mode 0755
- end
 
 
 # for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget debconf}
@@ -195,26 +231,6 @@ end
 # RvmBaseDir="/usr/local/rvm"
 
 
-template "/etc/chef/chef.json" do
-  source "chef.json.erb"
-  owner "#{node[:chef][:user]}"
-  group "#{node[:chef][:user]}"
-  mode 0755
-end
-
-template "/etc/chef/server.rb" do
-  source "server.rb.erb"
-  owner "#{node[:chef][:user]}"
-  group "#{node[:chef][:user]}"
-  mode 0755
-end
-
-template "/etc/chef/webui.rb" do
-  source "webui.rb.erb"
-  owner "#{node[:chef][:user]}"
-  group "#{node[:chef][:user]}"
-  mode 0755
-end
 
 # for install_file in %w{vhost.template install-chef-solo.sh} 
 #   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
