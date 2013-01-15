@@ -1,3 +1,4 @@
+
 #include_recipe "kthfsagent"
 
 user node[:ndb][:user] do
@@ -58,6 +59,7 @@ base_package_dirname =  File.basename(base_package_filename, ".tar.gz")
 cached_package_filename = "#{Chef::Config[:file_cache_path]}/#{base_package_filename}"
 Chef::Log.info "You should find it in:  #{cached_package_filename}"
 
+# TODO - HTTP Proxy settings
 remote_file cached_package_filename do
   source package_url
   mode "0600"
@@ -101,6 +103,13 @@ end
 
 template "#{node[:ndb][:scripts_dir]}/util/kill-process.sh" do
   source "kill-process.sh.erb"
+  owner node[:ndb][:user]
+  group node[:ndb][:user]
+  mode 0655
+end
+
+template "#{node[:ndb][:scripts_dir]}/util/force.sh" do
+  source "force.sh.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0655

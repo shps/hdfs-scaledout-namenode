@@ -54,7 +54,7 @@ end
 template "mysql.cnf" do
   owner node[:ndb][:user]
   group node[:ndb][:group]
-  path "#{node[:ndb][:base_dir]}/my.cnf"
+  path "#{node[:ndb][:root_dir]}/my.cnf"
   source "my.cnf.erb"
   mode "0644"
   variables({

@@ -40,7 +40,7 @@ template "/etc/init.d/ndb_mgmd" do
    notifies :enable, resources(:service => "ndb_mgmd")
 end
 
-template "#{node[:ndb][:base_dir]}/config.ini" do
+template "#{node[:ndb][:root_dir]}/config.ini" do
   source "config.ini.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]

@@ -53,8 +53,6 @@ default[:mgm][:id] = 49
 default[:mysql][:id] = 50
 default[:memcached][:id] = 51
 
-
-
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64
 # See examples here for configuration: http://dev.mysql.com/doc/ndbapi/en/ndbmemcache-configuration.html

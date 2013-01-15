@@ -1,26 +1,6 @@
 #!/bin/sh
+source <%= node[:ndb][:scripts_dir] %>/util/force.sh
 ID=<%= node[:mgm][:id] %>
 PID_FILE=<%= "#{node[:ndb][:log_dir]}/ndb_${ID}.pid" %> 
-# if [ ! -f $PID_FILE  ] ; then 
-#     echo "No mgm server (ndb_mgmd) process to stop - no PID file found at $PID_FILE."
-#     exit 0
-# fi
-
-# PID=`cat $PID_FILE`
-# echo ""
-# echo "Killing mgm server with process-id $PID "
-# echo ""
-# kill $PID
-# wait_pid_removed=10
-# timeout=0
-# while [ $timeout -lt $wait_pid_removed ] ; do
-#     sleep 1
-#     ! kill -0 $PID && break > /dev/null
-# #    test ! -s $PID_FILE && break
-#     echo -n "."
-#     timeout=`expr $timeout + 1`
-# done
-# echo ""
-
-<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh mgm-server $ID $PID_FILE 0
+<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh ndb_mgmd $PID_FILE 0 $FORCE
 exit $?

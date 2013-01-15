@@ -1,36 +1,6 @@
 #!/bin/sh
-
+source <%= node[:ndb][:scripts_dir] %>/util/force.sh
 ID=<%= @node_id %>
 PID_FILE=<%= node[:ndb][:log_dir] %>/memcached_$ID.pid
-
-#wait_pid_removed=10
-# if [ ! -f $PID_FILE  ] ; then 
-#     echo "No memcached server to stop - no PID file found at $PID_FILE."
-#     exit 0
-# fi
-
-# PID=`cat $PID_FILE`
-# PID=`expr $PID + 1`
-# kill -TERM $PID
-# RES=$?
-# if [ $RES -ne 0 ] ; then
-#     timeout=0
-#     while [ $timeout -lt $wait_pid_removed ] ; do
-# 	sleep 1
-# #	test ! -s $PID_FILE && break
-#         ! kill -0 $PID && break > /dev/null
-# 	echo -n "."
-# 	timeout=`expr $timeout + 1`
-#     done
-#     if [ $timeout -eq $wait_pid_removed ] ; then
-# 	kill -9 $PID
-#     fi
-# else
-#     exit 0
-
-# fi
-
-# exit $?
-
-<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh memcached $ID $PID_FILE 1
+<%= node[:ndb][:scripts_dir] %>/util/kill-process.sh memcached $PID_FILE 1 $FORCE
 exit $?
