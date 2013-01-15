@@ -25,8 +25,8 @@ client_key             "/etc/chef/client.pem"
 web_ui_client_name     "chef-webui"
 web_ui_key             "/etc/chef/webui.pem"
  
-web_ui_admin_user_name "kthfs"
-web_ui_admin_default_password "kthfs"
+web_ui_admin_user_name "<%= node[:web][:user] %>"
+web_ui_admin_default_password "<%= node[:web][:password] %>"
  
 supportdir = "/srv/chef/support"
 solr_jetty_path File.join(supportdir, "solr", "jetty")
