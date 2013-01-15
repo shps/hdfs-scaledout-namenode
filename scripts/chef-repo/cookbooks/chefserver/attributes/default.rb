@@ -1,5 +1,6 @@
 # Default values for configuration parameters
 default[:chef][:user] = "chef"
+default[:chef][:group] = "chef"
 default[:chef][:password] = "kthfs12"
 default[:amqp][:password] = "kthfs12"
 
