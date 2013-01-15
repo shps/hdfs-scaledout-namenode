@@ -1,6 +1,4 @@
 
-#include_recipe "kthfsagent"
-
 user node[:ndb][:user] do
   action :create
   system true

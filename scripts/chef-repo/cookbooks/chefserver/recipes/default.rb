@@ -33,7 +33,7 @@ user node[:chef][:user] do
   home "#{HomeDir}"
 end
 
-bash "add_chef_user_sudoers" do
+bash "add_user_sudoers" do
   user "root"
   code <<-EOF
   echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
@@ -41,16 +41,35 @@ bash "add_chef_user_sudoers" do
   EOF
 end
 
-for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget debconf}
+
+for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl}
   package "#{install_package}" do
     action :install
   end
 end
 
-for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion libmixlib-cli-ruby1.9.1 }
-  package "#{install_package}" do
-    action :install
-  end
+directory "/etc/chef" do
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  mode "755"
+  action :create
+  recursive true
+end
+
+template "/etc/chef/solo.rb" do
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  source "solo.rb.erb"
+  mode 0755
+end
+
+bash "install_chef_server" do
+  user "#{node[:chef][:user]}"
+  code <<-EOF
+   sudo chef-solo -o chef-server::rubygems-install
+
+   chef-server&
+  EOF
 end
 
 
@@ -61,114 +80,265 @@ end
 #   mode 0755
 # end
 
-# template "/etc/chef/knife.rb" do
-#   source "knife.rb.erb"
-#   owner node[:chef][:user]
-#   group node[:chef][:user]
+
+# for install_package in %w{readline-common libreadline-dev expect expect-dev bind9utils ncurses-dev openssl wget debconf}
+#   package "#{install_package}" do
+#     action :install
+#   end
+# end
+
+# for install_package in %w{build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev libxml2-dev libxslt-dev libc6-dev ncurses-dev libmixlib-cli-ruby1.9.1-full ssl-cert }
+#   package "#{install_package}" do
+#     action :install
+#   end
+# end
+
+
+# bash "install_chef_keys" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+# # mostly following this
+# # http://wiki.opscode.com/display/chef/Installing+Chef+Server+Manually
+
+# # needs setting on vagrant VMs for some reason
+# PATH=${PATH}:/usr/local/sbin:/usr/sbin:/sbin
+
+# # add the opscode repo
+# echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list > /dev/null
+# # and their key
+# sudo mkdir -p /etc/apt/trusted.gpg.d
+# echo "TRYING TO LIST KEYS"
+# EOF
+# end
+
+# bash "install_opscode_apt_keys" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+# sudo gpg --list-keys | grep 83EF826A
+# #if [ $? -ne 0 ] ; then
+# #  echo "Couldn't find opscode key"
+# sudo gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
+# if [ $? -ne 0 ] ; then
+#   echo "Re-trying opscode key"
+#   sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
+#   fi
+
+#   sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
+#   if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
+#     sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
+#     fi
+
+#     EOF
+#     # Test file exists and has a size greater than zero.
+#     not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
+#   end
+
+#   bash "install_rabbitmq_apt_keys" do
+#     user "#{node[:chef][:user]}"
+#     code <<-EOF
+
+# echo "RabbitMQ KEYS"
+# # RabbitMQ repo
+# echo "deb http://www.rabbitmq.com/debian/ testing main" | \
+#   sudo tee /etc/apt/sources.list.d/rabbit.list > /dev/null
+# if [ ! "`sudo apt-key list | grep Rabbit`" ]
+# then
+#   cd /tmp
+#   echo "Getting RabbitMQ KEYS"
+#   wget http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+#   echo "Installing RabbitMQ KEYS"
+#   sudo apt-key add rabbitmq-signing-key-public.asc
+#   fi
+
+#   # update apt to tell it about the new opscode and rabbitmq repos
+#   sudo apt-get -y -q update
+#   EOF
+#   not_if "`sudo apt-key list | grep Rabbit`"
+# end
+
+# for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
+#   package "#{install_package}" do
+#     action :install
+#     options "--force-yes"
+#   end
+# end
+
+
+# bash "install_chef_rabbitmq_install" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+
+# #`java -version 2> /dev/null` || sudo apt-get -y -q install openjdk-6-jdk
+
+# # configure rabbit (if it's not already done)
+# [ "`sudo rabbitmqctl list_vhosts | grep chef`" ] \
+#   || sudo rabbitmqctl add_vhost /chef
+# [ "`sudo rabbitmqctl list_users | grep chef`" ] \
+#   || sudo rabbitmqctl add_user chef testing
+# sudo rabbitmqctl set_permissions -p /chef chef ".*" ".*" ".*"
+# # we also like the rabbit webui management thing
+# sudo rabbitmq-plugins enable rabbitmq_management
+# sudo service rabbitmq-server restart
+
+# EOF
+#   not_if "sudo rabbitmqctl -q status 2> /dev/null"
+# end
+
+# RubyBaseDir="#{HomeDir}/.rvm"
+# RvmBaseDir="/usr/local/rvm"
+
+
+# template "/etc/chef/chef.json" do
+#   source "chef.json.erb"
+#   owner "#{node[:chef][:user]}"
+#   group "#{node[:chef][:user]}"
 #   mode 0755
 # end
-#
 
-bash "install_chef_keys" do
-  user "#{node[:chef][:user]}"
-  ignore_failure false
-  code <<-EOF
-# mostly following this
-# http://wiki.opscode.com/display/chef/Installing+Chef+Server+Manually
+# template "/etc/chef/server.rb" do
+#   source "server.rb.erb"
+#   owner "#{node[:chef][:user]}"
+#   group "#{node[:chef][:user]}"
+#   mode 0755
+# end
 
-# needs setting on vagrant VMs for some reason
-PATH=${PATH}:/usr/local/sbin:/usr/sbin:/sbin
+# template "/etc/chef/webui.rb" do
+#   source "webui.rb.erb"
+#   owner "#{node[:chef][:user]}"
+#   group "#{node[:chef][:user]}"
+#   mode 0755
+# end
 
-# add the opscode repo
-echo "deb http://apt.opscode.com/ `lsb_release -cs`-0.10 main" | sudo tee /etc/apt/sources.list.d/opscode.list > /dev/null
-# and their key
-sudo mkdir -p /etc/apt/trusted.gpg.d
-echo "TRYING TO LIST KEYS"
+# for install_file in %w{vhost.template install-chef-solo.sh} 
+#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
+#     source "#{install_file}"
+#     owner "#{node[:chef][:user]}"
+#     group "#{node[:chef][:user]}"
+#     mode 0755
+#     action :create_if_missing
+#   end
+# end
+
+# bash "install_chef_ruby" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+
+# #sudo apt-get install -y -q ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
+
+# sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
+#                         /usr/share/man/man1/ruby1.9.1.1.gz \
+#         --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
+#         --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
+#         --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
+
+# # choose your interpreter
+# # changes symlinks for /usr/bin/ruby , /usr/bin/gem
+# # /usr/bin/irb, /usr/bin/ri and man (1) ruby
+
+# # sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
+
+# sudo update-alternatives --config ruby
+# sudo update-alternatives --config gem
+
+# # now try
+# ruby --version
+
+# EOF
+# end
+
+# directory "/var/cache/local/preseeding" do
+#   owner "root"
+#   mode 0755
+#   recursive true
+# end
+
+# execute "preseed chef" do
+#   command "debconf-set-selections /var/cache/local/preseeding/chef.seed"
+#   action :nothing
+# end
+
+# template "/var/cache/local/preseeding/chef.seed" do
+#   source "chef.seed.erb"
+#   owner "root"
+#   mode "0600"
+#   notifies :run, resources(:execute => "preseed chef"), :immediately
+# end
+
+# execute "preseed chef-server" do
+#   command "debconf-set-selections /var/cache/local/preseeding/chef-server.seed"
+#   action :nothing
+# end
+
+# template "/var/cache/local/preseeding/chef-server.seed" do
+#   source "chef-server.seed.erb"
+#   owner "root"
+#   mode "0600"
+#   notifies :run, resources(:execute => "preseed chef-server"), :immediately
+# end
+
+# bash "install_chef_solo" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+
+# REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
+# sudo gem install chef --no-ri --no-rdoc
+
+# #sudo apt-get install -y -q chef
+
+# #sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
+
+# # Following doesn't work
+# # sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
+# #sudo usermod -s /bin/bash #{node[:chef][:user]}
+# #sudo chef-solo -v
+
+# EOF
+#   #not_if "which chef-solo"
+# end
+
+
+# bash "install_chef_server_from_solo" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+# #chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+# #sudo #{node[:ruby][:base_dir]}/bin/chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
+# sudo apt-get install -y -q chef-server chef-server-api chef-server-webui chef-solr
+
+# EOF
+#   #not_if "which chef-server"
+# end
+
+
+
+
+
+
+template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
+  source "knife-config.sh.erb"
+  owner "#{node[:chef][:user]}"
+  group "#{node[:chef][:user]}"
+  mode 0755
+end
+
+bash "configure_knife" do
+user "#{node[:chef][:user]}"
+code <<-EOF
+rm -rf #{HomeDir}/.chef
+cd #{HomeDir}
+sudo #{Chef::Config[:file_cache_path]}/knife-config.sh
+cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+cp /etc/chef/validation.pem #{HomeDir}/validation.pem
+
+# sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
+# sudo update-alternatives --set gem /usr/bin/gem1.9.1
+
 EOF
+not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
 
-bash "install_opscode_apt_keys" do
-  user "#{node[:chef][:user]}"
-  ignore_failure false
-  code <<-EOF
-sudo gpg --list-keys | grep 83EF826A
-#if [ $? -ne 0 ] ; then
-#  echo "Couldn't find opscode key"
-sudo gpg --keyserver keys.gnupg.net --recv-keys 83EF826A
-if [ $? -ne 0 ] ; then
-  echo "Re-trying opscode key"
-  sudo gpg --fetch-key http://apt.opscode.com/packages@opscode.com.gpg.key
-  fi
-
-  sudo gpg --export packages@opscode.com | sudo tee /etc/apt/trusted.gpg.d/opscode-keyring.gpg > /dev/null
-  if [ ! -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg ] ; then
-    sudo mv /etc/apt/trusted.gpg.d/opscode-keyring.gpg.pkg-new /etc/apt/trusted.gpg.d/opscode-keyring.gpg
-    fi
-
-    EOF
-    # Test file exists and has a size greater than zero.
-    not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
-  end
-
-  bash "install_rabbitmq_apt_keys" do
-    user "#{node[:chef][:user]}"
-    ignore_failure false
-    code <<-EOF
-
-echo "RabbitMQ KEYS"
-# RabbitMQ repo
-echo "deb http://www.rabbitmq.com/debian/ testing main" | \
-  sudo tee /etc/apt/sources.list.d/rabbit.list > /dev/null
-if [ ! "`sudo apt-key list | grep Rabbit`" ]
-then
-  cd /tmp
-  echo "Getting RabbitMQ KEYS"
-  wget http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
-  echo "Installing RabbitMQ KEYS"
-  sudo apt-key add rabbitmq-signing-key-public.asc
-  fi
-
-  # update apt to tell it about the new opscode and rabbitmq repos
-  sudo apt-get -y -q update
-  EOF
-  not_if "`sudo apt-key list | grep Rabbit`"
-end
-
-for install_package in %w{ couchdb nginx libgecode-dev rabbitmq-server opscode-keyring }
-  package "#{install_package}" do
-    action :install
-    options "--force-yes"
-  end
-end
-
-
-bash "install_chef_rabbitmq_install" do
-  user "#{node[:chef][:user]}"
-  ignore_failure false
-  code <<-EOF
-
-#`java -version 2> /dev/null` || sudo apt-get -y -q install openjdk-6-jdk
-
-# configure rabbit (if it's not already done)
-[ "`sudo rabbitmqctl list_vhosts | grep chef`" ] \
-  || sudo rabbitmqctl add_vhost /chef
-[ "`sudo rabbitmqctl list_users | grep chef`" ] \
-  || sudo rabbitmqctl add_user chef testing
-sudo rabbitmqctl set_permissions -p /chef chef ".*" ".*" ".*"
-# we also like the rabbit webui management thing
-sudo rabbitmq-plugins enable rabbitmq_management
-sudo service rabbitmq-server restart
-
-EOF
-  not_if "sudo rabbitmqctl -q status 2> /dev/null"
-end
-
-RubyBaseDir="#{HomeDir}/.rvm"
-RvmBaseDir="/usr/local/rvm"
 
 # bash "install_rvm" do
 #   user "#{node[:chef][:user]}"
-#   ignore_failure false
 #   code <<-EOF
 
 # # install rvm
@@ -192,7 +362,6 @@ RvmBaseDir="/usr/local/rvm"
 
 # bash "install_chef_ruby" do
 # user "#{node[:chef][:user]}"
-# ignore_failure false
 # code <<-EOF
 # sudo su -l #{node[:chef][:user]} -c "rvm user all; rvm install 1.9.3; rvm use 1.9.3 --default"
 # #sudo su - #{node[:chef][:user]} -l -c "rvm install 1.9.2; rvm use 1.9.2 --default"
@@ -213,183 +382,6 @@ RvmBaseDir="/usr/local/rvm"
 #   not_if "#{RubyBaseDir}/bin/ruby -v | grep \"1.9.3\" && test -f #{RubyBaseDir}/usr/lib/libssl.so"
 # end
 
-
-directory "/etc/chef" do
-  owner "chef"
-  group "chef"
-  mode "755"
-  action :create
-  recursive true
-end
-
-template "/etc/chef/chef.json" do
-  source "chef.json.erb"
-  owner "chef"
-  group "chef"
-  mode 0755
-end
- template "/etc/chef/solo.rb" do
-  source "solo.rb.erb"
-  owner "chef"
-  group "chef"
-  mode 0755
- end
-
-# template "/etc/chef/server.rb" do
-#   source "server.rb.erb"
-#   owner "chef"
-#   group "chef"
-#   mode 0755
-# end
-
-# template "/etc/chef/webui.rb" do
-#   source "webui.rb.erb"
-#   owner "chef"
-#   group "chef"
-#   mode 0755
-# end
-
-for install_file in %w{vhost.template install-chef-solo.sh} 
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_file}" do
-    source "#{install_file}"
-    owner "chef"
-    group "chef"
-    mode 0755
-    action :create_if_missing
-  end
-end
-
-bash "install_chef_ruby" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-sudo apt-get install -y -q ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
-
-sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
-                        /usr/share/man/man1/ruby1.9.1.1.gz \
-        --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
-        --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
-        --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
-
-# choose your interpreter
-# changes symlinks for /usr/bin/ruby , /usr/bin/gem
-# /usr/bin/irb, /usr/bin/ri and man (1) ruby
-
-# sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
-
-sudo update-alternatives --config ruby
-sudo update-alternatives --config gem
-
-# now try
-ruby --version
-
-EOF
-end
-
-  directory "/var/cache/local/preseeding" do
-    owner "root"
-    mode 0755
-    recursive true
-  end
-
-  execute "preseed chef" do
-    command "debconf-set-selections /var/cache/local/preseeding/chef.seed"
-    action :nothing
-  end
-
-  template "/var/cache/local/preseeding/chef.seed" do
-    source "chef.seed.erb"
-    owner "root"
-    mode "0600"
-    notifies :run, resources(:execute => "preseed chef"), :immediately
-  end
-
-  execute "preseed chef-server" do
-    command "debconf-set-selections /var/cache/local/preseeding/chef-server.seed"
-    action :nothing
-  end
-
-  template "/var/cache/local/preseeding/chef-server.seed" do
-    source "chef-server.seed.erb"
-    owner "root"
-    mode "0600"
-    notifies :run, resources(:execute => "preseed chef-server"), :immediately
-  end
-
-
-bash "install_chef_solo" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-
-sudo apt-get install -y -q chef
-
-#sudo true && curl -L https://www.opscode.com/chef/install.sh | sudo bash
-
-# Following doesn't work
-# sudo #{Chef::Config[:file_cache_path]}/install-chef-solo.sh
-#sudo usermod -s /bin/bash #{node[:chef][:user]}
-#sudo chef-solo -v
-
-EOF
-#not_if "which chef-solo"
-end
-
-
-bash "install_chef_server_from_solo" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-#chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
-#sudo #{node[:ruby][:base_dir]}/bin/chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz
-sudo apt-get install -y -q chef-server chef-server-api chef-server-webui chef-solr
-
-EOF
-#not_if "which chef-server"
-end
-
-
-template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
-  source "knife-config.sh.erb"
-  owner "chef"
-  group "chef"
-  mode 0755
-end
-
-
-for install_gem in node[:ironfan][:gems]
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-    source "#{install_gem}.gem"
-    owner node[:chef][:user]
-    group node[:chef][:user]
-    mode 0755
-    action :create_if_missing
-  end
-  gem_package "#{install_gem}" do
-    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-    action :install
-  end
-end
-
-
-bash "configure_knife" do
-user "#{node[:chef][:user]}"
-ignore_failure false
-code <<-EOF
-rm -rf #{HomeDir}/.chef
-cd #{HomeDir}
-#{Chef::Config[:file_cache_path]}/knife-config.sh
-cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
-# sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
-# sudo update-alternatives --set gem /usr/bin/gem1.9.1
-
-EOF
-not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
-end
-
-
-
 # for install_gem in node[:chef][:gems]
 #   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
 #     source "#{install_gem}.gem"
@@ -408,7 +400,6 @@ end
 
 # bash "install_chef_server2e" do
 # user "#{node[:chef][:user]}"
-# ignore_failure false
 # code <<-EOF
 
 
@@ -438,7 +429,6 @@ end
 
 # bash "install_chef_server3" do
 # user "#{node[:chef][:user]}"
-# ignore_failure false
 # code <<-EOF
 # # source /etc/profile.d/rvm.sh
 # sudo chown -R #{node[:chef][:user]} /var/chef/
@@ -457,7 +447,6 @@ end
 
 # bash "install_chef_server3b" do
 # user "#{node[:chef][:user]}"
-# ignore_failure false
 # code <<-EOF
 # # #source /etc/profile.d/rvm.sh
 
