@@ -353,8 +353,8 @@ code <<-EOF
 test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
 sudo #{Chef::Config[:file_cache_path]}/knife-config.sh
-cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
-cp /etc/chef/validation.pem #{HomeDir}/validation.pem
+sudo cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+sudo cp /etc/chef/validation.pem #{HomeDir}/validation.pem
 
 # sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
 # sudo update-alternatives --set gem /usr/bin/gem1.9.1
