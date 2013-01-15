@@ -93,7 +93,7 @@ template "/etc/chef/webui.rb" do
 end
 
 # chef-expander 
-for install_service in %w{ chef-server chef-solr chef-server-webui  }
+for install_service in %w{ chef-server chef-solr chef-server-webui }
   template "/etc/init/#{install_service}.conf" do
     source "#{install_service}.conf.erb"
     owner "#{node[:chef][:user]}"
@@ -110,9 +110,10 @@ bash "install_chef_server" do
    sudo chef-solo -o chef-server::rubygems-install
    sudo gem install chef-server-webui --no-ri --no-rdoc
    sudo gem install chef-server-api --no-ri --no-rdoc
-   sudo gem install chef-expander --no-ri --no-rdoc
+#   sudo gem install chef-expander --no-ri --no-rdoc
 
-for file in chef-server chef-solr chef-expander chef-server-webui
+# chef-expander
+for file in chef-server chef-solr chef-server-webui
 do
   outfile=`basename ${file}`
   service=${outfile%.conf}
