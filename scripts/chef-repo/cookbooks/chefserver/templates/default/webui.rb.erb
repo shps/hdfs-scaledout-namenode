@@ -28,7 +28,7 @@ ssl_verify_mode    :verify_none
 # valid values are any HTTP URL. If the server API port is changed, this
 # value needs to be updated as well.
 
-chef_server_url    "http://<%= node['ipaddress] %>:4000"
+chef_server_url    "http://<%= node['ipaddress'] %>:4000"
 
 # file_cache_path specifies where the client should cache cookbooks, server
 # cookie ID, and openid registration data.
