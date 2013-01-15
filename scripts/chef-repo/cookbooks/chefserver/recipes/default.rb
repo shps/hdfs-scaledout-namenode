@@ -349,7 +349,8 @@ end
 bash "configure_knife" do
 user "#{node[:chef][:user]}"
 code <<-EOF
-rm -rf #{HomeDir}/.chef
+
+test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
 sudo #{Chef::Config[:file_cache_path]}/knife-config.sh
 cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
