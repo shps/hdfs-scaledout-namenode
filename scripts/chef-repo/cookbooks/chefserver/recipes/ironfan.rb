@@ -97,10 +97,10 @@ rm -rf $CHEF_HOMEBASE/knife/credentials
 cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 #cp #{HomeDir}/*.pem/etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 #cp #{HomeDir}/webuit.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+#sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
 cp #{HomeDir}/#{node[:chef][:client]}.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
 cp #{HomeDir}/webuit.pem $CHEF_HOMEBASE/knife/credentials/
-cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
-sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
+cp #{HomeDir}/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 cd $CHEF_HOMEBASE/knife/credentials/
 mkdir certificates
 mkdir client_keys
@@ -146,7 +146,6 @@ end
 
 bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
-ignore_failure false
 code <<-EOF
 source #{HomeDir}/.bashrc
 cd #{HomeDir}/homebase

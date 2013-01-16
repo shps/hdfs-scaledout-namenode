@@ -88,14 +88,14 @@ bash "install_chef_server" do
    sudo gem install chef-server-api --no-ri --no-rdoc
    sudo gem install chef-solr --no-ri --no-rdoc
 
-#TODO -  need workaround to get chef-expander installed due to bug:
-# chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
-#   sudo gem install chef-expander --no-ri --no-rdoc
-
    sudo chown -R #{node[:chef][:user]} /var/log/chef 
    sudo chown -R #{node[:chef][:user]} /etc/chef/
    sudo chown -R #{node[:chef][:user]} /var/cache/chef
    sudo chown -R #{node[:chef][:user]} #{HomeDir}
+
+#TODO -  need workaround to get chef-expander installed due to bug:
+# chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
+   sudo gem install chef-expander --no-ri --no-rdoc
 
 # TODO - also include chef-expander here:
 #for file in chef-server chef-solr chef-server-webui 
@@ -110,7 +110,7 @@ not_if "which chef-server-webui"
 end
 
 # chef-expander 
-for install_service in %w{ chef-server chef-solr chef-server-webui }
+for install_service in %w{ chef-server chef-solr chef-server-webui chef-expander }
   service "#{install_service}" do
     provider Chef::Provider::Service::Upstart
     supports :restart => true, :stop => true, :start => true
@@ -149,6 +149,7 @@ while [ $timeout -lt $wait_chef ] ; do
     echo -n "."
     timeout=`expr $timeout + 1`
 done
+echo "Chef server started in $timeout seconds"
 
 test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
@@ -156,7 +157,7 @@ sudo cp /etc/chef/*.pem #{HomeDir}/
 sudo chown #{node[:chef][:user]} #{HomeDir}/*.pem
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
-sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
+#sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
 # For some reason the chef user's shell becomse /bin/sh - change it to bash
 sudo usermod -s /bin/bash #{node[:chef][:user]}
 
