@@ -22,16 +22,14 @@ ignore_failure false
 code <<-EOF
 
 
-# for gem in "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" 
- for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
- do
-   # # if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
-   # # then
-   #   echo "INSTALLING: ${gem}"
-#     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
-     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
-   # fi
- done
+ # for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
+ # do
+ #   # # if [ ! "`/usr/bin/gem1.9.1 list | grep \"${gem} \"`" ]
+ #   # # then
+ #   #   echo "INSTALLING: ${gem}"
+ #     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
+ #   # fi
+ # done
 
 
 # sudo gem install ironfan --no-rdoc --no-ri
@@ -42,9 +40,15 @@ code <<-EOF
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
 export EDITOR=vi
-echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
-echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
-echo "export EDITOR=vi" >> #{HomeDir}/.bash_aliases 
+#echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
+#echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
+#echo "export EDITOR=vi" >> #{HomeDir}/.bash_aliases 
+PATH_UPDATER=/etc/profile.d/ironfan.sh
+sudo echo "export CHEF_USERNAME=#{node[:chef][:user]}" > $PATH_UPDATER
+sudo echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> $PATH_UPDATER
+sudo echo "export EDITOR=vi" >> $PATH_UPDATER
+sudo chmod 755 $PATH_UPDATER
+
 cd $CHEF_HOME
 
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
