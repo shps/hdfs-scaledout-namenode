@@ -122,7 +122,7 @@ for install_service in %w{ chef-server chef-solr chef-server-webui }
     owner "#{node[:chef][:user]}"
     group "#{node[:chef][:user]}"
     mode 0755
-    notifies :enable, "service[nginx]"
+    notifies :enable, "service[#{install_service}]"
     notifies :start, "service[#{install_service}]", :immediately
   end
 end
