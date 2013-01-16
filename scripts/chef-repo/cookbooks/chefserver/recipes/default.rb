@@ -37,12 +37,12 @@ for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl make
   end
 end
 
-directory "/etc/chef" do
+directory "/etc/chef/certificates" do
   owner "#{node[:chef][:user]}"
   group "#{node[:chef][:user]}"
-  mode "755"
   action :create
   recursive true
+  mode 0755
 end
 
 template "/etc/chef/solo.rb" do
@@ -96,6 +96,7 @@ bash "install_chef_server" do
    sudo chef-solo -o chef-server::rubygems-install
    sudo gem install chef-server-webui --no-ri --no-rdoc
    sudo gem install chef-server-api --no-ri --no-rdoc
+   sudo gem install chef-solr --no-ri --no-rdoc
 
 #TODO -  need workaround to get chef-expander installed due to bug:
 # chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495

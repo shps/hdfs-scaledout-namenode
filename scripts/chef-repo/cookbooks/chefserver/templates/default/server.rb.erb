@@ -7,17 +7,18 @@ log_location       STDOUT
 ssl_verify_mode    :verify_none
 chef_server_url    "http://<%= node['ipaddress'] %>:4000"
  
-signing_ca_path    "<%= node[:chef][:base_dir] %>/ca"
 couchdb_database   'chef'
  
 cookbook_path      [ "<%= node[:chef][:base_dir] %>/cookbooks", "<%= node[:chef][:base_dir] %>/site-cookbooks" ]
  
+signing_ca_path    "<%= node[:chef][:base_dir] %>/ca"
 file_cache_path    "<%= node[:chef][:base_dir] %>/cache"
 node_path          "<%= node[:chef][:base_dir] %>/nodes"
 openid_store_path  "<%= node[:chef][:base_dir] %>/openid/store"
 openid_cstore_path "<%= node[:chef][:base_dir] %>/openid/cstore"
 search_index_path  "<%= node[:chef][:base_dir] %>/search_index"
 role_path          "<%= node[:chef][:base_dir] %>/roles"
+
  
 validation_client_name "chef-validator"
 validation_key         "/etc/chef/validation.pem"
