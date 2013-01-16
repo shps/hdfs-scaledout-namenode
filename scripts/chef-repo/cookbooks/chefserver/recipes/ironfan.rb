@@ -7,21 +7,21 @@ for install_package in %w{ git }
 end
 
 
-for install_gem in node[:ironfan][:gems]
-  cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
-    source "#{install_gem}.gem"
-    owner node[:chef][:user]
-    group node[:chef][:user]
-    mode 0755
-    action :create_if_missing
-  end
-  gem_package "#{install_gem}" do
-    source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
-    action :install
-#    options "--no-rdoc --no-ri"
-    options(:ignore_dependencies => true)
-  end
-end
+# for install_gem in node[:ironfan][:gems]
+#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+#     source "#{install_gem}.gem"
+#     owner node[:chef][:user]
+#     group node[:chef][:user]
+#     mode 0755
+#     action :create_if_missing
+#   end
+#   gem_package "#{install_gem}" do
+#     source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+#     action :install
+# #    options "--no-rdoc --no-ri"
+#     options(:ignore_dependencies => true)
+#   end
+# end
 
 template "/etc/profile.d/ironfan.sh" do
   source "ironfan.sh.erb"
@@ -45,8 +45,8 @@ code <<-EOF
  # done
 
 
-# sudo gem install ironfan --no-rdoc --no-ri
-# sudo gem install bundle --no-rdoc --no-ri
+ sudo gem install ironfan --no-rdoc --no-ri
+ sudo gem install bundle --no-rdoc --no-ri
 # sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
 
