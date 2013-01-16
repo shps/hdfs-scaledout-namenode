@@ -7,11 +7,11 @@ log_location       STDOUT
 ssl_verify_mode    :verify_none
 chef_server_url    "http://<%= node['ipaddress'] %>:4000"
  
+signing_ca_path    "<%= node[:chef][:base_dir] %>/ca"
 couchdb_database   'chef'
  
 cookbook_path      [ "<%= node[:chef][:base_dir] %>/cookbooks", "<%= node[:chef][:base_dir] %>/site-cookbooks" ]
  
-signing_ca_path    "<%= node[:chef][:base_dir] %>/ca"
 file_cache_path    "<%= node[:chef][:base_dir] %>/cache"
 node_path          "<%= node[:chef][:base_dir] %>/nodes"
 openid_store_path  "<%= node[:chef][:base_dir] %>/openid/store"
@@ -29,7 +29,7 @@ web_ui_key             "/etc/chef/webui.pem"
 #web_ui_admin_user_name "<%= node[:web][:user] %>"
 #web_ui_admin_default_password "<%= node[:web][:password] %>"
  
-supportdir = "/srv/chef/support"
+supportdir = "<%= node[:chef][:base_dir] %>/support"
 solr_jetty_path File.join(supportdir, "solr", "jetty")
 solr_data_path  File.join(supportdir, "solr", "data")
 solr_home_path  File.join(supportdir, "solr", "home")

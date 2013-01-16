@@ -15,6 +15,7 @@ pre-start script
 end script
 
 script
-  su - <%= node[:chef][:user] %> -c "chef-solr -c /etc/chef/solr.rb -L /var/log/chef/solr.log"
+#  su - <%= node[:chef][:user] %> -c "chef-solr -c /etc/chef/solr.rb -L /var/log/chef/solr.log"
+chef-solr -c /etc/chef/solr.rb -L /var/log/chef/solr.log
 end script
 

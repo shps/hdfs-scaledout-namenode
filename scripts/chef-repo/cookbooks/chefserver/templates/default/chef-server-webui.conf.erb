@@ -15,5 +15,6 @@ pre-start script
 end script
 
 script
-  su - <%= node[:chef][:user] %> -c "chef-server-webui -e production -p 4040 -L /var/log/chef/server-webui.log"
+#  su - <%= node[:chef][:user] %> -c "chef-server-webui -e production -p 4040 -L /var/log/chef/server-webui.log"
+chef-server-webui -e production -p 4040 -L /var/log/chef/server-webui.log
 end script

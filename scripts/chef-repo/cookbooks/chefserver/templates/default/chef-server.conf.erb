@@ -15,6 +15,7 @@ pre-start script
 end script
 
 script
-  su - <%= node[:chef][:user] %> -c "chef-server -e production -p 4000 -L /var/log/chef/server.log"
+#  su - <%= node[:chef][:user] %> -c "chef-server -e production -p 4000 -L /var/log/chef/server.log"
+  chef-server -e production -p 4000 -L /var/log/chef/server.log
 end script
 
