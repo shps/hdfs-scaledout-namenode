@@ -101,7 +101,7 @@ bash "install_chef_server" do
 # chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
 #   sudo gem install chef-expander --no-ri --no-rdoc
 
-   sudo chown -R #{node[:chef][:user]} /var/log/chef /etc/chef/ /var/cache/chef
+   sudo chown -R #{node[:chef][:user]} /var/log/chef /etc/chef/ /var/cache/chef #{HomeDir}
 
 
 # TODO - also include chef-expander here:
