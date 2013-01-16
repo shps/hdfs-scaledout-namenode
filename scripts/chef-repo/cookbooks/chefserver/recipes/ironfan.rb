@@ -1,5 +1,12 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
+for install_package in %w{ git }
+  package "#{install_package}" do
+    action :install
+  end
+end
+
+
 for install_gem in node[:ironfan][:gems]
   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
     source "#{install_gem}.gem"
@@ -15,10 +22,15 @@ for install_gem in node[:ironfan][:gems]
   end
 end
 
+template "/etc/profile.d/ironfan.sh" do
+  source "ironfan.sh.erb"
+  owner "root"
+  group "root"
+  mode 0755
+end
 
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
-ignore_failure false
 code <<-EOF
 
 
@@ -32,8 +44,8 @@ code <<-EOF
  # done
 
 
-# sudo gem install ironfan --no-rdoc --no-ri
-# sudo gem install bundle --no-rdoc --no-ri
+ sudo gem install ironfan --no-rdoc --no-ri
+ sudo gem install bundle --no-rdoc --no-ri
 # sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
 
@@ -43,11 +55,11 @@ export EDITOR=vi
 #echo "export CHEF_USERNAME=#{node[:chef][:user]}" >> #{HomeDir}/.bash_aliases 
 #echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
 #echo "export EDITOR=vi" >> #{HomeDir}/.bash_aliases 
-PATH_UPDATER=/etc/profile.d/ironfan.sh
-sudo echo "export CHEF_USERNAME=#{node[:chef][:user]}" > sudo $PATH_UPDATER
-sudo echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> sudo $PATH_UPDATER
-sudo echo "export EDITOR=vi" >> sudo $PATH_UPDATER
-sudo chmod 755 $PATH_UPDATER
+# PATH_UPDATER=/etc/profile.d/ironfan.sh
+# sudo echo "export CHEF_USERNAME=#{node[:chef][:user]}" > sudo $PATH_UPDATER
+# sudo echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> sudo $PATH_UPDATER
+# sudo echo "export EDITOR=vi" >> sudo $PATH_UPDATER
+# sudo chmod 755 $PATH_UPDATER
 
 cd $CHEF_HOME
 
