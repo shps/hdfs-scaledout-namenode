@@ -95,7 +95,7 @@ bash "install_chef_server" do
 
 #TODO -  need workaround to get chef-expander installed due to bug:
 # chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
-   sudo gem install chef-expander --no-ri --no-rdoc
+#   sudo gem install chef-expander --no-ri --no-rdoc
 
 # TODO - also include chef-expander here:
 #for file in chef-server chef-solr chef-server-webui 
@@ -110,7 +110,7 @@ not_if "which chef-server-webui"
 end
 
 # chef-expander 
-for install_service in %w{ chef-server chef-solr chef-server-webui chef-expander }
+for install_service in %w{ chef-server chef-solr chef-server-webui }
   service "#{install_service}" do
     provider Chef::Provider::Service::Upstart
     supports :restart => true, :stop => true, :start => true
