@@ -114,6 +114,7 @@ do
 done
 
   EOF
+not_if "which chef-server-webui"
 end
 
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
