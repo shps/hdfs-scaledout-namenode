@@ -44,9 +44,9 @@ export EDITOR=vi
 #echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> #{HomeDir}/.bash_aliases 
 #echo "export EDITOR=vi" >> #{HomeDir}/.bash_aliases 
 PATH_UPDATER=/etc/profile.d/ironfan.sh
-sudo echo "export CHEF_USERNAME=#{node[:chef][:user]}" > $PATH_UPDATER
-sudo echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> $PATH_UPDATER
-sudo echo "export EDITOR=vi" >> $PATH_UPDATER
+sudo echo "export CHEF_USERNAME=#{node[:chef][:user]}" > sudo $PATH_UPDATER
+sudo echo "export CHEF_HOMEBASE=#{HomeDir}/homebase" >> sudo $PATH_UPDATER
+sudo echo "export EDITOR=vi" >> sudo $PATH_UPDATER
 sudo chmod 755 $PATH_UPDATER
 
 cd $CHEF_HOME
