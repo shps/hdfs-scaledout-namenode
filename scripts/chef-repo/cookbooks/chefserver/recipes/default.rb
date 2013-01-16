@@ -144,7 +144,8 @@ wait_chef=30
 timeout=0
 while [ $timeout -lt $wait_chef ] ; do
     sleep 1
-    (! (ps -ef | grep chef-server > /dev/null) && break
+    ps -ef | grep chef-server > /dev/null
+    $? -eq 0 && break
     echo -n "."
     timeout=`expr $timeout + 1`
 done
@@ -160,5 +161,5 @@ sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
 sudo usermod -s /bin/bash #{node[:chef][:user]}
 
 EOF
-#not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
+not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
