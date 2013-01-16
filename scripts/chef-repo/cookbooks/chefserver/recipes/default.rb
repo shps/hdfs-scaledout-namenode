@@ -78,16 +78,6 @@ template "/etc/chef/webui.rb" do
   mode 0755
 end
 
-# chef-expander 
-for install_service in %w{ chef-server chef-solr chef-server-webui }
-  template "/etc/init/#{install_service}.conf" do
-    source "#{install_service}.conf.erb"
-    owner "#{node[:chef][:user]}"
-    group "#{node[:chef][:user]}"
-    mode 0755
-  end
-end
-
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
   code <<-EOF
@@ -108,16 +98,36 @@ bash "install_chef_server" do
    sudo chown -R #{node[:chef][:user]} #{HomeDir}
 
 # TODO - also include chef-expander here:
-for file in chef-server chef-solr chef-server-webui 
-do
-  outfile=`basename ${file}`
-  service=${outfile%.conf}
-  sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
-  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
-done
+#for file in chef-server chef-solr chef-server-webui 
+#do
+#  outfile=`basename ${file}`
+#  service=${outfile%.conf}
+#  sudo ln -sf /lib/init/ upstart-job /etc/init.d/${service}
+#  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
+#done
   EOF
 not_if "which chef-server-webui"
 end
+
+# chef-expander 
+for install_service in %w{ chef-server chef-solr chef-server-webui }
+  service "#{install_service}" do
+    provider Chef::Provider::Service::Upstart
+    supports :restart => true, :stop => true, :start => true
+    action :nothing
+  end
+
+  template "/etc/init/#{install_service}.conf" do
+    source "#{install_service}.conf.erb"
+    owner "#{node[:chef][:user]}"
+    group "#{node[:chef][:user]}"
+    mode 0755
+    notifies :enable, "service[nginx]"
+    notifies :start, "service[#{install_service}]", :immediately
+  end
+end
+
+
 
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
   source "knife-config.sh.erb"
