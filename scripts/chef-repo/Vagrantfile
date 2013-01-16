@@ -25,9 +25,9 @@ Vagrant::Config.run do |config|
      chef.log_level = :debug
 
  
-     chef.add_recipe "chefserver"
- #    chef.add_recipe "chefserver::ironfan"
-#     chef.add_recipe "chefserver::ec2"
+    chef.add_recipe "chefserver"
+    chef.add_recipe "chefserver::ironfan"
+    chef.add_recipe "chefserver::ec2"
   end 
 
 end
