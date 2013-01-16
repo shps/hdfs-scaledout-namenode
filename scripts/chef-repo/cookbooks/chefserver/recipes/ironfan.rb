@@ -85,7 +85,7 @@ export CHEF_HOMEBASE=$CHEF_HOME/homebase
 export EDITOR=vi
 
 # TODO - 'bundle install' not working !?!
-bundle install
+#bundle install
 sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
@@ -99,11 +99,11 @@ cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
 cd $CHEF_HOMEBASE/knife/credentials/
-# mkdir certificates
-# mkdir client_keys
-# mkdir data_bag_keys
-# mkdir ec2_certs
-# mkdir ec2_keys
+ mkdir certificates
+ mkdir client_keys
+ mkdir data_bag_keys
+ mkdir ec2_certs
+ mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 

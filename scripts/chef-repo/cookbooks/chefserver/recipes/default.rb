@@ -115,7 +115,6 @@ do
   sudo ln -sf /lib/init/upstart-job /etc/init.d/${service}
   sudo service ${service} start 2> /dev/null || sudo service ${service} restart
 done
-
   EOF
 not_if "which chef-server-webui"
 end
@@ -133,10 +132,11 @@ code <<-EOF
 
 test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
+sudo chown -R #{node[:chef][:user]} /etc/chef/
 sudo #{Chef::Config[:file_cache_path]}/knife-config.sh
 sudo cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 sudo cp /etc/chef/validation.pem #{HomeDir}/validation.pem
-
+sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
 # For some reason the chef user's shell becomse /bin/sh - change it to bash
 sudo usermod -s /bin/bash #{node[:chef][:user]}
 
