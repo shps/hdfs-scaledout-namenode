@@ -77,19 +77,20 @@ end
 #      {username}.pem
 #      {organization}-validator.pem
 
-bash "configure_ironfan2" do
+bash "configure_ironfan_bundle" do
 user "#{node[:chef][:user]}"
 code <<-EOF
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
 export EDITOR=vi
 
-# TODO - bundle not working. Maybe it's a 1.8 version of ruby?
+# TODO - 'bundle install' not working !?!
 bundle install
+sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
-rm -rf $CHEF_HOME/.chef
+test -f $CHEF_HOME/.chef && rm -rf $CHEF_HOME/.chef
 ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
 
 rm -rf $CHEF_HOMEBASE/knife/credentials
@@ -98,14 +99,13 @@ cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
 cd $CHEF_HOMEBASE/knife/credentials/
-mkdir certificates
-mkdir client_keys
-mkdir data_bag_keys
-mkdir ec2_certs
-mkdir ec2_keys
+# mkdir certificates
+# mkdir client_keys
+# mkdir data_bag_keys
+# mkdir ec2_certs
+# mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
 cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
-
 
 touch $CHEF_HOMEBASE/.installed
 EOF
@@ -149,6 +149,7 @@ source #{HomeDir}/.bashrc
 cd #{HomeDir}/homebase
 git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 
+sudo chef-server&
 # 'rake roles' doesn't work, and knife is recommended for uploading roles
 knife role from file roles/*.rb
 
