@@ -142,14 +142,14 @@ code <<-EOF
 
 test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
-sudo cp #{node[:chef][:user]} /etc/chef/*.pem #{HomeDir}/
+sudo cp /etc/chef/*.pem #{HomeDir}/
 sudo chown #{node[:chef][:user]} #{HomeDir}/*.pem
-sudo #{Chef::Config[:file_cache_path]}/knife-config.sh
-sudo cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
+#{Chef::Config[:file_cache_path]}/knife-config.sh
+cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
 # For some reason the chef user's shell becomse /bin/sh - change it to bash
 sudo usermod -s /bin/bash #{node[:chef][:user]}
 
 EOF
-not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
+#not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
