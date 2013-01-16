@@ -95,17 +95,20 @@ ln -sni $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
 
 rm -rf $CHEF_HOMEBASE/knife/credentials
 cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
-cp /etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+#cp #{HomeDir}/*.pem/etc/chef/webui.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+#cp #{HomeDir}/webuit.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+cp #{HomeDir}/#{node[:chef][:client]}.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+cp #{HomeDir}/webuit.pem $CHEF_HOMEBASE/knife/credentials/
 cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
 sudo chown -R #{node[:chef][:org]} $CHEF_HOMEBASE/knife/credentials/
 cd $CHEF_HOMEBASE/knife/credentials/
- mkdir certificates
- mkdir client_keys
- mkdir data_bag_keys
- mkdir ec2_certs
- mkdir ec2_keys
+mkdir certificates
+mkdir client_keys
+mkdir data_bag_keys
+mkdir ec2_certs
+mkdir ec2_keys
 # copy instead of move to make the recipe idempotent wrt chefserver installation.
-cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
+#cp #{HomeDir}/#{node[:chef][:user]}.pem $CHEF_HOME/.chef/credentials/#{node[:chef][:user]}.pem
 
 touch $CHEF_HOMEBASE/.installed
 EOF
@@ -149,7 +152,6 @@ source #{HomeDir}/.bashrc
 cd #{HomeDir}/homebase
 git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 
-sudo chef-server&
 # 'rake roles' doesn't work, and knife is recommended for uploading roles
 knife role from file roles/*.rb
 
