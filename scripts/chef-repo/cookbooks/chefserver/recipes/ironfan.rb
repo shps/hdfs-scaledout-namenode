@@ -45,8 +45,8 @@ code <<-EOF
  # done
 
 
- sudo gem install ironfan --no-rdoc --no-ri
- sudo gem install bundle --no-rdoc --no-ri
+# sudo gem install ironfan --no-rdoc --no-ri
+# sudo gem install bundle --no-rdoc --no-ri
 # sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
 
 
