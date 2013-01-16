@@ -139,6 +139,15 @@ end
 bash "configure_knife" do
 user "#{node[:chef][:user]}"
 code <<-EOF
+# Wait for chef servers to start
+wait_chef=30
+timeout=0
+while [ $timeout -lt $wait_chef ] ; do
+    sleep 1
+    (! (ps -ef | grep chef-server > /dev/null) && break
+    echo -n "."
+    timeout=`expr $timeout + 1`
+done
 
 test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
