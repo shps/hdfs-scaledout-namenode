@@ -11,13 +11,13 @@ import se.kth.kthfsdashboard.util.Formatter;
 
 public class NodesTableItem implements Serializable {
 
-    private int nodeId;
+    private Integer nodeId;
     private String status;
-    private long upTime;
-    private int startPhase;
-    private int configGeneration;
+    private Long upTime;
+    private Integer startPhase;
+    private Integer configGeneration;
 
-    public NodesTableItem(int nodeId, String status, long uptime, int startPhase, int configGeneration) {
+    public NodesTableItem(Integer nodeId, String status, Long uptime, Integer startPhase, Integer configGeneration) {
 
         this.nodeId = nodeId;
         this.status = status;
@@ -50,19 +50,19 @@ public class NodesTableItem implements Serializable {
       this.upTime = upTime;
    }
 
-   public int getStartPhase() {
+   public Integer getStartPhase() {
       return startPhase;
    }
 
-   public void setStartPhase(int startPhase) {
+   public void setStartPhase(Integer startPhase) {
       this.startPhase = startPhase;
    }
 
-   public int getConfigGeneration() {
+   public Integer getConfigGeneration() {
       return configGeneration;
    }
 
-   public void setConfigGeneration(int configGeneration) {
+   public void setConfigGeneration(Integer configGeneration) {
       this.configGeneration = configGeneration;
    }
 

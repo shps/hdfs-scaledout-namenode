@@ -42,7 +42,7 @@ public class MySQLAccess {
          }
 
       } catch (Exception e) {
-//            resultList.add(new NodesTableItem(null, "Error" + e.getMessage(), null, null, null));
+            resultList.add(new NodesTableItem(null, "Error" + e.getMessage(), null, null, null));
          
       } finally {
          close();

@@ -57,7 +57,7 @@ public class ExecuteCommandController implements Serializable {
       RequestContext context = RequestContext.getCurrentInstance();
 //      context.execute("prog.start()");
 
-      System.err.println("@@@ a=" + progress.get(id));
+      System.err.println("@@@ prog=" + progress.get(id));
 
       Integer value = progress.get(id);
 
