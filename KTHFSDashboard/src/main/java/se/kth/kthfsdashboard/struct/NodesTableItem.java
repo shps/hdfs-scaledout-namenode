@@ -43,7 +43,7 @@ public class NodesTableItem implements Serializable {
    }
 
    public String getUpTime() {
-      return Formatter.time(upTime);
+      return Formatter.timeInSec(upTime);
    }
 
    public void setUpTime(Long upTime) {

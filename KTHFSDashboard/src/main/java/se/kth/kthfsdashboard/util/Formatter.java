@@ -56,6 +56,28 @@ public class Formatter {
         }
         return format.format(time / d) + "d";
     }
+
+    public static String timeInSec(Long t) {
+        
+        DecimalFormat format = new DecimalFormat("#.#");
+        
+        if (t == null) {
+           return "";
+        }
+        
+        Double time = (double) t;        
+        
+        if(time < m) {
+            return format.format(time) + "s";
+        }
+        if (time < h) {
+            return format.format(time / m) + "m";
+        }
+        if (time < d) {
+            return format.format(time / h) + "h";
+        }
+        return format.format(time / d) + "d";
+    }    
     
     public static String date(Date d) {
        

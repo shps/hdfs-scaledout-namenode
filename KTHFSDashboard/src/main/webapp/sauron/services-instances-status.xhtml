@@ -30,31 +30,7 @@
                }
             }
          </script>
-         
-         
-<script type="text/javascript">  
-    function start() {  
-        startButton1.disable();  
-        window['progress'] = setInterval(function() {  
-            var oldValue = pbClient.getValue(),  
-            newValue = oldValue + 10;  
-  
-            pbClient.setValue(pbClient.getValue() + 10);  
-  
-            if(newValue == 100) {  
-                clearInterval(window['progress']);  
-            }  
-  
-  
-        }, 1000);  
-    }  
-  
-    function cancel() {  
-        clearInterval(window['progress']);  
-        pbClient.setValue(0);  
-        startButton1.enable();  
-    }  
-</script>           
+
       </ui:define>
 
 
@@ -152,11 +128,11 @@
          <h:form >        
             <p:dialog id="modalDialog" appendToBody="true" header="Star/stop service(s)" widgetVar="dlgstartstop" modal="true" width="500" height="200">
 
-            <h:outputText value="Commands:" />  <br/><br/>
+               <h:outputText value="Commands:" />  <br/><br/>
 
-            
-            <p:progressBar widgetVar="prog1" value="#{executeCommandController.progressValue('a1')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
-            <p:progressBar widgetVar="prog2" value="#{executeCommandController.progressValue('a2')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
+
+               <p:progressBar widgetVar="prog1" value="#{executeCommandController.progressValue('a1')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
+               <p:progressBar widgetVar="prog2" value="#{executeCommandController.progressValue('a2')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
 
             </p:dialog>                      
          </h:form>                         

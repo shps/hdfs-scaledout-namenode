@@ -3,8 +3,9 @@ package se.kth.kthfsdashboard.mysqlaccess;
 import java.io.Serializable;
 import java.util.List;
 import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.RequestScoped;
+import javax.faces.bean.ViewScoped;
+import javax.faces.context.FacesContext;
+import javax.faces.event.ActionEvent;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
 
 /**
@@ -12,60 +13,47 @@ import se.kth.kthfsdashboard.struct.NodesTableItem;
  * @author Hamidreza Afzali <afzali@kth.se>
  */
 @ManagedBean
-@RequestScoped
+@ViewScoped
 public class MySQLController implements Serializable {
 
-   @ManagedProperty("#{param.hostname}")
-   private String hostname;
-   @ManagedProperty("#{param.service}")
-   private String service;
-   @ManagedProperty("#{param.servicegroup}")
-   private String serviceGroup;
-   @ManagedProperty("#{param.kthfsinstance}")
-   private String kthfsInstance;
-
+   private boolean flag;   
+   private List<NodesTableItem> info;   
+   
    public MySQLController() {
    }
 
-   public String getService() {
-      return service;
+   public List<NodesTableItem> getInfo() throws Exception {
+//      System.err.println("Getting...");
+      
+      info = loadItems();
+      return info;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public boolean getFlag() {
+      return flag;
    }
 
-   public String getHostname() {
-      return hostname;
+   public void setFlag(boolean flag) {
+      this.flag = flag;
    }
 
-   public void setHostname(String hostname) {
-      this.hostname = hostname;
-   }
+   public void load(ActionEvent event) {
 
-   public String getServiceGroup() {
-      return serviceGroup;
-   }
-
-   public void setServiceGroup(String serviceGroup) {
-      this.serviceGroup = serviceGroup;
-   }
-
-   public void setKthfsInstance(String kthfsInstance) {
-      this.kthfsInstance = kthfsInstance;
-   }
-
-   public String getKthfsInstance() {
-      return kthfsInstance;
+      System.err.println("Loading...");
+      if (info != null) {
+         return;
+      }
+      info = loadItems();
+      setFlag(true);
    }
    
-   public List<NodesTableItem> getInfo() throws Exception {
-      
-          MySQLAccess dao = new MySQLAccess();
+   
+   private List<NodesTableItem> loadItems() {
+      MySQLAccess dao = new MySQLAccess();
+      try {
          return dao.readDataBase();
+      } catch (Exception e) {
+         return null;
+      }
    }
-
-
-
-
 }

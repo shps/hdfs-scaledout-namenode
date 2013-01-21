@@ -48,7 +48,7 @@ public class MySQLAccess {
          close();
       }
       
-//      Thread.sleep(10000); // for test
+      Thread.sleep(2000); // for test
       
       return resultList;
 
