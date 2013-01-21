@@ -46,3 +46,11 @@
     EOF
     not_if { `grep ndb node[:ndb][:collectd_conf]` }
   end
+
+
+# Need to restart collectd daemon
+
+service "collectd" do
+  action [:restart]
+end
+

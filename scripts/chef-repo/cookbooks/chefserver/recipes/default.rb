@@ -161,6 +161,8 @@ cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.p
 # For some reason the chef user's shell becomse /bin/sh - change it to bash
 sudo usermod -s /bin/bash #{node[:chef][:user]}
 
+
+#rubygems update --system
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end

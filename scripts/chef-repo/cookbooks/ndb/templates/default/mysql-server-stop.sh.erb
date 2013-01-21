@@ -1,6 +1,6 @@
 #!/bin/sh 
 source <%= node[:ndb][:scripts_dir] %>/util/force.sh
-MYSQL_SOCKET=`<%= @ndb_dir %>/scripts/get-mysql-socket.sh`
+MYSQL_SOCKET=`<%= node[:ndb][:base_dir] %>/scripts/get-mysql-socket.sh`
 wait_pid_removed=10
 ID=<%= @node_id %>
 PID_FILE=<%= node[:ndb][:log_dir] %>/mysql_$ID.pid 

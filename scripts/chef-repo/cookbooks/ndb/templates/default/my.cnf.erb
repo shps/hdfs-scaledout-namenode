@@ -3,7 +3,7 @@
 # MySQL Cluster client, Jim Dowling.
 #################################################
 [mysqld]
-user           = <%= @user %>
+user           = <%= node[:mysql][:user] %>
 basedir         = <%= node[:mysql][:base_dir] %>
 datadir         = <%= node[:ndb][:mysql_server_dir] %>
 port            = <%= node[:ndb][:mysql_port] %>
@@ -58,4 +58,4 @@ ndb-autoincrement-prefetch-sz=256
 
 [mysql_cluster]
 # set connectstring to ndb management server (used by all executables)
-ndb-connectstring=<%= @connect_string %>
+ndb-connectstring=<%= node[:ndb][:connect_string] %>

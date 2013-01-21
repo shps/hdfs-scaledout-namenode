@@ -14,11 +14,6 @@ for script in node[:mgm][:scripts] do
     owner "root"
     group "root"
     mode 0655
-    variables({
-       :ndb_dir => node[:ndb][:base_dir],
-       :mysql_dir => node[:mysql][:base_dir],
-       :connect_string => node[:ndb][:connect_string],
-    })
   end
 end 
 
@@ -31,13 +26,7 @@ template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
-  mode 0655
-  variables({
-              :ndb_dir => node[:ndb][:base_dir],
-              :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string],
-            })
-   notifies :enable, resources(:service => "ndb_mgmd")
+  notifies :enable, resources(:service => "ndb_mgmd")
 end
 
 template "#{node[:ndb][:root_dir]}/config.ini" do
@@ -45,6 +34,9 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0644
-  variables({:cores => node[:cpu][:total]})
-   notifies :restart, resources(:service => "ndb_mgmd"), :immediately
+  variables({
+              :cores => node[:cpu][:total],
+              :num_client_slots =>  node[:ndb][:num_client_slots],
+            })
+  notifies :restart, resources(:service => "ndb_mgmd"), :immediately
 end

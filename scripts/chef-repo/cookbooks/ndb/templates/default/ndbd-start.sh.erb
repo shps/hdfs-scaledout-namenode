@@ -9,7 +9,7 @@ if [ "X$USERID" != "X<%= node[:ndb][:user] %>" ]; then
 fi  
 
 
-MGM_CONN=<%= @connect_string %>
+MGM_CONN=<%= node[:ndb][:connect_string] %>
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -34,6 +34,6 @@ done
 
 echo "Starting Data Node <%= @node_id %>."
 # --connect-retries == -1 implies that the ndbd keeps trying forever to connect to the ndb_mgmd
-<%= @mysql_dir %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>  --connect-retries=-1 --connect-delay=10
+<%= node[:mysql][:base_dir] %>/bin/ndbmtd -c $MGM_CONN --ndb-nodeid=<%= @node_id %>  --connect-retries=-1 --connect-delay=10
 RES=`echo $?`
 exit $RES

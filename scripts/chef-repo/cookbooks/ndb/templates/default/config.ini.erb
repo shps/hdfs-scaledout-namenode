@@ -14,10 +14,10 @@ MaxNoOfExecutionThreads=<%= cpus  %>
 NoOfReplicas=<%= node[:ndb][:num_replicas] %>
 
 #The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
-# <% @data_memory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
-#DataMemory=<%= @data_memory%>M
+# <% node[:ndb][:data_memory] = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) %>
+#DataMemory=<%= node[:ndb][:data_memory]%>M
 #The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
-#IndexMemory=<%= @data_memory / 4 %>M
+#IndexMemory=<%= node[:ndb][:data_memory] / 4 %>M
 DataMemory=<%= node[:ndb][:data_memory] %>M
 IndexMemory=<%= node[:ndb][:index_memory] %>M
 
@@ -80,96 +80,7 @@ ServerPort=<%= 10000 + id %>
 [MYSQLD]
 NodeId=<%= node[:mysql][:id] %>
 
+<% for i in 1..@num_client_slots %> 
 [MYSQLD]
 
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
-
-[MYSQLD]
+<% end %>

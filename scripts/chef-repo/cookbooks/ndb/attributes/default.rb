@@ -36,6 +36,9 @@ default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
 default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
+
+default[:ndb][:num_clients]  = "20"
+
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
 default[:ndb][:instance] = "hdfs1"
 
@@ -45,6 +48,7 @@ default[:mysql][:base_dir] = "/usr/local/mysql"
 default[:mysql][:version_dir] = "#{default[:mysql][:base_dir]}" + "-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
+
 
 default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 

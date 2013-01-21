@@ -5,17 +5,17 @@ cached_libaio1 = "#{Chef::Config[:file_cache_path]}/#{libaio1}"
 Chef::Log.info "Installing libaio1 to #{cached_libaio1}"
 
 cookbook_file "#{cached_libaio1}" do
-    source "#{libaio1}"
-    owner node[:ndb][:user]
-    group node[:ndb][:group]
-    mode "0755"
-    action :create_if_missing
+  source "#{libaio1}"
+  owner node[:ndb][:user]
+  group node[:ndb][:group]
+  mode "0755"
+  action :create_if_missing
 end
 
 package "#{libaio1}" do
-   provider Chef::Provider::Package::Dpkg
-   source "#{cached_libaio1}"
-   action :install
+  provider Chef::Provider::Package::Dpkg
+  source "#{cached_libaio1}"
+  action :install
 end
 
 directory node[:ndb][:mysql_server_dir] do
@@ -33,16 +33,8 @@ for script in node[:mysql][:scripts]
     group node[:ndb][:group]
     mode 0774
     variables({
-       :user => node[:ndb][:user],
-       :ndb_dir => node[:ndb][:base_dir],
-       :mysql_dir => node[:mysql][:base_dir],
-       :ndb_mysql_dir => node[:ndb][:mysql_server_dir],
-       :ndb_mysql_data_dir => node[:ndb][:mysql_data_dir],
-       :connect_string => node[:ndb][:connect_string],
-       :mysql_port => node[:ndb][:mysql_port],
-       :mysql_socket => node[:ndb][:mysql_socket],
-       :node_id => node[:mysql][:id]
-    })
+                :node_id => node[:mysql][:id]
+              })
   end
 end 
 
@@ -57,11 +49,6 @@ template "mysql.cnf" do
   path "#{node[:ndb][:root_dir]}/my.cnf"
   source "my.cnf.erb"
   mode "0644"
-  variables({
-              :ndb_dir => node[:ndb][:base_dir],
-              :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string]
-            })
   notifies :restart, resources(:service => "mysqld")
 end
 
@@ -85,12 +72,7 @@ template "/etc/init.d/mysqld" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0755
-  variables({
-              :ndb_dir => node[:ndb][:base_dir],
-              :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string]
-            })
- notifies :enable, resources(:service => "mysqld")
- notifies :restart, resources(:service => "mysqld"), :immediately
- notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install"), :immediately
+  notifies :enable, resources(:service => "mysqld")
+  notifies :restart, resources(:service => "mysqld"), :immediately
+  notifies :install_distributed_privileges, resources(:ndb_mysql_start => "install"), :immediately
 end

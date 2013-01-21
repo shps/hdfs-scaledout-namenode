@@ -49,7 +49,7 @@ if node.attribute?('ipaddress') != true
     id += 1
   end 
 else
-# default IP is set, here
+  # default IP is set, here
   for ndbd in node[:ndb][:data_nodes]
     Chef::Log.info "Testing IP address: #{ndbd}"
     if node['ipaddress'].eql? ndbd
@@ -60,11 +60,11 @@ else
     id += 1
   end 
 end
-  Chef::Log.info "ID IS: #{id}"
+Chef::Log.info "ID IS: #{id}"
 
-  if @found != true
-    Chef::Log.info "Could not find matching IP address is list of data nodes."
-  end
+if @found != true
+  Chef::Log.info "Could not find matching IP address is list of data nodes."
+end
 
 directory "#{node[:ndb][:data_dir]}/#{found_id}" do
   owner node[:ndb][:user]
@@ -80,12 +80,7 @@ for script in node[:ndb][:scripts]
     owner node[:ndb][:user]
     group node[:ndb][:user]
     mode 0655
-    variables({
-                :ndb_dir => node[:ndb][:base_dir],
-                :mysql_dir => node[:mysql][:base_dir],
-                :connect_string => node[:ndb][:connect_string],
-                :node_id => found_id
-              })
+    variables({ :node_id => found_id })
   end
 end 
 
@@ -99,11 +94,6 @@ template "/etc/init.d/ndbd" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0655
-  variables({
-              :ndb_dir => node[:ndb][:base_dir],
-              :mysql_dir => node[:mysql][:base_dir],
-              :connect_string => node[:ndb][:connect_string]
-            })
   notifies :enable, resources(:service => "ndbd")
   notifies :restart, resources(:service => "ndbd"), :immediately
 end
