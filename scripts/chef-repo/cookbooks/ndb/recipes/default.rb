@@ -106,10 +106,3 @@ template "#{node[:ndb][:scripts_dir]}/util/kill-process.sh" do
   group node[:ndb][:user]
   mode 0655
 end
-
-template "#{node[:ndb][:scripts_dir]}/util/force.sh" do
-  source "force.sh.erb"
-  owner node[:ndb][:user]
-  group node[:ndb][:user]
-  mode 0655
-end
