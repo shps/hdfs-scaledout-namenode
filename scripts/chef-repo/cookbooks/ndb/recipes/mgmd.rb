@@ -26,6 +26,7 @@ template "/etc/init.d/ndb_mgmd" do
   source "ndb_mgmd.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
+  mode 0754
   notifies :enable, resources(:service => "ndb_mgmd")
 end
 

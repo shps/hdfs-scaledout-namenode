@@ -1,5 +1,4 @@
-include_recipe "kthfs"
-
+include_recipe "ndb::kthfs"
 
 Chef::Log.info "Trying to infer the ndbd ID by examining the local IP. If it matches the config.ini file, then we have our node."
 

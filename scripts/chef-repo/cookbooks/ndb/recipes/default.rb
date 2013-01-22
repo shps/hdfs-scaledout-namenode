@@ -14,10 +14,11 @@ directory node[:ndb][:version_dir] do
 end
 
 
-link node[:ndb][:base_dir] do
-  action :delete
-  only_if "test -L #{node[:ndb][:base_dir]}"
-end
+# Doesn't work as next link resource inherits its environment
+# link node[:ndb][:base_dir] do
+#   action :delete
+#   only_if "test -L #{node[:ndb][:base_dir]}"
+# end
 
 link node[:ndb][:base_dir] do
   to node[:ndb][:version_dir]

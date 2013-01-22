@@ -1,5 +1,4 @@
-#require 'fileutils'
-libpath = File.expand_path '../libraries', __FILE__
+libpath = File.expand_path '../../libraries', __FILE__
 require File.join(libpath, 'inifile')
 
 kthfs_dir = File.dirname(node[:ndb][:kthfs_services])

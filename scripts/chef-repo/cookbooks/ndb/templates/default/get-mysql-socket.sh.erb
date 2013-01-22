@@ -1,5 +1,5 @@
 #!/bin/sh 
 
-MYSQL_SOCKET=`grep ^socket <%= node[:ndb][:base_dir] %>/my.cnf | sed -e 's/socket.*= //'`
+MYSQL_SOCKET=`grep ^socket <%= node[:ndb][:root_dir] %>/my.cnf | sed -e 's/socket.*= //'`
 
 echo "$MYSQL_SOCKET"

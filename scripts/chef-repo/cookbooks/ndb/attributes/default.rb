@@ -13,11 +13,11 @@ default[:ndb][:port]       = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
 default[:ndb][:package_url] = "http://dev.mysql.com/get/Downloads/MySQL-Cluster-#{version}.#{majorVersion}/mysql-cluster-gpl-#{versionStr}-linux2.6-x86_64.tar.gz"
 default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server]}:#{ default[:ndb][:port]}"
-
 default[:ndb][:data_memory] = 50
 default[:ndb][:index_memory] = 10
 default[:ndb][:data_nodes] = %w{ 10.0.2.15 } # cloud8.sics.se cloud9.sics.se cloud16.sics.se 
 default[:ndb][:num_replicas] = 1
+default[:ndb][:num_client_slots] = 10
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
@@ -31,7 +31,7 @@ default[:ndb][:version_dir] = "#{default[:ndb][:root_dir]}" + "/ndb-#{versionStr
 default[:ndb][:base_dir] = "#{default[:ndb][:root_dir]}" + "/ndb"
 
 default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
-default[:ndb][:mgm_dir] = "#{default[:ndb][:base_dir]}" + "/mgmd"
+default[:ndb][:mgm_dir] = "#{default[:ndb][:root_dir]}" + "/mgmd"
 
 default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"

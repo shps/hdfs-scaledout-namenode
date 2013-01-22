@@ -93,7 +93,7 @@ template "/etc/init.d/ndbd" do
   source "ndbd.erb"
   owner node[:ndb][:user]
   group node[:ndb][:user]
-  mode 0655
+  mode 0754
   notifies :enable, resources(:service => "ndbd")
   notifies :restart, resources(:service => "ndbd"), :immediately
 end

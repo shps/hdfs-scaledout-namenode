@@ -5,7 +5,7 @@
 #     code <<-EOF
 #     cd #{node[:mysql][:base_dir]}
 #     # --force causes mysql_install_db to run even if DNS does not work. In that case, grant table entries that normally use host names will use IP addresses.
-#     #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:base_dir]}/my.cnf --force 
+#     #{node[:mysql][:base_dir]}/scripts/mysql_install_db --basedir=#{node[:mysql][:base_dir]} --defaults-file=#{node[:ndb][:root_dir]}/my.cnf --force 
 #     EOF
 #     not_if { ::File.exists?( "#{node[:ndb][:mysql_server_dir]}/mysql" ) }
 #   end
@@ -32,11 +32,16 @@ action :install_distributed_privileges do
     action :create_if_missing
   end
 
+ ndb_waiter "wait_mysql_started" do
+    action :wait_until_cluster_ready
+ end
+
   bash 'create_distributed_privileges' do
     user "#{node[:ndb][:user]}"
     code <<-EOF
-     # wait for mysqld to start
+     # wait extra for mysqld to start, in case it's slow to start after the cluster
      sleep 5
+
      #{node[:ndb][:scripts_dir]}/mysql-client.sh < #{cached_distusers}
 
      # Test that it works
