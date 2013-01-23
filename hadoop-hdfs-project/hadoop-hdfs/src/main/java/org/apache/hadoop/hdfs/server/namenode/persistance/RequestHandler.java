@@ -85,7 +85,9 @@ public abstract class RequestHandler {
     // NNThroughputBenchmark
     ADD_INODE,
     // TestNodeCount
-    TEST_NODE_COUNT,;
+    TEST_NODE_COUNT,
+    // Leader Election
+    LEADER_ELECTION;
   }
   protected static Log log = LogFactory.getLog(RequestHandler.class);
   protected Object[] params = null;
