@@ -62,6 +62,7 @@ public class Leader implements Comparable<Leader>
         if(partitionVal != 0)
         {
             throw new IllegalStateException("Leader.java: partition_val has to be zero");
+            // to store all rows on one machine
         }
     }
 
@@ -72,7 +73,7 @@ public class Leader implements Comparable<Leader>
         this.timeStamp = timeStamp;
         this.hostName = hostName;
         this.avgRequestProcessingLatency = 0;
-        this.partitionVal = 0;
+        this.partitionVal = 0; // to store all rows on one machine
     }
     
     
@@ -141,8 +142,6 @@ public class Leader implements Comparable<Leader>
     @Override
     public int compareTo(Leader l)
     {
-        //comparing (sorting) based on the
-        //id of the Namenode
 
         if (this.id < l.getId())
         {
@@ -168,7 +167,7 @@ public class Leader implements Comparable<Leader>
             //both are equal if all the fields match
             if (this.id == l.getId()
                     && this.counter == l.getCounter()
-                    && this.hostName == l.getHostName()
+                    && this.hostName.equals(l.getHostName())
                     && this.timeStamp == l.getTimeStamp())
             {
                 return true;
