@@ -11,7 +11,7 @@ default[:chef][:base_dir] = "/var/lib/chef"
 default[:chef][:port] = 4000
 default[:chef][:client] = "webui"
 default[:chef][:org] = "kth"
-default[:chef][:server_url] = "http://cloud16.sics.se:4000"
+default[:chef][:server_url] = "http://jimdowling.info:4000"
 
 default[:ruby][:base_dir] = "/opt/vagrant_ruby/"
 

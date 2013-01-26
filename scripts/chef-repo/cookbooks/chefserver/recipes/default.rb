@@ -35,9 +35,10 @@ bash "add_user_sudoers" do
   EOF
 end
 
-for install_package in %w{ruby1.9.1-full build-essential wget ssl-cert curl make expect}
+for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect}
   package "#{install_package}" do
     action :install
+    options "--force-yes"
   end
 end
 
@@ -85,6 +86,7 @@ end
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
   code <<-EOF
+   
    REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
    sudo gem install chef --no-ri --no-rdoc
    sudo chef-solo -o chef-server::rubygems-install
@@ -99,7 +101,7 @@ bash "install_chef_server" do
 
 #TODO -  need workaround to get chef-expander installed due to bug:
 # chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
-#   sudo gem install chef-expander --no-ri --no-rdoc
+   sudo gem install chef-expander --no-ri --no-rdoc
 
 # TODO - also include chef-expander here:
 #for file in chef-server chef-solr chef-server-webui 
@@ -113,14 +115,13 @@ bash "install_chef_server" do
 not_if "which chef-server-webui"
 end
 
-# chef-expander 
-for install_service in %w{ chef-server chef-solr chef-server-webui }
+
+for install_service in %w{ chef-server chef-solr chef-server-webui chef-expander }
   service "#{install_service}" do
     provider Chef::Provider::Service::Upstart
     supports :restart => true, :stop => true, :start => true
     action :nothing
   end
-
   template "/etc/init/#{install_service}.conf" do
     source "#{install_service}.conf.erb"
     owner "#{node[:chef][:user]}"

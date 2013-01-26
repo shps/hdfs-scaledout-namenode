@@ -78,10 +78,9 @@ if [ $? -ne 0 ] ; then
     not_if "test -s /etc/apt/trusted.gpg.d/opscode-keyring.gpg"
   end
 
-  bash "install_rabbitmq_apt_keys" do
-    user "#{node[:chef][:user]}"
-    code <<-EOF
-
+bash "install_rabbitmq_apt_keys" do
+ user "#{node[:chef][:user]}"
+  code <<-EOF
 echo "RabbitMQ KEYS"
 # RabbitMQ repo
 echo "deb http://www.rabbitmq.com/debian/ testing main" | \
@@ -104,7 +103,6 @@ end
 for install_package in %w{ couchdb libgecode-dev rabbitmq-server opscode-keyring }
   package "#{install_package}" do
     action :install
-#    options "--force-yes"
   end
 end
 
@@ -201,10 +199,10 @@ for install_package in %w{ libpolyglot-ruby libtreetop-ruby }
 end
 
 
-for install_package in %w{ chef-server chef-server-api chef-server-webui chef-solr chef-expander }
+for install_package in %w{ chef chef-server chef-server-api chef-server-webui chef-solr chef-expander }
   package "#{install_package}" do
     action :install
-#n    options "--force-yes"
+#    options "--force-yes"
   end
 end
 
