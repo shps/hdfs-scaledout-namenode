@@ -1,6 +1,10 @@
 # Actually used this tutorial
 # http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/
 
+
+# Knife/encrypting passwords/creating users tutorial
+# http://www.jasongrimes.org/2012/06/provisioning-a-lamp-stack-with-chef-vagrant-and-ec2-2-of-3/
+
 # How to install chef server...
 # https://github.com/pikesley/catering-college
 
