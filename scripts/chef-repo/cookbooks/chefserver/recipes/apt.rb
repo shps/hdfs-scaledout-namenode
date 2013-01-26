@@ -129,32 +129,39 @@ EOF
   not_if "sudo rabbitmqctl -q status 2> /dev/null"
 end
 
-bash "install_chef_ruby" do
-  user "#{node[:chef][:user]}"
-  code <<-EOF
 
-sudo apt-get install -y -q ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 libopenssl-ruby1.9.1 libssl-dev zlib1g-dev
-
- sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
-                         /usr/share/man/man1/ruby1.9.1.1.gz \
-         --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
-         --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
-         --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
-
-# choose your interpreter
-# changes symlinks for /usr/bin/ruby , /usr/bin/gem
-# /usr/bin/irb, /usr/bin/ri and man (1) ruby
-
-sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
-
-# sudo update-alternatives --config ruby
-# sudo update-alternatives --config gem
-
-# now test ruby works
-ruby --version
-
-EOF
+for install_package in %w{ ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 libopenssl-ruby1.9.1 libssl-dev zlib1g-dev }
+  package "#{install_package}" do
+    action :install
+  end
 end
+
+# bash "install_chef_ruby" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+
+# #sudo apt-get install -y -q 
+
+#  sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
+#                          /usr/share/man/man1/ruby1.9.1.1.gz \
+#          --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
+#          --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
+#          --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
+
+# # choose your interpreter
+# # changes symlinks for /usr/bin/ruby , /usr/bin/gem
+# # /usr/bin/irb, /usr/bin/ri and man (1) ruby
+
+# sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
+
+# # sudo update-alternatives --config ruby
+# # sudo update-alternatives --config gem
+
+# # now test ruby works
+# ruby --version
+
+# EOF
+# end
 
 directory "/var/cache/local/preseeding" do
   owner "root"
@@ -186,15 +193,30 @@ template "/var/cache/local/preseeding/chef-server.seed" do
   notifies :run, resources(:execute => "preseed chef-server"), :immediately
 end
 
-bash "install_chef_server_from_apt" do
-  user "#{node[:chef][:user]}"
-  code <<-EOF
-sudo apt-get install -y -q chef
-sudo apt-get install -y -q chef-server chef-server-api chef-server-webui chef-solr chef-expander
-
-EOF
-  not_if "which chef-server"
+for install_package in %w{ libpolyglot-ruby libtreetop-ruby }
+  package "#{install_package}" do
+    action :install
+#n    options "--force-yes"
+  end
 end
+
+
+for install_package in %w{ chef-server chef-server-api chef-server-webui chef-solr chef-expander }
+  package "#{install_package}" do
+    action :install
+#n    options "--force-yes"
+  end
+end
+
+# bash "install_chef_server_from_apt" do
+#   user "#{node[:chef][:user]}"
+#   code <<-EOF
+# sudo apt-get install -f -y -q chef
+# sudo apt-get install -f -y -q chef-server chef-server-api chef-server-webui chef-solr chef-expander
+
+# EOF
+#   not_if "which chef-server"
+# end
 
 
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
