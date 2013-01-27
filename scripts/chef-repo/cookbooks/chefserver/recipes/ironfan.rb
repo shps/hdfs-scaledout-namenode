@@ -51,6 +51,7 @@ code <<-EOF
 sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
 sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
+export CHEF_USERNAME=#{node[:chef][:user]}
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE=$CHEF_HOME/homebase
 export EDITOR=vi
@@ -76,7 +77,7 @@ rm -rf $CHEF_HOMEBASE/knife/credentials
 cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 
 # Assume my user's credentials are in my home dir, from a successful run of knife-config.sh
-cp #{HomeDir}/#{node[:chef][:client]}.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:client]}.pem
+cp #{HomeDir}/#{node[:chef][:user]}.pem #{HomeDir}/homebase/knife/credentials/#{node[:chef][:user]}.pem
 # Copy other credentials from chef config dir
 sudo cp /etc/chef/webuit.pem $CHEF_HOMEBASE/knife/credentials/
 sudo cp /etc/chef/validation.pem $CHEF_HOMEBASE/knife/credentials/#{node[:chef][:org]}-validator.pem
@@ -125,27 +126,35 @@ end
 
 bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
+ignore_failure false
 code <<-EOF
 
 cd #{HomeDir}/homebase
+export CHEF_USERNAME=#{node[:chef][:user]}
+export CHEF_HOME=#{HomeDir}
+export CHEF_HOMEBASE =$CHEF_HOME/homebase
+export EDITOR=vi
+env > /tmp/the_env
 
 # 'rake roles' doesn't work, and knife is recommended for uploading roles
-knife role from file roles/*.rb
-if (knife role list | wc -l) < 2 ; then
- exit 1
-fi
+knife role from file #{HomeDir}/homebase/roles/*.rb
+# if (knife role list | wc -l) < 2 ; then
+#  exit 1
+# fi
 
 git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
 
 # Copy all of ironfan's recipes to the chef server
-knife cookbook upload -a -o ./pantry/cookbooks/
-if (knife cookbook list | wc -l) < 2 ; then
- exit 1
-fi
+knife cookbook upload -a -o #{HomeDir}/homebase//pantry/cookbooks/
+# if (knife cookbook list | wc -l) < 2 ; then
+#  exit 1
+# fi
 
-knife environment create dev -y
-knife environment create prod -y
-knife environment create stag -y
+echo "Create your environments: "
+echo "knife environment create dev -y"
+echo "knife environment create prod -y"
+echo "knife environment create stag -y"
+
 touch #{HomeDir}/homebase/.uploads_complete
 EOF
 not_if "test -f #{HomeDir}/homebase/.uploads_complete"

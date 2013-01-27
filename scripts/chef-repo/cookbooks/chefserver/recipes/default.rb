@@ -32,10 +32,11 @@ bash "add_user_sudoers" do
   code <<-EOF
   echo "#{node[:chef][:user]} ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/#{node[:chef][:user]}
   sudo chmod 0440 /etc/sudoers.d/#{node[:chef][:user]}
+  apt-get update -y
   EOF
 end
 
-for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect}
+for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect libgecode-dev}
   package "#{install_package}" do
     action :install
     options "--force-yes"
@@ -83,6 +84,25 @@ template "/etc/chef/webui.rb" do
   mode 0755
 end
 
+# for install_gem in node[:chef][:gems]
+#   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
+#     source "#{install_gem}.gem"
+#     owner node[:chef][:user]
+#     group node[:chef][:user]
+#     mode 0755
+#     action :create_if_missing
+#   end
+#   gem_package "#{install_gem}" do
+#     source "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem"
+#     action :install
+# # Passing options as a string spawns a new process. The options hash is more efficient.
+# #    options "--no-rdoc --no-ri --ignore-dependencies"
+#     options(:ignore_dependencies => true, :no_rdoc => true, :no_ri => true)
+#   end
+# end
+
+
+
 bash "install_chef_server" do
   user "#{node[:chef][:user]}"
   code <<-EOF
@@ -93,17 +113,20 @@ bash "install_chef_server" do
    sudo gem install chef-server-webui --no-ri --no-rdoc
    sudo gem install chef-server-api --no-ri --no-rdoc
    sudo gem install chef-solr --no-ri --no-rdoc
+# chef-expander broken on Ubuntu 12.04+
+#  https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
+   sudo gem install chef-expander --no-ri --no-rdoc
 
    sudo chown -R #{node[:chef][:user]} /var/log/chef 
    sudo chown -R #{node[:chef][:user]} /etc/chef/
    sudo chown -R #{node[:chef][:user]} /var/cache/chef
    sudo chown -R #{node[:chef][:user]} #{HomeDir}
 
-#TODO -  need workaround to get chef-expander installed due to bug:
-# chef-expander doesn't work due to https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
-   sudo gem install chef-expander --no-ri --no-rdoc
 
-# TODO - also include chef-expander here:
+# For some reason the chef user's shell becomse /bin/sh - change it to bash
+sudo usermod -s /bin/bash #{node[:chef][:user]}
+
+# TODO - CentOS uses Init, not upstart
 #for file in chef-server chef-solr chef-server-webui 
 #do
 #  outfile=`basename ${file}`
@@ -112,7 +135,7 @@ bash "install_chef_server" do
 #  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
 #done
   EOF
-not_if "which chef-server-webui"
+not_if "which chef-server-expander"
 end
 
 
@@ -131,9 +154,7 @@ for install_service in %w{ chef-server chef-solr chef-server-webui chef-expander
     notifies :start, "service[#{install_service}]", :immediately
   end
 end
-
-
-
+ 
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
   source "knife-config.sh.erb"
   owner "#{node[:chef][:user]}"
@@ -144,6 +165,7 @@ end
 bash "configure_knife" do
 user "#{node[:chef][:user]}"
 code <<-EOF
+
 # Wait for chef servers to start
 wait_chef=30
 timeout=0
@@ -156,16 +178,14 @@ while [ $timeout -lt $wait_chef ] ; do
 done
 echo "Chef server started in $timeout seconds"
 
-test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
+test -d #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
 cd #{HomeDir}
 sudo cp /etc/chef/*.pem #{HomeDir}/
 sudo chown #{node[:chef][:user]} #{HomeDir}/*.pem
+
+mkdir #{HomeDir}/.chef
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
-#sudo chown -R #{node[:chef][:user]} #{HomeDir}/*pem
-# For some reason the chef user's shell becomse /bin/sh - change it to bash
-sudo usermod -s /bin/bash #{node[:chef][:user]}
-
 
 #rubygems update --system
 EOF

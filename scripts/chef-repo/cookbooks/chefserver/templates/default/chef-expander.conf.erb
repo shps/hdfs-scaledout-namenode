@@ -16,4 +16,4 @@ end script
 
 script
   su - <%= node[:chef][:user] %> -c "chef-expander -c /etc/chef/solr.rb -L /var/log/chef/expander.log -n 1 -i 1"
-
+end script

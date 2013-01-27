@@ -198,6 +198,11 @@ for install_package in %w{ libpolyglot-ruby libtreetop-ruby }
   end
 end
 
+# TODO - preseeding is supported now in chef. Problem is how to specify password parameter in files/default
+# Package expects chef-server.seed to be located in files/default
+# package "chef-server" do
+#   response_file "chef-server.seed"
+# end
 
 for install_package in %w{ chef chef-server chef-server-api chef-server-webui chef-solr chef-expander }
   package "#{install_package}" do
