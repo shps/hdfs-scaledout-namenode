@@ -25,15 +25,14 @@ end
 
 template "/etc/profile.d/ironfan.sh" do
   source "ironfan.sh.erb"
-  owner "root"
-  group "root"
+  owner "#{node[:chef][:user]}"
   mode 0755
 end
 
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
+ignore_failure false
 code <<-EOF
-
 
  # for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
  # do
@@ -43,7 +42,6 @@ code <<-EOF
  #     sudo su -l #{node[:chef][:user]} -c "/usr/bin/gem1.9.1 install #{Chef::Config[:file_cache_path]}/${gem}.gem --no-rdoc --no-ri --ignore-dependencies" 
  #   # fi
  # done
-
 
  sudo gem install ironfan --no-rdoc --no-ri
  sudo gem install bundle --no-rdoc --no-ri
@@ -127,19 +125,21 @@ end
 bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
 ignore_failure false
+cwd #{HomeDir}/homebase
 code <<-EOF
 env > /tmp/the_env
-cd #{HomeDir}/homebase
 export CHEF_USERNAME=#{node[:chef][:user]}
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE =$CHEF_HOME/homebase
 export EDITOR=vi
 
-
+# The bash resource logs in as 'root' but just changes UID to run the process as.
+# This isn't the same as logging in as a user, running bash_profile, etc
+sudo su - #{node[:chef][:user]} -c "knife role from file #{HomeDir}/homebase/roles/*.rb"
 # 'rake roles' doesn't work, and knife is recommended for uploading roles
-if (knife role list | wc -l) < 3 ; then
-  knife role from file #{HomeDir}/homebase/roles/*.rb
-fi
+#if (knife role list | wc -l) < 3 ; then
+#
+#fi
 
 if [ ! -d pantry ] ; then
   git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
@@ -147,9 +147,9 @@ fi
 
 # Copy all of ironfan's recipes to the chef server
 
-if (knife cookbook list | wc -l) < 4 ; then
-  knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks
-fi
+#if (knife cookbook list | wc -l) < 4 ; then
+  sudo su - #{node[:chef][:user]} -c "knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks"
+#fi
 
 echo "Create your environments: "
 echo "knife environment create dev -y"
