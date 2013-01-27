@@ -128,27 +128,28 @@ bash "upload_roles_cookbooks" do
 user "#{node[:chef][:user]}"
 ignore_failure false
 code <<-EOF
-
+env > /tmp/the_env
 cd #{HomeDir}/homebase
 export CHEF_USERNAME=#{node[:chef][:user]}
 export CHEF_HOME=#{HomeDir}
 export CHEF_HOMEBASE =$CHEF_HOME/homebase
 export EDITOR=vi
-env > /tmp/the_env
+
 
 # 'rake roles' doesn't work, and knife is recommended for uploading roles
-knife role from file #{HomeDir}/homebase/roles/*.rb
-# if (knife role list | wc -l) < 2 ; then
-#  exit 1
-# fi
+if (knife role list | wc -l) < 3 ; then
+  knife role from file #{HomeDir}/homebase/roles/*.rb
+fi
 
-git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
+if [ ! -d pantry ] ; then
+  git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
+fi
 
 # Copy all of ironfan's recipes to the chef server
-knife cookbook upload -a -o #{HomeDir}/homebase//pantry/cookbooks/
-# if (knife cookbook list | wc -l) < 2 ; then
-#  exit 1
-# fi
+
+if (knife cookbook list | wc -l) < 4 ; then
+  knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks
+fi
 
 echo "Create your environments: "
 echo "knife environment create dev -y"

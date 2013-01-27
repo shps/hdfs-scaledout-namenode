@@ -123,8 +123,10 @@ bash "install_chef_server" do
    sudo chown -R #{node[:chef][:user]} #{HomeDir}
 
 
-# For some reason the chef user's shell becomse /bin/sh - change it to bash
+# Installing the chef gem also causes a chef user to be created.
+# However, with the wrong shell (csh) and home directory (/root). Need to change them here. 
 sudo usermod -s /bin/bash #{node[:chef][:user]}
+sudo usermod -d #{HomeDir} #{node[:chef][:user]}
 
 # TODO - CentOS uses Init, not upstart
 #for file in chef-server chef-solr chef-server-webui 
