@@ -1,6 +1,6 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
-for install_package in %w{ git }
+for install_package in %w{ git-core }
   package "#{install_package}" do
     action :install
   end
@@ -122,33 +122,40 @@ end
 # knife cluster bootstrap test_cluster-web-0 
 # knife cluster bootstrap test_cluster-database-0 
 
-bash "upload_roles_cookbooks" do
+bash "upload_roles" do
 user "#{node[:chef][:user]}"
 ignore_failure false
-cwd #{HomeDir}/homebase
+cwd "#{HomeDir}/homebase"
 code <<-EOF
 env > /tmp/the_env
 export CHEF_USERNAME=#{node[:chef][:user]}
-export CHEF_HOME=#{HomeDir}
-export CHEF_HOMEBASE =$CHEF_HOME/homebase
+export CHEF_HOMEBASE =#{HomeDir}/homebase
 export EDITOR=vi
 
 # The bash resource logs in as 'root' but just changes UID to run the process as.
 # This isn't the same as logging in as a user, running bash_profile, etc
 sudo su - #{node[:chef][:user]} -c "knife role from file #{HomeDir}/homebase/roles/*.rb"
-# 'rake roles' doesn't work, and knife is recommended for uploading roles
-#if (knife role list | wc -l) < 3 ; then
-#
-#fi
 
-if [ ! -d pantry ] ; then
-  git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-fi
+touch #{HomeDir}/homebase/.roles_uploaded
+EOF
+not_if "test -f #{HomeDir}/homebase/.roles_uploaded"
+end
 
+bash "upload_cookbooks" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+cwd "#{HomeDir}/homebase"
+code <<-EOF
+export CHEF_USERNAME=#{node[:chef][:user]}
+export CHEF_HOMEBASE =#{HomeDir}/homebase
+export EDITOR=vi
+
+cd #{HomeDir}/homebase
+git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
+test -d #{HomeDir}/homebase/pantry
 # Copy all of ironfan's recipes to the chef server
-
+sudo su - #{node[:chef][:user]} -c "knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks"
 #if (knife cookbook list | wc -l) < 4 ; then
-  sudo su - #{node[:chef][:user]} -c "knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks"
 #fi
 
 echo "Create your environments: "
@@ -156,7 +163,7 @@ echo "knife environment create dev -y"
 echo "knife environment create prod -y"
 echo "knife environment create stag -y"
 
-touch #{HomeDir}/homebase/.uploads_complete
+touch #{HomeDir}/homebase/.cookbooks_uploaded
 EOF
-not_if "test -f #{HomeDir}/homebase/.uploads_complete"
+not_if "test -f #{HomeDir}/homebase/.cookbooks_uploaded"
 end
