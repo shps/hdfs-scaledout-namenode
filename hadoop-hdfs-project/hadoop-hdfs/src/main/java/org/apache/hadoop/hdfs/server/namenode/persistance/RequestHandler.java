@@ -38,6 +38,8 @@ public abstract class RequestHandler {
     HEARTBEAT_MONITOR,
     //LeaseManager
     PREPARE_LEASE_MANAGER_MONITOR, LEASE_MANAGER_MONITOR,
+    // LeaderElection
+    SELECT_ALL_LEADERS,
     //NamenodeJspHElper
     GET_SAFE_MODE_TEXT, GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
     TO_XML_CORRUPT_BLOCK_INFO,
