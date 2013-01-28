@@ -12,7 +12,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -141,11 +144,19 @@ public class LeaderElection extends Thread {
         updateCounter(counter, nn.getId(), hostname);
     }
 
-    /* The function that returns the list of actively running NNs */
-    //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    SortedMap<Long, InetSocketAddress> selectAll() throws PersistanceException, IOException {
+  /* The function that returns the list of actively running NNs */
+  //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  SortedMap<Long, InetSocketAddress> selectAll() throws IOException {
+    LightWeightRequestHandler requestHandler = new LightWeightRequestHandler(OperationType.SELECT_ALL_LEADERS) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
         return getActiveNamenodes();
-    }
+      }
+    };
+
+    return (SortedMap<Long, InetSocketAddress>) requestHandler.handle();
+  }
 
     // helper function start here
     private long getMaxNamenodeCounter() throws PersistanceException {
