@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 5.5.27-ndb-7.2.8, for linux2.6 (x86_64)
 --
--- Host: cloud11    Database: kthfs
+-- Host: localhost    Database: kthfs
 -- ------------------------------------------------------
 -- Server version	5.5.27-ndb-7.2.8-cluster-gpl
 
@@ -45,6 +45,30 @@ CREATE TABLE `block_infos` (
 LOCK TABLES `block_infos` WRITE;
 /*!40000 ALTER TABLE `block_infos` DISABLE KEYS */;
 /*!40000 ALTER TABLE `block_infos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cluster`
+--
+
+DROP TABLE IF EXISTS `cluster`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cluster` (
+  `namespace_id` int(11) NOT NULL,
+  `cluster_id` int(11) NOT NULL,
+  `safe_mode` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`namespace_id`,`cluster_id`)
+) ENGINE=ndbcluster DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cluster`
+--
+
+LOCK TABLES `cluster` WRITE;
+/*!40000 ALTER TABLE `cluster` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cluster` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -270,6 +294,7 @@ CREATE TABLE `leader` (
 
 LOCK TABLES `leader` WRITE;
 /*!40000 ALTER TABLE `leader` DISABLE KEYS */;
+INSERT INTO `leader` VALUES (3,3,'2012-12-01 17:41:20','salman',0,0);
 /*!40000 ALTER TABLE `leader` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -460,4 +485,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2012-11-20 16:21:46
+-- Dump completed on 2013-01-28 11:48:42
