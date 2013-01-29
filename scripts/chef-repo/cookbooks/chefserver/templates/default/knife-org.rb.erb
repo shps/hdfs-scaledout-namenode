@@ -92,8 +92,8 @@ validation_client_name  "#{organization}-validator"
   #
   Chef::Config[:ec2_image_info] ||= {}
   ec2_image_info.merge!({
-       %w[eu-west-1  64-bit  ebs  ironfan-natty ] => { :image_id => 'ami-00202f74', :ssh_user => 'ubuntu', :bootstrap_distro => "ubuntu11.04-ironfan", },
-#       %w[us-east-1  64-bit  ebs  ironfan-natty ] => { :image_id => 'ami-3d4ff254', :ssh_user => 'ubuntu', :bootstrap_distro => "ubuntu11.04-ironfan", },
+#       %w[eu-west-1  64-bit  ebs  ironfan-natty ] => { :image_id => ' ami-ami-00202f74', :ssh_user => 'ubuntu', :bootstrap_distro => "ubuntu11.04-ironfan", },
+       %w[us-east-1  64-bit  ebs  precise64 ] => { :image_id => 'ami-3d4ff254', :ssh_user => 'ubuntu', :bootstrap_distro => "ubuntu12.04-ironfan", },
     })
   Chef::Log.debug("Loaded #{__FILE__}, now have #{ec2_image_info.size} ec2 images")
 

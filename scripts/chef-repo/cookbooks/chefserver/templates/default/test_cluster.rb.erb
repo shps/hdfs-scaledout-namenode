@@ -17,7 +17,7 @@ Ironfan.cluster 'test_cluster' do
   # can be used to augment or override these settings
   cloud(:ec2) do
     permanent           false
-    availability_zones  ['eu-west-1a', 'eu-west-1b']
+    availability_zones  ['us-east-1a', 'us-east-1b']
     flavor              't1.micro'
     backing             'ebs'
     image_name          'ironfan-natty'

@@ -36,7 +36,7 @@ bash "add_user_sudoers" do
   EOF
 end
 
-for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect libgecode-dev}
+for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect libgecode-dev }
   package "#{install_package}" do
     action :install
     options "--force-yes"

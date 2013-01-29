@@ -1,6 +1,6 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
-for install_package in %w{ git }
+for install_package in %w{ git-core libxml2-dev libxslt1-dev }
   package "#{install_package}" do
     action :install
   end
@@ -32,6 +32,7 @@ end
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
+cwd "#{HomeDir}"
 code <<-EOF
 
  # for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
@@ -43,17 +44,14 @@ code <<-EOF
  #   # fi
  # done
 
- sudo gem install ironfan --no-rdoc --no-ri
- sudo gem install bundle --no-rdoc --no-ri
-# sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
+sudo gem install ironfan --no-rdoc --no-ri
+sudo gem install bundle --no-rdoc --no-ri
 sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
 sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
 export CHEF_USERNAME=#{node[:chef][:user]}
-export CHEF_HOME=#{HomeDir}
-export CHEF_HOMEBASE=$CHEF_HOME/homebase
+export CHEF_HOMEBASE=#{HomeDir}/homebase
 export EDITOR=vi
-cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 
@@ -68,8 +66,8 @@ sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
-test -f $CHEF_HOME/.chef && rm -rf $CHEF_HOME/.chef
-ln -sn $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
+test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
+sudo su - #{node[:chef][:user]} -c "ln -sn $CHEF_HOMEBASE/knife #{HomeDir}/.chef"
 
 rm -rf $CHEF_HOMEBASE/knife/credentials
 cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
@@ -122,33 +120,40 @@ end
 # knife cluster bootstrap test_cluster-web-0 
 # knife cluster bootstrap test_cluster-database-0 
 
-bash "upload_roles_cookbooks" do
+bash "upload_roles" do
 user "#{node[:chef][:user]}"
 ignore_failure false
-cwd #{HomeDir}/homebase
+cwd "#{HomeDir}/homebase"
 code <<-EOF
 env > /tmp/the_env
 export CHEF_USERNAME=#{node[:chef][:user]}
-export CHEF_HOME=#{HomeDir}
-export CHEF_HOMEBASE =$CHEF_HOME/homebase
+export CHEF_HOMEBASE =#{HomeDir}/homebase
 export EDITOR=vi
 
 # The bash resource logs in as 'root' but just changes UID to run the process as.
 # This isn't the same as logging in as a user, running bash_profile, etc
 sudo su - #{node[:chef][:user]} -c "knife role from file #{HomeDir}/homebase/roles/*.rb"
-# 'rake roles' doesn't work, and knife is recommended for uploading roles
-#if (knife role list | wc -l) < 3 ; then
-#
-#fi
 
-if [ ! -d pantry ] ; then
-  git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
-fi
+touch #{HomeDir}/homebase/.roles_uploaded
+EOF
+not_if "test -f #{HomeDir}/homebase/.roles_uploaded"
+end
 
+bash "upload_cookbooks" do
+user "#{node[:chef][:user]}"
+ignore_failure false
+cwd "#{HomeDir}/homebase"
+code <<-EOF
+export CHEF_USERNAME=#{node[:chef][:user]}
+export CHEF_HOMEBASE =#{HomeDir}/homebase
+export EDITOR=vi
+
+cd #{HomeDir}/homebase
+git clone https://github.com/infochimps-labs/ironfan-pantry.git pantry
+test -d #{HomeDir}/homebase/pantry
 # Copy all of ironfan's recipes to the chef server
-
+sudo su - #{node[:chef][:user]} -c "knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks"
 #if (knife cookbook list | wc -l) < 4 ; then
-  sudo su - #{node[:chef][:user]} -c "knife cookbook upload -a -o #{HomeDir}/homebase/pantry/cookbooks"
 #fi
 
 echo "Create your environments: "
@@ -156,7 +161,7 @@ echo "knife environment create dev -y"
 echo "knife environment create prod -y"
 echo "knife environment create stag -y"
 
-touch #{HomeDir}/homebase/.uploads_complete
+touch #{HomeDir}/homebase/.cookbooks_uploaded
 EOF
-not_if "test -f #{HomeDir}/homebase/.uploads_complete"
+not_if "test -f #{HomeDir}/homebase/.cookbooks_uploaded"
 end
