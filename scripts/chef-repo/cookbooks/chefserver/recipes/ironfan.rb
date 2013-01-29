@@ -1,6 +1,6 @@
 HomeDir="#{node[:chef][:base_dir]}"
 
-for install_package in %w{ git-core }
+for install_package in %w{ git-core libxml2-dev libxslt1-dev }
   package "#{install_package}" do
     action :install
   end
@@ -32,6 +32,7 @@ end
 bash "configure_ironfan" do
 user "#{node[:chef][:user]}"
 ignore_failure false
+cwd "#{HomeDir}"
 code <<-EOF
 
  # for gem in `ls #{Chef::Config[:file_cache_path]}/*.gem`
@@ -43,17 +44,14 @@ code <<-EOF
  #   # fi
  # done
 
- sudo gem install ironfan --no-rdoc --no-ri
- sudo gem install bundle --no-rdoc --no-ri
-# sudo gem install chozo -v '0.3.0' --no-rdoc --no-ri
+sudo gem install ironfan --no-rdoc --no-ri
+sudo gem install bundle --no-rdoc --no-ri
 sudo update-alternatives --set ruby /usr/bin/ruby1.9.1
 sudo update-alternatives --set gem /usr/bin/gem1.9.1
 
 export CHEF_USERNAME=#{node[:chef][:user]}
-export CHEF_HOME=#{HomeDir}
-export CHEF_HOMEBASE=$CHEF_HOME/homebase
+export CHEF_HOMEBASE=#{HomeDir}/homebase
 export EDITOR=vi
-cd $CHEF_HOME
 git clone https://github.com/infochimps-labs/ironfan-homebase homebase
 cd homebase
 
@@ -68,8 +66,8 @@ sudo bundle install
 git submodule update --init
 git submodule foreach git checkout master
 
-test -f $CHEF_HOME/.chef && rm -rf $CHEF_HOME/.chef
-ln -sn $CHEF_HOMEBASE/knife $CHEF_HOME/.chef
+test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
+sudo su - #{node[:chef][:user]} -c "ln -sn $CHEF_HOMEBASE/knife #{HomeDir}/.chef"
 
 rm -rf $CHEF_HOMEBASE/knife/credentials
 cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
