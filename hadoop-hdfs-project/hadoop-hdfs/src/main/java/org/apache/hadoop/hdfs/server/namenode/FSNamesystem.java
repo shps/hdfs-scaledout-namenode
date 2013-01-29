@@ -4488,33 +4488,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("Registered FSNamesystemState MBean");
     }
 
-    /**
-     * shutdown FSNamesystem
-     */
-    void shutdown() {
-        if (mbeanName != null) {
-            MBeans.unregister(mbeanName);
-        }
-        // TODO Jim - Leader leaves
-        try {
-            TransactionalRequestHandler leaderExitHandler = new TransactionalRequestHandler(OperationType.GET_FS_STATE) {
-                @Override
-                public Object performTask() throws PersistanceException, IOException {
-                    LeaderHelper.removeNamenode(nameNode.getId());
-                    return null;
-                }
-
-                @Override
-                public void acquireLock() throws PersistanceException, IOException {
-                    // TODO safemode
-                }
-            };
-            leaderExitHandler.handle();
-        } catch (IOException ex) {
-            LOG.error(ex);
-        }
-
+  /**
+   * shutdown FSNamesystem
+   */
+  void shutdown() {
+    if (mbeanName != null) {
+      MBeans.unregister(mbeanName);
     }
+    // TODO Jim - Leader leaves
+    try {
+      TransactionalRequestHandler leaderExitHandler = new TransactionalRequestHandler(OperationType.LEADER_EXIT) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+
+          EntityManager.remove(new Leader(nameNode.getId(), 0, 0, null));
+          return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO safemode
+        }
+      };
+      leaderExitHandler.handle();
+    } catch (IOException ex) {
+      LOG.error(ex);
+    }
+
+  }
 
     @Override // FSNamesystemMBean
     public int getNumLiveDataNodes() {
