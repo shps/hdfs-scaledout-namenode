@@ -1,3 +1,7 @@
 export CHEF_USERNAME=<%= node[:chef][:user] %>
 export CHEF_HOMEBASE=<%= node[:chef][:base_dir] %>/homebase
 export EDITOR=vi
+
+knife() {
+  bundle exec knife "$@"
+}
