@@ -1,5 +1,10 @@
 include_recipe "ndb"
 
+
+# if bootstrapping
+# node[:ndb][:ndbd] = discover_all(:ndb, :ndbd).map{|svr| [ svr.node[:ndb][:id], svr.node[:ipaddress] ] }.sort!
+# 
+
 directory node[:ndb][:mgm_dir] do
   owner node[:ndb][:user]
   group node[:ndb][:user]
@@ -41,3 +46,6 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
             })
   notifies :restart, resources(:service => "ndb_mgmd"), :immediately
 end
+
+
+announce(:ndb, :mgm_server)

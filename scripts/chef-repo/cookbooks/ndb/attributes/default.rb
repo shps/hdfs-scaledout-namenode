@@ -1,4 +1,8 @@
-# one of: debug, verbose, notice, warning
+default[:ndb][:ndbd][:run_state]  = :stop
+default[:ndb][:mysql_server][:run_state]  = :stop
+default[:ndb][:mgm_server][:run_state]  = :stop
+
+
 
 version="7"
 majorVersion="2"
@@ -6,13 +10,13 @@ minorVersion="10"
 versionStr= "#{version}.#{majorVersion}.#{minorVersion}"
 
 default[:ndb][:loglevel]   = "notice"
-default[:ndb][:mgm_server] = "10.0.2.15"
+default[:ndb][:mgm_server][:addr] = "10.0.2.15"
 default[:ndb][:user]       = "root"
 default[:ndb][:group]      = "root"
 default[:ndb][:port]       = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
 default[:ndb][:package_url] = "http://dev.mysql.com/get/Downloads/MySQL-Cluster-#{version}.#{majorVersion}/mysql-cluster-gpl-#{versionStr}-linux2.6-x86_64.tar.gz"
-default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server]}:#{ default[:ndb][:port]}"
+default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server][:addr]}:#{ default[:ndb][:port]}"
 default[:ndb][:data_memory] = 50
 default[:ndb][:index_memory] = 10
 default[:ndb][:data_nodes] = %w{ 10.0.2.15 } # cloud8.sics.se cloud9.sics.se cloud16.sics.se 

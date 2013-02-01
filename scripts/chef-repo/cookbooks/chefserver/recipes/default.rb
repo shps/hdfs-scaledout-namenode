@@ -1,22 +1,17 @@
 # Actually used this tutorial
 # http://jtimberman.housepub.org/blog/2012/11/17/install-chef-10-server-on-ubuntu-with-ruby-1-dot-9/
 
-
 # Knife/encrypting passwords/creating users tutorial
 # http://www.jasongrimes.org/2012/06/provisioning-a-lamp-stack-with-chef-vagrant-and-ec2-2-of-3/
 
+# Other tutorials
 # How to install chef server...
 # https://github.com/pikesley/catering-college
-
 # More detailed version of above script here:
 # https://github.com/kaldrenon/install-chef-server
-
-# ironfan: 
-# http://mharrytemp.blogspot.ie/2012/10/getting-started-with-ironfan.html
-
 # How to install chef-server using chef-solo:
 # http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo
-# http://blogs.clogeny.com/hadoop-cluster-automation-using-ironfan/
+
 
 
 HomeDir="#{node[:chef][:base_dir]}"
@@ -84,6 +79,9 @@ template "/etc/chef/webui.rb" do
   mode 0755
 end
 
+# We can reduce installation time by caching all the gems in the recipe, and then
+# installing them 'locally'. 
+#
 # for install_gem in node[:chef][:gems]
 #   cookbook_file "#{Chef::Config[:file_cache_path]}/#{install_gem}.gem" do
 #     source "#{install_gem}.gem"
@@ -113,7 +111,7 @@ bash "install_chef_server" do
    sudo gem install chef-server-webui --no-ri --no-rdoc
    sudo gem install chef-server-api --no-ri --no-rdoc
    sudo gem install chef-solr --no-ri --no-rdoc
-# chef-expander broken on Ubuntu 12.04+
+# chef-expander broken on Ubuntu 12.10+
 #  https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
    sudo gem install chef-expander --no-ri --no-rdoc
 
@@ -122,24 +120,14 @@ bash "install_chef_server" do
    sudo chown -R #{node[:chef][:user]} /var/cache/chef
    sudo chown -R #{node[:chef][:user]} #{HomeDir}
 
-
 # Installing the chef gem also causes a chef user to be created.
-# However, with the wrong shell (csh) and home directory (/root). Need to change them here. 
+# However, with the wrong shell (csh). Change the shell back to bash.
 sudo usermod -s /bin/bash #{node[:chef][:user]}
-sudo usermod -d #{HomeDir} #{node[:chef][:user]}
+#sudo usermod -d #{HomeDir} #{node[:chef][:user]}
 
-# TODO - CentOS uses Init, not upstart
-#for file in chef-server chef-solr chef-server-webui 
-#do
-#  outfile=`basename ${file}`
-#  service=${outfile%.conf}
-#  sudo ln -sf /lib/init/ upstart-job /etc/init.d/${service}
-#  sudo service ${service} start 2> /dev/null || sudo service ${service} restart
-#done
   EOF
 not_if "which chef-server-expander"
 end
-
 
 for install_service in %w{ chef-server chef-solr chef-server-webui chef-expander }
   service "#{install_service}" do
@@ -189,7 +177,6 @@ mkdir #{HomeDir}/.chef
 #{Chef::Config[:file_cache_path]}/knife-config.sh
 cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.pem
 
-#rubygems update --system
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end

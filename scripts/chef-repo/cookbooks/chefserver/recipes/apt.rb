@@ -13,13 +13,6 @@
 # More detailed version of above script here:
 # https://github.com/kaldrenon/install-chef-server
 
-# ironfan: 
-# http://mharrytemp.blogspot.ie/2012/10/getting-started-with-ironfan.html
-
-# How to install chef-server using chef-solo:
-# http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo
-# http://blogs.clogeny.com/hadoop-cluster-automation-using-ironfan/
-
 
 HomeDir="#{node[:chef][:base_dir]}"
 user node[:chef][:user] do
@@ -134,33 +127,6 @@ for install_package in %w{ ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.
   end
 end
 
-# bash "install_chef_ruby" do
-#   user "#{node[:chef][:user]}"
-#   code <<-EOF
-
-# #sudo apt-get install -y -q 
-
-#  sudo update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby1.9.1 400 --slave   /usr/share/man/man1/ruby.1.gz ruby.1.gz \
-#                          /usr/share/man/man1/ruby1.9.1.1.gz \
-#          --slave   /usr/bin/ri ri /usr/bin/ri1.9.1 \
-#          --slave   /usr/bin/irb irb /usr/bin/irb1.9.1 \
-#          --slave   /usr/bin/rdoc rdoc /usr/bin/rdoc1.9.1
-
-# # choose your interpreter
-# # changes symlinks for /usr/bin/ruby , /usr/bin/gem
-# # /usr/bin/irb, /usr/bin/ri and man (1) ruby
-
-# sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 400 --slave /usr/share/man/man1/gem.1.gz gem.1.gz
-
-# # sudo update-alternatives --config ruby
-# # sudo update-alternatives --config gem
-
-# # now test ruby works
-# ruby --version
-
-# EOF
-# end
-
 directory "/var/cache/local/preseeding" do
   owner "root"
   mode 0755
@@ -211,17 +177,6 @@ for install_package in %w{ chef chef-server chef-server-api chef-server-webui ch
   end
 end
 
-# bash "install_chef_server_from_apt" do
-#   user "#{node[:chef][:user]}"
-#   code <<-EOF
-# sudo apt-get install -f -y -q chef
-# sudo apt-get install -f -y -q chef-server chef-server-api chef-server-webui chef-solr chef-expander
-
-# EOF
-#   not_if "which chef-server"
-# end
-
-
 template "#{Chef::Config[:file_cache_path]}/knife-config.sh" do
   source "knife-config.sh.erb"
   owner "#{node[:chef][:user]}"
@@ -257,5 +212,3 @@ cp #{HomeDir}/.chef/#{node[:chef][:user]}.pem #{HomeDir}/#{node[:chef][:user]}.p
 EOF
 not_if "test -f #{HomeDir}/#{node[:chef][:user]}.pem || test -f #{HomeDir}/.chef/credentials/#{node[:chef][:user]}.pem"
 end
-
-

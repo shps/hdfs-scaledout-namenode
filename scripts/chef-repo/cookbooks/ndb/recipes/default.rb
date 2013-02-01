@@ -1,3 +1,4 @@
+include_recipe "silverware"
 
 user node[:ndb][:user] do
   action :create
