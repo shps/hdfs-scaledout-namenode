@@ -266,6 +266,7 @@ class HeartbeatManager implements DatanodeStatistics {
             lastHeartbeatCheck = now;
           }
           if (namesystem.getBlockManager().shouldUpdateBlockKey(
+                  namesystem.isLeader(),
                   now - lastBlockKeyUpdate)) {
             synchronized (HeartbeatManager.this) {
               for (DatanodeDescriptor d : datanodes) {
