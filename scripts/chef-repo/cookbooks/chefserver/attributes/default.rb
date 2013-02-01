@@ -21,9 +21,9 @@ default[:aws][:user] = "jdowling"
 default[:aws_access_key_id] = "AKIAJRR5Z45K4ZSIFYWQ"
 default[:aws_secret_access_key] = "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"
 
-default[:aws][:zone] = "eu-west-1a" #"us-east-1d"
+default[:aws][:zone] = "eu-west-1a" 
 default[:aws][:instance_type] = "ebs" # or instance
-default[:aws][:image_id] = "ami-ami-00202f74"
+default[:aws][:image_id] = "ami-ffcdce8b"
 default[:aws][:image_name] = "ironfan-natty" 
 default[:aws][:bootstrap_distro] = "ubuntu12.04-ironfan"
 #ubuntu11.04-ironfan
