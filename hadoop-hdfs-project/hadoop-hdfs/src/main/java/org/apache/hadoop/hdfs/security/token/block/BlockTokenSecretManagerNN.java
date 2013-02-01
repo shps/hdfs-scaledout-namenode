@@ -24,8 +24,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,10 +34,14 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.hdfs.server.namenode.SecretHelper;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockTokenKeyDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 
 /**
@@ -56,7 +59,6 @@ public class BlockTokenSecretManagerNN extends
     SecretManager<BlockTokenIdentifier> {
   public static final Log LOG = LogFactory
       .getLog(BlockTokenSecretManagerNN.class);
-  public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
   private final boolean isMaster;
   /**
@@ -83,34 +85,30 @@ public class BlockTokenSecretManagerNN extends
    * @throws IOException
    */
   public BlockTokenSecretManagerNN(boolean isMaster, long keyUpdateInterval,
-      long tokenLifetime, boolean isLeader) throws IOException {
+          long tokenLifetime, boolean isLeader) throws IOException {
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
 
-    
-    if(isLeader) {
-      // remove all existing keys
-      DBConnector.beginTransaction();
-      SecretHelper.removeAll();
-      DBConnector.commit();
+
+    if (isLeader) {
+      // TODO[Hooman]: Since Master is keeping the serialNo locally, so whenever
+      // A namenode crashes it should remove all keys from the database.
       
       // generate new keys
       generateKeys();
+    } else {
+      retrieveCurrentKeyAndNextKey();
     }
-    else {
-      currentKey = SecretHelper.getCurrentKey();
-      nextKey = SecretHelper.getNextKey();
-    }
-    
   }
 
   /** Initialize block keys */
   // Only called by the constructor which is called by BlockManager's activate() method
   // This is a one time operation when the namenode restarts
-  private synchronized void generateKeys() { //CHANGED
-    if (!isMaster)
+  private synchronized void generateKeys() throws IOException { //CHANGED
+    if (!isMaster) {
       return;
+    }
     /*
      * Need to set estimated expiry dates for currentKey and nextKey so that if
      * NN crashes, DN can still expire those keys. NN will stop using the newly
@@ -125,69 +123,29 @@ public class BlockTokenSecretManagerNN extends
      */
     serialNo++;
     currentKey = new BlockKey(serialNo, System.currentTimeMillis() + 2
-        * keyUpdateInterval + tokenLifetime, generateSecret());
+            * keyUpdateInterval + tokenLifetime, generateSecret());
+    currentKey.setKeyType(BlockKey.CURR_KEY);
     serialNo++;
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
-        * keyUpdateInterval + tokenLifetime, generateSecret());
+            * keyUpdateInterval + tokenLifetime, generateSecret());
+    nextKey.setKeyType(BlockKey.NEXT_KEY);
 
-    
-        TransactionalRequestHandler generateKeysHandler = new TransactionalRequestHandler(OperationType.GET_LISTING) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
-                SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
-                return null;
-            }
-            @Override
-            public void acquireLock() throws PersistanceException, IOException {
-                // TODO JIM - what locks are acquired here? An exclusive lock on
-                // 
-//                TransactionLockManager tla = new TransactionLockManager();
-//                tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
-//                        TransactionLockManager.INodeLockType.READ,
-//                        new String[]{src},
-//                        getFsDirectory().getRootDir()).
-//                        addBlock(TransactionLockManager.LockType.READ).
-//                        addReplica(TransactionLockManager.LockType.READ).
-//                        addExcess(TransactionLockManager.LockType.READ).
-//                        addCorrupt(TransactionLockManager.LockType.READ).
-//                        addReplicaUc(TransactionLockManager.LockType.READ).
-//                        acquire();
-            }
-        };
-        generateKeysHandler.handleWithReadLock(this);    
-    
-//    boolean isDone = false;
-//    int tries = DBConnector.RETRY_COUNT;
-//    try {
-//      while (!isDone && tries > 0) {
-//        try {
-//          
-//          
-//          DBConnector.beginTransaction();
-//          DBConnector.setExclusiveLock();
-//          SecretHelper.put(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY); 
-//          SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
-//          DBConnector.commit();
-//          isDone=true;
-//          
-//        }//end-inner try
-//        catch (ClusterJException ex) {
-//            DBConnector.safeRollback();
-//            DBConnector.setDefaultLock();
-//            tries--;
-//            //For now, the ClusterJException are just catched here.
-//            LOG.error(ex.getMessage(), ex);
-//          }
-//      }//end-while
-//    }//end-outer most try
-//    finally {
-//      if(!isDone) {
-//        DBConnector.safeRollback();
-//        DBConnector.setDefaultLock();
-//      }
-//    } // finally for db try block
-    
+
+    TransactionalRequestHandler generateKeysHandler = new TransactionalRequestHandler(OperationType.ADD_BLOCK_TOKENS) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        EntityManager.add(currentKey);
+        EntityManager.add(nextKey);
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        // No lock is required.
+      }
+    };
+    generateKeysHandler.handle();
   }
 
   /** Export block keys, only to be used in master mode */
@@ -195,27 +153,70 @@ public class BlockTokenSecretManagerNN extends
   // Its usually exported during datanode heart beats and when keys are to be updated (This updation is monitored by the HeartBeat monitor)
   // This method simply returns the current key and other 'unexpired' keys from the database
   public synchronized ExportedBlockKeys exportKeys() { //CHANGED
-    if (!isMaster)
+    if (!isMaster) {
       return null;
-    if (LOG.isDebugEnabled())
+    }
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Exporting access keys");
-
-    return new ExportedBlockKeys(true, keyUpdateInterval, tokenLifetime, SecretHelper.getCurrentKey(), SecretHelper.getAllKeys());
+    }
+    BlockKey[] allKeys = null;
+    try {
+      allKeys = (BlockKey[]) getAllKeys().toArray();
+    } catch (IOException ex) {
+      LOG.error(ex);
+      // TODO[Hooman]: throw exception to the caller.
+    }
+    return new ExportedBlockKeys(
+            true,
+            keyUpdateInterval,
+            tokenLifetime,
+            getKeyByType(BlockKey.CURR_KEY),
+            allKeys);
   }
 
-  private synchronized void removeExpiredKeys() { //CHANGED
-    long now = System.currentTimeMillis();
-    Map<Integer, BlockKey> allKeysMap = SecretHelper.getAllKeysMap();
-    for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeysMap.entrySet()
-        .iterator(); it.hasNext();) {
-      Map.Entry<Integer, BlockKey> e = it.next();
-      if (e.getValue().getExpiryDate() < now) {
-        it.remove();
-        SecretHelper.removeKey(e.getKey().intValue());
+  private synchronized void removeExpiredKeys() throws IOException { //CHANGED
+
+    TransactionalRequestHandler removeKeyHandler = new TransactionalRequestHandler(OperationType.REMOVE_BLOCK_KEY) {
+
+      long now = System.currentTimeMillis();
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        int keyId = (int) params[0];
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addBlockKeyLockById(TransactionLockManager.LockType.WRITE, keyId).acquire();
       }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        int keyId = (int) params[0];
+        BlockKey key = EntityManager.find(BlockKey.Finder.ById, keyId);
+        if (key != null) {
+          if (key.getExpiryDate() < now) {
+            EntityManager.remove(key);
+          }
+        }
+        return null;
+      }
+    };
+
+    List<BlockKey> allKeys = getAllKeys();
+    for (BlockKey key : allKeys) {
+      removeKeyHandler.setParams(key.getKeyId()).handle();
     }
   }
 
+  private List<BlockKey> getAllKeys() throws IOException {
+    return (List<BlockKey>) new LightWeightRequestHandler(OperationType.GET_ALL_BLOCK_TOKENS) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        BlockTokenKeyDataAccess da = (BlockTokenKeyDataAccess) StorageFactory.getDataAccess(BlockTokenKeyDataAccess.class);
+        List<BlockKey> allKeys = da.findAll();
+        return allKeys;
+      }
+    }.handle();
+  }
   /**
    * Update block keys if update time > update interval.
    * @return true if the keys are updated.
@@ -242,37 +243,72 @@ public class BlockTokenSecretManagerNN extends
       
       LOG.info("Updating block keys");
       removeExpiredKeys();
-
-      // set final expiry date of retiring currentKey
-      // also modifying this key to mark it as 'simple key' instead of 'current key'
-      BlockKey currentKeyFromDB = SecretHelper.getCurrentKey();
-      SecretHelper.update(currentKeyFromDB.getKeyId(), new BlockKey(currentKeyFromDB.getKeyId(),
-                                                                                                                                                          System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
-                                                                                                                                                          currentKeyFromDB.getKey()), 
-                                                                                                                                                          SecretHelper.SIMPLE_KEY);
-
-      // after above update, we only have a key marked as 'next key'
-      // the 'next key' becomes the 'current key'
-      // update the estimated expiry date of new currentKey
-      BlockKey nextKeyFromDB = SecretHelper.getNextKey();
-      currentKey = new BlockKey(nextKeyFromDB.getKeyId(), System.currentTimeMillis()
-          + 2 * keyUpdateInterval + tokenLifetime, nextKeyFromDB.getKey());
-      SecretHelper.update(currentKey.getKeyId(), currentKey, SecretHelper.CURR_KEY);
       
-      // generate a new nextKey
-      serialNo++;
-      nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3 
-          * keyUpdateInterval + tokenLifetime, generateSecret());
-      SecretHelper.put(nextKey.getKeyId(), nextKey, SecretHelper.NEXT_KEY);
+      new TransactionalRequestHandler(OperationType.UPDATE_BLOCK_KEYS) {
+        
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager tlm = new TransactionLockManager();
+          tlm.addBlockKeyLockByType(TransactionLockManager.LockType.WRITE, BlockKey.CURR_KEY).
+                  addBlockKeyLockByType(TransactionLockManager.LockType.WRITE, BlockKey.NEXT_KEY).
+                  acquire();
+        }
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          // set final expiry date of retiring currentKey
+          // also modifying this key to mark it as 'simple key' instead of 'current key'
+          BlockKey currentKeyFromDB = EntityManager.find(BlockKey.Finder.ByType, BlockKey.CURR_KEY);
+          currentKeyFromDB.setExpiryDate(System.currentTimeMillis() + keyUpdateInterval + tokenLifetime);
+          currentKeyFromDB.setKeyType(BlockKey.SIMPLE_KEY);
+          EntityManager.update(currentKeyFromDB);
+          // after above update, we only have a key marked as 'next key'
+          // the 'next key' becomes the 'current key'
+          // update the estimated expiry date of new currentKey
+          BlockKey nextKeyFromDB = EntityManager.find(BlockKey.Finder.ByType, BlockKey.NEXT_KEY);
+          currentKey = new BlockKey(nextKeyFromDB.getKeyId(), System.currentTimeMillis()
+                  + 2 * keyUpdateInterval + tokenLifetime, nextKeyFromDB.getKey());
+          currentKey.setKeyType(BlockKey.CURR_KEY);
+          EntityManager.update(currentKey);
+
+          // generate a new nextKey
+          serialNo++;
+          nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
+                  * keyUpdateInterval + tokenLifetime, generateSecret());
+          nextKey.setKeyType(BlockKey.NEXT_KEY);
+          EntityManager.add(nextKey);
+          return null;
+        }
+      }.handle();
     }
     else {
-      currentKey = SecretHelper.getCurrentKey();
-      nextKey = SecretHelper.getNextKey();
+      retrieveCurrentKeyAndNextKey();
     }
     
     return true;
   }
+  
+  private void retrieveCurrentKeyAndNextKey() throws IOException {
+    currentKey = getKeyByType(BlockKey.CURR_KEY);
+    nextKey = getKeyByType(BlockKey.NEXT_KEY);
+  }
 
+  private BlockKey getKeyByType(final short keyType) {
+    try {
+      return (BlockKey) new LightWeightRequestHandler(OperationType.GET_KEY_BY_TYPE) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          BlockTokenKeyDataAccess da = (BlockTokenKeyDataAccess) StorageFactory.getDataAccess(BlockTokenKeyDataAccess.class);
+          return da.findByKeyType(keyType);
+        }
+      }.handle();
+    } catch (IOException ex) {
+      LOG.error(ex);
+    }
+    return null;
+  }
+  
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<BlockTokenSecretManager.AccessMode> modes) throws IOException {
@@ -385,18 +421,19 @@ public class BlockTokenSecretManagerNN extends
   protected byte[] createPassword(BlockTokenIdentifier identifier) {
     BlockKey key = null;
     synchronized (this) {
-    	key = SecretHelper.getCurrentKey();
+      key = getKeyByType(BlockKey.CURR_KEY);
+      if (key == null) {
+        throw new IllegalStateException("currentKey hasn't been initialized.");
+      }
+
+      identifier.setExpiryDate(System.currentTimeMillis() + tokenLifetime);
+      identifier.setKeyId(key.getKeyId());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Generating block token for " + identifier.toString());
+      }
+
+      return createPassword(identifier.getBytes(), key.getKey());
     }
-    if (key == null)
-      throw new IllegalStateException("currentKey hasn't been initialized.");
-    
-    identifier.setExpiryDate(System.currentTimeMillis() + tokenLifetime);
-    identifier.setKeyId(key.getKeyId());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Generating block token for " + identifier.toString());
-    }
-    
-    return createPassword(identifier.getBytes(), key.getKey());
   }
 
   /**
@@ -414,10 +451,14 @@ public class BlockTokenSecretManagerNN extends
       throw new InvalidToken("Block token with " + identifier.toString()
           + " is expired.");
     }
-    
+
     BlockKey key = null;
     synchronized (this) {
-    	key = SecretHelper.get(identifier.getKeyId());
+      try {
+        key = getKeyById(identifier.getKeyId());
+      } catch (IOException ex) {
+        LOG.error(ex);
+      }
     }
     if (key == null) {
       throw new InvalidToken("Can't re-compute password for "
@@ -425,5 +466,16 @@ public class BlockTokenSecretManagerNN extends
           + identifier.getKeyId() + ") doesn't exist.");
     }
     return createPassword(identifier.getBytes(), key.getKey());
+  }
+  
+  private BlockKey getKeyById(final int keyId) throws IOException {
+    return (BlockKey) new LightWeightRequestHandler(OperationType.GET_KEY_BY_ID) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        BlockTokenKeyDataAccess da = (BlockTokenKeyDataAccess) StorageFactory.getDataAccess(BlockTokenKeyDataAccess.class);
+        return da.findByKeyId(keyId);
+      }
+    }.handle();
   }
 }

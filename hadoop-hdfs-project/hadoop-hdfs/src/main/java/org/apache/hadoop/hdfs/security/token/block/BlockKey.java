@@ -28,6 +28,23 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
  */
 @InterfaceAudience.Private
 public class BlockKey extends DelegationKey {
+  
+  public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<BlockKey> {
+
+    ById, ByType, All;
+
+    @Override
+    public Class getType() {
+      return BlockKey.class;
+    }
+  }
+  
+  // KTHFS
+  public static final short CURR_KEY = 0;
+	public static final short NEXT_KEY = 1;
+	public static final short SIMPLE_KEY = -1;
+  // To specify if this key is currentKey or nextKey.
+  private short keyType;
 
   public BlockKey() {
     super();
@@ -35,5 +52,15 @@ public class BlockKey extends DelegationKey {
 
   public BlockKey(int keyId, long expiryDate, SecretKey key) {
     super(keyId, expiryDate, key);
+  }
+  
+  public void setKeyType(short keyType)
+  {
+    this.keyType = keyType;
+  }
+  
+  public short getKeyType()
+  {
+    return this.keyType;
   }
 }
