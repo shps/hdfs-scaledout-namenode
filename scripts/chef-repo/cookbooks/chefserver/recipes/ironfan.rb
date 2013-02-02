@@ -62,12 +62,13 @@ git submodule foreach git checkout master
 #      {username}.pem
 #      {organization}-validator.pem
 
-# Ironfan removes the default .chef directory, and replaces it with a symbolic link
-# to homebase/knife.
-test -f #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
-sudo su - #{node[:chef][:user]} -c "ln -s $CHEF_HOMEBASE/knife #{HomeDir}/.chef"
+# Ironfan removes the default .chef directory, and later replaces it with a symbolic link to homebase/knife.
+test -d #{HomeDir}/.chef && rm -rf #{HomeDir}/.chef
+
+# Copy the sample credentials provided by ironfan to the credentials directory
 rm -rf $CHEF_HOMEBASE/knife/credentials
-cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
+#cp -a $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
+mv $CHEF_HOMEBASE/knife/example-credentials $CHEF_HOMEBASE/knife/credentials
 
 # Assume my user's credentials are in my home dir, from a successful run of knife-config.sh
 cp #{HomeDir}/#{node[:chef][:user]}.pem #{HomeDir}/homebase/knife/credentials/#{node[:chef][:user]}.pem
@@ -86,6 +87,10 @@ mkdir ec2_keys
 touch $CHEF_HOMEBASE/.installed
 EOF
 not_if "test -f $CHEF_HOMEBASE/.installed"
+end
+
+link "#{HomeDir}/.chef" do
+  to "#{HomeDir}/homebase/knife"
 end
 
 template "#{HomeDir}/homebase/knife/credentials/knife-org.rb" do
