@@ -29,8 +29,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -43,8 +41,12 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 public class TestBlockManager {
   private final List<DatanodeDescriptor> nodes = ImmutableList.of( 
@@ -90,19 +92,16 @@ public class TestBlockManager {
     // construct network topology
     for (DatanodeDescriptor dn : nodesToAdd) {
       cluster.add(dn);
-      DBConnector.beginTransaction();
       dn.updateHeartbeat(
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
-      DBConnector.commit();
     }
   }
 
   private void removeNode(DatanodeDescriptor deadNode) throws IOException {
     NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
     cluster.remove(deadNode);
-    // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-    bm.removeBlocksAssociatedTo(deadNode, false);
+    bm.removeBlocksAssociatedTo(deadNode, OperationType.REMOVE_NODE);
   }
 
 
@@ -319,24 +318,62 @@ public class TestBlockManager {
    * Tell the block manager that replication is completed for the given
    * pipeline.
    */
-  private void fulfillPipeline(BlockInfo blockInfo,
-      DatanodeDescriptor[] pipeline) throws IOException {
+  private void fulfillPipeline(final BlockInfo blockInfo,
+          final DatanodeDescriptor[] pipeline) throws IOException {
+    TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.FULFILL_PIPELINE) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        DatanodeDescriptor dnd = (DatanodeDescriptor) getParams()[0];
+        bm.addBlock(dnd, blockInfo, null);
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, blockInfo.getBlockId()).
+                addReplica(LockType.WRITE).
+                addExcess(LockType.WRITE).
+                addCorrupt(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addPendingBlock(LockType.WRITE).
+                addReplicaUc(LockType.WRITE).
+                addInvalidatedBlock(LockType.READ);
+        lm.acquireByBlock();
+      }
+    };
     for (int i = 1; i < pipeline.length; i++) {
-            // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      bm.addBlock(pipeline[i], blockInfo, null,  null, false);
+      handler.setParams(pipeline[i]).handle();
     }
   }
 
-  private BlockInfo blockOnNodes(long blkId, List<DatanodeDescriptor> nodes) {
-    Block block = new Block(blkId);
-    BlockInfo blockInfo = new BlockInfo(block);
+  private BlockInfo blockOnNodes(final long blkId, final List<DatanodeDescriptor> nodes) throws IOException {
+    return (BlockInfo) new TransactionalRequestHandler(OperationType.BLOCK_ON_NODES) {
 
-    for (DatanodeDescriptor dn : nodes) {
-      // KTHFS: Check for atomicity if required, currenlty this function is running without atomicity (i.e. separate transactions)
-      IndexedReplica replica = blockInfo.addReplica(dn);
-      EntityManager.getInstance().persist(replica);
-    }
-    return blockInfo;
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        Block block = new Block(blkId);
+        BlockInfo blockInfo = new BlockInfo(block);
+
+        for (DatanodeDescriptor dn : nodes) {
+          IndexedReplica replica = blockInfo.addReplica(dn);
+          if (replica != null) {
+            EntityManager.add(replica);
+          }
+        }
+        return blockInfo;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addBlock(LockType.READ, blkId).
+                addReplica(LockType.READ);
+        lm.acquire();
+      }
+    }.handle();
   }
 
   private List<DatanodeDescriptor> nodes(int ... indexes) {
@@ -365,25 +402,44 @@ public class TestBlockManager {
     return blockInfo;
   }
   
-  private DatanodeDescriptor[] scheduleSingleReplication(Block block) throws IOException {
-    assertEquals("Block not initially pending replication",
-        0, bm.pendingReplications.getNumReplicas(block));
-    assertTrue("computeReplicationWork should indicate replication is needed",
-        bm.computeReplicationWorkForBlock(block, 1, false));
-    assertTrue("replication is pending after work is computed",
-        bm.pendingReplications.getNumReplicas(block) > 0);
-    
-    LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls =
-      getAllPendingReplications();
-    assertEquals(1, repls.size());
-    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries().iterator().next();
-    DatanodeDescriptor[] targets = repl.getValue().targets;
-    
-    DatanodeDescriptor[] pipeline = new DatanodeDescriptor[1 + targets.length];
-    pipeline[0] = repl.getKey();
-    System.arraycopy(targets, 0, pipeline, 1, targets.length);
-    
-    return pipeline;
+  private DatanodeDescriptor[] scheduleSingleReplication(final Block block) throws IOException {
+    return (DatanodeDescriptor[]) new TransactionalRequestHandler(OperationType.SCHEDULE_SINGLE_REPLICATION) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        assertEquals("Block not initially pending replication",
+                0, bm.pendingReplications.getNumReplicas(block));
+        assertTrue("computeReplicationWork should indicate replication is needed",
+                bm.computeReplicationWorkForBlock(block, 1));
+        assertTrue("replication is pending after work is computed",
+                bm.pendingReplications.getNumReplicas(block) > 0);
+
+        LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls =
+                getAllPendingReplications();
+        assertEquals(1, repls.size());
+        Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries().iterator().next();
+        DatanodeDescriptor[] targets = repl.getValue().targets;
+
+        DatanodeDescriptor[] pipeline = new DatanodeDescriptor[1 + targets.length];
+        pipeline[0] = repl.getKey();
+        System.arraycopy(targets, 0, pipeline, 1, targets.length);
+
+        return pipeline;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.READ).
+                addBlock(LockType.WRITE, block.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquireByBlock();
+      }
+    }.handle();
   }
 
   private LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> getAllPendingReplications() {
