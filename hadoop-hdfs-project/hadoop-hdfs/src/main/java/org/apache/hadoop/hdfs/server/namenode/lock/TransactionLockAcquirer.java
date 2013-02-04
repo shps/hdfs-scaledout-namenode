@@ -51,9 +51,9 @@ public class TransactionLockAcquirer {
 
   public static <T> T acquireLock(TransactionLockManager.LockType lock, FinderType<T> finder, Object... param) throws PersistanceException {
     setLockMode(lock);
-    if (param == null) {
-      return null;
-    }
+//    if (param == null) {
+//      return null;
+//    }
     return EntityManager.find(finder, param);
   }
 

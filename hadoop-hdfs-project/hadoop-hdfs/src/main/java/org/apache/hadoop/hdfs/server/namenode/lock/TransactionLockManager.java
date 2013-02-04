@@ -15,6 +15,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.GenerationStamp;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
@@ -72,6 +73,8 @@ public class TransactionLockManager {
   private LockType blockKeyLock = null;
   private List<Integer> blockKeyIds = null;
   private List<Short> blockKeyTypes = null;
+  // block generation stamp
+  private LockType generationStampLock = null;
 
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
@@ -296,6 +299,11 @@ public class TransactionLockManager {
     return this;
   }
 
+  public TransactionLockManager addGenerationStamp(LockType lock) {
+    this.generationStampLock = lock;
+    return this;
+  }
+
   /**
    * Lock on block token key data.
    * @param lock
@@ -406,6 +414,11 @@ public class TransactionLockManager {
             TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ByType, type);
           }
         }
+      }
+      
+      if (generationStampLock != null)
+      {
+        TransactionLockAcquirer.acquireLock(generationStampLock, GenerationStamp.Finder.Counter);
       }
     }
   }

@@ -32,6 +32,7 @@ public class StorageFactory {
   private static UnderReplicatedBlockDataAccess underReplicatedBlockDataAccess;
   private static LeaderDataAccess leaderDataAccess;
   private static BlockTokenKeyDataAccess blockTokenKeyDataAccess;
+  private static GenerationStampDataAccess generationStampDataAccess;
   private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
 
   private static void initDataAccessMap() {
@@ -48,6 +49,7 @@ public class StorageFactory {
     dataAccessMap.put(underReplicatedBlockDataAccess.getClass().getSuperclass(), underReplicatedBlockDataAccess);
     dataAccessMap.put(leaderDataAccess.getClass().getSuperclass(), leaderDataAccess);
     dataAccessMap.put(blockTokenKeyDataAccess.getClass().getSuperclass(), blockTokenKeyDataAccess);
+    dataAccessMap.put(generationStampDataAccess.getClass().getSuperclass(), generationStampDataAccess);
   }
 
   public static StorageConnector getConnector() {
@@ -73,6 +75,7 @@ public class StorageFactory {
       underReplicatedBlockDataAccess = new UnderReplicatedBlockDerby();
       leaderDataAccess = new LeaderDerby();
       // TODO[Hooman]: Add derby data access for block token key.
+      // TODO[Hooman]: Add derby data access for block generation stamp.
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
       defaultStorage.setConfiguration(conf);
@@ -88,6 +91,7 @@ public class StorageFactory {
       replicaUnderConstruntionDataAccess = new ReplicaUnderConstructionClusterj();
       underReplicatedBlockDataAccess = new UnderReplicatedBlockClusterj();
       leaderDataAccess = new LeaderClusterj();
+      generationStampDataAccess = new GenerationStampClusterj();
       blockTokenKeyDataAccess = new BlockTokenKeyClusterj();
     }
 
@@ -116,6 +120,7 @@ public class StorageFactory {
     entityContexts.put(UnderReplicatedBlock.class, new UnderReplicatedBlockContext(underReplicatedBlockDataAccess));
     entityContexts.put(Leader.class, new LeaderContext(leaderDataAccess));
     entityContexts.put(BlockKey.class, new BlockTokenKeyContext(blockTokenKeyDataAccess));
+    entityContexts.put(GenerationStamp.class, new GenerationStampContext(generationStampDataAccess));
     return entityContexts;
   }
 
