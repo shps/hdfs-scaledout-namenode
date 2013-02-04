@@ -102,6 +102,20 @@ public class TransactionLockManager {
 
     return leases;
   }
+  
+  /**
+   * Acquires lock on lease path and lease having leasepath. This is used by
+   *  the test cases.
+   * @param leasePath 
+   */
+  public static void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException
+  {
+    LeasePath lp = TransactionLockAcquirer.acquireLock(leasePathLock, LeasePath.Finder.ByPKey, leasePath);
+    if (lp != null)
+    {
+      TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByHolderId, lp.getHolderId());
+    }
+  }
 
   private void checkStringParam(Object param) {
     if (param != null && !(param instanceof String)) {
