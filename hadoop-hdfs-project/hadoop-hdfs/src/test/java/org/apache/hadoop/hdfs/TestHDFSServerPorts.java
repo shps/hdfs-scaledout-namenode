@@ -29,14 +29,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -104,7 +101,7 @@ public class TestHDFSServerPorts extends TestCase {
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         fileAsURI(new File(hdfsDir, "name1")).toString());
     FileSystem.setDefaultUri(config, "hdfs://" + THIS_HOST);
-    DBConnector.setConfiguration(config);
+    StorageFactory.setConfiguration(config);
     
     if (withService) {
       NameNode.setServiceAddress(config, THIS_HOST);      
