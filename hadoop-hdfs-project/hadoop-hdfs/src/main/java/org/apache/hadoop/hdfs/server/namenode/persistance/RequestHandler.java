@@ -87,7 +87,9 @@ public abstract class RequestHandler {
     // TestNodeCount
     TEST_NODE_COUNT,
     // Leader Election
-    LEADER_ELECTION;
+    LEADER_ELECTION,
+    // Transaction in unit tests.
+    TEST,
   }
   protected static Log log = LogFactory.getLog(RequestHandler.class);
   protected Object[] params = null;
