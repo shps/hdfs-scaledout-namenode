@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 public class TestDFSRename extends junit.framework.TestCase {
 
-  static int countLease(MiniDFSCluster cluster) {
+  static int countLease(MiniDFSCluster cluster) throws IOException {
     return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
   final Path dir = new Path("/test/rename/");
