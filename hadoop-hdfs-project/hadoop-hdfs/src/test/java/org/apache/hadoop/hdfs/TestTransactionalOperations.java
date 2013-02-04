@@ -84,7 +84,7 @@ public class TestTransactionalOperations {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-      DFSClient client = dfs.dfs;
+      DFSClient client = dfs.getDefaultDFSClient();
       Path exPath = new Path("/e1/e2");
       // Creates a path
       dfs.mkdirs(exPath, FsPermission.getDefault());
@@ -170,22 +170,23 @@ public class TestTransactionalOperations {
       assert dfs.exists(f1.getParent()) : String.format("The path %s does not exist.", f1.getParent().toString());
       // Create two files, for one we report both replicas removed and for the other one we report one replica removed 
       // so we expect for the first file the blockinfo to be removed and for the latter the block-info be added to under-replicated blocks.
-      namenode.create(f1.toString(), FsPermission.getDefault(), dfs.dfs.getClientName(),
+      DFSClient client = dfs.getDefaultDFSClient();
+      namenode.create(f1.toString(), FsPermission.getDefault(), client.getClientName(),
               new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 2, blockSize);
-      namenode.create(f2.toString(), FsPermission.getDefault(), dfs.dfs.getClientName(),
+      namenode.create(f2.toString(), FsPermission.getDefault(), client.getClientName(),
               new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 2, blockSize);
-      LocatedBlock b1 = namenode.addBlock(f1.toString(), dfs.dfs.getClientName(), null,
+      LocatedBlock b1 = namenode.addBlock(f1.toString(), client.getClientName(), null,
               new DatanodeInfo[]{new DatanodeInfo(dns.get(1).getDatanodeId())});
 
       String bpId = cluster.getNamesystem().getBlockPoolId();
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(0), bpId), bpId,
               new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b1.getBlock().getLocalBlock(), "")});
-      LocatedBlock b2 = namenode.addBlock(f1.toString(), dfs.dfs.getClientName(), b1.getBlock(),
+      LocatedBlock b2 = namenode.addBlock(f1.toString(), client.getClientName(), b1.getBlock(),
               new DatanodeInfo[]{new DatanodeInfo(dns.get(1).getDatanodeId())});
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(0), bpId), bpId,
               new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b2.getBlock().getLocalBlock(), "")});
       Thread.sleep(300L);
-      namenode.complete(f1.toString(), dfs.dfs.getClientName(), b2.getBlock());
+      namenode.complete(f1.toString(), client.getClientName(), b2.getBlock());
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(1), bpId), bpId,
               new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b1.getBlock().getLocalBlock(), "")});
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(2), bpId), bpId,
@@ -195,11 +196,11 @@ public class TestTransactionalOperations {
       namenode.reportBadBlocks(new LocatedBlock[]{new LocatedBlock(b1.getBlock(),
                 new DatanodeInfo[]{new DatanodeInfo(dns.get(2).getDatanodeId())})});
 
-      LocatedBlock b3 = namenode.addBlock(f2.toString(), dfs.dfs.getClientName(),
+      LocatedBlock b3 = namenode.addBlock(f2.toString(), client.getClientName(),
               null, new DatanodeInfo[]{new DatanodeInfo(dns.get(1).getDatanodeId())}); //FIXME [H]: Create a scenario in which b3 is commited and completes in the receivedAndDeletedBlocks
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(0), bpId), bpId,
               new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b3.getBlock().getLocalBlock(), "")});
-      namenode.addBlock(f2.toString(), dfs.dfs.getClientName(), b3.getBlock(), null); // to make the b3 commited
+      namenode.addBlock(f2.toString(), client.getClientName(), b3.getBlock(), null); // to make the b3 commited
       // We expect to send an excessive replica here.
       dnp.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(2), bpId), bpId,
               new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b1.getBlock().getLocalBlock(), "-"),
@@ -246,7 +247,7 @@ public class TestTransactionalOperations {
       FSDataOutputStream stm = dfs.create(f1, false, bufferSize, (short) 2, blockSize);
       writeFile(stm, 2 * blockSize);
       stm.hflush();
-      assert dfs.dfs.getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
+      assert dfs.getDefaultDFSClient().getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
 
     } finally {
       cluster.shutdown();
@@ -276,22 +277,22 @@ public class TestTransactionalOperations {
         dfs1.mkdirs(f1.getParent(), FsPermission.getDefault());
         NamenodeProtocols namenode = cluster.getNameNodeRpc();
         String bpId = cluster.getNamesystem().getBlockPoolId();
-        namenode.create(f1.toString(), FsPermission.getDefault(), dfs1.dfs.getClientName(),
+        namenode.create(f1.toString(), FsPermission.getDefault(), dfs1.getDefaultDFSClient().getClientName(),
                 new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 3, blockSize);
-        namenode.create(f2.toString(), FsPermission.getDefault(), dfs2.dfs.getClientName(),
+        namenode.create(f2.toString(), FsPermission.getDefault(), dfs2.getDefaultDFSClient().getClientName(),
                 new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true, (short) 2, blockSize);
 
         List<DataNode> dns = cluster.getDataNodes();
-        LocatedBlock b1 = namenode.addBlock(f1.toString(), dfs1.dfs.getClientName(),
+        LocatedBlock b1 = namenode.addBlock(f1.toString(), dfs1.getDefaultDFSClient().getClientName(),
                 null, null);
         namenode.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(0), bpId), fakeGroup,
                 new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b1.getBlock().getLocalBlock(), "")});
         namenode.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(1), bpId), fakeGroup,
                 new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b1.getBlock().getLocalBlock(), "")});
-        LocatedBlock b2 = namenode.addBlock(f1.toString(), dfs1.dfs.getClientName(),
+        LocatedBlock b2 = namenode.addBlock(f1.toString(), dfs1.getDefaultDFSClient().getClientName(),
                 b1.getBlock(), null);
-        namenode.abandonBlock(b2.getBlock(), f1.toString(), dfs1.dfs.getClientName());
-        LocatedBlock b3 = namenode.addBlock(f2.toString(), dfs2.dfs.getClientName(),
+        namenode.abandonBlock(b2.getBlock(), f1.toString(), dfs1.getDefaultDFSClient().getClientName());
+        LocatedBlock b3 = namenode.addBlock(f2.toString(), dfs2.getDefaultDFSClient().getClientName(),
                 null, null);
         namenode.blockReceivedAndDeleted(DataNodeTestUtils.getDNRegistrationForBP(dns.get(0), bpId), fakeGroup,
                 new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(b3.getBlock().getLocalBlock(), "")});
@@ -335,7 +336,7 @@ public class TestTransactionalOperations {
       stm = dfs.create(f3, false, bufferSize, (short) 2, blockSize);
       writeFile(stm, 2 * blockSize);
       stm.hflush();
-      assert dfs.dfs.getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
+      assert dfs.getDefaultDFSClient().getBlockLocations(f1.toString(), 0, 2 * blockSize).length == 2;
 
       FSDataOutputStream stm2 = dfs2.create(f4, false, bufferSize, (short) 2, blockSize);
       writeFile(stm, 2 * blockSize);
@@ -615,7 +616,7 @@ public class TestTransactionalOperations {
         TransactionLockManager tlm = new TransactionLockManager();
         tlm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
-                addLease(TransactionLockManager.LockType.WRITE, dfs.dfs.clientName).
+                addLease(TransactionLockManager.LockType.WRITE, dfs.getDefaultDFSClient().clientName).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.READ).
@@ -692,7 +693,7 @@ public class TestTransactionalOperations {
           try {
             barrier.await(); // to make all threads starting at the same time
             nameNodeProto.create(name, FsPermission.getDefault(),
-                    dfs.dfs.clientName,
+                    dfs.getDefaultDFSClient().clientName,
                     new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, (short) 2, blockSize);
             latch.countDown();
           } catch (Exception ex) {
