@@ -1,25 +1,21 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-
-
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -35,39 +31,47 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.mysql.clusterj.ClusterJException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import junit.framework.TestCase;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
- * 
+ *
  * @author wmalik
  *
  */
-public class TestSecretHelper {
-  public static final Log LOG = LogFactory.getLog(TestSecretHelper.class);
-  private static final Configuration CONF = new HdfsConfiguration();
-  
-  @Before
-  public void connect() throws IOException {
-	  CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
-	  DBConnector.setConfiguration(CONF);
-	  DBConnector.formatDB();
-  }
+public class TestSecretHelper extends TestCase {
 
-  @After
-  public void disconnect() throws IOException {
-  
-  }
-
-  
-  @Test
-  public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
-	  BlockTokenSecretManagerNN tokenMgr = 
-			  new BlockTokenSecretManagerNN(true, 60*60*1000L, 60*60*1000L, true); //60 minutes
-	  
-	  ExportedBlockKeys expKeys = tokenMgr.exportKeys();
-	  assertEquals(2, expKeys.getAllKeys().length);
-	  
-  }
-  
-  
-  
+    public static final Log LOG = LogFactory.getLog(TestSecretHelper.class);
+    private static final Configuration CONF = new HdfsConfiguration();
+    
+    @Before
+    public void connect() throws IOException {
+        CONF.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
+        StorageFactory.setConfiguration(CONF);
+        try {
+            StorageFactory.getConnector().formatStorage();
+        } catch (StorageException ex) {
+            fail("Failed to format the db. " + ex);
+        }
+        
+    }
+    
+    @After
+    public void disconnect() throws IOException {
+        
+    }
+    
+    @Test
+    public void testCrudOperationsForKeys() throws ClusterJException, IOException, InterruptedException {
+        BlockTokenSecretManagerNN tokenMgr =
+                new BlockTokenSecretManagerNN(true, 60 * 60 * 1000L, 60 * 60 * 1000L, true); //60 minutes
+        
+        ExportedBlockKeys expKeys = tokenMgr.exportKeys();
+        assertEquals(2, expKeys.getAllKeys().length);
+        
+        
+    }
 }
