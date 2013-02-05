@@ -36,9 +36,13 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 public class TestOverReplicatedBlocks extends TestCase {
+
   /** Test processOverReplicatedBlock can handle corrupt replicas fine.
    * It make sure that it won't treat corrupt replicas as valid ones 
    * thus prevents NN deleting valid replicas but keeping
@@ -48,70 +52,79 @@ public class TestOverReplicatedBlocks extends TestCase {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
-        Integer.toString(2));
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
+            Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     FileSystem fs = cluster.getFileSystem();
 
     try {
       final Path fileName = new Path("/foo1");
-      DFSTestUtil.createFile(fs, fileName, 2, (short)3, 0L);
-      DFSTestUtil.waitReplication(fs, fileName, (short)3);
-      
+      DFSTestUtil.createFile(fs, fileName, 2, (short) 3, 0L);
+      DFSTestUtil.waitReplication(fs, fileName, (short) 3);
+
       // corrupt the block on datanode 0
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
+      final ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
       assertTrue(TestDatanodeBlockScanner.corruptReplica(block, 0));
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
       File scanLog = new File(MiniDFSCluster.getFinalizedDir(
-          MiniDFSCluster.getStorageDir(0, 0),
-          cluster.getNamesystem().getBlockPoolId()).getParent().toString()
-          + "/../dncp_block_verification.log.prev");
+              MiniDFSCluster.getStorageDir(0, 0),
+              cluster.getNamesystem().getBlockPoolId()).getParent().toString()
+              + "/../dncp_block_verification.log.prev");
       //wait for one minute for deletion to succeed;
-      for(int i=0; !scanLog.delete(); i++) {
+      for (int i = 0; !scanLog.delete(); i++) {
         assertTrue("Could not delete log file in one minute", i < 60);
         try {
           Thread.sleep(1000);
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException ignored) {
+        }
       }
-      
+
       // restart the datanode so the corrupt replica will be detected
       cluster.restartDataNode(dnProps);
-      DFSTestUtil.waitReplication(fs, fileName, (short)2);
-      
+      DFSTestUtil.waitReplication(fs, fileName, (short) 2);
+
       String blockPoolId = cluster.getNamesystem().getBlockPoolId();
-      final DatanodeID corruptDataNode = 
-        DataNodeTestUtils.getDNRegistrationForBP(
-            cluster.getDataNodes().get(2), blockPoolId);
-         
+      final DatanodeID corruptDataNode =
+              DataNodeTestUtils.getDNRegistrationForBP(
+              cluster.getDataNodes().get(2), blockPoolId);
+
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final HeartbeatManager hm = bm.getDatanodeManager().getHeartbeatManager();
-      try {
-        namesystem.writeLock();
-        synchronized(hm) {
-          // set live datanode's remaining space to be 0 
-          // so they will be chosen to be deleted when over-replication occurs
-          String corruptMachineName = corruptDataNode.getName();
-          for (DatanodeDescriptor datanode : hm.getDatanodes()) {
-            if (!corruptMachineName.equals(datanode.getName())) {
-              DBConnector.beginTransaction();
-              datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
-              DBConnector.commit();
-            }
+      synchronized (hm) {
+        // set live datanode's remaining space to be 0 
+        // so they will be chosen to be deleted when over-replication occurs
+        String corruptMachineName = corruptDataNode.getName();
+        for (DatanodeDescriptor datanode : hm.getDatanodes()) {
+          if (!corruptMachineName.equals(datanode.getName())) {
+            datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
+          }
+        }
+
+        // decrease the replication factor to 1; 
+        NameNodeAdapter.setReplication(namesystem, fileName.toString(), (short) 1);
+        new TransactionalRequestHandler(OperationType.TEST_PROCESS_OVER_REPLICATED_BLOCKS) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            // corrupt one won't be chosen to be excess one
+            // without 4910 the number of live replicas would be 0: block gets lost
+            assertEquals(1, bm.countNodes(block.getLocalBlock()).liveReplicas());
+            return null;
           }
 
-          // decrease the replication factor to 1; 
-          NameNodeAdapter.setReplication(namesystem, fileName.toString(), (short)1);
-
-          // corrupt one won't be chosen to be excess one
-          // without 4910 the number of live replicas would be 0: block gets lost
-          assertEquals(1, bm.countNodes(block.getLocalBlock()).liveReplicas());
-        }
-      } finally {
-        namesystem.writeUnlock();
+          @Override
+          public void acquireLock() throws PersistanceException, IOException {
+            TransactionLockManager lm = new TransactionLockManager();
+            lm.addBlock(TransactionLockManager.LockType.READ, block.getBlockId()).
+                    addReplica(TransactionLockManager.LockType.READ).
+                    addExcess(TransactionLockManager.LockType.READ).
+                    addCorrupt(TransactionLockManager.LockType.READ);
+            lm.acquire();
+          }
+        }.handleWithWriteLock(namesystem);
       }
-      
     } finally {
       cluster.shutdown();
     }
