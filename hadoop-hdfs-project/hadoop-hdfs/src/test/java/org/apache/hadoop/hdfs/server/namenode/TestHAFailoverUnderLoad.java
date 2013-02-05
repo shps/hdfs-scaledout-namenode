@@ -1,13 +1,12 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.mysql.clusterj.ClusterJException;
-import com.mysql.clusterj.Session;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 import org.apache.log4j.Level;
 import org.apache.commons.logging.LogFactory;
@@ -23,10 +22,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
-
 
 /**
  *
@@ -83,7 +81,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
     fs = cluster.getNewFileSystemInstance(NN1);
 
     timeout = conf.getInt(DFSConfigKeys.DFS_LEADER_CHECK_INTERVAL_KEY, DFSConfigKeys.DFS_LEADER_CHECK_INTERVAL_DEFAULT)
-              + conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000L;
+            + conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000L;
 
 
     // create the directory namespace
@@ -123,7 +121,6 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
       }
     }
   }
-  
 
   // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   private void verifyFile() throws IOException {
@@ -135,19 +132,17 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         in = fs.open(writers[i].filepath);
         //for (int j = 0, x; (x = in.readInt()) != -1; j++) {
         boolean eof = false;
-        int j=0, x=0;
-        while(!eof) {
+        int j = 0, x = 0;
+        while (!eof) {
           try {
-            x= in.readInt();
+            x = in.readInt();
             assertEquals(j, x);
             j++;
-          }
-          catch(EOFException ex) {
+          } catch (EOFException ex) {
             eof = true; // finished reading file
           }
         }
-      }
-      finally {
+      } finally {
         IOUtils.closeStream(in);
       }
     }
@@ -199,7 +194,6 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
 //    }
 //  }
   // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
   /**
    * Under load perform failover by killing leader NN1
    * NN2 will be active and loads are now processed by NN2
@@ -210,11 +204,11 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
   public void testFailoverWhenLeaderNNCrashes() {
     // Testing with replication factor of 3
     short repFactor = 3;
-    LOG.info("Running test [testFailoverWhenLeaderNNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenLeaderNNCrashes()] with replication factor " + repFactor);
     testFailoverWhenLeaderNNCrashes(repFactor);
     // Testing with replication factor of 6
     repFactor = 6;
-    LOG.info("Running test [testFailoverWhenLeaderNNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenLeaderNNCrashes()] with replication factor " + repFactor);
     testFailoverWhenLeaderNNCrashes(repFactor);
   }
 
@@ -244,8 +238,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         LOG.info("Wait a few seconds. Let them write some more");
         Thread.sleep(2000);
 
-      }
-      finally {
+      } finally {
         stopWriters();
       }
       // the block report intervals would inform the namenode of under replicated blocks
@@ -262,13 +255,11 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
       fs = cluster.getNewFileSystemInstance(NN1);
 
       verifyFile(); // throws IOException. Should be caught by parent
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       LOG.error("Received exception: " + ex.getMessage(), ex);
       ex.printStackTrace();
-      fail("Exception: "+ex.getMessage());
-    }
-    finally {
+      fail("Exception: " + ex.getMessage());
+    } finally {
       shutdown();
     }
 
@@ -284,11 +275,11 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
   public void testFailoverWhenNonLeaderNNCrashes() {
     // Testing with replication factor of 3
     short repFactor = 3;
-    LOG.info("Running test [testFailoverWhenNonLeaderNNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenNonLeaderNNCrashes()] with replication factor " + repFactor);
     testFailoverWhenNonLeaderNNCrashes(repFactor);
     // Testing with replication factor of 6
     repFactor = 6;
-    LOG.info("Running test [testFailoverWhenNonLeaderNNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenNonLeaderNNCrashes()] with replication factor " + repFactor);
     testFailoverWhenNonLeaderNNCrashes(repFactor);
   }
 
@@ -317,8 +308,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         LOG.info("Wait a few seconds. Let them write some more");
         Thread.sleep(100);
 
-      }
-      finally {
+      } finally {
         stopWriters();
       }
       // the block report intervals would inform the namenode of under replicated blocks
@@ -334,13 +324,11 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
       fs = cluster.getNewFileSystemInstance(NN1);
 
       verifyFile(); // throws IOException. Should be caught by parent
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       LOG.error("Received exception: " + ex.getMessage(), ex);
       ex.printStackTrace();
-      fail("Exception: "+ex.getMessage());
-    }
-    finally {
+      fail("Exception: " + ex.getMessage());
+    } finally {
       shutdown();
     }
 
@@ -362,16 +350,16 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
   public void testFailoverWhenDNCrashes() {
     // Testing with replication factor of 3
     short repFactor = 3;
-    LOG.info("Running test [testFailoverWhenDNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenDNCrashes()] with replication factor " + repFactor);
     testFailoverWhenDNCrashes(repFactor);
     // Testing with replication factor of 6
     repFactor = 6;
-    LOG.info("Running test [testFailoverWhenDNCrashes()] with replication factor "+repFactor);
+    LOG.info("Running test [testFailoverWhenDNCrashes()] with replication factor " + repFactor);
     testFailoverWhenDNCrashes(repFactor);
   }
 
   public void testFailoverWhenDNCrashes(short replicationFactor) {
-    
+
     StringBuffer sb = new StringBuffer();
 
     try {
@@ -397,11 +385,10 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         int numDatanodesToKill = 0;
         if (replicationFactor == 3) {
           numDatanodesToKill = 5;
-        }
-        else if (replicationFactor == 6) {
+        } else if (replicationFactor == 6) {
           numDatanodesToKill = 2;
         }
-        
+
         sb.append("Killing datanodes ");
         for (int i = 0; i < numDatanodesToKill; i++) {
           // we need a way to ensure that atleast one valid replica is available
@@ -413,8 +400,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
           // New pipeline recovery takes place
           try {
             Thread.sleep(15000);
-          }
-          catch (InterruptedException ex) {
+          } catch (InterruptedException ex) {
           }
         }
         LOG.info(sb);
@@ -423,8 +409,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         LOG.info("Wait a few seconds. Let them write some more");
         Thread.sleep(2000);
 
-      }
-      finally {
+      } finally {
         // closing files - finalize all the files UC
         stopWriters();
       }
@@ -437,20 +422,18 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
       cluster.shutdown();
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport).format(false).numNameNodes(NUM_NAMENODES).numDataNodes(NUM_DATANODES).build();
       cluster.waitActive();
-      
+
       // update the client so that it has the fresh list of namenodes. Black listed namenodes will be removed
       fs = cluster.getNewFileSystemInstance(NN1);
 
       // make sure that DNs that were killed are not part of the "expected block locations" or "triplets"
       // the blocks associated to the killed DNs should have been replicated
       verifyFile(); // throws IOException. Should be caught by parent
-    }
-    catch (Exception ex) {
-      LOG.error("Received exception: " + ex.getMessage()+". DNs killed ["+sb+"]", ex);
+    } catch (Exception ex) {
+      LOG.error("Received exception: " + ex.getMessage() + ". DNs killed [" + sb + "]", ex);
       ex.printStackTrace();
-      fail("Exception: "+ex.getMessage());
-    }
-    finally {
+      fail("Exception: " + ex.getMessage());
+    } finally {
       shutdown();
     }
 
@@ -459,7 +442,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
   // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public static void waitReplication(FileSystem fs, Path rootDir, short replicationFactor, long timeout) throws IOException, TimeoutException {
     FileStatus[] files = fs.listStatus(rootDir);
-    for (int i=0; i<files.length; ) {
+    for (int i = 0; i < files.length;) {
       try {
         // increasing timeout to take into consideration 'ping' time with failed namenodes
         // if the client fetches for block locations from a dead NN, it would need to retry many times and eventually this time would cause a timeout
@@ -468,35 +451,35 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         timeout = timeout + expectedRetyTime;
         DFSTestUtil.waitReplicationWithTimeout(fs, files[i].getPath(), replicationFactor, timeout);
         i++;
-      }
-      catch(ConnectException ex) {
+      } catch (ConnectException ex) {
         // ignore
         LOG.warn("Received Connect Exception (expected due to failure of NN)");
       }
     }
   }
-  
-  // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    private static void waitTillFilesClose(FileSystem fs, Path rootDir, long timeout) throws IOException, TimeoutException {
-      long initTime = System.currentTimeMillis();
-      
-      //getting parent directory
-      INode parent = INodeHelper.getINode(rootDir.getName(), 0);
-      List<INode> files = INodeHelper.getChildren(parent.id);
-      
-      // loop through all files and check if they are closed. Expected to be closed by now
-      for(int i=0; i<files.size(); ) {
-        
-        if(!files.get(i).isUnderConstruction()) {
-          i++;
-        }
-        
-        if(System.currentTimeMillis() - initTime > timeout) {
-          throw new TimeoutException("File ["+files.get(i).getFullPathName() +"] has not been closed. Still under construction");
-        }
-      }
-  }
 
+  // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  private static void waitTillFilesClose(FileSystem fs, Path rootDir, long timeout) throws IOException, TimeoutException, PersistanceException {
+    long initTime = System.currentTimeMillis();
+
+    //getting parent directory
+    INode parent = EntityManager.find(INode.Finder.ByNameAndParentId, rootDir.getName(), 0);
+//      INode parent = INodeHelper.getINode(rootDir.getName(), 0);
+//      List<INode> files = INodeHelper.getChildren(parent.id);
+    List<INode> files = (List<INode>) EntityManager.findList(INode.Finder.ByParentId, parent.getId());
+
+    // loop through all files and check if they are closed. Expected to be closed by now
+    for (int i = 0; i < files.size();) {
+
+      if (!files.get(i).isUnderConstruction()) {
+        i++;
+      }
+
+      if (System.currentTimeMillis() - initTime > timeout) {
+        throw new TimeoutException("File [" + files.get(i).getFullPathName() + "] has not been closed. Still under construction");
+      }
+    }
+  }
 
   // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   static class Writer extends Thread {
@@ -510,14 +493,13 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
       super(Writer.class.getSimpleName() + ":" + filepath);
       this.fs = fs;
       this.filepath = filepath;
-      
+
       // creating the file here
       try {
         out = this.fs.create(filepath);
-      }
-      catch(Exception ex) {
-        LOG.info(getName() + " unable to create file ["+filepath+"]" + ex, ex);
-        if(out != null) {
+      } catch (Exception ex) {
+        LOG.info(getName() + " unable to create file [" + filepath + "]" + ex, ex);
+        if (out != null) {
           IOUtils.closeStream(out);
           out = null;
         }
@@ -534,11 +516,9 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
             out.hflush();
             sleep(100);
           }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           LOG.info(getName() + " dies: e=" + e, e);
-        }
-        finally {
+        } finally {
           LOG.info(getName() + ": i=" + i);
           IOUtils.closeStream(out);
           //IOUtils.cleanup(LOG, out);  
@@ -551,7 +531,7 @@ public class TestHAFailoverUnderLoad extends junit.framework.TestCase {
         }//end-finally
       }// end-outcheck
       else {
-        LOG.info(getName() + " outstream was null for file  ["+filepath+"]");
+        LOG.info(getName() + " outstream was null for file  [" + filepath + "]");
       }
     }//end-run        
   }//end-method
