@@ -7,10 +7,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.security.UserGroupInformation;
-
 
 /**
  *
@@ -24,12 +24,10 @@ public class StorageFileNameGenerator extends FileNameGenerator {
   private final long BASE_FILE_ID;
   private final long TOTAL_FILES; // total number of files
   private Configuration config;
-  EntityManager em = EntityManager.getInstance();
-  
+
 //  public StorageFileNameGenerator(String baseDir, long totalFiles, Configuration config) {
 //    this(baseDir, DEFAULT_FILES_PER_DIRECTORY, totalFiles, config);
 //  }
-
   public StorageFileNameGenerator(String baseDir, int filesPerDir, long totalFiles, Configuration config, long namenodeId) {
     super(baseDir, filesPerDir);
     //this.BASE_PARENT_ID = baseDir.split("/").length - 1;
@@ -58,14 +56,14 @@ public class StorageFileNameGenerator extends FileNameGenerator {
      * NN2 ----->  BASE_PARENT_ID: 1x10,004  ==> [10,005-->/nnThroughputBenchmark__1] , [10,006-->/open] , [10,007-->dir1] , [10,008-->dir2] , [10,009~~20,008]
      */
     //this.BASE_PARENT_ID = ((namenodeId-1) * (totalFiles+1))+baseDir.split("/").length - 1;  
-    long factor = (baseDir.split("/").length - 1)+(totalFiles/filesPerDir) + totalFiles +1;     
+    long factor = (baseDir.split("/").length - 1) + (totalFiles / filesPerDir) + totalFiles + 1;
     this.BASE_DIR_COUNT = baseDir.split("/").length - 1;
-    this.BASE_PARENT_ID = ((namenodeId-1) * factor) ;
+    this.BASE_PARENT_ID = ((namenodeId - 1) * factor);
     this.TOTAL_FILES = totalFiles;
-    this.BASE_FILE_ID =(TOTAL_FILES / filesPerDir) + BASE_PARENT_ID+BASE_DIR_COUNT;
-    System.out.println("BASE_PARENT_ID: "+BASE_PARENT_ID+", BASE_FILE_ID: "+BASE_FILE_ID + ", NNid: "+namenodeId);
+    this.BASE_FILE_ID = (TOTAL_FILES / filesPerDir) + BASE_PARENT_ID + BASE_DIR_COUNT;
+    System.out.println("BASE_PARENT_ID: " + BASE_PARENT_ID + ", BASE_FILE_ID: " + BASE_FILE_ID + ", NNid: " + namenodeId);
     this.config = config;
-    DBConnector.setConfiguration(config);
+    StorageFactory.setConfiguration(config);
   }
 
   public void buildBaseDirs(String baseDir, FSDirectory dir) {
@@ -73,17 +71,16 @@ public class StorageFileNameGenerator extends FileNameGenerator {
       String[] dirs = baseDir.split("/");
       int base = (int) BASE_PARENT_ID;
       for (int i = 1; i < dirs.length; i++) {
-    PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
-            UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
+        PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
+                UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
         //addINodeDirectory(dirs[i], i, i - 1);
-    
-        if(i-1 == 0) {
+
+        if (i - 1 == 0) {
           // parent == "/"  --> 0
           // child      == "/nnThroughputBenchmark__1"
-          addINodeDirectory(dirs[i], base +i, 0);
-        }
-        else {
-          addINodeDirectory(dirs[i], base +i, base+i - 1);
+          addINodeDirectory(dirs[i], base + i, 0);
+        } else {
+          addINodeDirectory(dirs[i], base + i, base + i - 1);
         }
       }
       //addINodeDirectory(baseDir, dir);
@@ -100,7 +97,7 @@ public class StorageFileNameGenerator extends FileNameGenerator {
   }
 
   synchronized String getNextStoredFileName(String fileNamePrefix, short replication,
-          long blockSize, String clientName, FSDirectory dir) throws IOException {
+          long blockSize, String clientName, FSDirectory dir) throws IOException, PersistanceException {
     long fNum = fileCount % filesPerDirectory;
     boolean newDir = false;
     if (fNum == 0) {
@@ -116,40 +113,39 @@ public class StorageFileNameGenerator extends FileNameGenerator {
     long parentId;
     if (newDir) {
       String lastDir = pathComponents[pathComponents.length - 2];
-      parentId = (long) (Math.ceil((double)dirCount / (float)filesPerDirectory) + BASE_DIR_COUNT + BASE_PARENT_ID - 1);
+      parentId = (long) (Math.ceil((double) dirCount / (float) filesPerDirectory) + BASE_DIR_COUNT + BASE_PARENT_ID - 1);
       addINodeDirectory(lastDir, dirCount + BASE_DIR_COUNT + BASE_PARENT_ID, parentId);
       //addINodeDirectory(fn, dir);
     }
 
     PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
-    parentId = dirCount + BASE_DIR_COUNT + BASE_PARENT_ID;
+    parentId = dirCount + BASE_PARENT_ID;
     long aTime = System.currentTimeMillis();
     // Since there is no block and datanode, so client machine and DatanodeId shouldn't be required.
-    INodeFile inode = new INodeFile(permission, replication, aTime, aTime, blockSize);
-    inode.setLocalName(file);
+    INodeFile inode = new INodeFile(false, file.getBytes(), replication, aTime, blockSize, permission,
+            clientName, "", new DatanodeID(""));
     addInode(inode, BASE_FILE_ID + fileCount, parentId);
-    //dir.addFile(fn, permission, replication, blockSize, clientName, clientName, null, aTime, true);
+
     return fn;
   }
 
-  private void addINodeDirectory(String name, long inodeId, long parentId) throws IOException {
+  private void addINodeDirectory(String name, long inodeId, long parentId) throws IOException, PersistanceException {
     PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
     INodeDirectory dir = new INodeDirectory(name, permission);
     addInode(dir, inodeId, parentId);
   }
-  
+
 //  private void addINodeDirectory(String path, FSDirectory dir) throws IOException{
 //    PermissionStatus permission = new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
 //            UserGroupInformation.getCurrentUser().getGroupNames()[0], FsPermission.getDefault());
 //    dir.mkdirs(path, permission, true, System.currentTimeMillis(), true);
 //  }
+  private void addInode(INode inode, long inodeId, long parentId) throws PersistanceException {
 
-  private void addInode(INode inode, long inodeId, long parentId) {
-    
-    inode.setID(inodeId);
-    inode.setParentIDLocal(parentId);
-    INodeHelper.addChild(inode, false, parentId, true);
+    inode.setId(inodeId);
+    inode.setParentId(parentId);
+    EntityManager.add(inode);
   }
 }
