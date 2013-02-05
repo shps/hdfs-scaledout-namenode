@@ -215,7 +215,7 @@ class FSImageFormat {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
-          long gs = (long) params[0];
+          long gs = (Long) params[0];
           namesystem.setGenerationStamp(gs);
           return null;
         }
@@ -574,7 +574,7 @@ class FSImageFormat {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
         out.writeInt(sourceNamesystem.getFSImage().getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.getNsCount());
-        long gs = (long) new LightWeightRequestHandler(OperationType.GET_GENERATION_STAMP) {
+        long gs = (Long) new LightWeightRequestHandler(OperationType.GET_GENERATION_STAMP) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {

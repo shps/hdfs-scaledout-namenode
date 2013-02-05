@@ -1500,7 +1500,7 @@ public class NNThroughputBenchmark {
           @Override
           public Object performTask() throws PersistanceException, IOException {
             LeaderDataAccess da = (LeaderDataAccess) StorageFactory.getDataAccess(LeaderDataAccess.class);
-            long id = (long) params[0];
+            long id = (Long) params[0];
             return da.countAllSuccessors(id);
           }
         };
@@ -1509,15 +1509,16 @@ public class NNThroughputBenchmark {
           @Override
           public Object performTask() throws PersistanceException, IOException {
             LeaderDataAccess da = (LeaderDataAccess) StorageFactory.getDataAccess(LeaderDataAccess.class);
-            long id = (long) params[0];
+            long id = (Long) params[0];
             return da.countAllPredecessors(id);
           }
         };
 
         while (System.currentTimeMillis() - initTime <= timeout) {
+          int numSucc = (Integer) countSuccessorHandler.setParams(nameNode.getId()).handle();
+          int numPred = (Integer) countPredecessorsHandler.setParams(nameNode.getId()).handle();
           //System.out.println("NNId: ["+nameNode.getId()+"], Time: ["+(System.currentTimeMillis() - initTime)+"], Predecessors: ["+LeaderHelper.countPredecessors(nameNode.getId())+"], Successors: ["+LeaderHelper.countSuccessors(nameNode.getId())+"]");
-          if ((countSuccessorHandler.setParams(nameNode.getId()).handle() == 0)
-                  && (countPredecessorsHandler.setParams(nameNode.getId()).handle() == (nameNode.getId() - 1))) {
+          if (numSucc == 0 && numPred == (nameNode.getId() - 1)) {
             break;
           }
         }

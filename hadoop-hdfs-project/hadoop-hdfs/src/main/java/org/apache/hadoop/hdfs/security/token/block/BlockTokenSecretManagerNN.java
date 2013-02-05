@@ -182,14 +182,14 @@ public class BlockTokenSecretManagerNN extends
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        int keyId = (int) params[0];
+        int keyId = (Integer) params[0];
         TransactionLockManager tlm = new TransactionLockManager();
         tlm.addBlockKeyLockById(TransactionLockManager.LockType.WRITE, keyId).acquire();
       }
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        int keyId = (int) params[0];
+        int keyId = (Integer) params[0];
         BlockKey key = EntityManager.find(BlockKey.Finder.ById, keyId);
         if (key != null) {
           if (key.getExpiryDate() < now) {

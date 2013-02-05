@@ -38,7 +38,7 @@ import org.mockito.Mockito;
 public class TestLease {
 
   static boolean hasLease(final MiniDFSCluster cluster, final Path src) throws IOException {
-    return (boolean) new TransactionalRequestHandler(OperationType.TEST) {
+    return (Boolean) new TransactionalRequestHandler(OperationType.TEST) {
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
