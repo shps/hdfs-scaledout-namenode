@@ -16,7 +16,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -91,7 +91,6 @@ public class TestGetBlockLocations {
     return true;
   }
 
-
   // get a conf for testing
   /**
    * @param numDataNodes
@@ -117,13 +116,12 @@ public class TestGetBlockLocations {
     MiniDFSCluster cluster = null;
     int numDataNodes = 2;
     Configuration conf = getConf(numDataNodes, tokens);
-    DBConnector.setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).numNameNodes(1).build();
     cluster.waitActive();
     assertEquals(numDataNodes, cluster.getDataNodes().size());
     return cluster;
   }
-
 
   @Test
   public void testReadNnWithoutTokens() throws Exception{
@@ -200,8 +198,5 @@ public class TestGetBlockLocations {
         cluster.shutdown();
       }
     }
-
-
   }
-
 }
