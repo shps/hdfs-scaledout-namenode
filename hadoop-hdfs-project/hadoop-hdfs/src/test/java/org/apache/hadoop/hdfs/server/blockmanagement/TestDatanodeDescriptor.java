@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -24,17 +25,17 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DatanodeHelper;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * This class tests that methods in DatanodeDescriptor
  */
 public class TestDatanodeDescriptor extends TestCase {
+
   /**
    * Test that getInvalidateBlocks observes the maxlimit.
    */
@@ -42,10 +43,10 @@ public class TestDatanodeDescriptor extends TestCase {
     final int MAX_BLOCKS = 10;
     final int REMAINING_BLOCKS = 2;
     final int MAX_LIMIT = MAX_BLOCKS - REMAINING_BLOCKS;
-    
+
     DatanodeDescriptor dd = new DatanodeDescriptor();
     ArrayList<Block> blockList = new ArrayList<Block>(MAX_BLOCKS);
-    for (int i=0; i<MAX_BLOCKS; i++) {
+    for (int i = 0; i < MAX_BLOCKS; i++) {
       blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
     }
     dd.addBlocksToBeInvalidated(blockList);
@@ -54,59 +55,58 @@ public class TestDatanodeDescriptor extends TestCase {
     bc = dd.getInvalidateBlocks(MAX_LIMIT);
     assertEquals(bc.length, REMAINING_BLOCKS);
   }
-  
+
   public void testBlocksCounter() throws Exception {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
-    DBConnector.setConfiguration(conf);
-    EntityManager em = EntityManager.getInstance();
-    
-    DatanodeDescriptor dd = new DatanodeDescriptor();
-    // [J] persisting to make this test case work as per requirement!
-    dd.setStorageID("dummy_storage_id");
-    DBConnector.beginTransaction();
-    DatanodeHelper.registerDatanode(dd, true);
-//    DBConnector.commit();
-    
+    StorageFactory.setConfiguration(conf);
+
+    final DatanodeDescriptor dd = new DatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
-//    DBConnector.beginTransaction();
-    
-    BlockInfo blk = new BlockInfo(new Block(1L));
-    BlockInfo blk1 = new BlockInfo(new Block(2L));
-    em.persist(blk);
-    em.persist(blk1);
-    // add first block
-    IndexedReplica r1 = blk.addReplica(dd);
-    assertNotNull(r1);
-    em.persist(r1);
-    
-    assertEquals(1, dd.numBlocks());
-    // remove a non-existent block
-    IndexedReplica removeReplica = blk1.removeReplica(dd);
-    assertNull(removeReplica);
-    assertEquals(1, dd.numBlocks());
-    // add an existent block
-    r1 = blk.addReplica(dd);
-    assertNull(r1);
-    assertEquals(1, dd.numBlocks());
-    // add second block
-    r1 = blk1.addReplica(dd);
-    assertNotNull(r1);
-    em.persist(r1);
-    assertEquals(2, dd.numBlocks());
-    // remove first block
-    removeReplica = blk.removeReplica(dd);
-    assertNotNull(removeReplica);
-    em.remove(removeReplica);
-    assertEquals(1, dd.numBlocks());
-    // remove second block
-    removeReplica = blk1.removeReplica(dd);
-    assertNotNull(removeReplica);
-    em.remove(removeReplica);
-    assertEquals(0, dd.numBlocks()); 
-    //We rollbalck here because this generated data does not have the required 
-    //integrity to be persisted in database, for instance new block should be 
-    //blong to an inode.
-    DBConnector.safeRollback();
+
+    new TransactionalRequestHandler(OperationType.TEST_BLOCKS_COUNTER) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        BlockInfo blk = new BlockInfo(new Block(1L));
+        BlockInfo blk1 = new BlockInfo(new Block(2L));
+        EntityManager.add(blk);
+        EntityManager.add(blk1);
+        // add first block
+        IndexedReplica r1 = blk.addReplica(dd);
+        assertNotNull(r1);
+        EntityManager.add(r1);
+
+        assertEquals(1, dd.numBlocks());
+        // remove a non-existent block
+        IndexedReplica removeReplica = blk1.removeReplica(dd);
+        assertNull(removeReplica);
+        assertEquals(1, dd.numBlocks());
+        // add an existent block
+        r1 = blk.addReplica(dd);
+        assertNull(r1);
+        assertEquals(1, dd.numBlocks());
+        // add second block
+        r1 = blk1.addReplica(dd);
+        assertNotNull(r1);
+        EntityManager.add(r1);
+        assertEquals(2, dd.numBlocks());
+        // remove first block
+        removeReplica = blk.removeReplica(dd);
+        assertNotNull(removeReplica);
+        EntityManager.remove(removeReplica);
+        assertEquals(1, dd.numBlocks());
+        // remove second block
+        removeReplica = blk1.removeReplica(dd);
+        assertNotNull(removeReplica);
+        EntityManager.remove(removeReplica);
+        assertEquals(0, dd.numBlocks());
+        return null;
+      }
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
+    }.handle();
   }
 }
