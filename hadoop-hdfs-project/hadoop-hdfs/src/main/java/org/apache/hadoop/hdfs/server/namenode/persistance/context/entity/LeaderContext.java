@@ -84,6 +84,16 @@ public class LeaderContext extends EntityContext<Leader> {
                 log("count-all-leaders", CacheHitState.LOSS);
                 aboutToAccessStorage();
                 return dataAccess.countAllById();
+            case AllPredecessors:
+                log("count-all-predecessor-leaders", CacheHitState.LOSS);
+                aboutToAccessStorage();
+                Long id = (Long) params[0];
+                return dataAccess.countAllPredecessors(id);
+            case AllSuccessors:
+                log("count-all-Successor-leaders", CacheHitState.LOSS);
+                aboutToAccessStorage();
+                id = (Long) params[0];
+                return dataAccess.countAllSuccessors(id);
         }
 
         throw new RuntimeException(UNSUPPORTED_COUNTER);
