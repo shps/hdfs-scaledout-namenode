@@ -1,24 +1,18 @@
 Vagrant::Config.run do |config|
-
-#  config.vm.box = "quantal64ruby19"
   config.vm.box = "precise64"
-#  config.vm.box = "quantal64"
-#  config.vm.box = "quantalserver"
-
-  config.vm.customize ["modifyvm", :id, "--memory", 4000]
-# config.vm.network :hostonly, "192.168.111.113"
+# config.vm.network :hostonly, "192.168.111.111"
   config.vm.network :bridged
-  config.vm.forward_port 4000, 4000
-  config.vm.forward_port 4040, 4040
+
+  #collectd
+  config.vm.forward_port 25826,25826,{ :protocol => "udp"}
 
    config.vm.provision :chef_solo do |chef|
      chef.cookbooks_path = "cookbooks"
-     chef.log_level = :debug
-
-     chef.add_recipe "chefserver"
-     chef.add_recipe "chefserver::ironfan"
-     chef.add_recipe "chefserver::ec2"
-
+     chef.add_recipe "authbind"
+     chef.add_recipe "java"
+     chef.add_recipe "openssh"
+     chef.add_recipe "openssl"
+     chef.add_recipe "collectd::client-dn"
   end 
 
 end

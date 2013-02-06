@@ -28,3 +28,4 @@ default[:collectd][:collectd_web][:path] = "/srv/collectd_web"
 default[:collectd][:collectd_web][:hostname] = "http://localhost:8888/KTHFSDashboard/rest/collectd"
 default[:collectd][:interval] = 10
 default[:collectd][:server] = "localhost"
+

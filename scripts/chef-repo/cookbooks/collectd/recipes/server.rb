@@ -23,11 +23,9 @@ collectd_plugin "network" do
   options :listen=>'0.0.0.0'
 end
 
-# hamid
 collectd_plugin "rrdtool" do
   options :data_dir=>"/var/lib/collectd/rrd"
 end
-
 
 bash "create_jarmon_rrd_symbolic_link" do
     code <<-EOF
