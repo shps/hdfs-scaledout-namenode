@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.Leader;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -75,6 +76,9 @@ public class TransactionLockManager {
   private List<Short> blockKeyTypes = null;
   // block generation stamp
   private LockType generationStampLock = null;
+  // Leader
+  private LockType leaderLock = null;
+  private int[] leaderIds = null;
 
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
@@ -341,6 +345,13 @@ public class TransactionLockManager {
     blockKeyTypes.add(type);
     return this;
   }
+  
+  public TransactionLockManager addLeaderLock(LockType lock, int... ids)
+  {
+    this.leaderLock = lock;
+    this.leaderIds = ids;
+    return this;
+  }
 
   public TransactionLockManager addInvalidatedBlock(LockType lock) {
     this.invLocks = lock;
@@ -368,6 +379,19 @@ public class TransactionLockManager {
 
     acquireLeaseAndLpathLockNormal();
     acquireBlockRelatedLocksNormal();
+    acquireLeaderLock();
+  }
+  
+  private void acquireLeaderLock() throws PersistanceException {
+    if (leaderLock != null) {
+      if (leaderIds.length == 0) {
+        TransactionLockAcquirer.acquireLockList(leaderLock, Leader.Finder.All);
+      } else {
+        for (int id : leaderIds) {
+          TransactionLockAcquirer.acquireLock(leaderLock, Leader.Finder.ById, id);
+        }
+      }
+    }
   }
 
   private void acquireLeaseAndLpathLockNormal() throws PersistanceException {

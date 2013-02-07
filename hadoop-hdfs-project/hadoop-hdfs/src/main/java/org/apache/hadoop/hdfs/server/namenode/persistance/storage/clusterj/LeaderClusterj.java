@@ -75,6 +75,7 @@ public class LeaderClusterj extends LeaderDataAccess
     public int countAllPredecessors(long id) throws StorageException{
         try
         {
+          // TODO[Hooman]: code repetition. Use query for fetching "ids less than".
             Session session = connector.obtainSession();
             QueryBuilder qb = session.getQueryBuilder();
             QueryDomainType dobj = qb.createQueryDefinition(LeaderDTO.class);
