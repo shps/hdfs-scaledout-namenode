@@ -119,6 +119,12 @@ public enum ClusterjConnector implements StorageConnector<Session> {
       session.deletePersistentAll(PendingBlockClusterj.PendingBlockDTO.class);
       session.deletePersistentAll(CorruptReplicaClusterj.CorruptReplicaDTO.class);
       session.deletePersistentAll(UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO.class);
+      session.deletePersistentAll(LeaderClusterj.LeaderDTO.class);
+      session.deletePersistentAll(BlockTokenKeyClusterj.BlockKeyDTO.class);
+      GenerationStampClusterj.GenerationStampDTO gs = session.newInstance(GenerationStampClusterj.GenerationStampDTO.class);
+      gs.setId(GenerationStampClusterj.COUNTER_ID);
+      gs.setCounter(0L);
+      session.savePersistent(gs);
       tx.commit();
       session.flush();
       return true;

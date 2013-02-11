@@ -93,5 +93,5 @@ public abstract class UpgradeManager {
    *                    This variable is just needed by the abstract function of this super class. 
    *                    Its used by the Namenode Upgrade Manager (see @UpgradeManagerNamenode)
    */  
-  public abstract void completeUpgrade(boolean isTransactional) throws IOException;
+  public abstract void completeUpgrade() throws IOException, PersistanceException;
 }

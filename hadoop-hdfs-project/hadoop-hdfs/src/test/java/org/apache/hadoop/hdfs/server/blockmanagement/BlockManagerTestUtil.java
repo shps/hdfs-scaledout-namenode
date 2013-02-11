@@ -18,14 +18,15 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.util.Daemon;
 
 public class BlockManagerTestUtil {
@@ -39,7 +40,7 @@ public class BlockManagerTestUtil {
       final String storageID) {
     ns.readLock();
     try {
-      return ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
+      return ns.getBlockManager().getDatanodeManager().getDatanodeByStorageId(storageID);
     } finally {
       ns.readUnlock();
     }
@@ -49,8 +50,8 @@ public class BlockManagerTestUtil {
   /**
    * Refresh block queue counts on the name-node.
    */
-  public static void updateState(final BlockManager blockManager) {
-    blockManager.updateState();
+  public static void updateState(final BlockManager blockManager) throws IOException {
+    blockManager.updateState(OperationType.TEST);
   }
 
   /**
@@ -59,15 +60,27 @@ public class BlockManagerTestUtil {
    * @throws IOException 
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) throws IOException {
-    final BlockManager bm = namesystem.getBlockManager();
-    namesystem.readLock();
-    try {
-      return new int[]{getNumberOfRacks(bm, b),
-          bm.countNodes(b).liveReplicas(),
-          bm.neededReplications.contains(b) ? 1 : 0};
-    } finally {
-      namesystem.readUnlock();
-    }
+    return (int[]) new TransactionalRequestHandler(OperationType.TEST) {
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addBlock(TransactionLockManager.LockType.READ, b.getBlockId()).
+                addReplica(TransactionLockManager.LockType.READ).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                addExcess(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.READ).
+                acquire();
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        final BlockManager bm = namesystem.getBlockManager();
+        return new int[]{getNumberOfRacks(bm, b),
+                  bm.countNodes(b).liveReplicas(),
+                  bm.neededReplications.contains(b) ? 1 : 0};
+      }
+    }.handleWithReadLock(namesystem);
   }
 
   /**
@@ -77,14 +90,13 @@ public class BlockManagerTestUtil {
    * @throws IOException 
    */
   private static int getNumberOfRacks(final BlockManager blockManager,
-      final Block b) throws IOException {
+      final Block b) throws IOException, PersistanceException {
     final Set<String> rackSet = new HashSet<String>(0);
-    final Collection<DatanodeDescriptor> corruptNodes = getCorruptReplicas(blockManager).getNodes(b, blockManager.getDatanodeManager());
-    DBConnector.beginTransaction();
+
     BlockInfo storedBlock = blockManager.getStoredBlock(b);
     for (DatanodeDescriptor cur : blockManager.getDatanodes(storedBlock)) {
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
-        if ((corruptNodes == null ) || !corruptNodes.contains(cur)) {
+        if (!blockManager.isItCorruptedReplica(b.getBlockId(), cur.getStorageID())) {
           String rackName = cur.getNetworkLocation();
           if (!rackSet.contains(rackName)) {
             rackSet.add(rackName);
@@ -92,7 +104,6 @@ public class BlockManagerTestUtil {
         }
       }
     }
-    DBConnector.commit();
     return rackSet.size();
   }
 
@@ -104,15 +115,6 @@ public class BlockManagerTestUtil {
   {
     return blockManager.replicationThread;
   }
-  
-  /**
-   * @param blockManager
-   * @return corruptReplicas from block manager
-   */
-  public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
-    return blockManager.corruptReplicas;
-    
-  }
 
   /**
    * @param blockManager
@@ -122,7 +124,7 @@ public class BlockManagerTestUtil {
    */
   public static int getComputedDatanodeWork(final BlockManager blockManager) throws IOException
   {
-    return blockManager.computeDatanodeWork(false);
+    return blockManager.computeDatanodeWork(OperationType.GET_COMPUTED_DATANODE_WORK);
   }
   
 }

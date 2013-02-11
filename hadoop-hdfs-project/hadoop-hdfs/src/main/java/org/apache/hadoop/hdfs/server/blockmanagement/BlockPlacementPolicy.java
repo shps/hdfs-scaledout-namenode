@@ -29,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
+import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -123,7 +125,7 @@ public abstract class BlockPlacementPolicy {
    * @return array of DatanodeDescriptor instances chosen as target 
    * and sorted as a pipeline.
    */
-  DatanodeDescriptor[] chooseTarget(Inode srcInode,
+  DatanodeDescriptor[] chooseTarget(INode srcInode,
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> chosenNodes,
@@ -162,7 +164,7 @@ public abstract class BlockPlacementPolicy {
                    listed in the previous parameter.
    * @return the replica that is the best candidate for deletion
    */
-  abstract public DatanodeDescriptor chooseReplicaToDelete(Inode srcInode,
+  abstract public DatanodeDescriptor chooseReplicaToDelete(FSInodeInfo srcInode,
                                       Block block, 
                                       short replicationFactor,
                                       Collection<DatanodeDescriptor> existingReplicas,

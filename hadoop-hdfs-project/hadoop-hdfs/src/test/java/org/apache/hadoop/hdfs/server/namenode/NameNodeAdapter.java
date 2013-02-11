@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
@@ -43,16 +46,9 @@ public class NameNodeAdapter {
    * Get block locations within the specified range.
    */
   public static LocatedBlocks getBlockLocations(NameNode namenode,
-      String src, long offset, long length) throws IOException {
-
-    INode [] inodesOnPath = namenode.getNamesystem().dir.getExistingPathINodes(src);
-    if(!namenode.getNamesystem().dir.isValidINodeFile(inodesOnPath[inodesOnPath.length-1])) {
-      throw new FileNotFoundException("File does not exist: " + src);
-    }
-    INodeFile inode = (INodeFile) inodesOnPath[inodesOnPath.length-1];
-
-    return namenode.getNamesystem().getBlockLocations(src, inodesOnPath, inode,
-                                                      offset, length, false, true, false);
+          String src, long offset, long length) throws IOException {
+    return namenode.getNamesystem().getBlockLocations(
+            src, offset, length, false, true);
   }
   
   /**
@@ -89,8 +85,19 @@ public class NameNodeAdapter {
     namesystem.lmthread.interrupt();
   }
 
-  public static String getLeaseHolderForPath(NameNode namenode, String path) {
-    return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
+  public static String getLeaseHolderForPath(final NameNode namenode, final String path) throws IOException {
+    return (String) new TransactionalRequestHandler(OperationType.TEST) {
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager.acquireByLeasePath(path, TransactionLockManager.LockType.READ, TransactionLockManager.LockType.READ);
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
+      }
+    }.handle();
   }
 
   /**

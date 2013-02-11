@@ -28,6 +28,10 @@ public abstract class LeaderDataAccess extends EntityDataAccess {
   public abstract Collection<Leader> findAllByIDLT(long id) throws StorageException;
   
   public abstract Collection<Leader> findAll() throws StorageException;
+  
+  public abstract int countAllPredecessors(long id) throws StorageException;
+  
+  public abstract int countAllSuccessors(long id) throws StorageException;
 
   public abstract void prepare(Collection<Leader> removed, Collection<Leader> newed, Collection<Leader> modified) throws StorageException;
   

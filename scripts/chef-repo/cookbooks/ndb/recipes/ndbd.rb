@@ -21,12 +21,22 @@ include_recipe "ndb"
 Chef::Log.info "Hostname is: #{node['hostname']}"
 Chef::Log.info "IP address is: #{node['ipaddress']}"
 
+# if first_startup
+# announce(:ndb, :ndbd)
+#
+# if bootstrapping
+# node[:ndb][:mgm_server][:addr] = discover(:ndb, :mgm_server).private_ip rescue nil
+# 
+
 directory node[:ndb][:data_dir] do
   owner node[:ndb][:user]
   mode "755"
   action :create
   recursive true
 end
+
+#mgmd_hosts = discover_all(:ndb, :mgm_server).map{|svr| [ svr.node[:k][:zkid], svr.node[:ipaddress] ] }.sort!
+mgmd_host = discover(:ndb, :mgm_server)
 
 found_id = -1
 id = 1

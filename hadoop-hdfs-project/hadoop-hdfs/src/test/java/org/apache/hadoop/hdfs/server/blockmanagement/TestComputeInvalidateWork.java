@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -49,39 +47,44 @@ public class TestComputeInvalidateWork extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       final int blockInvalidateLimit = bm.getDatanodeManager().blockInvalidateLimit;
-      final DatanodeDescriptor[] nodes = bm.getDatanodeManager(
-          ).getHeartbeatManager().getDatanodes();
+      final DatanodeDescriptor[] nodes = bm.getDatanodeManager().getHeartbeatManager().getDatanodes();
       assertEquals(nodes.length, NUM_OF_DATANODES);
-      
+
+      new TransactionalRequestHandler(OperationType.COMP_INVALIDATE) {
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          for (int i = 0; i < nodes.length; i++) {
+            for (int j = 0; j < 3 * blockInvalidateLimit + 1; j++) {
+              Block block = new Block(i * (blockInvalidateLimit + 1) + j, 0,
+                      GenerationStamp.FIRST_VALID_STAMP);
+              bm.addToInvalidates(block, nodes[i]);
+            }
+          }
+          return null;
+        }
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO [lock] no lock is required. use ligh weight request handler
+        }
+      }.handleWithWriteLock(namesystem);
       namesystem.writeLock();
       try {
-        DBConnector.beginTransaction();
-        EntityManager em = EntityManager.getInstance();
-        for (int i=0; i<nodes.length; i++) {
-          for(int j=0; j<3*blockInvalidateLimit+1; j++) {
-            Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
-                GenerationStamp.FIRST_VALID_STAMP);
-            bm.addToInvalidates(block, nodes[i]);
-          }
-        }
-        DBConnector.commit();
-        
-        assertEquals(blockInvalidateLimit*NUM_OF_DATANODES, bm.computeInvalidateWork(NUM_OF_DATANODES+1));
-        assertEquals(blockInvalidateLimit*NUM_OF_DATANODES, bm.computeInvalidateWork(NUM_OF_DATANODES));
-        assertEquals(blockInvalidateLimit*(NUM_OF_DATANODES-1), bm.computeInvalidateWork(NUM_OF_DATANODES-1));
-        int workCount = bm.computeInvalidateWork(1);
+        assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
+                bm.computeInvalidateWork(NUM_OF_DATANODES + 1, OperationType.COMP_INVALIDATE));
+        assertEquals(blockInvalidateLimit * NUM_OF_DATANODES,
+                bm.computeInvalidateWork(NUM_OF_DATANODES, OperationType.COMP_INVALIDATE));
+        assertEquals(blockInvalidateLimit * (NUM_OF_DATANODES - 1),
+                bm.computeInvalidateWork(NUM_OF_DATANODES - 1, OperationType.COMP_INVALIDATE));
+        int workCount = bm.computeInvalidateWork(1, OperationType.COMP_INVALIDATE);
         if (workCount == 1) {
-          assertEquals(blockInvalidateLimit+1, bm.computeInvalidateWork(2));
+          assertEquals(blockInvalidateLimit + 1, bm.computeInvalidateWork(2, OperationType.COMP_INVALIDATE));
         } else {
           assertEquals(workCount, blockInvalidateLimit);
-          assertEquals(2, bm.computeInvalidateWork(2));
+          assertEquals(2, bm.computeInvalidateWork(2, OperationType.COMP_INVALIDATE));
         }
-        
-//        DBConnector.commit(); //FIXME[H]: This can be added here when inode is added to transaction context.
-      } catch(Exception ex) {
-          ex.printStackTrace();
-        } finally {
-        DBConnector.safeRollback();
+      } finally {
         namesystem.writeUnlock();
       }
     } finally {

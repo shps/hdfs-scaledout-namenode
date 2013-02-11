@@ -11,20 +11,22 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
+import org.apache.hadoop.hdfs.server.blockmanagement.GenerationStamp;
 import org.apache.hadoop.hdfs.server.blockmanagement.IndexedReplica;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ReplicaUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.Leader;
 import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeasePath;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -68,6 +70,15 @@ public class TransactionLockManager {
   private LockType pbLock = null;
   // invalidated blocks
   private LockType invLocks = null;
+  // block token key
+  private LockType blockKeyLock = null;
+  private List<Integer> blockKeyIds = null;
+  private List<Short> blockKeyTypes = null;
+  // block generation stamp
+  private LockType generationStampLock = null;
+  // Leader
+  private LockType leaderLock = null;
+  private int[] leaderIds = null;
 
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
@@ -94,6 +105,20 @@ public class TransactionLockManager {
     }
 
     return leases;
+  }
+  
+  /**
+   * Acquires lock on lease path and lease having leasepath. This is used by
+   *  the test cases.
+   * @param leasePath 
+   */
+  public static void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException
+  {
+    LeasePath lp = TransactionLockAcquirer.acquireLock(leasePathLock, LeasePath.Finder.ByPKey, leasePath);
+    if (lp != null)
+    {
+      TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByHolderId, lp.getHolderId());
+    }
   }
 
   private void checkStringParam(Object param) {
@@ -292,6 +317,42 @@ public class TransactionLockManager {
     return this;
   }
 
+  public TransactionLockManager addGenerationStamp(LockType lock) {
+    this.generationStampLock = lock;
+    return this;
+  }
+
+  /**
+   * Lock on block token key data.
+   * @param lock
+   * @param keyId
+   * @return 
+   */
+  public TransactionLockManager addBlockKeyLockById(LockType lock, int keyId) {
+    blockKeyLock = lock;
+    if (blockKeyIds == null) {
+      blockKeyIds = new ArrayList<Integer>();
+    }
+    blockKeyIds.add(keyId);
+    return this;
+  }
+
+  public TransactionLockManager addBlockKeyLockByType(LockType lock, short type) {
+    blockKeyLock = lock;
+    if (blockKeyTypes == null) {
+      blockKeyTypes = new ArrayList<Short>();
+    }
+    blockKeyTypes.add(type);
+    return this;
+  }
+  
+  public TransactionLockManager addLeaderLock(LockType lock, int... ids)
+  {
+    this.leaderLock = lock;
+    this.leaderIds = ids;
+    return this;
+  }
+
   public TransactionLockManager addInvalidatedBlock(LockType lock) {
     this.invLocks = lock;
     return this;
@@ -317,7 +378,20 @@ public class TransactionLockManager {
     }
 
     acquireLeaseAndLpathLockNormal();
-    acquireBlockRelatedLocksNormal(); // acquire locks on the rest of the tables.
+    acquireBlockRelatedLocksNormal();
+    acquireLeaderLock();
+  }
+  
+  private void acquireLeaderLock() throws PersistanceException {
+    if (leaderLock != null) {
+      if (leaderIds.length == 0) {
+        TransactionLockAcquirer.acquireLockList(leaderLock, Leader.Finder.All);
+      } else {
+        for (int id : leaderIds) {
+          TransactionLockAcquirer.acquireLock(leaderLock, Leader.Finder.ById, id);
+        }
+      }
+    }
   }
 
   private void acquireLeaseAndLpathLockNormal() throws PersistanceException {
@@ -366,6 +440,24 @@ public class TransactionLockManager {
       if (pbLock != null) {
         acquireBlockRelatedLock(pbLock, PendingBlockInfo.Finder.ByPKey);
       }
+
+      if (blockKeyLock != null) {
+        if (blockKeyIds != null) {
+          for (int id : blockKeyIds) {
+            TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ById, id);
+          }
+        }
+        if (blockKeyTypes != null) {
+          for (short type : blockKeyTypes) {
+            TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ByType, type);
+          }
+        }
+      }
+      
+      if (generationStampLock != null)
+      {
+        TransactionLockAcquirer.acquireLock(generationStampLock, GenerationStamp.Finder.Counter);
+      }
     }
   }
 
@@ -376,9 +468,9 @@ public class TransactionLockManager {
       case PATH_AND_IMMEDIATE_CHILDREN: // Memcached not applicable for delete of a dir (and its children)
       case PATH_AND_ALL_CHILDREN_RECURESIVELY:
         for (int i = 0; i < params.length; i++) {
-            // TODO - MemcacheD Lookup of path
-            // On
-          LinkedList<INode> resolvedInodes = 
+          // TODO - MemcacheD Lookup of path
+          // On
+          LinkedList<INode> resolvedInodes =
                   TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir);
           if (resolvedInodes.size() > 0) {
             inodes[i] = resolvedInodes.peekLast();
@@ -390,8 +482,8 @@ public class TransactionLockManager {
           inodes = findChildrenRecursively(inodes);
         }
         break;
-          // e.g. mkdir -d /opt/long/path which creates subdirs.
-          // That is, the HEAD and some ancestor inodes might not exist yet.
+      // e.g. mkdir -d /opt/long/path which creates subdirs.
+      // That is, the HEAD and some ancestor inodes might not exist yet.
       case ONLY_PATH_WITH_UNKNOWN_HEAD: // Can try and use memcached for this case.
         for (int i = 0; i < params.length; i++) {
           // TODO Test this in all different possible scenarios

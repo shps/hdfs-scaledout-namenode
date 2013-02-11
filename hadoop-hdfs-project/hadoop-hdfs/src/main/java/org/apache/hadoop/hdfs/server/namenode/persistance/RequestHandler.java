@@ -38,15 +38,15 @@ public abstract class RequestHandler {
     HEARTBEAT_MONITOR,
     //LeaseManager
     PREPARE_LEASE_MANAGER_MONITOR, LEASE_MANAGER_MONITOR,
+    // LeaderElection
+    SELECT_ALL_LEADERS, LEADER_EXIT, GET_ALL_NAME_NODES, GET_LEADER, 
+    // BlockTokenSecretManagerNN
+    ADD_BLOCK_TOKENS, GET_ALL_BLOCK_TOKENS, GET_BLOCK_TOKENS, REMOVE_ALL, GET_KEY_BY_TYPE,REMOVE_BLOCK_KEY, UPDATE_BLOCK_KEYS, GET_KEY_BY_ID,
+    // Block Generationstamp
+    GET_GENERATION_STAMP, SET_GENERATION_STAMP,
     //NamenodeJspHElper
-    GET_SAFE_MODE_TEXT, GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
+    GET_SAFE_MODE_TEXT,GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
     TO_XML_CORRUPT_BLOCK_INFO,
-    //MiniDfsCluster
-    IS_NAMENODE_UP,
-    // TestLease
-    HAS_LEASE,
-    // TestMissingBlocksAlert
-    GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS, GET_UNDER_REPLICATED_NOT_MISSING_BLOCKS2,
     // TestNamenodePing
     COUNT_LEASE,
     // BLockManagerTestUtil
@@ -87,7 +87,9 @@ public abstract class RequestHandler {
     // TestNodeCount
     TEST_NODE_COUNT,
     // Leader Election
-    LEADER_ELECTION;
+    LEADER_ELECTION,
+    // Transaction in unit tests.
+    TEST,
   }
   protected static Log log = LogFactory.getLog(RequestHandler.class);
   protected Object[] params = null;

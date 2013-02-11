@@ -45,7 +45,13 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.GenerationStampDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 
@@ -158,7 +164,7 @@ class FSImageFormat {
         // read in the last generation stamp.
         if (imgVersion <= -12) {
           long genstamp = in.readLong();
-          namesystem.setGenerationStamp(genstamp); 
+          setGenerationStamp(genstamp);
         }
         
         // read the transaction ID of the last edit represented by
@@ -195,6 +201,25 @@ class FSImageFormat {
       
       LOG.info("Image file of size " + curFile.length() + " loaded in " 
           + (now() - startTime)/1000 + " seconds.");
+    }
+    
+    private void setGenerationStamp(long gs) throws IOException {
+      new TransactionalRequestHandler(OperationType.SET_GENERATION_STAMP) {
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager tlm = new TransactionLockManager();
+          tlm.addGenerationStamp(TransactionLockManager.LockType.WRITE).
+                  acquire();
+        }
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          long gs = (Long) params[0];
+          namesystem.setGenerationStamp(gs);
+          return null;
+        }
+      }.handle();
     }
 
   /** Update the root node's attributes */
@@ -547,10 +572,17 @@ class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
-        out.writeInt(sourceNamesystem.getFSImage()
-                     .getStorage().getNamespaceID()); // TODO bad dependency
+        out.writeInt(sourceNamesystem.getFSImage().getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.getNsCount());
-        out.writeLong(sourceNamesystem.getGenerationStamp());
+        long gs = (Long) new LightWeightRequestHandler(OperationType.GET_GENERATION_STAMP) {
+
+          @Override
+          public Object performTask() throws PersistanceException, IOException {
+            GenerationStampDataAccess da = (GenerationStampDataAccess) StorageFactory.getDataAccess(GenerationStampDataAccess.class);
+            return da.findCounter();
+          }
+        }.handle();
+        out.writeLong(gs);
         out.writeLong(txid);
 
         // write compression info and set up compressed stream

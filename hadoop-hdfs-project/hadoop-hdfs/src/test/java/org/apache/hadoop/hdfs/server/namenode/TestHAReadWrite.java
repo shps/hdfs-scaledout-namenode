@@ -3,7 +3,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.SocketTimeoutException;
 import org.apache.commons.logging.Log;
 
 import org.apache.commons.logging.LogFactory;
@@ -15,7 +14,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.NameNodeSelector;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -34,7 +32,7 @@ public class TestHAReadWrite extends junit.framework.TestCase {
   }
   final Path dir = new Path("/test/HA/");
 
-  static int countLease(MiniDFSCluster cluster) {
+  static int countLease(MiniDFSCluster cluster) throws IOException {
     return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
 
@@ -100,7 +98,7 @@ public class TestHAReadWrite extends junit.framework.TestCase {
       createFile(fs, file3);
       assertTrue(fs.exists(file3));
       Path file4 = new Path(dir, "file4");
-      
+
       // Read operation - list files (3 files created now under this directory)
       assertEquals(3, list(fs));
 
@@ -116,18 +114,15 @@ public class TestHAReadWrite extends junit.framework.TestCase {
       // Write operation - Delete
       assertTrue(fs.delete(dir, true));
 
-    }
-    catch (IOException ex) {
+    } catch (IOException ex) {
       // In case we have any connectivity issues here, there is a problem
       // All connectivitiy issues are handled in the above piece of code
       assertFalse("Cannot be any connectivity issues", ex instanceof ConnectException);
       fail();
-    }
-    finally {
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
   }
-
 }

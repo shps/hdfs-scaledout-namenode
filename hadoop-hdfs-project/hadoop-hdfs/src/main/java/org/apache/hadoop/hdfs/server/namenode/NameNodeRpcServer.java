@@ -883,6 +883,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public String getNextNamenodeToSendBlockReport() throws IOException {
     // Use the modulo to roundrobin b/w namenodes
     nnIndex++;
+    // TODO[Hooman]: What if totalNamenodes is null?
     Collection<InetSocketAddress> totalNamenodes = nn.getLeaderAlgo().selectAll().values();
     nnIndex = nnIndex % totalNamenodes.size();
     Iterator<InetSocketAddress> iter = totalNamenodes.iterator();

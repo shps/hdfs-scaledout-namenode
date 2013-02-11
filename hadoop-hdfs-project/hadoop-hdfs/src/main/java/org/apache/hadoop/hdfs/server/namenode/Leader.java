@@ -35,7 +35,7 @@ public class Leader implements Comparable<Leader>
 
     public static enum Counter implements org.apache.hadoop.hdfs.server.namenode.CounterType<Leader>
     {
-        AllById;
+        AllById, AllPredecessors, AllSuccessors;
         @Override
         public Class getType()
         {

@@ -10,9 +10,13 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -54,7 +58,7 @@ public class LeaderElection extends Thread {
         } catch (PersistanceException ex) {
             LOG.error("LeaderMonitor.run() :: unable to perform leader election. Exception: " + ex.getMessage(), ex);
         } catch (Throwable t) {
-            LOG.warn("LeaderElection thread received Runtime exception. ", t);
+            LOG.error("LeaderElection thread received Runtime exception. ", t);
             nn.stop();
             Runtime.getRuntime().exit(-1);
         }
@@ -107,17 +111,32 @@ public class LeaderElection extends Thread {
         return getLeader();
     }
 
-    public long getLeader() throws PersistanceException, IOException {
-        long maxCounter = getMaxNamenodeCounter();
-        long totalNamenodes = getLeaderRowCount();
-        if (totalNamenodes == 0) {
-            LOG.warn("No namenodes in the system. The first one to start would be the leader");
-            return LeaderElection.LEADER_INITIALIZATION_ID;
-        }
+  private TransactionalRequestHandler getLeaderHandler = new TransactionalRequestHandler(OperationType.GET_LEADER) {
 
-        List<Leader> activeNamenodes = getActiveNamenodesInternal(maxCounter, totalNamenodes);
-        return getMinNamenodeId(activeNamenodes);
+    @Override
+    public void acquireLock() throws PersistanceException, IOException {
+      TransactionLockManager tlm = new TransactionLockManager();
+      tlm.addLeaderLock(TransactionLockManager.LockType.READ_COMMITTED).
+              acquire();
     }
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      long maxCounter = getMaxNamenodeCounter();
+      long totalNamenodes = getLeaderRowCount();
+      if (totalNamenodes == 0) {
+        LOG.warn("No namenodes in the system. The first one to start would be the leader");
+        return LeaderElection.LEADER_INITIALIZATION_ID;
+      }
+
+      List<Leader> activeNamenodes = getActiveNamenodesInternal(maxCounter, totalNamenodes);
+      return getMinNamenodeId(activeNamenodes);
+    }
+  };
+
+  public long getLeader() throws IOException {
+    return (Long) getLeaderHandler.handle();
+  }
     
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     protected void updateCounter() throws IOException, PersistanceException {
@@ -141,19 +160,27 @@ public class LeaderElection extends Thread {
         updateCounter(counter, nn.getId(), hostname);
     }
 
-    /* The function that returns the list of actively running NNs */
-    //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    SortedMap<Long, InetSocketAddress> selectAll() throws PersistanceException, IOException {
-        return getActiveNamenodes();
-    }
+  /* The function that returns the list of actively running NNs */
+  //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  SortedMap<Long, InetSocketAddress> selectAll() throws IOException {
+    LightWeightRequestHandler requestHandler = new LightWeightRequestHandler(OperationType.SELECT_ALL_LEADERS) {
 
-    // helper function start here
-    private long getMaxNamenodeCounter() throws PersistanceException {
-        List<Leader> namenodes = getAllNamenodesInternal();
-        return getMaxNamenodeCounter(namenodes);
-    }
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return getActiveNamenodes();
+      }
+    };
+
+    return (SortedMap<Long, InetSocketAddress>) requestHandler.handle();
+  }
+
+  private long getMaxNamenodeCounter() throws PersistanceException {
+    List<Leader> namenodes = getAllNamenodesInternal();
+    return getMaxNamenodeCounter(namenodes);
+  }
 
     private List<Leader> getAllNamenodesInternal() throws PersistanceException {
+      
         List<Leader> leaders = (List<Leader>) EntityManager.findList(Leader.Finder.All);
         return leaders;
     }
@@ -179,10 +206,10 @@ public class LeaderElection extends Thread {
         }
     }
 
-    public long getMaxNamenodeId() throws PersistanceException {
-        List<Leader> namenodes = getAllNamenodesInternal();
-        return getMaxNamenodeId(namenodes);
-    }
+  public long getMaxNamenodeId() throws PersistanceException {
+    List<Leader> namenodes = getAllNamenodesInternal();
+    return getMaxNamenodeId(namenodes);
+  }
 
     private static long getMaxNamenodeId(List<Leader> namenodes) {
         long maxId = 0;

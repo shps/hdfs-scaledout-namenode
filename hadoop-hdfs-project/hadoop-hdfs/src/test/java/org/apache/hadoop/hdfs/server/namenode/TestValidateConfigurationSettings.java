@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import java.io.IOException;
@@ -29,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * This class tests the validation of the configuration object when passed 
@@ -47,7 +47,7 @@ public class TestValidateConfigurationSettings {
       throws IOException {
 
     Configuration conf = new HdfsConfiguration();
-    DBConnector.setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
     // set both of these to port 9000, should fail
     FileSystem.setDefaultUri(conf, "hdfs://localhost:9000"); 
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
@@ -71,7 +71,7 @@ public class TestValidateConfigurationSettings {
       throws IOException {
 
     Configuration conf = new HdfsConfiguration();
-    DBConnector.setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
     FileSystem.setDefaultUri(conf, "hdfs://localhost:8000");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
     DFSTestUtil.formatNameNode(conf);

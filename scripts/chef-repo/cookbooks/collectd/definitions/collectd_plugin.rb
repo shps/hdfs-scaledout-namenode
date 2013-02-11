@@ -50,3 +50,38 @@ define :collectd_python_plugin, :options => {}, :module => nil, :path => nil do
   end
   t.variables[:options][:modules][params[:module] || params[:name]] = params[:options]
 end
+
+define :collectd_jmx_plugin, :namenode => {}, :datanode => {}, :template => nil, :cookbook => nil do
+  template "/etc/collectd/plugins/java.conf" do
+    owner "root"
+    group "root"
+    mode "644"
+    if params[:template].nil?
+      source "jmx_plugin.conf.erb"
+      cookbook params[:cookbook] || "collectd"
+    else
+      source params[:template]
+      cookbook params[:cookbook]
+    end
+    variables :namenode=>params[:namenode], :datanode=>params[:datanode]
+    notifies :restart, resources(:service => "collectd")
+  end
+end
+
+define :collectd_dbi_plugin, :mysql => {}, :template => nil, :cookbook => nil do
+  template "/etc/collectd/plugins/dbi.conf" do
+    owner "root"
+    group "root"
+    mode "644"
+    if params[:template].nil?
+      source "dbi_plugin.conf.erb"
+      cookbook params[:cookbook] || "collectd"
+    else
+      source params[:template]
+      cookbook params[:cookbook]
+    end
+    variables :mysql=>params[:mysql]
+    notifies :restart, resources(:service => "collectd")
+  end
+end
+

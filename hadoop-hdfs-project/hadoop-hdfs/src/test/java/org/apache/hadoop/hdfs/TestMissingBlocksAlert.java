@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -87,7 +88,7 @@ public class TestMissingBlocksAlert extends TestCase {
       }
       assertTrue(dfs.getMissingBlocksCount() == 1);
       assertEquals(4, dfs.getUnderReplicatedBlocksCount());
-      assertEquals(3, bm.getUnderReplicatedNotMissingBlocks());
+      assertEquals(3, bm.getUnderReplicatedNotMissingBlocks(OperationType.TEST));
 
 
       // Now verify that it shows up on webui
@@ -118,7 +119,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       //FIXME: race condition happens in the following commented line, check it out
 //      assertEquals(2, dfs.getUnderReplicatedBlocksCount());
-      assertEquals(2, bm.getUnderReplicatedNotMissingBlocks());
+      assertEquals(2, bm.getUnderReplicatedNotMissingBlocks(OperationType.TEST));
 
       // and make sure WARNING disappears
       // Now verify that it shows up on webui

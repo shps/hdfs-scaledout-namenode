@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedOutputStream;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -313,9 +315,10 @@ public class DFSTestUtil {
    */
   public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
       Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException {
+      throws IOException, TimeoutException, PersistanceException {
     int count = 0;
     final int ATTEMPTS = 50;
+    
     int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
     while (repls != corruptRepls && count < ATTEMPTS) {
       try {

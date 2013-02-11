@@ -57,10 +57,14 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.namenode.persistance.DBConnector;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -555,12 +559,16 @@ public class MiniDFSCluster {
     if(nameserviceIds.size() > 1)  
       federation = true;
   
-    // Setting the configuration for DBConnector
-    DBConnector.setConfiguration(conf);
+    // Setting the configuration for Storage
+    StorageFactory.setConfiguration(conf);
 
     if (format) {
-      // this should be done before creating namenodes
-      assert(DBConnector.formatDB());
+      try {
+        // this should be done before creating namenodes
+        assert (StorageFactory.getConnector().formatStorage());
+      } catch (StorageException ex) {
+        throw new IOException(ex);
+      }
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
@@ -788,7 +796,7 @@ public class MiniDFSCluster {
   /**
    * wait for the given namenode to get out of safemode.
    */
-  public void waitNameNodeUp(int nnIndex) {
+  public void waitNameNodeUp(int nnIndex) throws PersistanceException, IOException {
     while (!isNameNodeUp(nnIndex)) {
       try {
         LOG.warn("Waiting for namenode at " + nnIndex + " to start...");
@@ -801,7 +809,7 @@ public class MiniDFSCluster {
   /**
    * wait for the cluster to get out of safemode.
    */
-  public void waitClusterUp() {
+  public void waitClusterUp() throws IOException {
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
         try {
@@ -1519,8 +1527,8 @@ public class MiniDFSCluster {
    * Returns true if the NameNode is running and is out of Safe Mode
    * or if waiting for safe mode is disabled.
    */
-  public boolean isNameNodeUp(int nnIndex) {
-    NameNode nameNode = nameNodes[nnIndex].nameNode;
+  public boolean isNameNodeUp(int nnIndex) throws IOException{
+    final NameNode nameNode = nameNodes[nnIndex].nameNode;
     if(nameNodes[nnIndex].isShutdown == true) {
       // this namenode has been shut down. Do not include as part of "cluster Up" check
       return true;
@@ -1542,7 +1550,20 @@ public class MiniDFSCluster {
       // sizes[0] at zero index is the capacity that is returned by each datanode during heartbeats
       // for secondary namenodes, since datanodes don't register with it, it will always be zero
       // So we need this check only for leader namenode
-      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
+      TransactionalRequestHandler isInSafeModeHandler = new TransactionalRequestHandler(OperationType.TEST) {
+
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          // TODO[Hooman]: Safe mode locks
+          throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          return nameNode.isInSafeMode();
+        }
+      };
+      isUp = ((!(Boolean) isInSafeModeHandler.handle() || !waitSafeMode) && sizes[0] != 0);
 //      if(nameNode.isLeader()) {
 //        isUp = sizes[0] != 0;
 //      }
@@ -1553,7 +1574,7 @@ public class MiniDFSCluster {
   /**
    * Returns true if all the NameNodes are running and is out of Safe Mode.
    */
-  public boolean isClusterUp() {
+  public boolean isClusterUp() throws IOException {
     for (int index = 0; index < nameNodes.length; index++) {
       if (!isNameNodeUp(index)) {
         if(nameNodes[index].nameNode != null) {

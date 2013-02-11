@@ -56,7 +56,7 @@ ReceiveBufferMemory=2M
  
 [NDB_MGMD]
 NodeId=<%= node[:mgm][:id] %>
-HostName=<%= node[:ndb][:mgm_server] %>
+HostName=<%= node[:ndb][:mgm_server][:addr] %>
 PortNumber=<%= node[:ndb][:port] %>
 DataDir=<%= node[:ndb][:log_dir] %>
 LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6

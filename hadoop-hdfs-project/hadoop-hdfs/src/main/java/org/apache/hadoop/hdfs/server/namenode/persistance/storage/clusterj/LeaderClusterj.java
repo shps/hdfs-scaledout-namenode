@@ -24,6 +24,8 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public class LeaderClusterj extends LeaderDataAccess
 {
 
+
+
     @PersistenceCapable(table = TABLE_NAME)
     public interface LeaderDTO
     {
@@ -67,6 +69,51 @@ public class LeaderClusterj extends LeaderDataAccess
     {
         return findAll().size();
     }
+    
+    
+    @Override
+    public int countAllPredecessors(long id) throws StorageException{
+        try
+        {
+          // TODO[Hooman]: code repetition. Use query for fetching "ids less than".
+            Session session = connector.obtainSession();
+            QueryBuilder qb = session.getQueryBuilder();
+            QueryDomainType dobj = qb.createQueryDefinition(LeaderDTO.class);
+            PredicateOperand propertyPredicate = dobj.get("id");
+            String param = "id";
+            PredicateOperand propertyLimit = dobj.param(param);
+            Predicate lessThan = propertyPredicate.lessThan(propertyLimit);
+            dobj.where(lessThan);
+            Query query = session.createQuery(dobj);
+            query.setParameter(param, new Long(id));
+            return query.getResultList().size();
+        } catch (Exception e)
+        {
+            throw new StorageException(e);
+        }
+    }
+
+    @Override
+    public int countAllSuccessors(long id) throws StorageException {
+        try
+        {
+            Session session = connector.obtainSession();
+            QueryBuilder qb = session.getQueryBuilder();
+            QueryDomainType dobj = qb.createQueryDefinition(LeaderDTO.class);
+            PredicateOperand propertyPredicate = dobj.get("id");
+            String param = "id";
+            PredicateOperand propertyLimit = dobj.param(param);
+            Predicate greaterThan = propertyPredicate.greaterThan(propertyLimit);
+            dobj.where(greaterThan);
+            Query query = session.createQuery(dobj);
+            query.setParameter(param, new Long(id));
+            return query.getResultList().size();
+        } catch (Exception e)
+        {
+            throw new StorageException(e);
+        }
+    }
+    
 
     @Override
     public Leader findById(long id) throws StorageException

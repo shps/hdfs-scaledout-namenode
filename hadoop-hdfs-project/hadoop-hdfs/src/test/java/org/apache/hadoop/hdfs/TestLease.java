@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,15 +26,33 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestLease {
-  static boolean hasLease(MiniDFSCluster cluster, Path src) {
-    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
-        ).getLeaseByPath(src.toString()) != null;
+
+  static boolean hasLease(final MiniDFSCluster cluster, final Path src) throws IOException {
+    return (Boolean) new TransactionalRequestHandler(OperationType.TEST) {
+
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager.acquireByLeasePath(
+                src.getName(),
+                TransactionLockManager.LockType.READ,
+                TransactionLockManager.LockType.WRITE);
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).getLeaseByPath(src.toString()) != null;
+      }
+    }.handle();
   }
   
   final Path dir = new Path("/test/lease/");
