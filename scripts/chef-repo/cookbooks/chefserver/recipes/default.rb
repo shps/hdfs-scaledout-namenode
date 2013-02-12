@@ -13,7 +13,7 @@
 # http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo
 
 
-
+ChefVersion="10.20.0"
 HomeDir="#{node[:chef][:base_dir]}"
 user node[:chef][:user] do
   action :create
@@ -31,7 +31,7 @@ bash "add_user_sudoers" do
   EOF
 end
 
-for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect libgecode-dev }
+for install_package in %w{ruby1.9.1-dev build-essential wget ssl-cert curl make expect libgecode-dev rubygems1.9.1 }
   package "#{install_package}" do
     action :install
     options "--force-yes"
@@ -106,11 +106,11 @@ bash "install_chef_server" do
   code <<-EOF
    
    REALLY_GEM_UPDATE_SYSTEM=yes sudo -E gem update --system
-   sudo gem install chef --no-ri --no-rdoc
+   sudo gem install chef --no-ri --no-rdoc -v #{ChefVersion}
    sudo chef-solo -o chef-server::rubygems-install
-   sudo gem install chef-server-webui --no-ri --no-rdoc
-   sudo gem install chef-server-api --no-ri --no-rdoc
-   sudo gem install chef-solr --no-ri --no-rdoc
+   sudo gem install chef-server-webui --no-ri --no-rdoc -v #{ChefVersion}
+   sudo gem install chef-server-api --no-ri --no-rdoc -v #{ChefVersion}
+   sudo gem install chef-solr --no-ri --no-rdoc -v #{ChefVersion}
 # chef-expander broken on Ubuntu 12.10+
 #  https://tickets.opscode.com/browse/CHEF-3567, https://tickets.opscode.com/browse/CHEF-3495
    sudo gem install chef-expander --no-ri --no-rdoc

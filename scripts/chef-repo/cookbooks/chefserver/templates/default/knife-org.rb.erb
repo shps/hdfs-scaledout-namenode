@@ -93,6 +93,7 @@ validation_client_name  "#{organization}-validator"
   Chef::Config[:ec2_image_info] ||= {}
   ec2_image_info.merge!({
        %w[<%= node[:aws][:zone] %> 64-bit  <%= node[:aws][:instance_type] %> <%= node[:aws][:image_name] %> ] => { :image_id => '<%= node[:aws][:image_id] %>', :ssh_user => 'ubuntu', :bootstrap_distro => "<%= node[:aws][:bootstrap_distro] %>", }
+
     })
   Chef::Log.debug("Loaded #{__FILE__}, now have #{ec2_image_info.size} ec2 images")
 
@@ -102,7 +103,7 @@ validation_client_name  "#{organization}-validator"
 
   # if set, uses the system account to log in
   #
-  # knife[:ssh_user]              = 'ubuntu'
+  knife[:ssh_user]              = 'ubuntu'
 
   # Don't complain about ssh known_hosts
   knife[:host_key_verify]       = false # yeah... so 0.10.7+ uses one, 0.10.4 the other.

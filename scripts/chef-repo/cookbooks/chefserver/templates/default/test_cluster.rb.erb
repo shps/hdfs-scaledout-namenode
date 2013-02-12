@@ -11,21 +11,29 @@ Ironfan.cluster 'test_cluster' do
   
   # Life will be difficult without this
   role                  :ssh
+  role                  :chef_client
  
   # These are behaviors that apply to EC2 resources anywhere
   # in the cluster. cloud(:ec2) statements within each facet
   # can be used to augment or override these settings
   cloud(:ec2) do
+    ssh_user            'ubuntu'
     permanent           false
-    availability_zones  ['eu-west-1a', 'eu-west-1b']
+#    availability_zones  ['eu-west-1a', 'eu-west-1b']
+#    availability_zones  ['eu-west-1a']
+    availability_zones  ['us-east-1a']
     flavor              't1.micro'
     backing             'ebs'
     image_name          'ironfan-natty'
-    chef_client_script  'client.rb'
+#    chef_client_script  'client.rb'
     security_group(:ssh).authorize_port_range(22..22)
-    mount_ephemerals
+#    mount_ephemerals
+#    bootstrap_distro    'ubuntu12.04-ironfan'
   end
- 
+
+#  node_attributes = { :a => 1, :b => 2 } 
+# cluster_overrides = Mash.new(node_attributes)  
+
   facet :web do
     instances 1
     recipe 'nginx'
@@ -39,6 +47,7 @@ Ironfan.cluster 'test_cluster' do
         authorize_port_range(443..443)
       end
     end
+#    override_attributes(node_attributes) 
   end
  
   facet :database do
@@ -47,6 +56,6 @@ Ironfan.cluster 'test_cluster' do
     cloud(:ec2) do
       flavor 'm1.small'
     end
-end
- 
+  end
+#  cluster_role.override_attributes(cluster_overrides)  
 end
