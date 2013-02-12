@@ -39,7 +39,7 @@ public abstract class RequestHandler {
     //LeaseManager
     PREPARE_LEASE_MANAGER_MONITOR, LEASE_MANAGER_MONITOR,
     // LeaderElection
-    SELECT_ALL_LEADERS, LEADER_EXIT, GET_ALL_NAME_NODES, GET_LEADER, 
+    SELECT_ALL_NAMENODES, LEADER_EXIT, GET_ALL_NAME_NODES, GET_LEADER, LEADER_ELECTION, UPDATE_LEADER_COUNTER, REMOVE_PREV_LEADERS,
     // BlockTokenSecretManagerNN
     ADD_BLOCK_TOKENS, GET_ALL_BLOCK_TOKENS, GET_BLOCK_TOKENS, REMOVE_ALL, GET_KEY_BY_TYPE,REMOVE_BLOCK_KEY, UPDATE_BLOCK_KEYS, GET_KEY_BY_ID,
     // Block Generationstamp
@@ -86,8 +86,6 @@ public abstract class RequestHandler {
     ADD_INODE,
     // TestNodeCount
     TEST_NODE_COUNT,
-    // Leader Election
-    LEADER_ELECTION,
     // Transaction in unit tests.
     TEST,
   }

@@ -343,7 +343,7 @@ public class NameNode {
     loginAsNameNodeUser(conf);
 
     // Setting the configuration for DBConnector
-//    DBConnector.setConfiguration(conf);
+    StorageFactory.setConfiguration(conf);
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
@@ -640,13 +640,13 @@ public class NameNode {
     LOG.info("Formatting using clusterid: " + clusterId);
     
     // Format storage
-    StorageFactory.setConfiguration(conf);
-    StorageConnector connector = StorageFactory.getConnector();
-    try {
-      assert (connector.formatStorage());
-    } catch (StorageException ex) {
-      LOG.error(ex.getMessage(), ex);
-    }
+//    StorageFactory.setConfiguration(conf);
+//    StorageConnector connector = StorageFactory.getConnector();
+//    try {
+//      assert (connector.formatStorage());
+//    } catch (StorageException ex) {
+//      LOG.error(ex.getMessage(), ex);
+//    }
     
     FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
@@ -789,7 +789,8 @@ public class NameNode {
         System.exit(aborted ? 1 : 0);
         return null; // avoid warning
       default:
-        DefaultMetricsSystem.initialize("NameNode");
+        // FIXME[Hooman]: Metrics throws exceptions.
+//        DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf, NamenodeRole.SECONDARY);
     }
   }

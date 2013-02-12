@@ -339,12 +339,12 @@ public class InodeClusterj extends InodeDataAccess {
       persistable.setNSCount(((INodeDirectory) inode).getNsCount());
       persistable.setDSCount(((INodeDirectory) inode).getDsCount());
     }
-    else if (inode instanceof INodeDirectoryWithQuota) {
+    if (inode instanceof INodeDirectoryWithQuota) {
       persistable.setIsDir(true); //why was it false earlier?	    	
       persistable.setIsUnderConstruction(false);
       persistable.setIsDirWithQuota(true);
     }
-    else if (inode instanceof INodeFile) {
+    if (inode instanceof INodeFile) {
       persistable.setIsDir(false);
       persistable.setIsUnderConstruction(inode.isUnderConstruction());
       persistable.setIsDirWithQuota(false);
@@ -353,11 +353,9 @@ public class InodeClusterj extends InodeDataAccess {
       persistable.setClientMachine(((INodeFile) inode).getClientMachine());
       persistable.setClientNode(((INodeFile) inode).getClientNode() == null ? null : ((INodeFile) inode).getClientNode().getName());
     }
-    else if (inode instanceof INodeSymlink) {
+    if (inode instanceof INodeSymlink) {
       String linkValue = DFSUtil.bytes2String(((INodeSymlink) inode).getSymlink());
       persistable.setSymlink(linkValue);
-    } else {
-        throw new IllegalStateException("Unrecognised INode type");
     }
   }
 }
