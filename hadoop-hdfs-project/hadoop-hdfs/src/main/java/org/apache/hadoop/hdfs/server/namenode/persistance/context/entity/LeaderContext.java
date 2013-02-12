@@ -158,7 +158,7 @@ public class LeaderContext extends EntityContext<Leader> {
     switch (lFinder) {
       case ById:
         Long id = (Long) params[0];
-        if (allReadLeaders.containsKey(id)) {
+        if (allRead || allReadLeaders.containsKey(id)) {
           log("find-leader-by-id", CacheHitState.HIT, new String[]{
                     "leaderId", Long.toString(id)
                   });

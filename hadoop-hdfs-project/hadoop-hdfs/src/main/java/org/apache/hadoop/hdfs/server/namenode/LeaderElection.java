@@ -170,23 +170,8 @@ public class LeaderElection extends Thread {
 
   /* The function that returns the list of actively running NNs */
   //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  SortedMap<Long, InetSocketAddress> selectAll() throws IOException {
-    TransactionalRequestHandler requestHandler = new TransactionalRequestHandler(OperationType.SELECT_ALL_LEADERS) {
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return getActiveNamenodes();
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tlm = new TransactionLockManager();
-        tlm.addLeaderLock(TransactionLockManager.LockType.READ_COMMITTED).
-                acquire();
-      }
-    };
-
-    return (SortedMap<Long, InetSocketAddress>) requestHandler.handle();
+  SortedMap<Long, InetSocketAddress> selectAll() throws IOException, PersistanceException {
+    return getActiveNamenodes();
   }
 
   private long getMaxNamenodeCounter() throws PersistanceException {
