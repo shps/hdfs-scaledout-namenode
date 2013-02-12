@@ -33,7 +33,8 @@ glassfish_domain "#{domain_name}" do
   secure secure 
   echo true
   terse false
-  max_memory 3500
+  min_memory 3500
+  max_memory 4500
   max_stack_size 1024
   max_perm_size 1024
   action :create
