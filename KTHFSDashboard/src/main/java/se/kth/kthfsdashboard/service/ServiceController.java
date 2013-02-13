@@ -133,7 +133,7 @@ public class ServiceController {
       for (String instance : instances) {
          
          
-         KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "Started ?", "?");
+         KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "?", "?");
          
          List<Service> services = serviceEJB.findByInstance(instance);
          for (Service s: services) {

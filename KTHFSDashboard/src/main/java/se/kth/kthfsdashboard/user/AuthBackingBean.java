@@ -68,7 +68,9 @@ public class AuthBackingBean {
                 .getExternalContext().getRequest();
 
         try {
-            request.login(username, password);
+           
+           request.logout();
+           request.login(username, password);
             user = userService.findByEmail(username);
         } catch (ServletException e) {
             context.addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Login failed!", null));
@@ -79,11 +81,10 @@ public class AuthBackingBean {
         Principal principal = request.getUserPrincipal();
         log.info("Logging IN Authenticated user: " + principal.getName());
 
-
         if (request.isUserInRole("ADMIN")) {
-            return "/sauron/services.xml";
+            return "/sauron/services.xml?faces-redirect=true";
         } else {
-            return "/sauron/services.xml";
+            return "/sauron/services.xml?faces-redirect=true";
         }
     }
 

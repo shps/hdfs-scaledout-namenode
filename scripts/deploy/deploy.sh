@@ -8,6 +8,11 @@ echo "You do not appear to have installed: parallel-rsync"
 echo "sudo aptitude install pssh"
 fi
 
+<<<<<<< Updated upstream
+=======
+#mvn  -f ./../../pom.xml  package -Pdist -DskipTests
+
+>>>>>>> Stashed changes
 HOSTS=`cut -f 1 -d " " ./hosts.txt`
 echo "Deploying on: $HOSTS"
 
