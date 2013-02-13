@@ -372,7 +372,7 @@ public class INodeDirectory extends INode {
             node.setPermission(p);
         }
 
-        if (getChildren() != null) {
+        if (children != null) {
             int low = Collections.binarySearch(getChildren(), node.name);
             if (low >= 0) {
                 return null;
