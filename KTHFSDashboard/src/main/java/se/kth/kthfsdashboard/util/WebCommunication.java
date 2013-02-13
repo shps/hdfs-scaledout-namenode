@@ -27,6 +27,10 @@ public class WebCommunication {
 
       STDOUT, STDERR, DO
    }
+   
+   private static String USERNAME = "kthfsagent@sics.se";
+   private static String PASSWORD = "kthfsagent";
+   private static int PORT = 8090;
    private static String NOT_AVAILABLE = "Not available.";
    private String hostname;
    private String kthfsInstance;
@@ -51,7 +55,8 @@ public class WebCommunication {
    private String getLog(String logType, int lines) {
       
       String log = NOT_AVAILABLE;
-      String url = baseUrl(hostname) + "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + lines;
+      String path = "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + lines;
+      String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
          if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
@@ -67,7 +72,8 @@ public class WebCommunication {
    public String getConfig() {
 
       String conf = NOT_AVAILABLE;
-      String url = baseUrl(hostname) + "/config/" + kthfsInstance + "/" + service;
+      String path = "/config/" + kthfsInstance + "/" + service;
+      String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
          if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
@@ -81,13 +87,14 @@ public class WebCommunication {
 
    public ClientResponse doCommand(String command) throws Exception {
 
-      String url = baseUrl(hostname) + "/do/" + kthfsInstance + "/" + service + "/" + command;
+      String path = "/do/" + kthfsInstance + "/" + service + "/" + command;
+      String url = baseUrl(hostname) + path;
       return getWebResource(url);
    }
 
    private static String baseUrl(String hostname) {
 
-      return "https://" + hostname + ":8090";
+      return "https://" + hostname + ":" + PORT;
    }
 
    private ClientResponse getWebResource(String url) throws Exception {
@@ -96,8 +103,8 @@ public class WebCommunication {
       Client client = Client.create();
       WebResource webResource = client.resource(url);
       MultivaluedMap params = new MultivaluedMapImpl();
-      params.add("username", "kthfsagent@sics.se");
-      params.add("password", "kthfsagent");
+      params.add("username", USERNAME);
+      params.add("password", PASSWORD);
 
       return webResource.queryParams(params).get(ClientResponse.class);
    }

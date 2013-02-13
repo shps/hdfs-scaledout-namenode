@@ -137,7 +137,7 @@
             </p:dialog>                      
          </h:form>                         
 
-         <h:form id="test">                  
+         <h:form id="test" rendered="false">  // Test                 
             <p:commandButton id="modalDialogButton" value="Test 2" actionListener="#{executeCommandController.doCommandTest}" ajax="true" onclick="prog1.setValue(0);prog2.setValue(0);dlgstartstop.show();prog1.start();prog2.start();">
                <f:param name="hostname" value="#{hostController.hostname}" />
                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
