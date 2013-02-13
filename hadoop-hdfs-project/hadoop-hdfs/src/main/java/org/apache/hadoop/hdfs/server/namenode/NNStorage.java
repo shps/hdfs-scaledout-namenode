@@ -528,12 +528,11 @@ public class NNStorage extends Storage implements Closeable {
   private int newNamespaceID() {
     int newID = 0;
     while(newID == 0)
-        // XXX Jude - This number should be the same for all the data nodes.
-        // Hack is to set a fixed number here.
-        // Proper soln is to start transaction, check if number in DB, if yes - done,
-        // else generate-num, insert into DB, commit.
-        // Create 1 table with 1 row to store the version.
-      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
+        // FIXME[Hooman]: NamespaceID should be the same for the whole cluster.
+        // Hack is to set a fixed number here. Proper solution is to set a global
+      // namespace id and everyone access it.
+//      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
+      newID = 99999;
     return newID;
   }
 
