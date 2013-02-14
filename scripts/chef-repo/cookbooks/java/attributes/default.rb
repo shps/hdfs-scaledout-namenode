@@ -32,7 +32,9 @@ default['java']['arch'] = kernel['machine'] =~ /x86_64/ ? "x86_64" : "i586"
 #when "freebsd"
 #  default['java']['java_home'] = "/usr/local/openjdk#{java['jdk_version']}"
 #when "arch"
-  default['java']['java_home'] = "/usr/lib/jvm/java-#{java['jdk_version']}-openjdk"
+
+default['java']['java_home'] = "/usr/lib/jvm/java-#{java['jdk_version']}-openjdk-amd64"
+
 #else
 #  default['java']['java_home'] = "/usr/lib/jvm/default-java"
 #end

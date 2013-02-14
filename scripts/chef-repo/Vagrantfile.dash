@@ -1,0 +1,49 @@
+#     €€\   €€\ €€€€€€€€\ €€\   €€\ €€€€€€€€\  €€€€€€\  
+#     €€ | €€  |\__€€  __|€€ |  €€ |€€  _____|€€  __€€\ 
+#     €€ |€€  /    €€ |   €€ |  €€ |€€ |      €€ /  \__|
+#     €€€€€  /     €€ |   €€€€€€€€ |€€€€€\    \€€€€€€\  
+#     €€  €€<      €€ |   €€  __€€ |€€  __|    \____€€\ 
+#     €€ |\€€\     €€ |   €€ |  €€ |€€ |      €€\   €€ |
+#     €€ | \€€\    €€ |   €€ |  €€ |€€ |      \€€€€€€  |
+#     \__|  \__|   \__|   \__|  \__|\__|       \______/ 
+                                                  
+
+Vagrant::Config.run do |config|
+  #config.vm.box = "precise64"
+  #config.vm.box = "precise64ruby19"
+  config.vm.box = "quantal64"
+
+  config.vm.customize ["modifyvm", :id, "--memory", 5000]
+#  config.vm.network :hostonly, "192.168.111.113"
+ config.vm.network :bridged
+# Glassfish/webapp ports
+  config.vm.forward_port 8080, 8080
+  config.vm.forward_port 8181, 8181
+  config.vm.forward_port 8686, 8686
+  config.vm.forward_port 4848, 4848
+# Mysql server port
+  config.vm.forward_port 3306, 3306
+# Chef ports
+  config.vm.forward_port 4000, 4000
+  config.vm.forward_port 4040, 4040
+  config.vm.forward_port 8983, 8983
+
+  #Collectd network plugin
+  config.vm.forward_port 25826,55826,{ :protocol => "udp"}
+
+   config.vm.provision :chef_solo, :log_level => :debug do |chef|
+     chef.log_level = :debug
+     chef.cookbooks_path = "cookbooks"
+     chef.add_recipe "authbind"
+     chef.add_recipe "java"
+     chef.add_recipe "mysql"
+     chef.add_recipe "openssh"
+     chef.add_recipe "openssl"
+     chef.add_recipe "glassfish::kthfs"
+     chef.add_recipe "collectd::server"
+     chef.add_recipe "chefserver"
+     chef.add_recipe "chefserver::ironfan"
+     chef.add_recipe "chefserver::ec2"
+  end 
+
+end
