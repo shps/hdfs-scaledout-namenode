@@ -6,10 +6,10 @@ TARGET2="/home/x/NetBeansProjects/kthfs/KTHFSDashboard/target/KTHFSDashboard/jar
 
 echo "Creting Symbolic Links:"
 echo
-echo $SRC" ---> "$TARGET1
+#echo $SRC" ---> "$TARGET1
 echo $SRC" ---> "$TARGET2
 echo
-ln -s $SRC $TARGET1
+#ln -s $SRC $TARGET1
 ln -s $SRC $TARGET2
 
 rm -rf /var/lib/collectd/rrd/rrd

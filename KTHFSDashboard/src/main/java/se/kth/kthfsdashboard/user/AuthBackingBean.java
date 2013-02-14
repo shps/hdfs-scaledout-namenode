@@ -69,7 +69,7 @@ public class AuthBackingBean {
 
         try {
            
-           request.logout();
+//           request.logout();
            request.login(username, password);
             user = userService.findByEmail(username);
         } catch (ServletException e) {
