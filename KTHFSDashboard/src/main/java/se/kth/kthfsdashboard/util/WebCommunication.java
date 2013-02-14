@@ -31,6 +31,7 @@ public class WebCommunication {
    private static String USERNAME = "kthfsagent@sics.se";
    private static String PASSWORD = "kthfsagent";
    private static int PORT = 8090;
+   private static int LOG_LINES = 50;
    private static String NOT_AVAILABLE = "Not available.";
    private String hostname;
    private String kthfsInstance;
@@ -44,18 +45,18 @@ public class WebCommunication {
       this.service = service;
    }
 
-   public String getStdOut(int lines) {
-      return getLog("stdout", lines);
+   public String getStdOut() {
+      return getLog("stdout");
    }
 
-   public String getStdErr(int lines) {
-      return getLog("stderr", lines);
+   public String getStdErr() {
+      return getLog("stderr");
    }
 
-   private String getLog(String logType, int lines) {
+   private String getLog(String logType) {
       
       String log = NOT_AVAILABLE;
-      String path = "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + lines;
+      String path = "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + LOG_LINES;
       String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
