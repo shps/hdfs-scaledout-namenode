@@ -21,6 +21,7 @@ end
 # attribute "mysql/password",
 #   :display_name => "MySQL Server Password for 'kthfs' user",
 #   :description => "Password for the 'kthfs' user",
+#   :type => 'string',
 #   :default => "kthfs"
 
 

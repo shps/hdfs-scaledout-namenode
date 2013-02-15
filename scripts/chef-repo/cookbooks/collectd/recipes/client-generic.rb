@@ -19,12 +19,10 @@
 
 include_recipe "collectd::client"
 
-node.normal[:collectd][:config]="collectd-dn"
-
-directory "/etc/collectd/#{node[:collectd][:config]}-plugins" do
-  owner "root"
-  group "root"
-  mode "755"
+collectd_plugin "network" do
+  options :server=>servers
+  :dir=>"#{node[:collectd][:config]}"  
+#  options :server=> [#{node[:collectd][:server]}]
 end
 
 template "/etc/init.d/#{node[:collectd][:config]}" do
@@ -41,24 +39,13 @@ service "#{node[:collectd][:config]}" do
   supports :restart => true, :status => true
 end
 
-template "/etc/collectd/#{node[:collectd][:config]}.conf" do
-  source "#{node[:collectd][:config]}.conf.erb"
-  owner "root"
-  group "root"
-  mode "644"
-  notifies :enable, resources(:service => "#{node[:collectd][:config]}")
-  notifies :restart, resources(:service => "#{node[:collectd][:config]}")
-end
-
-%w(collection thresholds).each do |file|
+%w(node[:collectd][:config] collection thresholds).each do |file|
   template "/etc/collectd/#{file}.conf" do
     source "#{file}.conf.erb"
     owner "root"
     group "root"
     mode "644"
+    notifies :enable, resources(:service => "#{node[:collectd][:config]}")
+    notifies :restart, resources(:service => "#{node[:collectd][:config]}")
   end
-end
-
-collectd_jmx_plugin do
-	datanode :host=>"127.0.0.1", :jmxport =>  "8006" , :jmxuser => "monitorRole", :jmxpassword => "123456", :dir=>"#{node[:collectd][:config]}"
 end
