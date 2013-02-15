@@ -30,13 +30,14 @@ define :collectd_plugin, :options => {}, :template => nil, :cookbook => nil, :di
       cookbook params[:cookbook]
     end
     variables :name=>params[:name], :options=>params[:options]
-    notifies :restart, resources(:service => "#{params[:dir]}")
+#    notifies :restart, resources(:service => "#{params[:dir]}")
   end
 end
 
 define :collectd_python_plugin, :options => {}, :module => nil, :path => nil, :dir => nil do
   begin
-   t = resources(:template => "/etc/collectd/#{params[:dir]}-plugins/python.conf")
+   t = resources(:template => "/etc/collectd/collectd-mysql-plugins/python.conf")
+#   t = resources(:template => "/etc/collectd/#{params[:dir]}-plugins/python.conf")
   rescue ArgumentError,Chef::Exceptions::ResourceNotFound
     collectd_plugin "python" do
       options :paths=>[node[:collectd][:plugin_dir]], :modules=>{}
@@ -52,7 +53,8 @@ define :collectd_python_plugin, :options => {}, :module => nil, :path => nil, :d
 end
 
 define :collectd_jmx_plugin, :namenode => {}, :datanode => {}, :template => nil, :cookbook => nil, :dir => nil do
-  template "/etc/collectd/#{params[:dir]}-plugins/java.conf" do
+#  template "/etc/collectd/#{params[:dir]}-plugins/java.conf" do
+  template "/etc/collectd/collectd-mysql-plugins/java.conf" do
     owner "root"
     group "root"
     mode "644"
@@ -64,12 +66,12 @@ define :collectd_jmx_plugin, :namenode => {}, :datanode => {}, :template => nil,
       cookbook params[:cookbook]
     end
     variables :namenode=>params[:namenode], :datanode=>params[:datanode]
-    notifies :restart, resources(:service => "#{params[:dir]}")
+ #   notifies :restart, resources(:service => "#{params[:dir]}")
   end
 end
 
 define :collectd_dbi_plugin, :mysql => {}, :template => nil, :cookbook => nil, :dir => nil do
-  template "/etc/collectd/#{params[:dir]}-plugins/dbi.conf" do
+  template "/etc/collectd/collectd-mysql-plugins/dbi.conf" do
     owner "root"
     group "root"
     mode "644"
@@ -82,7 +84,7 @@ define :collectd_dbi_plugin, :mysql => {}, :template => nil, :cookbook => nil, :
     end
     variables :mysql=>params[:mysql]
 #    notifies :restart, resources(:service => "collectd")
-    notifies :restart, resources(:service => "#{params[:dir]}")
+  #  notifies :restart, resources(:service => "#{params[:dir]}")
   end
 end
 

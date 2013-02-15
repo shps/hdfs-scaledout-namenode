@@ -50,6 +50,12 @@ template "/etc/collectd/#{node[:collectd][:config]}.conf" do
   notifies :restart, resources(:service => "#{node[:collectd][:config]}")
 end
 
+collectd_plugin "network" do
+  options :server=>servers
+  dir "#{node[:collectd][:config]}"  
+#  options :server=> [#{node[:collectd][:server]}]
+end
+
 %w(collection thresholds).each do |file|
   template "/etc/collectd/#{file}.conf" do
     source "#{file}.conf.erb"

@@ -15,6 +15,23 @@ TypesDB "<%= @node[:collectd][:types_db].join('", "') %>"
 Interval <%= @node[:collectd][:interval] %>
 ReadThreads <%= @node[:collectd][:read_threads] %>
 
-Include "/etc/collectd/<%= @config_dir %>-plugins/*.conf"
-Include "/etc/collectd/thresholds.conf"
+#Include "/etc/collectd/<%= @config_dir %>-plugins/*.conf"
+Include "/etc/collectd/collectd-mysql-plugins/*.conf"
+#Include "/etc/collectd/thresholds.conf"
+
+LoadPlugin syslog
+
+<Plugin syslog>
+	LogLevel info
+</Plugin>
+
+LoadPlugin cpu
+LoadPlugin df
+LoadPlugin disk
+LoadPlugin interface
+LoadPlugin java
+LoadPlugin load
+LoadPlugin memory
+LoadPlugin swap
+
 

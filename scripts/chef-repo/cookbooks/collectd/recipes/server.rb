@@ -85,12 +85,12 @@ collectd_plugin "rrdtool" do
   dir "#{node[:collectd][:config]}"
 end
 
-# bash "create_jarmon_rrd_symbolic_link" do
-#     code <<-EOF
-# ln -s #{node[:collectd][:data_dir]} /usr/local/glassfish-3.1.2.2/glassfish/domains/domain1/applications/KTHFSDashboard/jarmon/data
-# EOF
-#   not_if { ::File.exists?( '/usr/local/glassfish-3.1.2.2/glassfish/domains/domain1/applications/KTHFSDashboard/jarmon/data' ) } 
-# end
+ bash "create_jarmon_rrd_symbolic_link" do
+     code <<-EOF
+ ln -s #{node[:collectd][:data_dir]} /usr/local/glassfish-3.1.2.2/glassfish/domains/domain1/applications/KTHFSDashboard/jarmon/data
+ EOF
+   not_if { ::File.exists?( '/usr/local/glassfish-3.1.2.2/glassfish/domains/domain1/applications/KTHFSDashboard/jarmon/data' ) } 
+ end
 
 
 

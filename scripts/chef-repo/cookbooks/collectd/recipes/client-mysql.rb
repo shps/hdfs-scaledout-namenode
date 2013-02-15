@@ -21,12 +21,6 @@ include_recipe "collectd::client"
 
 node.normal[:collectd][:config]="collectd-mysql"
 
-collectd_plugin "network" do
-  options :server=>servers
-  :dir=>"#{node[:collectd][:config]}"  
-#  options :server=> [#{node[:collectd][:server]}]
-end
-
 directory "/etc/collectd/#{node[:collectd][:config]}-plugins" do
   owner "root"
   group "root"
@@ -44,7 +38,6 @@ template "/etc/init.d/#{node[:collectd][:config]}" do
   })
 end
 
-
 service "#{node[:collectd][:config]}" do
   supports :restart => true, :status => true
 end
@@ -58,6 +51,13 @@ template "/etc/collectd/#{node[:collectd][:config]}.conf" do
   notifies :restart, resources(:service => "#{node[:collectd][:config]}")
 end
 
+
+collectd_plugin "network" do
+  options :server=>servers
+  dir "#{node[:collectd][:config]}"  
+end
+
+
 %w(collection thresholds).each do |file|
   template "/etc/collectd/#{file}.conf" do
     source "#{file}.conf.erb"
@@ -69,5 +69,6 @@ end
 
 
 collectd_dbi_plugin do
-	mysql :host => "127.0.0.1", :jmxuser => "root", :jmxpassword => "kthfs", :dir=>"#{node[:collectd][:config]}"
+	mysql :host => "127.0.0.1", :jmxuser => "root", :jmxpassword => "kthfs", :dir=>"collectd-mysql"
 end
+# "#{node[:collectd][:config]}"
