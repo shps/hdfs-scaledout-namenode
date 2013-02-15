@@ -202,7 +202,7 @@
             <plugin>
                 <groupId>org.codehaus.cargo</groupId>
                 <artifactId>cargo-maven2-plugin</artifactId>
-                <version>1.2.2</version>
+                <version>1.2.4</version>
                 <configuration>
                     <container>
                         <containerId>glassfish3x</containerId>

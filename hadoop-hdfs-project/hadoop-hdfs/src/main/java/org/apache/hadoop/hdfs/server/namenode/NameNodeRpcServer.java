@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import java.util.Iterator;
+import java.util.SortedMap;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -60,7 +61,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.protocol.ActiveNamenodeList;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -866,13 +871,27 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   }
 
+  private TransactionalRequestHandler selectAllNameNodesHandler = new TransactionalRequestHandler(OperationType.SELECT_ALL_NAMENODES) {
+
+    @Override
+    public void acquireLock() throws PersistanceException, IOException {
+      TransactionLockManager tlm = new TransactionLockManager();
+      tlm.addLeaderLock(TransactionLockManager.LockType.READ_COMMITTED).
+              acquire();
+    }
+
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      return nn.getLeaderAlgo().selectAll();
+    }
+  };
   /**
    * //DatanodeProtocol
    * The datanodes periodically asks the leader namenode for the list of actively running namenodes
    */
   @Override
   public ActiveNamenodeList sendActiveNamenodes() throws IOException {
-    return new ActiveNamenodeList(nn.getLeaderAlgo().selectAll());
+    return new ActiveNamenodeList((SortedMap<Long, InetSocketAddress>) selectAllNameNodesHandler.handle());
   }
 
   /**
@@ -884,7 +903,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     // Use the modulo to roundrobin b/w namenodes
     nnIndex++;
     // TODO[Hooman]: What if totalNamenodes is null?
-    Collection<InetSocketAddress> totalNamenodes = nn.getLeaderAlgo().selectAll().values();
+    Collection<InetSocketAddress> totalNamenodes = ((SortedMap<Long, InetSocketAddress>) selectAllNameNodesHandler.handle()).values();
     nnIndex = nnIndex % totalNamenodes.size();
     Iterator<InetSocketAddress> iter = totalNamenodes.iterator();
     int count = nnIndex;

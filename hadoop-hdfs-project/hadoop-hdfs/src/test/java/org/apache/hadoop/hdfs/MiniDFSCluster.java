@@ -615,28 +615,28 @@ public class MiniDFSCluster {
     updateClientConfs(conf);
   }
   /** Initializes non-federated multiple namenodes */
-  private void createNameNodes(Configuration conf, 
-                                                                            int numDataNodes, 
-                                                                            boolean manageNameDfsDirs, 
-                                                                            boolean format, StartupOption operation, 
-                                                                            String clusterId, 
-                                                                            int nnPort, int nnHttpPort, boolean useFreePorts) throws IOException {
-    for(int nnIndex=0; nnIndex< nameNodes.length; nnIndex++)   {
-        
-        initNamenodesConf(nnPort, nnHttpPort);
-      
-        NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs, format, operation, clusterId);
-        // Checks if the next name nodes should use consecutive ports after 1st namenode port
-        if(!useFreePorts) {
-          // set the nnPort so that the next namenode gets the next consecutive port
-          nnPort = nn.getNameNodeAddress().getPort();
-        }
-        
-        setNamenodeConf(conf, nn, nnIndex);
-        
-        // Assign new port to the next namenode
-        nnPort = nnPort == 0 ? 0 : nnPort + 2;
-        
+  private void createNameNodes(Configuration conf,
+          int numDataNodes,
+          boolean manageNameDfsDirs,
+          boolean format, StartupOption operation,
+          String clusterId,
+          int nnPort, int nnHttpPort, boolean useFreePorts) throws IOException {
+    for (int nnIndex = 0; nnIndex < nameNodes.length; nnIndex++) {
+
+      initNamenodesConf(nnPort, nnHttpPort);
+
+      NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs, format, operation, clusterId);
+      // Checks if the next name nodes should use consecutive ports after 1st namenode port
+      if (!useFreePorts) {
+        // set the nnPort so that the next namenode gets the next consecutive port
+        nnPort = nn.getNameNodeAddress().getPort();
+      }
+
+      setNamenodeConf(conf, nn, nnIndex);
+
+      // Assign new port to the next namenode
+      nnPort = nnPort == 0 ? 0 : nnPort + 2;
+
     }
     finalizeNamenodesConf(conf);
   }
@@ -796,7 +796,7 @@ public class MiniDFSCluster {
   /**
    * wait for the given namenode to get out of safemode.
    */
-  public void waitNameNodeUp(int nnIndex) throws PersistanceException, IOException {
+  public void waitNameNodeUp(int nnIndex) throws IOException {
     while (!isNameNodeUp(nnIndex)) {
       try {
         LOG.warn("Waiting for namenode at " + nnIndex + " to start...");
@@ -1555,7 +1555,7 @@ public class MiniDFSCluster {
         @Override
         public void acquireLock() throws PersistanceException, IOException {
           // TODO[Hooman]: Safe mode locks
-          throw new UnsupportedOperationException("Not supported yet.");
+//          throw new UnsupportedOperationException("Not supported yet.");
         }
 
         @Override
@@ -1563,10 +1563,10 @@ public class MiniDFSCluster {
           return nameNode.isInSafeMode();
         }
       };
-      isUp = ((!(Boolean) isInSafeModeHandler.handle() || !waitSafeMode) && sizes[0] != 0);
-//      if(nameNode.isLeader()) {
-//        isUp = sizes[0] != 0;
-//      }
+      isUp = !(Boolean) isInSafeModeHandler.handle() || !waitSafeMode;
+      if(nameNode.isLeader()) {
+        isUp = isUp && sizes[0] != 0;
+      }
     }
     return isUp;
   }

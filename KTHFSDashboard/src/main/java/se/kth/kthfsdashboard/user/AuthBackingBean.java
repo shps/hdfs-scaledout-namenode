@@ -68,7 +68,9 @@ public class AuthBackingBean {
                 .getExternalContext().getRequest();
 
         try {
-            request.login(username, password);
+           
+//           request.logout();
+           request.login(username, password);
             user = userService.findByEmail(username);
         } catch (ServletException e) {
             context.addMessage(null, new FacesMessage(FacesMessage.SEVERITY_WARN, "Login failed!", null));
@@ -78,7 +80,6 @@ public class AuthBackingBean {
         //you can fetch user from database for authenticated principal and do some action  
         Principal principal = request.getUserPrincipal();
         log.info("Logging IN Authenticated user: " + principal.getName());
-
 
         if (request.isUserInRole("ADMIN")) {
             return "/sauron/services.xml";

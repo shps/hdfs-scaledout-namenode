@@ -114,6 +114,13 @@ template "#{HomeDir}/homebase/clusters/test_cluster.rb" do
   mode 0755
 end
 
+template "#{HomeDir}/homebase/clusters/pygmy.rb" do
+  source "pygmy.rb.erb"
+  owner node[:chef][:user]
+  group node[:chef][:user]
+  mode 0755
+end
+
 bash "upload_roles" do
 user "#{node[:chef][:user]}"
 ignore_failure false

@@ -125,10 +125,10 @@
             <role-name>AGENT</role-name>
             <role-name>ADMIN</role-name>            
         </auth-constraint>
-        <user-data-constraint>
+<!--        <user-data-constraint>
             <description>SSL Support</description>
             <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-        </user-data-constraint> 
+        </user-data-constraint> -->
     </security-constraint>
                                   
                      

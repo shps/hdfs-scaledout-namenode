@@ -14,7 +14,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public class GenerationStampClusterj extends GenerationStampDataAccess {
 
   // Generation stamp should have only a single row which stores the generation stamp number (counter),
-  public static final int COUNTER_ID = 0;
+  public static final int COUNTER_ID = 1;
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface GenerationStampDTO {

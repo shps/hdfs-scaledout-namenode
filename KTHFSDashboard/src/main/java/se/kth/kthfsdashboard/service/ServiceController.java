@@ -133,7 +133,7 @@ public class ServiceController {
       for (String instance : instances) {
          
          
-         KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "Started ?", "?");
+         KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "?", "?");
          
          List<Service> services = serviceEJB.findByInstance(instance);
          for (Service s: services) {
@@ -374,14 +374,14 @@ public class ServiceController {
       return true;
    }
 
-   public String showStdoutLog(int n) {
+   public String showStdoutLog() {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdOut(n);
+      return webComm.getStdOut();
    }
 
-   public String showStderrLog(int n) {
+   public String showStderrLog() {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdErr(n);
+      return webComm.getStdErr();
    }
 
    public String showConfig() throws Exception {

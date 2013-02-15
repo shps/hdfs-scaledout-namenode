@@ -26,16 +26,18 @@ default['java']['install_flavor'] = "openjdk"
 default['java']['jdk_version'] = '6'
 default['java']['arch'] = kernel['machine'] =~ /x86_64/ ? "x86_64" : "i586"
 
-case platform
-when "centos","redhat","fedora","scientific","amazon"
-  default['java']['java_home'] = "/usr/lib/jvm/java"
-when "freebsd"
-  default['java']['java_home'] = "/usr/local/openjdk#{java['jdk_version']}"
-when "arch"
-  default['java']['java_home'] = "/usr/lib/jvm/java-#{java['jdk_version']}-openjdk"
-else
-  default['java']['java_home'] = "/usr/lib/jvm/default-java"
-end
+#case platform
+#when "centos","redhat","fedora","scientific","amazon"
+#  default['java']['java_home'] = "/usr/lib/jvm/java"
+#when "freebsd"
+#  default['java']['java_home'] = "/usr/local/openjdk#{java['jdk_version']}"
+#when "arch"
+
+default['java']['java_home'] = "/usr/lib/jvm/java-#{java['jdk_version']}-openjdk-amd64"
+
+#else
+#  default['java']['java_home'] = "/usr/lib/jvm/default-java"
+#end
 
 # If you change this to true, you can download directly from Oracle
 default['java']['oracle']['accept_oracle_download_terms'] = true

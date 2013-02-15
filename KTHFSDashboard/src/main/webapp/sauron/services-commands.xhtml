@@ -84,6 +84,7 @@
             <p:panel header="Running Commands">
                <p:dataTable var="command" value="#{commandController.runningCommandsByInstance}">
                <p:column headerText="Command"><h:outputText value="#{command.command}"/></p:column>
+                <p:column headerText="Hostname"><h:outputText value="#{command.hostname}"/></p:column>               
                <p:column headerText="Instance"><h:outputText value="#{command.instance}"/></p:column>
                <p:column headerText="Group"><h:outputText value="#{command.serviceGroup}"/></p:column>
                <p:column headerText="Service"><h:outputText value="#{command.service}"/></p:column>
@@ -99,6 +100,7 @@
                <p:dataTable var="command" value="#{commandController.recentCommandsByInstance}">
                   
                   <p:column headerText="Command"><h:outputText value="#{command.command}"/></p:column>
+                  <p:column headerText="Hostname"><h:outputText value="#{command.hostname}"/></p:column>
                   <p:column headerText="Instance"><h:outputText value="#{command.instance}"/></p:column>
                   <p:column headerText="Group"><h:outputText value="#{command.serviceGroup}"/></p:column>
                   <p:column headerText="Service"><h:outputText value="#{command.service}"/></p:column>

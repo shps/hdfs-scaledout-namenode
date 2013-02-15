@@ -219,7 +219,7 @@ class FSImageFormat {
           namesystem.setGenerationStamp(gs);
           return null;
         }
-      }.handle();
+      }.setParams(gs).handle();
     }
 
   /** Update the root node's attributes */
