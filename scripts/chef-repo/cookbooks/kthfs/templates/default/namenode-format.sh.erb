@@ -3,7 +3,7 @@
 rootDir=<%= node[:kthfs][:dir] %>/hadoop
 . $rootDir/sbin/scripts/set-env.sh $rootDir
 
-./hdfs namenode -format
+$rootDir/bin/hdfs namenode -format
 
 PID=$!
 

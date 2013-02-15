@@ -34,6 +34,7 @@ Vagrant::Config.run do |config|
    config.vm.provision :chef_solo, :log_level => :debug do |chef|
      chef.log_level = :debug
      chef.cookbooks_path = "cookbooks"
+      chef.add_recipe "java"
       chef.add_recipe "kthfs"
   end 
 

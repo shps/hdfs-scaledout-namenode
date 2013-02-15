@@ -33,6 +33,21 @@ bash 'extract-kthfs' do
 end
 
 
+template "#{node[:kthfs][:dir]}/hadoop/etc/hadoop/hdfs-site.xml" do
+  source "hdfs-site.xml.erb"
+  owner "root"
+  group "root"
+  mode "755"
+end
+
+template "#{node[:kthfs][:dir]}/hadoop/etc/hadoop/core-site.xml" do
+  source "core-site.xml.erb"
+  owner "root"
+  group "root"
+  mode "755"
+end
+
+
 %w(namenode-format start-nn stop-nn start-dn stop-dn).each do |file|
   template "#{node[:kthfs][:dir]}/hadoop/sbin/scripts/#{file}.sh" do
     source "#{file}.sh.erb"
@@ -45,21 +60,21 @@ end
 bash 'format-nn' do
 	user "root"
 	code <<-EOH
-		#{node[:kthfs][:dir]}/scripts/sbin/namenode-format.sh
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/namenode-format.sh
 	EOH
- only_if "! test -d #{node[:kthfs][:dir]}/hadoop/tmp/dfs/name/current/"
+# not_if "test -d #{node[:kthfs][:dir]}/hadoop/tmp/dfs/name/current/"
 end
 
 bash 'start-nn' do
 	user "root"
 	code <<-EOH
-		#{node[:kthfs][:dir]}/scripts/sbin/scripts/start-nn.sh
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/start-nn.sh
 	EOH
 end
 
 bash 'start-dn' do
 	user "root"
 	code <<-EOH
-		#{node[:kthfs][:dir]}/scripts/sbin/scripts/start-dn.sh
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/start-dn.sh
 	EOH
 end
