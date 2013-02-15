@@ -48,4 +48,4 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
 end
 
 
-announce(:ndb, :mgm_server)
+#announce(:ndb, :mgm_server)

@@ -1,1 +1,29 @@
+[kthfs1-namenode]
+status = Stopped
+instance = kthfs1
+service-class = KTHFS
+service-group = namenode
+service = namenode
+web-port = 6001
+stop-script = /var/lib/kthfs/hadoop/sbin/scripts/stop-nn.sh
+start-script = /var/lib/kthfs/hadoop/sbin/scripts/start-nn.sh
+pid-file = /tmp/hadoop-afzali-namenode.pid
+stdout-file = /var/lib/kthfs/hadoop/logs/hfadoop-root-namenode-localhost.out
+stderr-file = 
+start-time = 
+stop-time = 
 
+[kthfs1-datanode]
+status = Stopped
+instance = kthfs1
+service-class = KTHFS
+service-group = datanode
+service = datanode
+web-port = 6003
+stop-script = /var/lib/kthfs/hadoop/sbin/scripts/stop-dn.sh
+start-script = /var/lib/kthfs/hadoop/sbin/scripts/start-dn.sh
+pid-file = /tmp/hadoop-afzali-datanode.pid
+stdout-file = /var/lib/kthfs/hadoop/logs/hadoop-root-datanode-localhost.out
+stderr-file = 
+start-time = 1360941445
+stop-time = 1360941451
