@@ -36,7 +36,7 @@ directory node[:ndb][:data_dir] do
 end
 
 #mgmd_hosts = discover_all(:ndb, :mgm_server).map{|svr| [ svr.node[:k][:zkid], svr.node[:ipaddress] ] }.sort!
-mgmd_host = discover(:ndb, :mgm_server)
+#mgmd_host = discover(:ndb, :mgm_server)
 
 found_id = -1
 id = 1
