@@ -1,4 +1,5 @@
 include_recipe "ndb::kthfs"
+#include "kthfsagent"
 #include "collectd"
 
 ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do

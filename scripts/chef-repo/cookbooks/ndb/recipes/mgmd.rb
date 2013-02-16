@@ -1,6 +1,5 @@
 include_recipe "ndb"
 
-
 # if bootstrapping
 # node[:ndb][:ndbd] = discover_all(:ndb, :ndbd).map{|svr| [ svr.node[:ndb][:id], svr.node[:ipaddress] ] }.sort!
 # 

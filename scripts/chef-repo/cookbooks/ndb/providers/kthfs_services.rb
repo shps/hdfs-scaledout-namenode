@@ -2,13 +2,14 @@ action :install_ndbd do
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
   Chef::Log.info "Loaded services for agent into ini-file."
 
-  if ini_file.has_section?("hdfs1-ndb")
+  if ini_file.has_section?("#{node[:ndb][:instance]}-ndb")
     Chef::Log.info "Over-writing an existing section in the ini file."
-    ini_file.delete_section("hdfs1-ndb")
+    ini_file.delete_section("#{node[:ndb][:instance]}-ndb")
   end
-  ini_file["hdfs1-ndb"] = {
+  ini_file["#{node[:ndb][:instance]}-ndb"] = {
     'status' => 'Stopped',
     'instance' => "#{node[:ndb][:instance]}",
+    'service-class' => "#{node[:ndb][:class]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'ndb',
     'init-script'  => "#{node[:ndb][:scripts_dir]}/ndbd-init.sh",
@@ -20,27 +21,26 @@ action :install_ndbd do
   } 
   ini_file.save
   Chef::Log.info "Saved an updated copy of services file at the kthfsagent."
-
 # Nothing to update in collectd for NDBD
-
 end
 
 action :install_mgmd do
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
 
-  if ini_file.has_section?('hdfs1-mysqlcluster') then
+  if ini_file.has_section?("#{node[:ndb][:instance]}-mysqlcluster") then
     Chef::Log.info "Over-writing an existing mysqlcluster section in the ini file."
-    ini_file.delete_section("hdfs1-mysqlcluster")
+    ini_file.delete_section("#{node[:ndb][:instance]}-mysqlcluster")
   end
 
-  if ini_file.has_section?('hdfs1-mgmserver') then
+  if ini_file.has_section?("#{node[:ndb][:instance]}-mgmserver") then
     Chef::Log.info "Over-writing an existing mgmserver section in the ini file."
-    ini_file.delete_section("hdfs1-mgmserver")
+    ini_file.delete_section("#{node[:ndb][:instance]}-mgmserver")
   end
 
-  ini_file['hdfs1-mysqlcluster'] = {
+  ini_file["#{node[:ndb][:instance]}-mysqlcluster"] = {
     'status' => 'Stopped',
     'instance' => "#{node[:ndb][:instance]}",
+    'service-class' => "#{node[:ndb][:class]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mysqlcluster',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/cluster-shutdown.sh",
@@ -50,9 +50,10 @@ action :install_mgmd do
     'stderr-file'  => ""
   } 
 
-  ini_file['hdfs1-mgmserver'] = {
+  ini_file["#{node[:ndb][:instance]}-mgmserver"] = {
     'status' => '',
     'instance' => "#{node[:ndb][:instance]}",
+    'service-class' => "#{node[:ndb][:class]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mgmserver',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mgm-server-stop.sh",
@@ -75,9 +76,10 @@ action :install_mysqld do
   Chef::Log.info "Loading ini-file: #{node[:ndb][:kthfs_services]}"
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
 
-  ini_file["hdfs1-mysqld"] = {
+  ini_file["#{node[:ndb][:instance]}-mysqld"] = {
     'status' => 'Stopped',
     'instance' => "#{node[:ndb][:instance]}",
+    'service-class' => "#{node[:ndb][:class]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'mysqld',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/mysql-server-stop.sh",
@@ -145,14 +147,15 @@ action :install_memcached do
   Chef::Log.info "Loading ini-file: #{node[:ndb][:kthfs_services]}"
   ini_file = IniFile.load(node[:ndb][:kthfs_services], :comment => ';#')
 
-  ini_file["hdfs1-memcached"] = {
+  ini_file["#{node[:ndb][:instance]}-memcached"] = {
     'status' => 'Stopped',
     'instance' => "#{node[:ndb][:instance]}",
+    'service-class' => "#{node[:ndb][:class]}",
     'service-group'  => 'mysqlcluster',
     'service'  => 'memcached',
     'stop-script'  => "#{node[:ndb][:scripts_dir]}/memcached-stop.sh",
     'start-script'  => "#{node[:ndb][:scripts_dir]}/memcached-start.sh",
-    'pid-file'  => "#{node[:ndb][:log_dir]}/mysql_#{new_resource.node_id}.pid",
+    'pid-file'  => "#{node[:ndb][:log_dir]}/memcached_#{new_resource.node_id}.pid",
     'stdout-file'  => "#{node[:ndb][:log_dir]}/memcached_#{new_resource.node_id}.out.log",
     'stderr-file'  => "#{node[:ndb][:log_dir]}/memcached_#{new_resource.node_id}.err.log"
   } 

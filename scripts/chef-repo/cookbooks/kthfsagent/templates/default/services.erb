@@ -7,8 +7,8 @@ service = namenode
 web-port = 6001
 stop-script = /var/lib/kthfs/hadoop/sbin/scripts/stop-nn.sh
 start-script = /var/lib/kthfs/hadoop/sbin/scripts/start-nn.sh
-pid-file = /tmp/hadoop-afzali-namenode.pid
-stdout-file = /var/lib/kthfs/hadoop/logs/hfadoop-root-namenode-localhost.out
+pid-file = /tmp/hadoop-root-namenode.pid
+stdout-file = /var/lib/kthfs/hadoop/logs/hadoop-root-namenode-<%= node['hostname'] %>.out
 stderr-file = 
 start-time = 
 stop-time = 
@@ -22,8 +22,8 @@ service = datanode
 web-port = 6003
 stop-script = /var/lib/kthfs/hadoop/sbin/scripts/stop-dn.sh
 start-script = /var/lib/kthfs/hadoop/sbin/scripts/start-dn.sh
-pid-file = /tmp/hadoop-afzali-datanode.pid
-stdout-file = /var/lib/kthfs/hadoop/logs/hadoop-root-datanode-localhost.out
+pid-file = /tmp/hadoop-root-datanode.pid
+stdout-file = /var/lib/kthfs/hadoop/logs/hadoop-root-datanode-<%= node['hostname'] %>.out
 stderr-file = 
 start-time = 1360941445
 stop-time = 1360941451
