@@ -95,7 +95,7 @@ directory node[:kthfs][:base_dir] do
 end
 
 service "kthfsagent" do
-  supports :restart => true
+  supports :restart => true, :start => true, :stop => true
 end
 
 template "/etc/init.d/kthfsagent" do
@@ -106,13 +106,32 @@ template "/etc/init.d/kthfsagent" do
   notifies :enable, resources(:service => "kthfsagent")
 end
 
-cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do
-  source "agent.py"
+template"#{node[:kthfs][:base_dir]}/agent.py" do
+  source "agent.py.erb"
   owner node[:kthfs][:user]
   group node[:kthfs][:user]
-  mode 0755
-  notifies :restart, resources(:service => "kthfsagent")
+  mode 0655
+  notifies :enable, resources(:service => "kthfsagent")
 end
+
+# cookbook_file "#{node[:kthfs][:base_dir]}/agent.py" do
+#   source "agent.py"
+#   owner node[:kthfs][:user]
+#   group node[:kthfs][:user]
+#   mode 0755
+# #  notifies :restart, resources(:service => "kthfsagent")
+# end
+
+['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services', 'get-pid.sh'].each do |script|
+  Chef::Log.info "Installing #{script}"
+  template "#{node[:kthfs][:base_dir]}/#{script}" do
+    source "#{script}.erb"
+    owner node[:kthfs][:user]
+    group node[:kthfs][:user]
+    mode 0655
+#    notifies :restart, resources(:service => "kthfsagent")
+  end
+end 
 
 template "#{node[:kthfs][:base_dir]}/config.ini" do
   source "config.ini.erb"
@@ -123,17 +142,33 @@ template "#{node[:kthfs][:base_dir]}/config.ini" do
               :name => node['ipaddress'],
               :rack => '/default'
             })
-  notifies :restart, resources(:service => "kthfsagent")
+#  notifies :start, resources(:service => "kthfsagent"), :immediately
 end
 
+#TODO install MONIT to restart the agent if it crashes
 
-['start-agent.sh', 'stop-agent.sh', 'restart-agent.sh', 'services', 'get-pid.sh'].each do |script|
-  Chef::Log.info "Installing #{script}"
-  template "#{node[:kthfs][:base_dir]}/#{script}" do
-    source "#{script}.erb"
-    owner node[:kthfs][:user]
-    group node[:kthfs][:user]
-    mode 0655
-    notifies :restart, resources(:service => "kthfsagent")
-  end
-end 
+ bash "start_kthfsagent" do
+    code <<-EOF
+  nohup #{node[:kthfs][:base_dir]}/agent.py &> /dev/null &
+
+# echo ""
+# echo "Checking if the agent is running...."
+# echo ""
+# PID_FILE=#{node[:kthfs][:pid_file]}
+# PID=""
+# if [ -e $PID_FILE ] ; then
+#   PID=`cat $PID_FILE`
+# fi
+# echo "PID is $PID"
+# echo ""
+# kill -0 $PID 2> /dev/null
+
+# if [ $? -ne 0 ]; then
+# 	echo "Agent is not running."
+#   nohup #{node[:kthfs][:base_dir]}/agent.py &> /dev/null &
+# else
+#     echo "Agent is already running with pid=$PID."
+#     exit 1
+# fi
+ EOF
+ end
