@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -26,7 +27,7 @@ import org.apache.hadoop.net.NetUtils;
  */
 public class LeaderElection extends Thread {
 
-  private static final Log LOG = NameNode.LOG;
+  private static final Log LOG = LogFactory.getLog(LeaderElection.class);
   public static final long LEADER_INITIALIZATION_ID = -1;
   // interval for monitoring leader
   private final long leadercheckInterval;
@@ -37,12 +38,13 @@ public class LeaderElection extends Thread {
   // list of actively running namenodes in the hdfs to be sent to DNs
   protected List<Long> nnList = new ArrayList<Long>();
   private int missedHeartBeatThreshold = 1;
-
+  String hostname;
   //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   public LeaderElection(Configuration conf, NameNode nn) {
     this.nn = nn;
     this.leadercheckInterval = conf.getInt(DFSConfigKeys.DFS_LEADER_CHECK_INTERVAL_KEY, DFSConfigKeys.DFS_LEADER_CHECK_INTERVAL_DEFAULT);
     this.missedHeartBeatThreshold = conf.getInt(DFSConfigKeys.DFS_LEADER_MISSED_HB_THRESHOLD, DFSConfigKeys.DFS_LEADER_MISSED_HB_THRESHOLD_DEFAULT);
+    hostname = nn.getNameNodeAddress().getAddress().getHostAddress() + ":" + nn.getNameNodeAddress().getPort();
   }
 
   //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -61,6 +63,7 @@ public class LeaderElection extends Thread {
 
         @Override
         public Object performTask() throws PersistanceException, IOException {
+          LOG.info(hostname+") Leader Election initializing ... ");
           determineAndSetLeader();
           return null;
         }
@@ -70,7 +73,7 @@ public class LeaderElection extends Thread {
       start();
 
     } catch (Throwable t) {
-      LOG.error("LeaderElection thread received Runtime exception. ", t);
+      LOG.info(hostname+") LeaderElection thread received Runtime exception. ", t);
       nn.stop();
       Runtime.getRuntime().exit(-1);
     }
@@ -84,7 +87,7 @@ public class LeaderElection extends Thread {
 
     // If this node is the leader, remove all previous leaders
     if (leaderId == nn.getId() && !nn.isLeader() && leaderId != LEADER_INITIALIZATION_ID) {
-      LOG.info("New leader elected. Namenode id: " + nn.getId() + ", rpcAddress: " + nn.getServiceRpcAddress() + ", Total Active namenodes in system: " + selectAll().size());
+      LOG.info(hostname+") New leader elected. Namenode id: " + nn.getId() + ", rpcAddress: " + nn.getServiceRpcAddress() + ", Total Active namenodes in system: " + selectAll().size());
       // remove all previous leaders from [LEADER] table
       removePrevoiouslyElectedLeaders(leaderId);
       nn.setRole(NamenodeRole.LEADER);
@@ -121,14 +124,15 @@ public class LeaderElection extends Thread {
     
     while (nn.namesystem.isRunning()) {
       try {
+        LOG.info(hostname+") Leader Election timeout. Updating the counter and checking for new leader");
         leaderElectionHandler.handle();
         Thread.sleep(leadercheckInterval);
 
       } catch (InterruptedException ie) {
-        LOG.warn("LeaderElection thread received InterruptedException.", ie);
+        LOG.info(hostname+") LeaderElection thread received InterruptedException.", ie);
         break;
       } catch (Throwable t) {
-        LOG.warn("LeaderElection thread received Runtime exception. ", t);
+        LOG.info(hostname+") LeaderElection thread received Runtime exception. ", t);
         nn.stop();
         Runtime.getRuntime().exit(-1);
       }
@@ -139,7 +143,7 @@ public class LeaderElection extends Thread {
     long maxCounter = getMaxNamenodeCounter();
     long totalNamenodes = getLeaderRowCount();
     if (totalNamenodes == 0) {
-      LOG.warn("No namenodes in the system. The first one to start would be the leader");
+      LOG.info(hostname+") No namenodes in the system. The first one to start would be the leader");
       return LeaderElection.LEADER_INITIALIZATION_ID;
     }
 
@@ -162,9 +166,6 @@ public class LeaderElection extends Thread {
 
     // store updated counter in [COUNTER] table
     // hostname is in "ip:port" format
-    String hostname = nn.getNameNodeAddress().getAddress().getHostAddress() + ":" + nn.getNameNodeAddress().getPort();
-    //String hostname = nn.getNameNodeAddress().getAddress().getHostName()+":"+nn.getNameNodeAddress().getPort();
-    //String hostname = hostname = nn.getNameNodeAddress().getAddress().getCanonicalHostName()+":"+nn.getNameNodeAddress().getPort();
     updateCounter(counter, nn.getId(), hostname);
   }
 
@@ -225,7 +226,9 @@ public class LeaderElection extends Thread {
     // update the counter in [Leader]
     // insert the row. if it exists then update it
     // otherwise create a new row
+    
     Leader leader = new Leader(id, counter, now(), hostname);
+    LOG.info(hostname+") Adding/updating row "+leader.toString());
     EntityManager.add(leader);
   }
 

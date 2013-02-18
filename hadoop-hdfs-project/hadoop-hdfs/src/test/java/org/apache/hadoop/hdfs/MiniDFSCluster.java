@@ -1307,9 +1307,10 @@ public class MiniDFSCluster {
     nameNodes[nnIndex] = new NameNodeInfo(nn, nnconf);
     if (waitActive) {
       waitClusterUp();
-      System.out.println("Restarted the namenode");
+      LOG.info("Restarted the namenode "+nnIndex+" address is "+nameNodes[nnIndex].nameNode.getNameNodeAddress());
+      
       waitActive();
-      System.out.println("Cluster is active");
+      LOG.info("Cluster is active");
     }
   }
 
@@ -1690,7 +1691,7 @@ public class MiniDFSCluster {
     // ensure all datanodes have registered and sent heartbeat to the namenode
     while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
       try {
-        LOG.info("Waiting for cluster to become active");
+        LOG.info("Waiting for cluster to become active. Trying to connect to "+addr.toString());
         Thread.sleep(100);
       } catch (InterruptedException e) {
       }
@@ -1713,7 +1714,7 @@ public class MiniDFSCluster {
           failedCount++;
           // Cached RPC connection to namenode, if any, is expected to fail once
           if (failedCount > 1) {
-            System.out.println("Tried waitActive() " + failedCount
+            LOG.info("Tried waitActive() " + failedCount
                 + " time(s) and failed, giving up.  "
                 + StringUtils.stringifyException(e));
             throw e;

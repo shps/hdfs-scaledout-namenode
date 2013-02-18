@@ -891,6 +891,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
    */
   @Override
   public ActiveNamenodeList sendActiveNamenodes() throws IOException {
+      
     return new ActiveNamenodeList((SortedMap<Long, InetSocketAddress>) selectAllNameNodesHandler.handle());
   }
 

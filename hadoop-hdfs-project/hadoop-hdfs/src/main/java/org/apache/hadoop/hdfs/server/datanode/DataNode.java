@@ -728,8 +728,10 @@ public class DataNode extends Configured
    * verifies if the given address is a leader namenode recoginzed by the datanode
    */
   public boolean isLeader(InetSocketAddress addr) {
+    //LOG.info(selfAddr+"datanode is leader addr "+addr);
     NamenodeService [] nnServices = getAllBpOs();
     for(NamenodeService service : nnServices) {
+        //LOG.info(selfAddr+"Connected to "+service.getNNSocketAddress().toString());
       if(service.getNNSocketAddress().equals(addr)) {
          return service.isLeader(addr);
       }
@@ -827,6 +829,7 @@ public class DataNode extends Configured
     }
     
     boolean isLeader(InetSocketAddress leaderAddr) {
+      //LOG.info("nn service isLeader(leaderAddr), connected to Name node: "+nnAddr+", leaderAddr: "+leaderAddr.toString());
       if (nnAddr.equals(leaderAddr)) {
         return true;
       }
@@ -1085,7 +1088,9 @@ public class DataNode extends Configured
      * @throws IOException
      */
     ActiveNamenodeList getActiveNamenodes() throws IOException {
-      return bpNamenode.sendActiveNamenodes();
+        ActiveNamenodeList list= bpNamenode.sendActiveNamenodes();
+        LOG.info("Active namenodes are "+list.toString());
+      return list;
     }
 
     /**
@@ -1420,7 +1425,9 @@ public class DataNode extends Configured
           LOG.warn("IOException in offerService", e);
         }
        
-      } // while (shouldRun && shouldServiceRun)
+      }
+      // while (shouldRun && shouldServiceRun)
+      LOG.error("service function shut down");
     } // offerService
 
     /**
@@ -3150,6 +3157,7 @@ public class DataNode extends Configured
    */
   public boolean isBPServiceAlive(InetSocketAddress addr) {
     NamenodeService bp = blockPoolManager.get(addr);
+    LOG.info("blockPoolManager does not have active thread for "+addr.toString());
     return bp != null ? bp.isAlive() : false;
   }
   
