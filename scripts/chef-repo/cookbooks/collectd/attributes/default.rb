@@ -23,9 +23,10 @@ default[:collectd][:plugin_dir] = "/usr/lib/collectd"
 default[:collectd][:types_db] = ["/usr/share/collectd/types.db"]
 default[:collectd][:read_threads] = 5
 
-default[:collectd][:collectd_web][:path] = "/srv/collectd_web"
-#default[:collectd][:collectd_web][:hostname] = "collectd"
 default[:collectd][:collectd_web][:hostname] = "http://localhost:8888/KTHFSDashboard/rest/collectd"
 default[:collectd][:interval] = 10
 default[:collectd][:server] = "localhost"
-
+# Override config for all clients
+default[:collectd][:config] = "collectd"
+default[:collectd][:data_dir] = "/var/lib/#{default[:collectd][:config]}/rrd"
+default[:collectd][:collectd_web][:path] = "/srv/#{default[:collectd][:config]}_web"

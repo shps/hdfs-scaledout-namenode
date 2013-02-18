@@ -1,0 +1,12 @@
+#!/bin/bash
+
+rootDir=<%= node[:kthfs][:dir] %>/hadoop
+. $rootDir/sbin/scripts/set-env.sh $rootDir
+
+$rootDir/bin/hdfs namenode -format
+
+PID=$!
+
+echo "$PID" > $rootDir/namenode.pid
+exit
+

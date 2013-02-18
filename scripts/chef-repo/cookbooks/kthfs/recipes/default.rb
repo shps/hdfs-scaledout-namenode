@@ -31,3 +31,50 @@ bash 'extract-kthfs' do
 		tar -xf /tmp/#{node[:kthfs][:tarfile]} -C #{node[:kthfs][:dir]}
 	EOH
 end
+
+
+template "#{node[:kthfs][:dir]}/hadoop/etc/hadoop/hdfs-site.xml" do
+  source "hdfs-site.xml.erb"
+  owner "root"
+  group "root"
+  mode "755"
+end
+
+template "#{node[:kthfs][:dir]}/hadoop/etc/hadoop/core-site.xml" do
+  source "core-site.xml.erb"
+  owner "root"
+  group "root"
+  mode "755"
+end
+
+
+%w(namenode-format start-nn stop-nn start-dn stop-dn).each do |file|
+  template "#{node[:kthfs][:dir]}/hadoop/sbin/scripts/#{file}.sh" do
+    source "#{file}.sh.erb"
+    owner "root"
+    group "root"
+    mode "755"
+  end
+end
+
+bash 'format-nn' do
+	user "root"
+	code <<-EOH
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/namenode-format.sh
+	EOH
+# not_if "test -d #{node[:kthfs][:dir]}/hadoop/tmp/dfs/name/current/"
+end
+
+bash 'start-nn' do
+	user "root"
+	code <<-EOH
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/start-nn.sh
+	EOH
+end
+
+bash 'start-dn' do
+	user "root"
+	code <<-EOH
+		#{node[:kthfs][:dir]}/hadoop/sbin/scripts/start-dn.sh
+	EOH
+end

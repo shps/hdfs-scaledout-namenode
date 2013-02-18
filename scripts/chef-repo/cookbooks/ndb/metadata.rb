@@ -8,7 +8,7 @@ long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 
 version          "0.1"
 
-depends "silverware"
+#depends "silverware"
 
 recipe            "ndb::mgmd", "Installs a MySQL Cluster management server (ndb_mgmd)"
 recipe            "ndb::ndbd", "Installs a MySQL Cluster data node (ndbd)"
@@ -21,6 +21,7 @@ end
 # attribute "mysql/password",
 #   :display_name => "MySQL Server Password for 'kthfs' user",
 #   :description => "Password for the 'kthfs' user",
+#   :type => 'string',
 #   :default => "kthfs"
 
 

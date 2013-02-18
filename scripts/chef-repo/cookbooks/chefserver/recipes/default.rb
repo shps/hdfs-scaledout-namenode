@@ -13,7 +13,7 @@
 # http://wiki.opscode.com/display/chef/Installing+Chef+Server+using+Chef+Solo
 
 
-ChefVersion="10.20.0"
+ChefVersion="10.21.0"
 HomeDir="#{node[:chef][:base_dir]}"
 user node[:chef][:user] do
   action :create

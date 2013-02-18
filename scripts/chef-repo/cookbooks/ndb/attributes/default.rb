@@ -2,26 +2,24 @@ default[:ndb][:ndbd][:run_state]  = :stop
 default[:ndb][:mysql_server][:run_state]  = :stop
 default[:ndb][:mgm_server][:run_state]  = :stop
 
-
-
 version="7"
 majorVersion="2"
 minorVersion="10"
 versionStr= "#{version}.#{majorVersion}.#{minorVersion}"
-
+dataNode= "#{node['ipaddress']}"
 default[:ndb][:loglevel]   = "notice"
-default[:ndb][:mgm_server][:addr] = "10.0.2.15"
+default[:ndb][:mgm_server][:addr] = "#{node['ipaddress']}" #10.0.2.15
 default[:ndb][:user]       = "root"
 default[:ndb][:group]      = "root"
 default[:ndb][:port]       = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
 default[:ndb][:package_url] = "http://dev.mysql.com/get/Downloads/MySQL-Cluster-#{version}.#{majorVersion}/mysql-cluster-gpl-#{versionStr}-linux2.6-x86_64.tar.gz"
 default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server][:addr]}:#{ default[:ndb][:port]}"
-default[:ndb][:data_memory] = 50
-default[:ndb][:index_memory] = 10
-default[:ndb][:data_nodes] = %w{ 10.0.2.15 } # cloud8.sics.se cloud9.sics.se cloud16.sics.se 
+default[:ndb][:data_memory] = 80
+default[:ndb][:index_memory] = 20
+default[:ndb][:data_nodes] = ["#{dataNode}"] # %w{  } 
 default[:ndb][:num_replicas] = 1
-default[:ndb][:num_client_slots] = 10
+default[:ndb][:num_client_slots] = 20
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
@@ -43,8 +41,10 @@ default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 
 default[:ndb][:num_clients]  = "20"
 
+# TODO: include kthfsagent recipe, and then remove this.
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
-default[:ndb][:instance] = "hdfs1"
+default[:ndb][:instance] = "kthfs1"
+default[:ndb][:class] = "KTHFS"
 
 default[:ndb][:wait_startup] = 300
 

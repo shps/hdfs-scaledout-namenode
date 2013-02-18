@@ -1,6 +1,5 @@
 include_recipe "ndb"
 
-
 # if bootstrapping
 # node[:ndb][:ndbd] = discover_all(:ndb, :ndbd).map{|svr| [ svr.node[:ndb][:id], svr.node[:ipaddress] ] }.sort!
 # 
@@ -48,4 +47,4 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
 end
 
 
-announce(:ndb, :mgm_server)
+#announce(:ndb, :mgm_server)

@@ -1,7 +1,7 @@
 include_recipe "ndb"
 Chef::Log.info "Memcached for NDB"
 
-theResource="memcache-installer"
+theResource="memcached-installer"
 theService="memcached"
 
 service "#{theService}" do

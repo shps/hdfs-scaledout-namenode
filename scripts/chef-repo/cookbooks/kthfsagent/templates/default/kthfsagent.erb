@@ -23,21 +23,25 @@ RETVAL=0
 
 EXEC_WITH_USER="su <%= node[:kthfs][:user] %> -c"
 
+
 start() {
   echo "Executing as '<%= node[:kthfs][:user] %>': $START_PROG"
-  $EXEC_WITH_USER "$START_PROG"
+#  $EXEC_WITH_USER "$START_PROG"
+  $START_PROG
   return $?
 }
 
 stop() {
   echo "Executing as '<%= node[:kthfs][:user] %>': $STOP_PROG"
-  $EXEC_WITH_USER "$STOP_PROG"
+#  $EXEC_WITH_USER "$STOP_PROG"
+  $STOP_PROG
   return $?
 }
 
 restart() {
   echo "Executing as '<%= node[:kthfs][:user] %>': $RESTART_PROG"
-  $EXEC_WITH_USER "$RESTART_PROG"
+#  $EXEC_WITH_USER "$RESTART_PROG"
+  $RESTART_PROG
   return $?
 }
 

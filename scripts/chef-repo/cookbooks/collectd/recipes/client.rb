@@ -23,14 +23,10 @@ servers = []
 #search(:node, 'recipes:"collectd::server"') do |n|
 #  servers << node['fqdn']
 #end
-  servers << node[:collectd][:server]
+servers << node[:collectd][:server]
 
 if servers.empty?
   raise "No servers found. Please configure at least one node with collectd::server."
 end
 
 
-collectd_plugin "network" do
-  options :server=>servers
-#  options :server=> [#{node[:collectd][:server]}]
-end

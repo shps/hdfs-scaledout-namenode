@@ -6,3 +6,10 @@ long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          "1.0.0"
 supports         "ubuntu"
 
+
+#attribute "collectd/config",
+# :display_name => "Collectd node type",
+# :description => "Collectd node type (collectd-mysql, collectd-ndb, collectd-dn, collectd-nn)"
+#  :type => 'string',
+# :default => "collectd"
+

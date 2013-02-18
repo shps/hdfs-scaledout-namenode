@@ -41,11 +41,11 @@ service_commands["mgmserver"] =         ["start", "stop"]
 service_commands["resourcemanager"] =   ["start", "stop"]
 service_commands["nodemanager"] =       ["start", "stop"]
 
-config_filename = "config.ini"
-services_filename = "services"
-LOG_FILE = "agent.log"
-CERT_FILE = "kthfs.pem"
-KEY_FILE = "kthfs.key"
+config_filename = "<%= node[:kthfs][:base_dir] %>/config.ini"
+services_filename = "<%= node[:kthfs][:base_dir] %>/services"
+LOG_FILE = "<%= node[:kthfs][:base_dir] %>/agent.log"
+CERT_FILE = "<%= node[:kthfs][:base_dir] %>/kthfs.pem"
+KEY_FILE = "<%= node[:kthfs][:base_dir] %>/kthfs.key"
 
 cores = multiprocessing.cpu_count()
 

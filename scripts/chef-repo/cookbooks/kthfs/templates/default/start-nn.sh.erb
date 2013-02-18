@@ -1,0 +1,16 @@
+#!/bin/bash
+
+rootDir=<%= node[:kthfs][:dir] %>/hadoop
+. $rootDir/sbin/scripts/set-env.sh $rootDir
+
+HDFS=$HADOOP_COMMON_HOME/sbin/hadoop-daemon.sh
+
+echo "Starting namenode on ..."
+echo "$HDFS start namenode > $rootDir/logs/namenode.out &"
+$HDFS start namenode > $rootDir/logs/namenode.out &
+result=$?
+
+sleep 5
+
+exit $result
+

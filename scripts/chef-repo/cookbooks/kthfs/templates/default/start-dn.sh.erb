@@ -1,0 +1,12 @@
+#!/bin/bash
+
+rootDir=<%= node[:kthfs][:dir] %>/hadoop
+. $rootDir/sbin/scripts/set-env.sh $rootDir
+
+HDFS=$HADOOP_COMMON_HOME/sbin/hadoop-daemon.sh
+
+echo "Starting the datanode"
+$HDFS start datanode > $rootDir/logs/datanode.out &
+
+exit $?
+
