@@ -1031,6 +1031,7 @@ public class DataNode extends Configured
         if (receivedAndDeletedBlockArray != null) {
           bpNamenode.blockReceivedAndDeleted(bpRegistration, blockPoolId,
                                              receivedAndDeletedBlockArray);
+          //FIXME [S] why is this commented?
           //synchronized (receivedAndDeletedBlockList) {
           for (int i = 0; i < receivedAndDeletedBlockArray.length; i++) {
             receivedAndDeletedBlockList.remove(receivedAndDeletedBlockArray[i]);
@@ -1088,6 +1089,7 @@ public class DataNode extends Configured
      * @throws IOException
      */
     ActiveNamenodeList getActiveNamenodes() throws IOException {
+        
         ActiveNamenodeList list= bpNamenode.sendActiveNamenodes();
         LOG.info("Active namenodes are "+list.toString());
       return list;
@@ -1338,6 +1340,7 @@ public class DataNode extends Configured
               continue;
            }
           }
+          
 
           /*
            * A little background info. about block receive and delete notification to namenode:
@@ -1418,6 +1421,7 @@ public class DataNode extends Configured
           try {
             long sleepTime = Math.min(1000, heartBeatInterval);
             Thread.sleep(sleepTime);
+            
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
           }

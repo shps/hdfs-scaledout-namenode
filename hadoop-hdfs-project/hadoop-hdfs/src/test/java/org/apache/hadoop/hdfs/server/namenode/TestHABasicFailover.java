@@ -32,7 +32,7 @@ public class TestHABasicFailover extends junit.framework.TestCase
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
     int NUM_NAMENODES = 2;
-    int NUM_DATANODES = 1;
+    int NUM_DATANODES = 3;
 
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     /**
@@ -101,8 +101,12 @@ public class TestHABasicFailover extends junit.framework.TestCase
              */
             // Doing a fail back scenario to NN1
             cluster.restartNameNode(NN1); // will be restarted in the system with the next highest id while NN2 is still the leader
-            cluster.waitActive();
+            cluster.waitActive();        
+  
+            waitLeaderElection(cluster.getDataNodes(), cluster.getNameNode(NN2), timeout * 10);
+            
             cluster.shutdownNameNode(NN2);
+            cluster.waitActive();
             
             // waiting for NN1 to elect itself as the leader
             waitLeaderElection(cluster.getDataNodes(), cluster.getNameNode(NN1), timeout * 10);
