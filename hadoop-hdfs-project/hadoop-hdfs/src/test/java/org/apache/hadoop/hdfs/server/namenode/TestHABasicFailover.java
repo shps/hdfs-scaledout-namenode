@@ -45,7 +45,7 @@ public class TestHABasicFailover extends junit.framework.TestCase
     @Test
     public void testFailover()
     {
- 
+
         final int NN1 = 0, NN2 = 1;
         if (NUM_NAMENODES < 2)
         {
@@ -68,16 +68,15 @@ public class TestHABasicFailover extends junit.framework.TestCase
              * **********************************
              */
             // Check NN1 is the leader
-            
-            LOG.info("NameNode 1 id " + cluster.getNameNode(NN1).getId()+" address "+cluster.getNameNode(NN1).getServiceRpcAddress().toString() );
-            LOG.info("NameNode 2 id " + cluster.getNameNode(NN2).getId()+" address "+cluster.getNameNode(NN2).getServiceRpcAddress().toString() );
-            
+            LOG.info("NameNode 1 id " + cluster.getNameNode(NN1).getId() + " address " + cluster.getNameNode(NN1).getServiceRpcAddress().toString());
+            LOG.info("NameNode 2 id " + cluster.getNameNode(NN2).getId() + " address " + cluster.getNameNode(NN2).getServiceRpcAddress().toString());
+
             assertTrue("NN1 is expected to be leader, but is not", cluster.getNameNode(NN1).isLeader());
 
             // performing failover - Kill NN1. This would allow NN2 to be leader
             cluster.shutdownNameNode(NN1);
-            
-            
+
+
 
             // wait for leader to be elected and for Datanodes to also detect the leader
             waitLeaderElection(cluster.getDataNodes(), cluster.getNameNode(NN2), timeout * 10);
@@ -95,19 +94,33 @@ public class TestHABasicFailover extends junit.framework.TestCase
 
             /**
              * **************************************
-             * testing fail-back 
+             * testing fail-back after some interval datanode asks for a
+             * namenode to return all alive namenodes in the system. 
              * 
-             * **************************************
+             * datanode starts new threads for new namenodes. if it finds out that some
+             * previous namenode is dead then the corresponding service thread
+             * is killed.              *
+             * A datanodes find out new namenodes by asking existing name nodes
+             * in the system. what happen data node is connected to X set of
+             * namenodes and they all die suddenly; and after a while Y set of
+             * namenodes come online. datanode will have no way of finding out
+             * namenodes belonging to set Y
+             *
+             * there is no fix for it yet. if such thing happens then restart
+             * datanode with some correct namenode.              *
+             * in the tests such secnaiors are avoided by making sure that
+             * datanodes are connected to atleast one name node after killing
+             * other namenodes. **************************************
              */
             // Doing a fail back scenario to NN1
             cluster.restartNameNode(NN1); // will be restarted in the system with the next highest id while NN2 is still the leader
-            cluster.waitActive();        
-  
+            cluster.waitActive();
+
             waitLeaderElection(cluster.getDataNodes(), cluster.getNameNode(NN2), timeout * 10);
-            
+
             cluster.shutdownNameNode(NN2);
             cluster.waitActive();
-            
+
             // waiting for NN1 to elect itself as the leader
             waitLeaderElection(cluster.getDataNodes(), cluster.getNameNode(NN1), timeout * 10);
             assertTrue("NN1 is expected to be the leader, but is not", cluster.getNameNode(NN1).isLeader());
