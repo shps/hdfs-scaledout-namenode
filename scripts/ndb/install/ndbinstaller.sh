@@ -46,11 +46,11 @@ RELEASE=""
 
 MYSQL_VERSION_MAJOR="7"
 MYSQL_VERSION_MINOR="2"
-MYSQL_VERSION_REV="9"
+MYSQL_VERSION_REV="10"
 
 NDB_VERSION_MAJOR="7"
 NDB_VERSION_MINOR="2"
-NDB_VERSION_REV="9"
+NDB_VERSION_REV="10"
 
 VERSION_PREFIX="mysql-cluster-gpl-"
 #VERSION_PREFIX=""
@@ -309,7 +309,7 @@ WAIT_CLUSTER_ALREADY_RUNNING=2
 NDBD_RESTART_TIMEOUT=300
 
 # User Installation Options Variables
-NUM_NODES=4
+NUM_NODES=2
 INSTALL_LOG="cluster_"installation-${MYSQL_VERSION_MAJOR}.${MYSQL_VERSION_MINOR}.${MYSQL_VERSION_REV}".log"
 
 # Used by 'wget' to download binaries
@@ -404,10 +404,7 @@ cd ndb/scripts\n
 \n
 1. FIRST TIME START OF MYSQL CLUSTER \n
 To start a 2-node cluster for the first time:\n
-./init-start-cluster-2node.sh\n
-\n
-If instead, you want to start a 4-node cluster (for the first time) use:\n
-./init-start-cluster-4node.sh\n
+./init-cluster.sh\n
 \n
 These scripts perform an \"initial start\", where the contents of the\n
 database are deleted. Be care not to call these scripts if you\n
@@ -458,8 +455,8 @@ This stops the ndbd nodes, the ndb_mgmd node and the mysqld node.\n
 You can skip stopping the mysqld node using a switch.\n
 \n
 5. SUBSEQUENT STARTS OF MYSQL CLUSTER (after 1st time)\n
-Non-first-time start of a 2-node cluster is performed using:\n
-./start-noinit-cluster-2node.sh\n
+Non-first-time start of a cluster is performed using:\n
+./start-noinit-cluster.sh\n
 \n
 This script performs a \"normal start\", where the contents of the\n
 database are not deleted. \n
@@ -1482,7 +1479,7 @@ fi
 
 
 ###################################################################################################
-# FUNCTION TO GENERATE config-2node.ini and config-4node.ini FILES
+# FUNCTION TO GENERATE config.ini 
 ###################################################################################################
 
 # $1=NoNodes, $2=NoMYSQLs
@@ -3282,7 +3279,7 @@ make_initd_mgmd()
 start_stop_restart
 
 MGMD_INIT="ndb_mgmd-1"
-CONFIG_INI="$NDB_DIR/config-${NUM_NODES}node.ini"
+CONFIG_INI="$NDB_DIR/config.ini"
 LOGGING="> $NDB_LOGS_DIR/mgmd-stdout-1.log 2>&1"
 # > /dev/null"
 
@@ -5256,12 +5253,11 @@ setup_config_ini()
 
    echo "" $ECHO_OUT
    echo "To change these configuration parameters, edit the configuration file(s): " $ECHO_OUT  
-   if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
-       echo "$NDB_DIR/config-4node.ini" $ECHO_OUT
-       echo "$NDB_DIR/config-2node.ini" $ECHO_OUT
-   else
-       echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
-   fi
+   #if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
+       echo "$NDB_DIR/config.ini" $ECHO_OUT
+   #else
+       #echo "$NDB_DIR/configUM_NODES}node.ini" $ECHO_OUT
+   #fi
    echo "" $ECHO_OUT
    echo "Note: Perform a rolling restart for changes in these parameters to take effect." $ECHO_OUT  
 
@@ -5352,11 +5348,11 @@ setup_config_scripts()
     echo "--- Creating Cluster Config File (config.ini) ---" $ECHO_OUT
     echo "" $ECHO_OUT
     echo "Creating cluster configuration files:" $ECHO_OUT
-    if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
+  #  if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] ; then 
 	echo "$NDB_DIR/config.ini" $ECHO_OUT
-    else
-	echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
-    fi
+  #  else
+#	echo "$NDB_DIR/config-${NUM_NODES}node.ini" $ECHO_OUT
+#    fi
 
     if [ "$DISTRIBUTED" != "0" ] ; then
       make_config_ini $NUM_NODES
@@ -6178,12 +6174,12 @@ start_cluster()
         }
        if [ $INSTALL_ACTION -eq $INSTALL_LOCALHOST ] && [ $MGM_RUNNING -eq 0 ]  ; then
            #start_num_nodes
-           NUM_NODES_TO_START=4
+           NUM_NODES_TO_START=2
            echo "" $ECHO_OUT
            echo "Starting the cluster with $NUM_NODES_TO_START data nodes by running:" $ECHO_OUT 
-           echo "\$NDB_HOME/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}" $ECHO_OUT
+           echo "\$NDB_HOME/scripts/${INIT_START}.sh" $ECHO_OUT
            echo "" $ECHO_OUT
-           ${NDB_DIR}/scripts/$INIT_START-${NUM_NODES_TO_START}${CLUSTER_START}  
+           ${NDB_DIR}/scripts/${INIT_START}.sh
            #>> $INSTALL_LOG 
            # wait for the mysqld to join as well
            if [ $? -eq 2 ] ; then
