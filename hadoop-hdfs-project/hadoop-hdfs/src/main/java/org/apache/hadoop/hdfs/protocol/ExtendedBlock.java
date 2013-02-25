@@ -55,17 +55,20 @@ public class ExtendedBlock implements Writable {
   }
   
   public ExtendedBlock(final String poolId, final long blockId) {
+      
     this(poolId, blockId, 0, 0);
+    NameNode.LOG.info("ExtendedBlock() about to be instantiated with poolId " + poolId);
   }
   
   public ExtendedBlock(String poolId, Block b) {
-	  NameNode.LOG.debug("[thesis] ExtendedBlock() about to be instantiated with poolId " + poolId);
+    NameNode.LOG.info("ExtendedBlock() about to be instantiated with poolId " + poolId);
     this.poolId = poolId;
     this.block = b;
   }
 
   public ExtendedBlock(final String poolId, final long blkid, final long len,
       final long genstamp) {
+      NameNode.LOG.info("ExtendedBlock() about to be instantiated with poolId " + poolId);
     this.poolId = poolId;
     block = new Block(blkid, len, genstamp);
   }

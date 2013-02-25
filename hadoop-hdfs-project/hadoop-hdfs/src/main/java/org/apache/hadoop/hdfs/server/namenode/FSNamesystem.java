@@ -1825,7 +1825,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void setBlockPoolId(String bpid) {
-    //blockPoolId = bpid; //[thesis]
+    blockPoolId = bpid; 
   }
 
   /**

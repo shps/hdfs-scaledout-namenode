@@ -967,12 +967,19 @@ public class NNStorage extends Storage implements Closeable {
       LOG.warn("Could not use SecureRandom");
       rand = DFSUtil.getRandom().nextInt(Integer.MAX_VALUE);
     }
-    String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+     //String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+    // [J] We need to make the block pool id consistent among all namenodes
+    String bpid = "h4ck3d-810ck-p001";
     return bpid;
   }
 
   /** Validate and set block pool ID */
   void setBlockPoolID(String bpid) {
+      if(!bpid.equals("h4ck3d-810ck-p001"))
+      {
+          LOG.error("wrong block pool id is set expecting h4ck3d-810ck-p001 and got "+ bpid);
+          throw new IllegalStateException("wrong block pool id is set expecting h4ck3d-810ck-p001 and got "+ bpid);
+      }
     blockpoolID = bpid;
   }
 
@@ -992,6 +999,11 @@ public class NNStorage extends Storage implements Closeable {
   }
   
   public String getBlockPoolID() {
+      if(blockpoolID == null || !blockpoolID.equals("h4ck3d-810ck-p001"))
+      {
+          LOG.error("wrong block pool id expecting h4ck3d-810ck-p001");
+          throw new IllegalStateException("wrong block pool id ");
+      }
     return blockpoolID;
   }
 
