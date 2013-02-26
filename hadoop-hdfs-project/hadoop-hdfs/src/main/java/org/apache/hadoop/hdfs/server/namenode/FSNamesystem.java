@@ -3672,16 +3672,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      *
      * @return true if in safe mode
      */
-    // TODO - JIM Why are some methods synchronized and others not?
-    private synchronized boolean isOn() throws PersistanceException {
-      try {
-        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
-                + "Total num of blocks, active blocks, or "
-                + "total safe blocks don't match.";
-      } catch (IOException e) {
-        System.err.print(StringUtils.stringifyException(e));
-      }
-      return this.reached >= 0;
+    private boolean isOn() throws PersistanceException {
+      //TODO [lock]
+      return false;
+//      try {
+//        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
+//                + "Total num of blocks, active blocks, or "
+//                + "total safe blocks don't match.";
+//      } catch (IOException e) {
+//        System.err.print(StringUtils.stringifyException(e));
+//      }
+//      return this.reached >= 0;
     }
 
     /**
@@ -3894,10 +3895,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @throws IOException
      */
     private synchronized void decrementSafeBlockCount(short replication) throws IOException, PersistanceException {
-      if (safeMode.isOn()) {
-        // TODO JIM update safeblock count
-//                updateSafeBlockCount();
-      }
       if (replication == safeReplication - 1) {
         this.blockSafe--;
       }
@@ -4135,7 +4132,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public void checkSafeMode() throws IOException, PersistanceException {
     // safeMode is volatile, and may be set to null at any time
-    if (this.safeMode != null) {
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode != null) {
       safeMode.checkMode();
     }
   }
@@ -4143,7 +4141,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public boolean isInSafeMode() throws PersistanceException {
     // safeMode is volatile, and may be set to null at any time
-    if (this.safeMode == null) {
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) {
       return false;
     }
     return safeMode.isOn();
@@ -4152,7 +4151,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public boolean isInStartupSafeMode() throws PersistanceException {
     // safeMode is volatile, and may be set to null at any time
-    if (this.safeMode == null) {
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) {
       return false;
     }
     return !safeMode.isManual() && safeMode.isOn();
@@ -4161,7 +4161,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public boolean isPopulatingReplQueues() {
     // safeMode is volatile, and may be set to null at any time
-    if (this.safeMode == null) {
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) {
       return true;
     }
     return safeMode.isPopulatingReplQueues();
@@ -4182,7 +4183,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // safeMode is volatile, and may be set to null at any time
     // TODO - JIM - HK: what is this code? Why have a local variable point to
     // SafeModeInfo's field
-    if (this.safeMode == null) // mostly true
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) // mostly true
     {
       return;
     }
