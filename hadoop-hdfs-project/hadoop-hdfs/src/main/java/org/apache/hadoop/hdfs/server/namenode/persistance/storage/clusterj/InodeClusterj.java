@@ -259,6 +259,7 @@ public class InodeClusterj extends InodeDataAccess {
       Query<InodeDTO> query = session.createQuery(dobj);
       query.setParameter("param", ids.toArray());
       List<InodeDTO> results = query.getResultList();
+      List<INode> inodes = null;
       return createInodeList(results);
     } catch (Exception e) {
       throw new StorageException(e);

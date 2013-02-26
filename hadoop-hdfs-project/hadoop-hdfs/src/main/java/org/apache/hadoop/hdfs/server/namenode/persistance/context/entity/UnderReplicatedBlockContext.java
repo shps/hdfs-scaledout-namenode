@@ -63,7 +63,7 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
         log("count-all-urblocks");
         // TODO - use a cache here...
         
-          return dataAccess.countAll();
+        return findList(UnderReplicatedBlock.Finder.All).size();
 //        return findList(UnderReplicatedBlock.Finder.All).size();
       case ByLevel:
         Integer level = (Integer) params[0];

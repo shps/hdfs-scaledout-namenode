@@ -2512,7 +2512,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, SafeModeException, UnresolvedLinkException,
           IOException, PersistanceException {
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
-    boolean deleteNow = false;
 
     try {
       if (isInSafeMode()) {

@@ -84,8 +84,8 @@ public class TestHAReadWrite extends junit.framework.TestCase {
       assertNotSame(0, fs.getFileBlockLocations(file1, 0, 1).length);
 
       // Now we kill all namenodes except the last two
-//      cluster.getNameNode(0).stop();
-//      cluster.getNameNode(1).stop();
+      cluster.getNameNode(0).stop();
+      cluster.getNameNode(1).stop();
 
       // Now lets read again - These operations should be possible
       assertTrue(fs.exists(file1));
@@ -114,7 +114,7 @@ public class TestHAReadWrite extends junit.framework.TestCase {
 
       // Write operation - Delete
       assertTrue(fs.delete(dir, true));
-
+        
     } catch (IOException ex) {
       // In case we have any connectivity issues here, there is a problem
       // All connectivitiy issues are handled in the above piece of code

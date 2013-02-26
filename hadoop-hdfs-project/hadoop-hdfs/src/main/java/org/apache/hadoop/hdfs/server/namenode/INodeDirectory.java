@@ -107,29 +107,14 @@ public class INodeDirectory extends INode {
         return true;
     }
 
-    public INode removeChild(INode node) throws PersistanceException {
-
-        int low = Collections.binarySearch(getChildren(), node.name);
-        if (low >= 0) {
-            List<INode> children = getChildren();
-            INode removedChild = children.remove(low);
-            // TODO - JIM why cache all children? We can't validate them when reading from the cache?
-//            if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
-//                MemcacheForINode.getInstance().putChildren(id, children);
-//            }            
-            return removedChild;
-        } else {
-            return null;
-        }
-
-        // TODO JIM this is HK's old code. Is it correct/complete?
-//        //this does take care of in memory removals only
-//        if (children != null && getChildren().contains(node)) {
-//            getChildren().remove(node);
-//            return node;
-//        }
-//        return node;
+      public INode removeChild(INode node) throws PersistanceException {
+    //this does take care of in memory removals only
+    if (children != null && getChildren().contains(node)) {
+      getChildren().remove(node);
+      return node;
     }
+    return node;
+  }
 
     /**
      * Replace a child that has the same name as newChild by newChild.
