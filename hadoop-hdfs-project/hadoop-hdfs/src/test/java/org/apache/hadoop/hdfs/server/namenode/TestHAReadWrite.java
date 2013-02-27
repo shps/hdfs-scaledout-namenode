@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ public class TestHAReadWrite extends junit.framework.TestCase {
   }
   final Path dir = new Path("/test/HA/");
 
-  static int countLease(MiniDFSCluster cluster) throws IOException {
+  static int countLease(MiniDFSCluster cluster) throws IOException, PersistanceException {
     return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
 

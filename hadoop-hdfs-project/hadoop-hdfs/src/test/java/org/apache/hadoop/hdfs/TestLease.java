@@ -43,7 +43,7 @@ public class TestLease {
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager.acquireByLeasePath(
-                src.getName(),
+                src.toString(),
                 TransactionLockManager.LockType.READ,
                 TransactionLockManager.LockType.WRITE);
       }
@@ -55,7 +55,7 @@ public class TestLease {
     }.handle();
   }
   
-  final Path dir = new Path("/test/lease/");
+  final Path dir = new Path("/");
 
   @Test
   public void testLease() throws Exception {

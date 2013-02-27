@@ -51,9 +51,9 @@ public class TransactionLockAcquirer {
 
   public static <T> T acquireLock(TransactionLockManager.LockType lock, FinderType<T> finder, Object... param) throws PersistanceException {
     setLockMode(lock);
-//    if (param == null) {
-//      return null;
-//    }
+    if (param == null) {
+      return null;
+    }
     return EntityManager.find(finder, param);
   }
 
@@ -142,10 +142,10 @@ public class TransactionLockAcquirer {
       if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count[0] + 1 == components.length - 1))
               || (lock == INodeLockType.WRITE_ON_PARENT && (count[0] + 1 == components.length - 2))) {
         EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
-      } else if (lock == INodeLockType.READ) {
-        EntityManager.readLock();
-      } else {
+      } else if (lock == INodeLockType.READ_COMMITED) {
         EntityManager.readCommited();
+      } else {
+        EntityManager.readLock();
       }
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
       if (lastComp)

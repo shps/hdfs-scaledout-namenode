@@ -4757,10 +4757,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     //[H]: No need to persist blocks in KTHFS.
     // persist blocks only if append is supported
-    String src = leaseManager.findPath(pendingFile);
-    if (supportAppends) {
-      dir.persistBlocks(src, pendingFile);
-    }
+    // FIXME [S] was commented in lock_analysis branch. uncommenting it throws 
+    // exception and 
+    // dir.persistBlcks(...,...) does nothing 
+//    String src = leaseManager.findPath(pendingFile);
+//    if (supportAppends) {
+//      dir.persistBlocks(src, pendingFile);
+//    }
   }
 
   // rename was successful. If any part of the renamed subtree had

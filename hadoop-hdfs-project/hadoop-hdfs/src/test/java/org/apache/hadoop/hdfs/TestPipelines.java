@@ -90,7 +90,7 @@ public class TestPipelines {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + METHOD_NAME);
     }
-    Path filePath = new Path("/" + METHOD_NAME + ".dat");
+    Path filePath = new Path("/test/" + METHOD_NAME + ".dat");
 
     DFSTestUtil.createFile(fs, filePath, FILE_SIZE, REPL_FACTOR, rand.nextLong());
     if(LOG.isDebugEnabled()) {

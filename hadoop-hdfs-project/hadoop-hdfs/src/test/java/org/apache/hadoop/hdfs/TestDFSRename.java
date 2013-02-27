@@ -25,11 +25,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 
 public class TestDFSRename extends junit.framework.TestCase {
 
-  static int countLease(MiniDFSCluster cluster) throws IOException {
+  static int countLease(MiniDFSCluster cluster) throws IOException, PersistanceException {
     return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
   }
   final Path dir = new Path("/test/rename/");
