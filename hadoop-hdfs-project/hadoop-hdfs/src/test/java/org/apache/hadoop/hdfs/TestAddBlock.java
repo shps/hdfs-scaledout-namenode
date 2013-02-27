@@ -15,7 +15,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import static org.junit.Assert.assertTrue;
 /**
  *
  * @author Hooman <hooman@sics.se>
@@ -24,6 +24,7 @@ public class TestAddBlock {
 
     public static final Log LOG = LogFactory.getLog(TestAddBlock.class.getName());
     private final short DATANODES = 5;
+    short replicas = 5;
     private int seed = 139;
     private int blockSize = 8192;
     Configuration conf;
@@ -42,6 +43,7 @@ public class TestAddBlock {
             IOUtils.closeStream(dfs);
         }
         cluster.shutdown();
+        System.out.println("closed");
     }
 
     /**
@@ -60,8 +62,8 @@ public class TestAddBlock {
         // create a new file.
         //
         Path file1 = new Path("/hooman.dat");
-        short replicas = 3;
-        FSDataOutputStream strm = createFile(dfs, file1, 3);
+
+        FSDataOutputStream strm = createFile(dfs, file1, replicas);
         LOG.info("testAddBlock: "
                 + "Created file hooman.dat with " + replicas + " replicas.");
         LocatedBlocks locations = client.getNamenode().getBlockLocations(
@@ -84,9 +86,12 @@ public class TestAddBlock {
         LocatedBlock location = locations.getLocatedBlocks().get(0);
         
         //check the number of replicas
-        assert location != null;
-        assert location.getLocations().length == replicas;
+        assertTrue("Location is null", location != null);
+        assertTrue("wrong nubmer of blocks. blocks are "
+                +location.getLocations().length
+                +" expected were "+replicas, location.getLocations().length == replicas);
 
+        
         //Check the validity of the replicas.
         for (DatanodeInfo dn : location.getLocations()) {
             assert dn != null;
