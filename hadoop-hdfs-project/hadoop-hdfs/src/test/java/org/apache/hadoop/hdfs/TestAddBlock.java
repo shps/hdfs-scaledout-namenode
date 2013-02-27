@@ -2,6 +2,8 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,7 +77,12 @@ public class TestAddBlock {
         writeFile(strm, blockSize);
         strm.hflush();
         strm.close();
-
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(TestAddBlock.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         locations = client.getNamenode().getBlockLocations(
                 file1.toString(), 0, Long.MAX_VALUE);
 
