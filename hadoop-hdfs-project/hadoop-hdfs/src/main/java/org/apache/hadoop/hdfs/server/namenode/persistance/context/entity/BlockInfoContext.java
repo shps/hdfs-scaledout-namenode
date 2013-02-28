@@ -83,6 +83,10 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         long id = (Long) params[0];
         result = blocks.get(id);
         if (result == null && !blocks.containsKey(id)) { // a key may have null object associated with it
+                                                         // some test intentionally look for blocks that are not in the DB
+                                                         // duing the acquire lock phase if we see that an id does not
+                                                         // exist in the db then we should put null in the cache for that id
+
           log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           aboutToAccessStorage();
           result = dataAccess.findById(id);
