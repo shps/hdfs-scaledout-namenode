@@ -82,7 +82,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
       case ById:
         long id = (Long) params[0];
         result = blocks.get(id);
-        if (result == null) {
+        if (result == null && !blocks.containsKey(id)) { // a key may have null object associated with it
           log("find-block-by-bid", CacheHitState.LOSS, new String[]{"bid", Long.toString(id)});
           aboutToAccessStorage();
           result = dataAccess.findById(id);

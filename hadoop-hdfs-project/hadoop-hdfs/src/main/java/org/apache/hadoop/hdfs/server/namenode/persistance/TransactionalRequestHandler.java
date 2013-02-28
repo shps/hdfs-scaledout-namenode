@@ -48,6 +48,7 @@ public abstract class TransactionalRequestHandler extends RequestHandler{
             acquireLock();
             EntityManager.preventStorageCall();
           }
+          log.debug("perform tx "+opType.name());
           return performTask();
         } catch (TransactionContextException ex) {
           log.error("Could not perfortm task", ex);
