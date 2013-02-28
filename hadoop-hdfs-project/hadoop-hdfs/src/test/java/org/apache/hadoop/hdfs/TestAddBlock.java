@@ -77,11 +77,15 @@ public class TestAddBlock {
         writeFile(strm, blockSize);
         strm.hflush();
         strm.close();
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(TestAddBlock.class.getName()).log(Level.SEVERE, null, ex);
+       
+        try{
+            // file is closed when min replication is reached.
+            // wait until all data nodea have written the blocks
+            Thread.sleep(5000);
+        }catch(Exception e){
+            
         }
+        
         
         locations = client.getNamenode().getBlockLocations(
                 file1.toString(), 0, Long.MAX_VALUE);
@@ -99,7 +103,7 @@ public class TestAddBlock {
                 +" expected were "+replicas, location.getLocations().length == replicas);
 
         
-        //Check the validity of the replicas.
+        //Check the validity of the replicas.8
         for (DatanodeInfo dn : location.getLocations()) {
             assert dn != null;
         }
