@@ -93,18 +93,18 @@ ReceiveBufferMemory=2M
 <% for node in node[:ndb][:mgm_server][:addrs] %>
 [NDB_MGMD]
 NodeId=<%= node[:mgm][:id] += id %>
-HostName=<%= mgmd#{id} %>
+HostName=<%= mgmd %><% id %>
 PortNumber=<%= node[:ndb][:mgm_server][:port] %>
 DataDir=<%= node[:ndb][:log_dir] %>
 LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6
-ArbitrationRank=#{id}
+ArbitrationRank=<% id %>
 <% id += 1 %>
 <% end %>
 
 <% id = 1 %>
 <% for node in node[:ndb][:ndbd][:addrs] %>
 [NDBD]
-HostName=<%= ndbd#{id} %>
+HostName=<%= ndbd %><% id %>
 DataDir=<%= node[:ndb][:log_dir] %>
 FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
 NodeId=<%= id %>
@@ -120,19 +120,19 @@ ServerPort=<%= 10000 + id %>
 <% for node in node[:ndb][:mysql_server][:addrs] %>
 [MYSQLD]
 NodeId=<%= node[:mysql][:id] += id %>
-HostName=<% mysqld#{id} %>
+HostName=<%= mysqld %><% id %>
 <% end %>
 
 # Memcached Servers
 <% for node in node[:ndb][:memcached][:addrs] %>
 [API]
 NodeId=<%= node[:memcached][:id] += id %>
-HostName=<% memcached#{id} %>
+HostName=<%= memcached %><% id %>
 <% end %>
 
 # Clusterj clients
 <% for node in node[:ndb][:clusterj][:addrs] %>
 [API]
 NodeId=<%= node[:mysql][:id] += id %>
-HostName=<% clusterj#{id} %>
+HostName=<%= clusterj %><% id %>
 <% end %>
