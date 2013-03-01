@@ -3154,14 +3154,18 @@ public class BlockManager {
         }
         BlockInfo bi = getStoredBlock(block);
         if (bi != null) {
-            INodeFile iNode = bi.getINode();
-            if (iNode != null) {
-                iNode.removeBlock(bi);
-            }
-            bi.setINode(null);
-            for (IndexedReplica replica : bi.getReplicas()) {
-                EntityManager.remove(replica);
-            }
+//            INodeFile iNode = bi.getINode();
+//            if (iNode != null) {
+//                iNode.removeBlock(bi);      //TODO [S] does not remove any thing 
+//                                            //it modifies the block's record in db
+//                                            //its appeart that this is redundant as the 
+//                                            // modified row will be deleted later in this
+//                                            // transaction
+//            }
+//            bi.setINode(null);
+//            for (IndexedReplica replica : bi.getReplicas()) {
+//                EntityManager.remove(replica);
+//            }
 
             if (bi instanceof BlockInfoUnderConstruction) {
                 for (ReplicaUnderConstruction ruc : ((BlockInfoUnderConstruction) bi).getExpectedReplicas()) {
@@ -3170,11 +3174,19 @@ public class BlockManager {
             }
             EntityManager.remove(bi);
 
-            // Remove all the replicas for this block
+            // Remove all the replicas for this block           // TODO [S] didnt we do this above
             Collection<IndexedReplica> replicas = EntityManager.findList(IndexedReplica.Finder.ByBlockId, block.getBlockId());
             for (IndexedReplica r : replicas) {
                 EntityManager.remove(r);
             }
+            
+            // Remove all the under entries from the under replicated blocks table
+            UnderReplicatedBlock urb = EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId());
+            System.out.println(urb);
+            if(urb != null)
+            {
+                EntityManager.remove(urb);
+            }           
         }
     }
 

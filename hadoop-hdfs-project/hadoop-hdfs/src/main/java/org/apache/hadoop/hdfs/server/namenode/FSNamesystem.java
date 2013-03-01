@@ -2472,6 +2472,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addReplica(TransactionLockManager.LockType.WRITE).
                 addCorrupt(TransactionLockManager.LockType.WRITE).
                 addReplicaUc(TransactionLockManager.LockType.WRITE).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
       }
     };
