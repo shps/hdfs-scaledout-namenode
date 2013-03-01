@@ -1,23 +1,27 @@
-default[:ndb][:ndbd][:run_state]  = :stop
-default[:ndb][:mysql_server][:run_state]  = :stop
-default[:ndb][:mgm_server][:run_state]  = :stop
 
 version="7"
 majorVersion="2"
 minorVersion="10"
 versionStr= "#{version}.#{majorVersion}.#{minorVersion}"
 dataNode= "#{node['ipaddress']}"
+# IP addresses of the mgm-server, ndbds must be overridden by role/recipe caller.
+default[:ndb][:mgm_server][:addrs] = "[]"  #[\"#{node['ipaddress']}\"]" 
+default[:ndb][:mgm_server][:port]  = "1186"
+default[:ndb][:ndbd][:addrs] = "[]"
+default[:ndb][:mysql_server][:addrs] = "[]"
+default[:ndb][:clusterj][:addrs] = "[]"
+default[:ndb][:memcached][:addrs] = "[]"
+default[:ndb][:my_ip] = ""
+
 default[:ndb][:loglevel]   = "notice"
-default[:ndb][:mgm_server][:addr] = "#{node['ipaddress']}" #10.0.2.15
 default[:ndb][:user]       = "root"
 default[:ndb][:group]      = "root"
-default[:ndb][:port]       = "1186"
 default[:ndb][:package_src] = "from/http://cdn.mysql.com/"
 default[:ndb][:package_url] = "http://dev.mysql.com/get/Downloads/MySQL-Cluster-#{version}.#{majorVersion}/mysql-cluster-gpl-#{versionStr}-linux2.6-x86_64.tar.gz"
-default[:ndb][:connect_string] = "#{default[:ndb][:mgm_server][:addr]}:#{ default[:ndb][:port]}"
+default[:ndb][:connect_string] = ""
 default[:ndb][:data_memory] = 80
 default[:ndb][:index_memory] = 20
-default[:ndb][:data_nodes] = ["#{dataNode}"] # %w{  } 
+#default[:ndb][:data_nodes] = ["#{dataNode}"] # %w{ } 
 default[:ndb][:num_replicas] = 1
 default[:ndb][:num_client_slots] = 20
 
@@ -39,7 +43,8 @@ default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 
-default[:ndb][:num_clients]  = "20"
+#work out the number of clients supplied above
+#default[:ndb][:num_clients]  = "20"
 
 # TODO: include kthfsagent recipe, and then remove this.
 default[:ndb][:kthfs_services] = "/var/lib/kthfsagent/services"
@@ -54,12 +59,13 @@ default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
 
 
-default[:collectd][:conf] = "/etc/collectd/collectd.conf"
+# Chef loads attributes in alphabetical order. If you want to pre-load collectd attributes, use 'include_attribute'
+#include_attribute "collectd"
+#default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
-
-default[:mgm][:id] = 49
-default[:mysql][:id] = 50
-default[:memcached][:id] = 51
+default[:mgm][:id] = 48
+default[:mysql][:id] = 52
+default[:memcached][:id] = 70
 
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64
