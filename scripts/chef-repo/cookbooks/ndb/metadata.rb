@@ -35,23 +35,29 @@ attribute "ndb/ndbd/addrs",
 :type => 'array',
 :default => ""
 
-attribute "ndb/mysql_server/addrs",
-:display_name => "MySQL server IP addresses in MySQL Cluster",
-:description => "List of IP addresses of mysqld processes (mysql servers)",
+attribute "ndb/ndbapi/addrs",
+:display_name => "API client IP addresses",
+:description => "List of IP addresses of mysqld, clusterj, and memcached processes (mysql servers, java client apps, memcached servers).",
 :type => 'array',
 :default => ""
 
-attribute "ndb/memcached/addrs",
-:display_name => "Memcached server IP addresses in MySQL Cluster",
-:description => "List of IP addresses of memcached processes (memcached servers)",
-:type => 'array',
-:default => ""
+# attribute "ndb/mysql_server/addrs",
+# :display_name => "MySQL server IP addresses in MySQL Cluster",
+# :description => "List of IP addresses of mysqld processes (mysql servers)",
+# :type => 'array',
+# :default => ""
 
-attribute "ndb/clusterj/addrs",
-:display_name => "Cluster/J IP addresses in MySQL Cluster",
-:description => "List of IP addresses of cluster/j processes (ndb clients)",
-:type => 'array',
-:default => ""
+# attribute "ndb/memcached/addrs",
+# :display_name => "Memcached server IP addresses in MySQL Cluster",
+# :description => "List of IP addresses of memcached processes (memcached servers)",
+# :type => 'array',
+# :default => ""
+
+# attribute "ndb/clusterj/addrs",
+# :display_name => "Cluster/J IP addresses in MySQL Cluster",
+# :description => "List of IP addresses of cluster/j processes (ndb clients)",
+# :type => 'array',
+# :default => ""
 
 attribute "ndb/my_ip",
 :display_name => "IP address",

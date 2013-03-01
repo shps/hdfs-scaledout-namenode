@@ -8,9 +8,7 @@ dataNode= "#{node['ipaddress']}"
 default[:ndb][:mgm_server][:addrs] = "[]"  #[\"#{node['ipaddress']}\"]" 
 default[:ndb][:mgm_server][:port]  = "1186"
 default[:ndb][:ndbd][:addrs] = "[]"
-default[:ndb][:mysql_server][:addrs] = "[]"
-default[:ndb][:clusterj][:addrs] = "[]"
-default[:ndb][:memcached][:addrs] = "[]"
+default[:ndb][:ndbapi][:addrs] = "[]"
 default[:ndb][:my_ip] = ""
 
 default[:ndb][:loglevel]   = "notice"
@@ -63,9 +61,8 @@ default[:mysql][:password]  = "kthfs"
 #include_attribute "collectd"
 #default[:collectd][:conf] = "/etc/collectd/collectd.conf"
 
-default[:mgm][:id] = 48
+default[:mgm][:id] = 49
 default[:mysql][:id] = 52
-default[:memcached][:id] = 70
 
 # Size in MB of memcached cache
 default[:memcached][:mem_size] = 64

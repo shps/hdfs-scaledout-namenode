@@ -5,11 +5,11 @@
 
 [NDBD DEFAULT]
 #Used by ndbmdmt to determine the number of LQH threads
-<% cpus = (@cores / 2) + 1 %>
+<%= cpus = (@cores / 2) + 1 %>
 <% if cpus < 2
      cpus =2 
    end
-%>
+-%>
 MaxNoOfExecutionThreads=<%= cpus  %>
 
 #More flexible than MaxNoOfExecutionThreads
@@ -89,50 +89,39 @@ ODirect=1
 SendBufferMemory=2M
 ReceiveBufferMemory=2M
 
-<% id = 0 %>
-<% for node in node[:ndb][:mgm_server][:addrs] %>
+<% id = node[:mgm][:id] -%>
+<% rank = 0 -%>
+<% for mgmd in node[:ndb][:mgm_server][:addrs] -%>
 [NDB_MGMD]
-NodeId=<%= node[:mgm][:id] += id %>
-HostName=<%= mgmd %><% id %>
+NodeId=<%= id %>
+HostName=mgmd<%= id %>
 PortNumber=<%= node[:ndb][:mgm_server][:port] %>
 DataDir=<%= node[:ndb][:log_dir] %>
 LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6
-ArbitrationRank=<% id %>
-<% id += 1 %>
-<% end %>
+ArbitrationRank=<%= rank %>
+<% id += 1 -%>
+<% rank += 1 -%>
+<% end -%>
 
-<% id = 1 %>
-<% for node in node[:ndb][:ndbd][:addrs] %>
-[NDBD]
-HostName=<%= ndbd %><% id %>
+<% id = 1 -%>
+<% port = 10000 -%>
+<% for ndbdNode in node[:ndb][:ndbd][:addrs] -%>
+[NDBD] 
+NodeId=<%= id %>
+HostName=ndbd<%= id %>
+ServerPort=<%= port %>
 DataDir=<%= node[:ndb][:log_dir] %>
 FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
+<% id += 1 -%>
+<% port += 1 -%>
+<% end -%>
+
+# MySQL Servers, Clusterj clients, and Memcached servers
+<% id = node[:mysql][:id] -%>
+<% for ndbapi in node[:ndb][:ndbapi][:addrs] -%>
+[API]
 NodeId=<%= id %>
-# ServerPort is set to know what ports to forward in Vagrant
-ServerPort=<%= 10000 + id %>
-#LockExecuteThreadToCPU=
-#LockMaintThreadToCPU=
-<% id += 1 %>
-<% end %>
+HostName=ndbapi<%= id %>
+<% id += 1 -%>
+<% end -%>
 
-# MySQL Servers
-<% id = 1 %>
-<% for node in node[:ndb][:mysql_server][:addrs] %>
-[MYSQLD]
-NodeId=<%= node[:mysql][:id] += id %>
-HostName=<%= mysqld %><% id %>
-<% end %>
-
-# Memcached Servers
-<% for node in node[:ndb][:memcached][:addrs] %>
-[API]
-NodeId=<%= node[:memcached][:id] += id %>
-HostName=<%= memcached %><% id %>
-<% end %>
-
-# Clusterj clients
-<% for node in node[:ndb][:clusterj][:addrs] %>
-[API]
-NodeId=<%= node[:mysql][:id] += id %>
-HostName=<%= clusterj %><% id %>
-<% end %>

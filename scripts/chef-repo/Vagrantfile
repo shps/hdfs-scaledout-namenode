@@ -46,18 +46,8 @@ Vagrant::Config.run do |config|
 		       }
       },
       :ndb => {
-        :mysql_servers => { 
-		       :addrs => ["10.0.2.15"]
-		       }
-      },
-      :ndb => {
-        :memcached => { 
-		       :addrs => ["10.0.2.15"]
-		       }
-      },
-      :ndb => {
-        :clusterj => { 
-		       :addrs => ["10.0.2.15"]
+        :ndbapi => { 
+		       :addrs => ["10.0.2.15","10.0.2.15","10.0.2.15"]
 		       }
       },
       :ndb => { 
