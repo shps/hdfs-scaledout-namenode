@@ -5,7 +5,7 @@
 
 [NDBD DEFAULT]
 #Used by ndbmdmt to determine the number of LQH threads
-<%= cpus = (@cores / 2) + 1 %>
+<% cpus = (@cores / 2) + 1 -%>
 <% if cpus < 2
      cpus =2 
    end
@@ -50,11 +50,6 @@ TransactionInactiveTimeout=10000
 
 TransactionDeadlockDetectionTimeout=10000
 
-[MYSQLD DEFAULT]
-
-[NDB_MGMD DEFAULT]
-
-[NDBD DEFAULT]
 #0: Disables locking. This is the default value.
 #1: Performs the lock after allocating memory for the process.
 #2: Performs the lock before memory for the process is allocated.
@@ -85,11 +80,16 @@ BackupMemory        =   20M
 
 # Needs root privileges
 ODirect=1
+
+[MYSQLD DEFAULT]
+
+[NDB_MGMD DEFAULT]
+
 [TCP DEFAULT]
 SendBufferMemory=2M
 ReceiveBufferMemory=2M
 
-<% id = node[:mgm][:id] -%>
+<% id = @mgm_id -%>
 <% rank = 0 -%>
 <% for mgmd in node[:ndb][:mgm_server][:addrs] -%>
 [NDB_MGMD]
@@ -117,11 +117,15 @@ FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
 <% end -%>
 
 # MySQL Servers, Clusterj clients, and Memcached servers
-<% id = node[:mysql][:id] -%>
+<% hostId = @mysql_id -%>
+<% nodeId = @mysql_id -%>
 <% for ndbapi in node[:ndb][:ndbapi][:addrs] -%>
-[API]
-NodeId=<%= id %>
-HostName=ndbapi<%= id %>
-<% id += 1 -%>
+<% for count in 0..3 -%>
+[MYSQLD]
+NodeId=<%= nodeId %>
+HostName=ndbapi<%= hostId %>
+<% nodeId += 1 -%>
+<% end -%>
+<% hostId += 1 -%>
 <% end -%>
 

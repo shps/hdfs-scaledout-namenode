@@ -40,7 +40,9 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
   group node[:ndb][:user]
   mode 0644
   variables({
-              :cores => node[:cpu][:total]
+              :cores => node[:cpu][:total],
+              :mgm_id => node[:mgm][:id],
+              :mysql_id => node[:mysql][:id]
             })
   notifies :restart, resources(:service => "ndb_mgmd"), :immediately
 end

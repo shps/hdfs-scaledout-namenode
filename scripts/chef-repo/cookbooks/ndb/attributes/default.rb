@@ -5,10 +5,10 @@ minorVersion="10"
 versionStr= "#{version}.#{majorVersion}.#{minorVersion}"
 dataNode= "#{node['ipaddress']}"
 # IP addresses of the mgm-server, ndbds must be overridden by role/recipe caller.
-default[:ndb][:mgm_server][:addrs] = "[]"  #[\"#{node['ipaddress']}\"]" 
+default[:ndb][:mgm_server][:addrs] =['10.0.2.15']  #[\"#{node['ipaddress']}\"]" 
 default[:ndb][:mgm_server][:port]  = "1186"
-default[:ndb][:ndbd][:addrs] = "[]"
-default[:ndb][:ndbapi][:addrs] = "[]"
+default[:ndb][:ndbd][:addrs] = ['10.0.2.15']
+default[:ndb][:ndbapi][:addrs] = ['10.0.2.15']
 default[:ndb][:my_ip] = ""
 
 default[:ndb][:loglevel]   = "notice"

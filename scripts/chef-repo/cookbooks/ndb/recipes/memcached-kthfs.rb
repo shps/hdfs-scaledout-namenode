@@ -23,4 +23,4 @@ ndb_kthfs_services "#{node[:ndb][:kthfs_services]}" do
  node_id found_id
  action :install_memcached
 end
-#node[:memcached][:id]
+

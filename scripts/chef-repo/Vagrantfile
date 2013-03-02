@@ -35,25 +35,26 @@ Vagrant::Config.run do |config|
      chef.log_level = :debug
      chef.cookbooks_path = "cookbooks"
     chef.json = {
-      :ndb => {
-        :mgm_servers => { 
-		       :addrs => ["10.0.2.15"]
+     "ndb" => {
+        "mgm_server" => { 
+		       "addrs" => ["10.0.2.15"]
 		       }
       },
-      :ndb => {
-        :ndbd => { 
-		       :addrs => ["10.0.2.15"]
+      "ndb" => {
+        "ndbd" => { 
+		       "addrs" => ["10.0.2.15"]
 		       }
       },
-      :ndb => {
-        :ndbapi => { 
-		       :addrs => ["10.0.2.15","10.0.2.15","10.0.2.15"]
+      "ndb" => {
+        "ndbapi" => { 
+		       "addrs" => ["10.0.2.15","10.0.2.15","10.0.2.15"]
 		       }
       },
-      :ndb => { 
-      	   :my_ip => "10.0.2.15"
+      "ndb" => { 
+      	   "my_ip" => "10.0.2.15"
       }
-    }
+     }
+
 
 #      chef.add_recipe "authbind"
 #      chef.add_recipe "java"
