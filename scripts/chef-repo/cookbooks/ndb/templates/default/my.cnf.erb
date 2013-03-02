@@ -32,7 +32,7 @@ ndb-force-send=0
 engine-condition-pushdown=1
 
 # use the cluster connection pool to reduce cluster connection setup time
-ndb-cluster-connection-pool=3
+ndb-cluster-connection-pool=<%= node[:ndb][:num_ndb_slots_per_client] %>
 
 # Log more data at MySQL Server about ndb
 ndb-extra-logging=0

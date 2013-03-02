@@ -26,7 +26,7 @@ id = 1
 # else
 # default IP is set, here
 for ndbd in node[:ndb][:ndbd][:addrs]
-  if node[:ndb][:my_ip].eql? ndbd
+  if node[:ndb][:private_ip].eql? ndbd
     Chef::Log.info "Found matching IP address in the list of data nodes: #{ndbd} . ID= #{id}"
     @found = true
     found_id = id

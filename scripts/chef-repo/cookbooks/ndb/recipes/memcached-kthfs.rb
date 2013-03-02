@@ -4,7 +4,7 @@ Chef::Log.info "Trying to infer the memcached ID by examining the local IP. If i
 found_id = -1
 id = 1
 for api in node[:ndb][:ndbapi][:addrs]
-  if node[:ndb][:my_ip].eql? api
+  if node[:ndb][:private_ip].eql? api
     Chef::Log.info "Found matching IP address in the list of nodes: #{api} . ID= #{id}"
     @found = true
     found_id = id

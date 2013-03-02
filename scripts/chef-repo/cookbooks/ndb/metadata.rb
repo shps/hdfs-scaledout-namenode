@@ -41,24 +41,6 @@ attribute "ndb/ndbapi/addrs",
 :type => 'array',
 :default => ""
 
-# attribute "ndb/mysql_server/addrs",
-# :display_name => "MySQL server IP addresses in MySQL Cluster",
-# :description => "List of IP addresses of mysqld processes (mysql servers)",
-# :type => 'array',
-# :default => ""
-
-# attribute "ndb/memcached/addrs",
-# :display_name => "Memcached server IP addresses in MySQL Cluster",
-# :description => "List of IP addresses of memcached processes (memcached servers)",
-# :type => 'array',
-# :default => ""
-
-# attribute "ndb/clusterj/addrs",
-# :display_name => "Cluster/J IP addresses in MySQL Cluster",
-# :description => "List of IP addresses of cluster/j processes (ndb clients)",
-# :type => 'array',
-# :default => ""
-
 attribute "ndb/my_ip",
 :display_name => "IP address",
 :description => "IP address used by this node",
@@ -71,3 +53,46 @@ attribute "mysql/password",
 :description => "Password for the 'kthfs' user",
 :type => 'string',
 :default => "kthfs"
+
+attribute "ndb/data_memory",
+:display_name => "Data memory",
+:description => "Data memory for each MySQL Cluster Data Node",
+:type => 'string',
+:default => "80"
+
+attribute "ndb/index_memory",
+:display_name => "Index memory",
+:description => "Index memory for each MySQL Cluster Data Node",
+:type => 'string',
+:default => "20"
+
+attribute "ndb/num_replicas",
+:display_name => "Num Replicas",
+:description => "Num of replicas of the MySQL Cluster Data Nodes",
+:type => 'string',
+:default => "2"
+
+attribute "ndb/private_ip",
+:display_name => "Private ip address",
+:description => "Private ip address used by MySQL Cluster",
+:type => 'string',
+:default => ""
+
+attribute "ndb/num_ndb_slots_per_client",
+:display_name => "Number ndbapi slots per client",
+:description => "Number of ndbapi slots used by MySQL Server, clusterj, and memcached",
+:type => 'string',
+:default => "3"
+
+attribute "memcached/mem_size",
+:display_name => "Memcached data memory size",
+:description => "Memcached data memory size",
+:type => 'string',
+:default => "80"
+
+attribute "memcached/options",
+:display_name => "Memcached options",
+:description => "Memcached options",
+:type => 'string',
+:default => ""
+

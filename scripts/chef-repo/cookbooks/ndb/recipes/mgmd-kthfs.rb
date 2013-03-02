@@ -4,7 +4,7 @@ Chef::Log.info "Trying to infer the mgmd ID by examining the local IP. If it mat
 found_id = -1
 id = 1
 for mgmd in node[:ndb][:mgmd][:addrs]
-  if node[:ndb][:my_ip].eql? mgmd
+  if node[:ndb][:private_ip].eql? mgmd
     Chef::Log.info "Found matching IP address in the list of nodes: #{api} . ID= #{id}"
     @found = true
     found_id = id

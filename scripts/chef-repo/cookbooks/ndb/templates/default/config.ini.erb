@@ -19,9 +19,9 @@ MaxNoOfExecutionThreads=<%= cpus  %>
 NoOfReplicas=<%= node[:ndb][:num_replicas] %>
 
 #The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
-# node[:ndb][:data_memory] = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) 
+# <% dataMemory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) -%>
 #The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
-#IndexMemory=<%= node[:ndb][:data_memory] / 4 %>M
+#IndexMemory=<%= dataMemory / 4 %>M
 DataMemory=<%= node[:ndb][:data_memory] %>M
 IndexMemory=<%= node[:ndb][:index_memory] %>M
 
@@ -120,7 +120,7 @@ FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
 <% hostId = @mysql_id -%>
 <% nodeId = @mysql_id -%>
 <% for ndbapi in node[:ndb][:ndbapi][:addrs] -%>
-<% for count in 0..3 -%>
+<% for count in 0..(@num_client_slots-1) -%>
 [MYSQLD]
 NodeId=<%= nodeId %>
 HostName=ndbapi<%= hostId %>
