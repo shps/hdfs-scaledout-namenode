@@ -1,0 +1,19 @@
+127.0.0.1       localhost
+
+#TODO - merge the arrays and remove duplicates
+
+<% id = @mgm_id -%>
+<% for n in node[:ndb][:mgm_server][:addrs] -%>
+<%= n %>     mgmd<%= id %>
+<% id += 1 -%>
+<% end -%>
+<% id = 1 -%>
+<% for n in node[:ndb][:ndbd][:addrs] -%>
+<%= n %>     ndbd<%= id %>
+<% id += 1 -%>
+<% end -%>
+<% id = @mysql_id -%>
+<% for n in node[:ndb][:ndbapi][:addrs] -%>
+<%= n %>     ndbapi<%= id %>
+<% id += 1 -%>
+<% end -%>
