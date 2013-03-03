@@ -13,15 +13,33 @@ recipe            "ndb::ndbd", "Installs a MySQL Cluster data node (ndbd)"
 recipe            "ndb::mysqld", "Installs a MySQL Server connected to the MySQL Cluster (mysqld)"
 recipe            "ndb::memcached", "Installs a memcached Server connected to the MySQL Cluster (memcached)"
 
+recipe            "ndb::mgmd-remove", "Removes a MySQL Cluster management server (ndb_mgmd)"
+recipe            "ndb::ndbd-remove", "Removes a MySQL Cluster data node (ndbd)"
+recipe            "ndb::mysqld-remove", "Removes a MySQL Server connected to the MySQL Cluster (mysqld)"
+recipe            "ndb::memcached-remove", "Removes a memcached Server connected to the MySQL Cluster (memcached)"
+
 recipe            "ndb::mgmd-kthfs", "Configures the kthfs agent for the NDB management server"
 recipe            "ndb::ndbd-kthfs", "Configures the kthfs agent for the NDB data node"
 recipe            "ndb::mysqld-kthfs", "Configures the kthfs agent for the NDB MySQL Server"
 recipe            "ndb::memcached-kthfs", "Configures the kthfs agent for the NDB memcached Server"
 
+recipe            "ndb::purge", "Removes all data and all binaries related to a MySQL Cluster installation"
 
 %w{ ubuntu debian }.each do |os|
   supports os
 end
+
+attribute "ndb/root_dir",
+:display_name => "Install directory for NDB",
+:description => "Install directory for MySQL Cluster data files",
+:type => 'string',
+:default => "/var/lib/mysql-cluster"
+
+attribute "mysql/base_dir",
+:display_name => "Install directory for MySQL Binaries",
+:description => "Install directory for MySQL Binaries",
+:type => 'string',
+:default => "/usr/local"
 
 attribute "ndb/mgm_server/addrs",
 :display_name => "Mgm server IP addresses",

@@ -24,19 +24,20 @@ default[:ndb][:num_ndb_slots_per_client] = 3
 
 default[:mgm][:scripts] = %w{ enter-singleuser-mode.sh mgm-client.sh mgm-server-start.sh mgm-server-stop.sh mgm-server-restart.sh cluster-shutdown.sh  exit-singleuser-mode.sh }
 default[:ndb][:scripts] = %w{ backup-start.sh backup-restore.sh ndbd-start.sh ndbd-init.sh ndbd-stop.sh ndbd-restart.sh }
-default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh memcached-start.sh memcached-stop.sh memcached-restart.sh }
+default[:mysql][:scripts] = %w{ get-mysql-socket.sh get-mysql-port.sh mysql-server-start.sh mysql-server-stop.sh mysql-server-restart.sh mysql-client.sh }
+default[:memcached][:scripts] = %w{ memcached-start.sh memcached-stop.sh memcached-restart.sh }
 
 default[:ndb][:version] = #{versionStr}
 default[:ndb][:root_dir] = "/var/lib/mysql-cluster"
-default[:ndb][:log_dir] = "#{default[:ndb][:root_dir]}" + "/log"
-default[:ndb][:data_dir] = "#{default[:ndb][:root_dir]}" + "/ndb_data"
-default[:ndb][:version_dir] = "#{default[:ndb][:root_dir]}" + "/ndb-#{versionStr}"
-default[:ndb][:base_dir] = "#{default[:ndb][:root_dir]}" + "/ndb"
+default[:ndb][:log_dir] = "#{node[:ndb][:root_dir]}" + "/log"
+default[:ndb][:data_dir] = "#{node[:ndb][:root_dir]}" + "/ndb_data"
+default[:ndb][:version_dir] = "#{node[:ndb][:root_dir]}" + "/ndb-#{versionStr}"
+default[:ndb][:base_dir] = "#{node[:ndb][:root_dir]}" + "/ndb"
 
-default[:ndb][:scripts_dir] = "#{default[:ndb][:base_dir]}" + "/scripts"
-default[:ndb][:mgm_dir] = "#{default[:ndb][:root_dir]}" + "/mgmd"
+default[:ndb][:scripts_dir] = "#{node[:ndb][:base_dir]}" + "/scripts"
+default[:ndb][:mgm_dir] = "#{node[:ndb][:root_dir]}" + "/mgmd"
 
-default[:ndb][:mysql_server_dir] = "#{default[:ndb][:base_dir]}" + "/mysql"
+default[:ndb][:mysql_server_dir] = "#{node[:ndb][:base_dir]}" + "/mysql"
 default[:ndb][:mysql_port] = "3306"
 default[:ndb][:mysql_socket] = "/tmp/mysql.sock"
 
@@ -47,8 +48,9 @@ default[:ndb][:class] = "KTHFS"
 
 default[:ndb][:wait_startup] = 300
 
-default[:mysql][:base_dir] = "/usr/local/mysql"
-default[:mysql][:version_dir] = "#{default[:mysql][:base_dir]}" + "-#{versionStr}"
+default[:mysql][:root_dir] = "/usr/local"
+default[:mysql][:base_dir] = "#{node[:mysql][:root_dir]}/mysql"
+default[:mysql][:version_dir] = "#{node[:mysql][:base_dir]}" + "-#{versionStr}"
 default[:mysql][:user]      = "kthfs"
 default[:mysql][:password]  = "kthfs"
 
