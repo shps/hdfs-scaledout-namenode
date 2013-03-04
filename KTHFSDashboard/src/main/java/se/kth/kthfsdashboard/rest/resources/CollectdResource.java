@@ -1,14 +1,29 @@
 package se.kth.kthfsdashboard.rest.resources;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.security.RolesAllowed;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import se.kth.kthfsdashboard.log.LogEJB;
 import se.kth.kthfsdashboard.log.TempLogStore;
+import se.kth.kthfsdashboard.util.CollectdTools;
 
 /**
  *
@@ -21,7 +36,6 @@ public class CollectdResource {
 
    @EJB
    private LogEJB logEJB;
-   
    TempLogStore tempLogStore = new TempLogStore();
 
    @GET
@@ -30,6 +44,40 @@ public class CollectdResource {
    public String getLog() {
       return "KTHFSDashboard: Pong";
    }
+
+   @GET
+   @Path("graph")
+   @Produces("image/png")
+   public Response getGraph(
+           @QueryParam("chart_type") String chartType,           
+           @QueryParam("start") int start,
+           @QueryParam("end") int end,
+           @QueryParam("hostname") String hostname,
+           @QueryParam("plugin") String plugin,
+           @QueryParam("plugin_instance") String pluginInstance,
+           @QueryParam("type") String type,
+           @QueryParam("type_instance") String typeInstance,
+           @QueryParam("ds") String ds 
+           ) throws InterruptedException, IOException {
+
+      CollectdTools ct = new CollectdTools();
+
+      try {
+         BufferedImage image;
+         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         InputStream g = ct.getGraphStream(chartType, hostname, plugin, pluginInstance, type, typeInstance, ds, start, end);
+         image = ImageIO.read(g);
+         ImageIO.write(image, "png", baos);
+         byte[] imageData = baos.toByteArray();
+
+         return Response.ok(new ByteArrayInputStream(imageData)).build();
+      } catch (Exception e) {
+         
+         System.err.println(e);
+         return Response.status(Response.Status.NOT_FOUND).build();
+      }
+   }
+   
 
    @POST
    @Consumes(MediaType.APPLICATION_JSON)

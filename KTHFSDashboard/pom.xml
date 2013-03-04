@@ -18,21 +18,19 @@
         <glassfish.hostname>localhost</glassfish.hostname>
         <glassfish.admin></glassfish.admin>
         <glassfish.passwd></glassfish.passwd>
--->
-                
-<!--        <glassfish.hostname>lucan.sics.se</glassfish.hostname>
+-->            
+        <glassfish.hostname>lucan.sics.se</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
-        <glassfish.passwd>dight12</glassfish.passwd>-->
-        
+        <glassfish.passwd>dight12</glassfish.passwd>  
 <!--
         <glassfish.hostname>cloud16.sics.se</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
         <glassfish.passwd>admin</glassfish.passwd>
--->
+
         <glassfish.hostname>54.246.64.96</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
         <glassfish.passwd>admin</glassfish.passwd>
-                
+-->               
         <netbeans.hint.deploy.server>gfv3ee6</netbeans.hint.deploy.server>
     </properties>
 

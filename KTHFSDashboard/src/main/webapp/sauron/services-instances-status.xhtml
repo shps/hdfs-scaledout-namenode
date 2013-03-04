@@ -130,14 +130,39 @@
 
                <h:outputText value="Commands:" />  <br/><br/>
 
+               <h:panelGrid id="grid" width="100%" style="border-width: 2px; border-color: black"> 
 
-               <p:progressBar widgetVar="prog1" value="#{executeCommandController.progressValue('a1')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
-               <p:progressBar widgetVar="prog2" value="#{executeCommandController.progressValue('a2')}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
+                  <f:facet name="header">  
+                     <p:row>  
+                        <p:column>Operation</p:column>  
+                        <p:column>Progress</p:column>  
+                     </p:row>  
+                  </f:facet>     
 
+                  <p:row >                 
+                     <p:column style="width: 10%">
+                        <h:outputLabel value="Stop namenode on cloud2.sics.se:" style=" background-color: red" />    
+                     </p:column>  
+                     <p:column style="width: 90%">
+                        <p:progressBar widgetVar="prog1" value="" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>  
+                     </p:column> 
+                  </p:row> 
+
+
+                  <p:row >
+                     <p:column style="width: 10%">
+                        <h:outputLabel value="Stop datanode on cloud3.sics.se:"/>                         
+                     </p:column>  
+                     <p:column style="width: 90%">
+                        <p:progressBar widgetVar="prog2" value="" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>     
+                     </p:column> 
+                  </p:row> 
+
+               </h:panelGrid>  
             </p:dialog>                      
          </h:form>                         
 
-         <h:form id="test" rendered="false">  // Test                 
+         <h:form id="test"  rendered="false">                 
             <p:commandButton id="modalDialogButton" value="Test 2" actionListener="#{executeCommandController.doCommandTest}" ajax="true" onclick="prog1.setValue(0);prog2.setValue(0);dlgstartstop.show();prog1.start();prog2.start();">
                <f:param name="hostname" value="#{hostController.hostname}" />
                <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
