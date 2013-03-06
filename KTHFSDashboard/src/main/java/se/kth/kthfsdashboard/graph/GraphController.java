@@ -4,17 +4,18 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
 import org.primefaces.model.DashboardColumn;
 import org.primefaces.model.DashboardModel;
 import org.primefaces.model.DefaultDashboardColumn;
 import org.primefaces.model.DefaultDashboardModel;
+import se.kth.kthfsdashboard.struct.DatePeriod;
 
 /**
  *
@@ -25,6 +26,7 @@ import org.primefaces.model.DefaultDashboardModel;
 public class GraphController implements Serializable {
 
    private String kthfsInstance;
+   @ManagedProperty("#{param.hostname}")   
    private String hostname;
    private String serviceGroup;
    private String service;
@@ -32,13 +34,19 @@ public class GraphController implements Serializable {
    private Date end;
    private String period;
    private DashboardModel model;
-   private List<String> datePeriods = new ArrayList<String>();
+   private List<DatePeriod> datePeriods = new ArrayList<DatePeriod>();
 
    public GraphController() {
 
 
-      Collections.addAll(datePeriods, "Last hour", "Last 6 hours", "Last 12 hours", "Last 24 hours", "Last week");
-
+      datePeriods.add(new DatePeriod("hour", "1h"));
+      datePeriods.add(new DatePeriod("2hr", "2h"));
+      datePeriods.add(new DatePeriod("4hr", "2h"));
+      datePeriods.add(new DatePeriod("day", "1d"));
+      datePeriods.add(new DatePeriod("week", "7d"));
+      datePeriods.add(new DatePeriod("month", "1m"));
+      datePeriods.add(new DatePeriod("year", "1y"));      
+      
       Calendar c = Calendar.getInstance();
       c.setTime(new Date());
       c.add(Calendar.HOUR_OF_DAY, -1);
@@ -111,12 +119,15 @@ public class GraphController implements Serializable {
       DashboardColumn column1 = new DefaultDashboardColumn();
       DashboardColumn column2 = new DefaultDashboardColumn();
       DashboardColumn column3 = new DefaultDashboardColumn();
-      
-      column1.addWidget("load");
-      column2.addWidget("memory");
-      column3.addWidget("df");
 
-      column2.addWidget("interface");
+      column1.addWidget("memory");
+      column2.addWidget("df");
+      column3.addWidget("swap");
+
+      column1.addWidget("load");      
+      column2.addWidget("interface");      
+      
+
       
       model.addColumn(column1);
       model.addColumn(column2);
@@ -128,7 +139,6 @@ public class GraphController implements Serializable {
 
       Calendar c = Calendar.getInstance();
       c.setTime(new Date());
-
       String unit = period.substring(period.length() - 1);
       int delta = Integer.parseInt(period.substring(0, period.length() - 1));
 
@@ -143,7 +153,6 @@ public class GraphController implements Serializable {
       } else {
          return;
       }
-
       start = c.getTime();
       end = new Date();
    }
@@ -164,11 +173,11 @@ public class GraphController implements Serializable {
       this.period = period;
    }
 
-   public List<String> getDatePeriods() {
+   public List<DatePeriod> getDatePeriods() {
       return datePeriods;
    }
    
-   public String getGraphUrl() throws MalformedURLException {
+   public String getPlaneGraphUrl() throws MalformedURLException {
       HashMap<String, String> params = new HashMap<String, String>();
       params.put("start", getStartTime().toString());
       params.put("end", getEndTime().toString());
@@ -185,66 +194,24 @@ public class GraphController implements Serializable {
       return url;
    }
 
-   public String getGraphUrl2() throws MalformedURLException {
+   public String getGraphUrl(String host,String plugin, String type) throws MalformedURLException {
       HashMap<String, String> params = new HashMap<String, String>();
-      params.put("chart_type", "loadall");      
+      params.put("chart_type", plugin + "all");      
       params.put("start", getStartTime().toString());
       params.put("end", getEndTime().toString());
-      params.put("hostname", "ubuntu");
-      params.put("plugin", "load");
-      params.put("type", "load");
+      params.put("hostname", hostname);
+      params.put("plugin", plugin);
+      params.put("type", type);
 
-      String url = "rest/collectd/graph?";
+      String url = "../rest/collectd/graph?";
       for (Entry<String, String> entry : params.entrySet()) {
          url += entry.getKey() + "=" + entry.getValue() + "&";
       }
+      
+      System.err.println(">>>>>>>>>>>>>" + hostname);
+              
+              
       return url;
    }   
-   
-   public String getGraphUrl3() throws MalformedURLException {
-      HashMap<String, String> params = new HashMap<String, String>();
-      params.put("chart_type", "memoryall");      
-      params.put("start", getStartTime().toString());
-      params.put("end", getEndTime().toString());
-      params.put("hostname", "ubuntu");
-      params.put("plugin", "memory");
-      params.put("type", "memory");
-      String url = "rest/collectd/graph?";
-      for (Entry<String, String> entry : params.entrySet()) {
-         url += entry.getKey() + "=" + entry.getValue() + "&";
-      }
-      return url;
-   }   
-
-   public String getGraphUrl4() throws MalformedURLException {
-      HashMap<String, String> params = new HashMap<String, String>();
-      params.put("chart_type", "dfall");      
-      params.put("start", getStartTime().toString());
-      params.put("end", getEndTime().toString());
-      params.put("hostname", "ubuntu");
-      params.put("plugin", "df");
-      params.put("type", "df");
-      String url = "rest/collectd/graph?";
-      for (Entry<String, String> entry : params.entrySet()) {
-         url += entry.getKey() + "=" + entry.getValue() + "&";
-      }
-      return url;
-   }      
-   
-   
-   public String getGraphUrl5() throws MalformedURLException {
-      HashMap<String, String> params = new HashMap<String, String>();
-      params.put("chart_type", "interfaceall");      
-      params.put("start", getStartTime().toString());
-      params.put("end", getEndTime().toString());
-      params.put("hostname", "ubuntu");
-      params.put("plugin", "interface");
-      params.put("type", "if_octets");
-      String url = "rest/collectd/graph?";
-      for (Entry<String, String> entry : params.entrySet()) {
-         url += entry.getKey() + "=" + entry.getValue() + "&";
-      }
-      return url;
-   }      
    
 }

@@ -149,7 +149,7 @@ public class CollectdTools {
 
    private enum GraphType {
 
-      plane, loadall, memoryall, dfall, interfaceall;
+      plane, loadall, memoryall, dfall, interfaceall, swapall;
    }
 
    public InputStream getGraphStream(String chartType, String hostname, String plugin, String pluginInstance, String type, String typeInstance, String ds, int start, int end) throws IOException {
@@ -167,47 +167,63 @@ public class CollectdTools {
          chartType = "plane";
       }
 
-      RrrtoolCommand cmd = new RrrtoolCommand(hostname, plugin, pluginInstance, type, start, end);
+      RrdtoolCommand cmd = new RrdtoolCommand(hostname, plugin, pluginInstance, type, start, end);
       switch (GraphType.valueOf(chartType)) {
          case loadall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Load");
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, "", "longterm", "Longterm", RED, null);
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, "", "midterm", "Midterm", BLUE, null);
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, "", "shortterm", "Shortterm", YELLOW, null);
+            cmd.setVerticalLabel(" ");
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "longterm", "Longterm ", RED, "%5.2lf");
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "midterm", "Midterm  ", BLUE, "%5.2lf");
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "shortterm", "Shortterm", YELLOW, "%5.2lf");
             break;
 
          case memoryall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Memory");
             cmd.setVerticalLabel("Byte");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA, "used", "value", "used", RED, "%5.2lf %S");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA_STACK, "buffered", "value", "buffered", BLUE, "%5.2lf %S");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA_STACK, "cached", "value", "cached", YELLOW, "%5.2lf %S");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA_STACK, "free", "value", "free", GREEN, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "used", "value", "Used    ", RED, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "buffered", "value", "Buffered", BLUE, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "cached", "value", "Cached  ", YELLOW, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "free", "value", "Free    ", GREEN, "%5.2lf %S");
             break;
 
+         case swapall:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Swap");
+            cmd.setVerticalLabel("Byte");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "used", "value", "Used    ", RED, "%5.2lf %s");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "cached", "value", "Cached  ", YELLOW, "%5.2lf %s");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "free", "value", "Free    ", GREEN, "%5.2lf %s");
+            break;
+            
          case dfall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Physical Memory");
             cmd.setVerticalLabel("Byte");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA, "root", "used", "used", RED, "%5.2lf %S");
-            cmd.addGraph(RrrtoolCommand.ChartType.AREA_STACK, "root", "free", "free", GREEN, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "root", "used", "Used", RED, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "root", "free", "Free", GREEN, "%5.2lf %S");
             break;
 
          case interfaceall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Network Interface");
             cmd.setVerticalLabel("bps");
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, "eth0", "rx", "RX", YELLOW, "%5.2lf %S");
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, "eth0", "tx", "TX", BLUE, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "eth0", "rx", "RX", YELLOW, "%5.2lf %S");
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "eth0", "tx", "TX", BLUE, "%5.2lf %S");
             break;
 
          default:
             cmd.setTitle(plugin);
             cmd.setVerticalLabel(plugin);
-            cmd.addGraph(RrrtoolCommand.ChartType.LINE, typeInstance, ds, typeInstance, GREEN, null);
+            cmd.addGraph(RrdtoolCommand.ChartType.LINE, typeInstance, ds, typeInstance, GREEN, null);
       }
+
+//      System.err.println();
+//      System.err.println("------------------------------------");
+//      for (String s: cmd.getCommands()) {
+//         System.err.println(s);
+//      }
 
       Process process = new ProcessBuilder(cmd.getCommands()).directory(new File("/usr/bin/"))
               .redirectErrorStream(true).start();

@@ -158,17 +158,56 @@
 
          <p:spacer width="1" height="20" />
 
-         <p:accordionPanel activeIndex="-1" >
+         <p:accordionPanel activeIndex="1">
             <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />                           
             <p:tab id="host-collectd" title ="Collectd">
                <iframe id="iframe-jarmon-host" src="jarmon-host.xhtml?hostname=#{hostController.hostname}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
+            </p:tab>
+            <p:tab id="rrd-graph" title="Graphs" >
+               <h:form id="formcharts" style="text-align: center">  
+                  <h:panelGrid columns="6"> 
+                     <p:selectOneButton id ="periods" value="#{graphController.period}">  
+                        <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                        <p:ajax event="change" update="graphs, calstart, calend" listener="#{graphController.updateDates}"/>
+                     </p:selectOneButton>
+                     <h:outputText value="or from" />
+                     <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+                     <h:outputText value=" to " />
+                     <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+                     <p:commandButton value="Go" update="graphs, periods"  actionListener="#{graphController.useCalendar()}" >
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                     </p:commandButton> 
+                  </h:panelGrid>
+
+                  <p:separator id="separator"/>
+
+                  <p:dashboard styleClass="styleRrdGraph" id="graphs" model="#{graphController.model}"  > 
+                     <p:panel  id="load" header="Load" >
+                        <p:graphicImage value="#{graphController.getGraphUrl(hostController.hostname,'load','load')}"/>
+                     </p:panel>  
+                     <p:panel id="memory" header="Memory">  
+                        <p:graphicImage value="#{graphController.getGraphUrl(hostController.hostname,'memory', 'memory')}" /> 
+                     </p:panel>  
+                     <p:panel id="df" header="Physical Memory">  
+                        <p:graphicImage value="#{graphController.getGraphUrl(hostController.hostname,'df','df')}" /> 
+                     </p:panel>  
+                     <p:panel id="interface" header="Network Interface">  
+                        <p:graphicImage value="#{graphController.getGraphUrl(hostController.hostname,'interface','if_octets')}" /> 
+                     </p:panel>  
+                     <p:panel id="swap" header="Swap">  
+                        <p:graphicImage value="#{graphController.getGraphUrl(hostController.hostname,'swap', 'swap')}" /> 
+                     </p:panel>              
+                  </p:dashboard>          
+               </h:form> 
             </p:tab>
 
          </p:accordionPanel>
 
 
-
       </ui:define>
+
+
 
    </ui:composition>
 

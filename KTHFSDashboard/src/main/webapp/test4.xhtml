@@ -6,7 +6,8 @@
       xmlns:p="http://primefaces.org/ui"
       xmlns:f="http://java.sun.com/jsf/core"      
 
-      xmlns:c="http://java.sun.com/jsp/jstl/core">
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets">
 
    <h:head>
       <title>Test Page 4</title>
@@ -20,46 +21,34 @@
       <h:form id="form">  
 
          <h:panelGrid columns="6"> 
-
             <p:selectOneButton id ="periods" value="#{graphController.period}">  
-               <f:selectItem itemLabel="hour" itemValue="1h"/>  
-               <f:selectItem itemLabel="2hr" itemValue="2h" />  
-               <f:selectItem itemLabel="4hr" itemValue="4h" />  
-               <f:selectItem itemLabel="day" itemValue="1d" />  
-               <f:selectItem itemLabel="week" itemValue="7d" />  
-               <f:selectItem itemLabel="month" itemValue="1m" /> 
-               <f:selectItem itemLabel="year" itemValue="1y" />
+               <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
                <p:ajax event="change" update="graphs, calstart, calend" listener="#{graphController.updateDates}"/>
             </p:selectOneButton>
-
             <h:outputText value="or from" />
             <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
             <h:outputText value=" to " />
             <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
-
             <p:commandButton value="Go" update="graphs, periods"  actionListener="#{graphController.useCalendar()}" /> 
-
          </h:panelGrid>
 
-
-
-         <p:dashboard id="graphs" model="#{graphController.model}"  >  
-
-            <p:panel  id="load" header="" style="min-width: 389px; min-height: 303px; border-width: 0px; margin: 3px; text-align: center">
-               <p:graphicImage value="#{graphController.graphUrl2}" /> 
+         <p:dashboard styleClass="styleRrdGraph" id="graphs" model="#{graphController.model}"  >  
+            <p:panel  id="load" header="Load">
+               <p:graphicImage value="#{graphController.getGraphUrl('ubuntu','load','load')}" /> 
             </p:panel>  
-            <p:panel id="memory" header="Memory"  style="min-width: 389px; min-height: 303px;border-width: 0px; margin: 3px; text-align: center" >  
-               <p:graphicImage value="#{graphController.graphUrl3}" /> 
+            <p:panel id="memory" header="Memory">  
+               <p:graphicImage value="#{graphController.getGraphUrl('ubuntu','memory', 'memory')}" /> 
             </p:panel>  
-            <p:panel id="df" header="Physical Memory"  style="min-width: 389px; min-height: 303px;border-width: 0; margin: 3px; text-align: center" >  
-               <p:graphicImage value="#{graphController.graphUrl4}" /> 
+            <p:panel id="df" header="Physical Memory">  
+               <p:graphicImage value="#{graphController.getGraphUrl('ubuntu','df','df')}" /> 
             </p:panel>  
-            <p:panel id="interface" header="Network Interface"  style="min-width: 389px; min-height: 303px;border-width: 0; margin: 3px; text-align: center" >  
-               <p:graphicImage value="#{graphController.graphUrl5}" /> 
+            <p:panel id="interface" header="Network Interface">  
+               <p:graphicImage value="#{graphController.getGraphUrl('ubuntu','interface','if_octets')}" /> 
             </p:panel>  
-            
+            <p:panel id="swap" header="Swap">  
+               <p:graphicImage value="#{graphController.getGraphUrl('ubuntu','swap', 'swap')}" /> 
+            </p:panel>              
          </p:dashboard>          
-
 
       </h:form>
 
