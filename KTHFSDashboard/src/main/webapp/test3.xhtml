@@ -4,32 +4,40 @@
 <html xmlns="http://www.w3.org/1999/xhtml"   
       xmlns:h="http://java.sun.com/jsf/html"
       xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://java.sun.com/jsf/core"      
       >
 
    <h:head>
-      <title>Test Page</title>
+      <title>Test Page 3</title>
       <link rel="stylesheet" type="text/css" href="#{resource['/css/layout.css']}" />
 
    </h:head>
 
    <h:body>
-      <p>Test</p>
+      <p>Test 3</p>
 
 
-<h:form id="form">  
-              
-    <h:panelGrid columns="3">  
-        <h:outputText value="Keyup: " />  
-          
-        <p:inputText id="counter">  
-            <p:ajax event="keyup" update="out"   
-                    listener="#{counterBean.increment}"/>  
-        </p:inputText>  
-          
-        <h:outputText id="out" value="#{counterBean.count}" />  
-    </h:panelGrid>  
-      
-</h:form> 
+
+      <h:form >        
+         <p:dialog id="modalDialog" appendToBody="true" header="Star/stop service(s)" widgetVar="dlgstartstop" modal="true" width="800" height="200">
+
+            <p:dataTable id="instances" var="s" value="#{executeCommandController.services}">
+
+               <p:column headerText="Command" style="width: 1px"><h:outputText value="#{s.service}"/></p:column>
+               <p:column headerText="Progress">
+                  <p:progressBar widgetVar="prog2" value="#{executeCommandController.progressValue(s)}" ajax="true" labelTemplate="{value}%" styleClass="animated" interval ="500"/>     
+               </p:column>
+
+            </p:dataTable> 
+
+         </p:dialog>                      
+      </h:form> 
+
+
+      <h:form id="test" >                 
+         <p:commandButton id="modalDialogButton" value="Test 2" actionListener="#{executeCommandController.doCommandTest}" ajax="true" onclick="dlgstartstop.show();prog2.setValue(0);prog2.start()">
+         </p:commandButton>                 
+      </h:form>            
 
 
 

@@ -15,7 +15,6 @@ tmpdir          = /tmp
 # use NDB storage engine and make NDB the default table type
 ndbcluster
 default-storage-engine = ndbcluster
-ndb-cluster-connection-pool=2
 
 #################################################
 # optimizations to improve performance of NDB
@@ -33,7 +32,7 @@ ndb-force-send=0
 engine-condition-pushdown=1
 
 # use the cluster connection pool to reduce cluster connection setup time
-ndb-cluster-connection-pool=4
+ndb-cluster-connection-pool=<%= node[:ndb][:num_ndb_slots_per_client] %>
 
 # Log more data at MySQL Server about ndb
 ndb-extra-logging=0
@@ -59,4 +58,4 @@ ndb-autoincrement-prefetch-sz=256
 [mysql_cluster]
 # set connectstring to ndb management server (used by all executables)
 ndb-connectstring=<%= node[:ndb][:connect_string] %>
-ndb-wait-setup=120
+ndb-wait-setup=30

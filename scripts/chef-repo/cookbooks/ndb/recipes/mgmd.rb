@@ -41,7 +41,9 @@ template "#{node[:ndb][:root_dir]}/config.ini" do
   mode 0644
   variables({
               :cores => node[:cpu][:total],
-              :num_client_slots =>  node[:ndb][:num_client_slots],
+              :mgm_id => node[:mgm][:id],
+              :mysql_id => node[:mysql][:id],
+              :num_client_slots => node[:ndb][:num_ndb_slots_per_client]
             })
   notifies :restart, resources(:service => "ndb_mgmd"), :immediately
 end

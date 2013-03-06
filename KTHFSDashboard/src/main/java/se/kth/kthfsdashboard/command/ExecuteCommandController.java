@@ -1,15 +1,17 @@
 package se.kth.kthfsdashboard.command;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
-import javax.ejb.EJB;
+import java.util.List;
 import javax.faces.application.FacesMessage;
-import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import org.primefaces.context.RequestContext;
+import se.kth.kthfsdashboard.service.Service;
+import se.kth.kthfsdashboard.struct.InstanceFullInfo;
 
 /**
  *
@@ -20,9 +22,22 @@ import org.primefaces.context.RequestContext;
 //@ApplicationScoped
 public class ExecuteCommandController implements Serializable {
 
-   private static HashMap<String, Integer> progress = new HashMap<String, Integer>();
+   private static HashMap<InstanceFullInfo, Integer> progress = new HashMap<InstanceFullInfo, Integer>();
+   private static List<InstanceFullInfo> services = new ArrayList<InstanceFullInfo>();
 
    public ExecuteCommandController() {
+
+      InstanceFullInfo i1 = new InstanceFullInfo("kthfs1", "namenode", "namenode", "cloud1.sics.se", 0, "/default", Service.Status.Started, null);
+      InstanceFullInfo i2 = new InstanceFullInfo("kthfs1", "datanode", "datanode", "cloud2.sics.se", 0, "/default", Service.Status.Started, null);
+
+      services.clear();
+      services.add(i1);
+      services.add(i2);
+
+   }
+
+   public List<InstanceFullInfo> getServices() {
+      return services;
    }
 
    public void onComplete() {
@@ -34,26 +49,52 @@ public class ExecuteCommandController implements Serializable {
    }
 
    public void doCommandTest(ActionEvent actionEvent) throws InterruptedException {
-
-
-
-
-      progress.put("a1", 35);
-      progress.put("a2", 20);
-
-      Thread.sleep(2000);
-
-      progress.put("a1", 100);
-      progress.put("a2", 70);      
       
-      Thread.sleep(4000);
+      
+  RequestContext requestContext = RequestContext.getCurrentInstance();  
+  requestContext.execute("alert('hello')");
 
-      progress.put("a2", 100);      
-      System.err.println("####################" );
+
+
+      Command c = new Command("Start", "cloud1.sics.se", "namenode", "namenode", "kthfs1");
+
+      for (InstanceFullInfo i : services) {
+
+         progress.put(i, 0);
+      }
+
+      Thread.sleep(1000);
+
+
+      int min = 0;
+
+      while (min < 100) {
+         int d = 30;
+         min = 100;
+         for (InstanceFullInfo i : services) {
+
+
+            int val = progress.get(i) + d;
+            if (val > 100) {
+               val = 100;
+            }
+            d += 10;
+            progress.put(i, val);
+            
+           if (val < min) {
+              min = val;
+           }
+            
+            System.err.println("HERE, val=" + val);
+         }
+         Thread.sleep(2000);
+      }
+
+      System.err.println("####################");
 
    }
 
-   public Integer progressValue(String id) {
+   public Integer progressValue(InstanceFullInfo id) {
       RequestContext context = RequestContext.getCurrentInstance();
 //      context.execute("prog.start()");
 

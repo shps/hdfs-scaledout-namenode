@@ -24,6 +24,24 @@ body {
     border-width: 1px;
 }
 
+/*Panel rrd graph*/
+
+.styleRrdGraph .ui-panel {
+   min-width: 389px; 
+   min-height: 255px; 
+   /*border: none;*/ 
+   margin: 3px; 
+   /*text-align: center;*/
+   text-align: left;
+
+}
+.styleRrdGraph .ui-panel .ui-panel-title{
+   font-size: 9px;
+}
+
+
+
+
 /*Panel*/
 
 .ui-panel {

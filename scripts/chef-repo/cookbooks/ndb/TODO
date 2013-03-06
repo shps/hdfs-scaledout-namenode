@@ -1,11 +1,7 @@
-Two-pass chef script required.
-In the first pass, the nodes go into 'bootstrap' mode.
-In the 2nd pass, they move into 'running' mode.
+re-write /etc/hosts
+http://www.mysqlperformanceblog.com/2011/06/09/how-to-replace-a-ndb-node-on-ec2/
 
-mgmd recipe - config.ini, pub/priv key, list-of-ndbds, config variables 
-                 store public key in data bag in chef server,
-    https://github.com/barcampbangkok/chef-repo/wiki/Getting-Started-with-Chef
+iptables to open ports used, and no more
+# See iptables & ndb: http://itinsurrey.co.uk/blog/2010/08/10/iptables-firewall-set-up-for-clusters.htm
 
-ndbd recipe - start/init/stop-ndbd.sh, ID, connectstring,
-                 search for mgm-server's public key in data bag, then add
-                 to .ssh/authorized_hosts of the 'root' user.
+accept all node IPs as parameters in the chef run_list

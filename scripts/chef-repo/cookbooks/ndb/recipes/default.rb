@@ -1,3 +1,18 @@
+connectString = ""
+Chef::Log.info "mgm servers: #{node[:ndb][:mgm_server][:addrs]}"
+
+id=node[:mgm][:id]
+for n in node[:ndb][:mgm_server][:addrs]
+#  connectString += "mgmd#{n}:#{node[:ndb][:mgm_server][:port]},"
+  connectString += "mgmd#{id}:#{node[:ndb][:mgm_server][:port]},"
+  id += 1
+end
+
+# Remove the last ','
+connectString = connectString.chop
+
+node.set[:ndb][:connect_string] = "#{connectString}"
+
 
 user node[:ndb][:user] do
   action :create
@@ -105,4 +120,16 @@ template "#{node[:ndb][:scripts_dir]}/util/kill-process.sh" do
   owner node[:ndb][:user]
   group node[:ndb][:user]
   mode 0655
+end
+
+
+template "/etc/hosts" do
+  source "hosts.erb"
+  owner "root"
+  group "root"
+  mode 0644
+  variables({
+              :mgm_id => node[:mgm][:id],
+              :mysql_id => node[:mysql][:id]
+            })
 end

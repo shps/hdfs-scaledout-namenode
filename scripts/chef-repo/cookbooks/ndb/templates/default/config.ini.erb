@@ -1,10 +1,15 @@
+# For documentation on config params, see:
+# http://dev.mysql.com/doc/refman/5.5/en/mysql-cluster-ndbd-definition.html
+# For overview:
+# http://docs.oracle.com/cd/E17952_01/refman-5.5-en/mysql-cluster-ndb-innodb-engines.html
+
 [NDBD DEFAULT]
 #Used by ndbmdmt to determine the number of LQH threads
-<% cpus = @cores / 2 %>
+<% cpus = (@cores / 2) + 1 -%>
 <% if cpus < 2
      cpus =2 
    end
-%>
+-%>
 MaxNoOfExecutionThreads=<%= cpus  %>
 
 #More flexible than MaxNoOfExecutionThreads
@@ -14,9 +19,9 @@ MaxNoOfExecutionThreads=<%= cpus  %>
 NoOfReplicas=<%= node[:ndb][:num_replicas] %>
 
 #The amount of main memory (RAM) used to store columns and ordered indexes in tables, plus some overhead
-# node[:ndb][:data_memory] = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) 
+# <% dataMemory = (node['memory']['total'][0..-3].to_i / (1024 * 100)) * ((node[:ndb][:memory].to_i) / 5 ) -%>
 #The amount of main memory (RAM) used to hash indexes in tables, plus some overhead
-#IndexMemory=<%= node[:ndb][:data_memory] / 4 %>M
+#IndexMemory=<%= dataMemory / 4 %>M
 DataMemory=<%= node[:ndb][:data_memory] %>M
 IndexMemory=<%= node[:ndb][:index_memory] %>M
 
@@ -29,10 +34,10 @@ NoOfFragmentLogFiles=<%= node[:ndb][:data_memory].to_i / 10 %>
 FragmentLogFileSize=64M
 
 #The speed at which LocalCheckpoints (LCP) are written to disk
-DiskCheckpointSpeed=1M
+DiskCheckpointSpeed=10M
 
 #The speed at which LocalCheckpoints (LCP) are written to disk, as part of a node recovery 
-DiskCheckpointSpeedInRestart=10M
+DiskCheckpointSpeedInRestart=100M
 
 #The size of the RedoLog Buffer in memory; Reduce for improved disk throughput (but slower recovery time)
 DiskSyncSize=4M
@@ -43,7 +48,38 @@ RedoBuffer=32M
 #The maximum time in ms that is permitted to lapse between operations in the same transaction before the transaction is aborted.
 TransactionInactiveTimeout=10000
 
-TransactionDeadlockDetectionTimeout=3G
+TransactionDeadlockDetectionTimeout=10000
+
+#0: Disables locking. This is the default value.
+#1: Performs the lock after allocating memory for the process.
+#2: Performs the lock before memory for the process is allocated.
+# Needs root privileges
+LockPagesInMainMemory=1
+
+# Setting these parameters allows you to take advantage of real-time scheduling
+# of NDBCLUSTER threads to get higher throughput.
+RealTimeScheduler=1
+# This parameter specifies the time in microseconds for threads to be executed in the scheduler before sleeping.
+# Default = 0. Higher value to optimize latency over throughput.
+SchedulerSpinTimer=0
+# Specifies the time in microseconds for threads to be executed in the scheduler before being sent. 
+# Default is 50. Higher values give higher throughput at cost of increased latency.
+SchedulerExecutionTimer=100
+
+# Number of threads to create when rebuilding indexes during a system or node start
+BuildIndexThreads=10
+
+# Savings of up to 50% over noncompressed LCPs and backups
+# CompressedLCP=1
+# CompressedBackup=1
+
+BackupMaxWriteSize=    1M
+BackupLogBufferSize=    4M
+BackupDataBufferSize=   16M
+BackupMemory        =   20M
+
+# Needs root privileges
+ODirect=1
 
 [MYSQLD DEFAULT]
 
@@ -53,33 +89,43 @@ TransactionDeadlockDetectionTimeout=3G
 SendBufferMemory=2M
 ReceiveBufferMemory=2M
 
- 
+<% id = @mgm_id -%>
+<% rank = 0 -%>
+<% for mgmd in node[:ndb][:mgm_server][:addrs] -%>
 [NDB_MGMD]
-NodeId=<%= node[:mgm][:id] %>
-HostName=<%= node[:ndb][:mgm_server][:addr] %>
-PortNumber=<%= node[:ndb][:port] %>
+NodeId=<%= id %>
+HostName=mgmd<%= id %>
+PortNumber=<%= node[:ndb][:mgm_server][:port] %>
 DataDir=<%= node[:ndb][:log_dir] %>
 LogDestination=FILE:filename=<%= node[:ndb][:log_dir] %>/cluster.log,maxsize=10000000,maxfiles=6
-ArbitrationRank=1
+ArbitrationRank=<%= rank %>
+<% id += 1 -%>
+<% rank += 1 -%>
+<% end -%>
 
-<% id = 1 %>
-<% for dn in node[:ndb][:data_nodes] %>
-[NDBD]
-HostName=<%= dn %>
+<% id = 1 -%>
+<% port = 10000 -%>
+<% for ndbdNode in node[:ndb][:ndbd][:addrs] -%>
+[NDBD] 
+NodeId=<%= id %>
+HostName=ndbd<%= id %>
+ServerPort=<%= port %>
 DataDir=<%= node[:ndb][:log_dir] %>
 FileSystemPath=<%= "#{node[:ndb][:data_dir]}/#{id}" %>
-NodeId=<%= id %>
-# ServerPort is set to know what ports to forward in Vagrant
-ServerPort=<%= 10000 + id %>
-#LockExecuteThreadToCPU=
-#LockMaintThreadToCPU=
-<% id += 1 %>
-<% end %>
+<% id += 1 -%>
+<% port += 1 -%>
+<% end -%>
 
+# MySQL Servers, Clusterj clients, and Memcached servers
+<% hostId = @mysql_id -%>
+<% nodeId = @mysql_id -%>
+<% for ndbapi in node[:ndb][:ndbapi][:addrs] -%>
+<% for count in 0..(@num_client_slots-1) -%>
 [MYSQLD]
-NodeId=<%= node[:mysql][:id] %>
+NodeId=<%= nodeId %>
+HostName=ndbapi<%= hostId %>
+<% nodeId += 1 -%>
+<% end -%>
+<% hostId += 1 -%>
+<% end -%>
 
-<% for i in 1..@num_client_slots %> 
-[MYSQLD]
-
-<% end %>
