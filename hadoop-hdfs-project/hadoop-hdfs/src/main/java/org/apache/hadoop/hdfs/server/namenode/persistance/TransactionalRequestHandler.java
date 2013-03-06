@@ -42,13 +42,12 @@ public abstract class TransactionalRequestHandler extends RequestHandler{
         exception = null;
         try {
           NDC.push(opType.name()); // Defines a context for every operation to track them in the logs easily.
-          log.debug("begin tx "+opType.name());
           EntityManager.begin();
           if (rowLevelLock) { 
             acquireLock();
             EntityManager.preventStorageCall();
           }
-          log.debug("perform tx "+opType.name());
+          log.debug("perform tx ");
           return performTask();
         } catch (TransactionContextException ex) {
           log.error("Could not perfortm task", ex);
@@ -63,7 +62,6 @@ public abstract class TransactionalRequestHandler extends RequestHandler{
         } finally {
           try {
             if (!rollback) {
-              log.debug("commit tx "+opType.name());  
               EntityManager.commit();
             }
           } catch (StorageException ex) {

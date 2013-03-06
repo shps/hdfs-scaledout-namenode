@@ -2700,7 +2700,7 @@ public class BlockManager {
                 public void acquireLock() throws PersistanceException, IOException {
                     ReceivedDeletedBlockInfo receivedAndDeletedBlock = (ReceivedDeletedBlockInfo) getParams()[0];
                     TransactionLockManager lm = new TransactionLockManager();
-                    lm.addINode(TransactionLockManager.INodeLockType.READ).
+                    lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                             addBlock(LockType.WRITE, receivedAndDeletedBlock.getBlock().getBlockId()).
                             addReplica(LockType.WRITE).
                             addExcess(LockType.WRITE).
