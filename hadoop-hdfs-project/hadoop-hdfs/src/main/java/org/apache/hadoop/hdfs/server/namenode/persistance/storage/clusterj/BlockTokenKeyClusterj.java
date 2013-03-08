@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockTokenKeyDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -33,17 +31,17 @@ public class BlockTokenKeyClusterj extends BlockTokenKeyDataAccess {
     Session session = connector.obtainSession();
     QueryBuilder qb = session.getQueryBuilder();
     QueryDomainType<BlockKeyDTO> dobj = qb.createQueryDefinition(BlockKeyDTO.class);
-    PredicateOperand field = dobj.get("key_type");
+    PredicateOperand field = dobj.get("keyType");
     Predicate predicate = field.equal(dobj.param("param1"));
     dobj.where(predicate);
     Query<BlockKeyDTO> query = session.createQuery(dobj);
-    query.setParameter("param1", KEY_TYPE);
+    query.setParameter("param1", keyType);
     List<BlockKeyDTO> results = query.getResultList();
     if (results == null || results.isEmpty()) {
       return null;
     } else if (results.size() > 1) {
       throw new StorageException("More than 1 keys found for KeyType "
-              + KEY_TYPE + " - This should never happen or the world will end");
+              + keyType + " - This should never happen or the world will end");
     } else {
       try {
         return createBlockKey(results.get(0));

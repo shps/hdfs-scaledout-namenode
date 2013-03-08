@@ -6,30 +6,25 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
-import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
  * Test to validate the getBlockLocations functionality in the readerNN
- * 
- * Tests the following functionality:
- * 1. Start a writerNN with datanodes
- * 2. Start a readerNN without datanodes
- * 3. Write a file (with blocks) on the writerNN and the datanodes
- * 4. Read that file from the readerNN (with tokens disabled)
- * 5. Read that file from the readerNN (with tokens enabled)
- * 
+ *
+ * Tests the following functionality: 1. Start a writerNN with datanodes 2.
+ * Start a readerNN without datanodes 3. Write a file (with blocks) on the
+ * writerNN and the datanodes 4. Read that file from the readerNN (with tokens
+ * disabled) 5. Read that file from the readerNN (with tokens enabled)
+ *
  * @author wmalik
  */
 public class TestGetBlockLocations {
@@ -39,7 +34,6 @@ public class TestGetBlockLocations {
   private final byte[] rawData = new byte[FILE_SIZE];
 
   {
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
     Random r = new Random();
     r.nextBytes(rawData);
   }
@@ -72,7 +66,7 @@ public class TestGetBlockLocations {
     byte[] toRead = new byte[FILE_SIZE];
     try {
       assertEquals("Cannot read file", toRead.length, in.read(0, toRead, 0,
-          toRead.length));
+              toRead.length));
     } catch (IOException e) {
       return false;
     }
@@ -100,15 +94,15 @@ public class TestGetBlockLocations {
    */
   private static Configuration getConf(int numDataNodes, boolean tokens) throws IOException {
     Configuration conf = new Configuration();
-    if(tokens)
+    if (tokens) {
       conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    }
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
     conf.setBoolean("dfs.support.append", true);
-    conf.setStrings(DFSConfigKeys.DFS_DB_DATABASE_KEY, DFSConfigKeys.DFS_DB_DATABASE_DEFAULT);
     return conf;
   }
 
@@ -124,7 +118,7 @@ public class TestGetBlockLocations {
   }
 
   @Test
-  public void testReadNnWithoutTokens() throws Exception{
+  public void testReadNnWithoutTokens() throws Exception {
 
     MiniDFSCluster cluster = null;
     try {
@@ -147,7 +141,7 @@ public class TestGetBlockLocations {
       Path fileTxt = new Path("/file.txt");
       createFile(fs, fileTxt);
       FSDataInputStream in1 = fs.open(fileTxt);
-      assertTrue(checkFile1(in1)); 
+      assertTrue(checkFile1(in1));
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = fs.open(fileTxt);
@@ -164,7 +158,7 @@ public class TestGetBlockLocations {
   }
 
   @Test
-  public void testReadNnWithTokens() throws Exception{
+  public void testReadNnWithTokens() throws Exception {
 
     MiniDFSCluster cluster = null;
     try {
@@ -187,7 +181,7 @@ public class TestGetBlockLocations {
       Path fileTxt = new Path("/file.txt");
       createFile(fs, fileTxt);
       FSDataInputStream in1 = fs.open(fileTxt);
-      assertTrue(checkFile1(in1)); 
+      assertTrue(checkFile1(in1));
 
       //try to read the file from the readNn (calls readerFsNamesystem.getBlockLocations under the hood) 
       FSDataInputStream in2 = fs.open(fileTxt);

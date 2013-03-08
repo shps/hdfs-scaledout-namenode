@@ -161,7 +161,9 @@ public class BlockTokenSecretManagerNN extends
     }
     BlockKey[] allKeys = null;
     try {
-      allKeys = (BlockKey[]) getAllKeys().toArray();
+      List<BlockKey> keysList = getAllKeys();
+      if (keysList != null)
+        allKeys = keysList.toArray(new BlockKey[keysList.size()]);
     } catch (IOException ex) {
       LOG.error(ex);
       // TODO[Hooman]: throw exception to the caller.
