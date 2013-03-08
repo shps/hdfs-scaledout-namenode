@@ -560,6 +560,7 @@ public class TransactionLockManager {
     if (rcBlock == null) {
       return;
     }
+
     EntityManager.clearContext();
 
     INode inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, rcBlock.getInodeId());

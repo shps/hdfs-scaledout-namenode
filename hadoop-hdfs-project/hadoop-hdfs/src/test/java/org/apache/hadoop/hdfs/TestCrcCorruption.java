@@ -209,7 +209,7 @@ public class TestCrcCorruption {
     LOG.info("TestCrcCorruption with default parameters");
     Configuration conf1 = new HdfsConfiguration();
     conf1.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
-    DFSTestUtil util1 = new DFSTestUtil("TestCrcCorruption", 40, 3, 8*1024);
+    DFSTestUtil util1 = new DFSTestUtil("TestCrcCorruption", 2, 3, 8*1024);
     thistest(conf1, util1);
 
     //
@@ -219,7 +219,7 @@ public class TestCrcCorruption {
     Configuration conf2 = new HdfsConfiguration();
     conf2.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 17);
     conf2.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 34);
-    DFSTestUtil util2 = new DFSTestUtil("TestCrcCorruption", 40, 3, 400);
+    DFSTestUtil util2 = new DFSTestUtil("TestCrcCorruption", 12, 3, 400);
     thistest(conf2, util2);
   }
 

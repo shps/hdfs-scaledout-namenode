@@ -2461,6 +2461,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
+        LOG.fatal("DELETE root dir is "+getFsDirectory().getRootDir());
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
@@ -4898,6 +4899,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         // FIXME JIM - Not done yet?
+        // locks are acquired in order i.e. first inodes , then blocks etc
+        // in this function the order is reversed. 
+        // solution make each operation a transaction
+        // i.e. read urb in a transaction and then read blocks in anther transaction etc
+          
         throw new UnsupportedOperationException("Not supported yet.");
       }
     };

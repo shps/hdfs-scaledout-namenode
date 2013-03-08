@@ -32,4 +32,11 @@ public class IndexedReplica extends Replica {
   public void setIndex(int index) {
     this.index = index;
   }
+
+    @Override
+    public String toString() {
+        return "sid "+storageId+" bid: "+blockId+" index: "+index;
+    }
+  
+  
 }

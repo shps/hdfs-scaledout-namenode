@@ -89,11 +89,29 @@ public class ReplicaUnderConstructionContext extends EntityContext<ReplicaUnderC
 
   @Override
   public void remove(ReplicaUnderConstruction replica) throws PersistanceException {
+    
+    boolean removed = false;  
+    if(blockReplicasUc.containsKey(replica.getBlockId()))
+    {
+        List<ReplicaUnderConstruction> urbs = blockReplicasUc.get(replica.getBlockId());
+        if(urbs.contains(replica))
+        {
+            removedReplicasUc.put(replica, replica);
+            blockReplicasUc.remove(replica);
+            removed = true;
+        }
+    }
+    if ( !removed ){
+        
+        throw new StorageException("Trying to delete row in ruc table that was not locked. ruc bid "+replica.getBlockId()
+                +" sid "+replica.getStorageId());
+    }
     newReplicasUc.remove(replica);
-    removedReplicasUc.put(replica, replica);
     log("removed-replicauc", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
-              "sid", replica.getStorageId(), "state", replica.getState().name()});
+              "sid", replica.getStorageId(), "state", replica.getState().name(),
+              " replicas to be removed",Integer.toString(removedReplicasUc.size()),
+            "Storage id" ,replica.getStorageId()});
   }
 
   @Override

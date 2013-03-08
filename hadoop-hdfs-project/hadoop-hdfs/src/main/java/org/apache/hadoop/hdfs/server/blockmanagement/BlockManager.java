@@ -98,7 +98,7 @@ public class BlockManager {
     private final Namesystem namesystem;
     private DatanodeManager datanodeManager = null;
     private HeartbeatManager heartbeatManager = null;
-    private final BlockTokenSecretManagerNN blockTokenSecretManager;
+    private BlockTokenSecretManagerNN blockTokenSecretManager;
     private volatile long pendingReplicationBlocksCount = 0L;
     private volatile long corruptReplicaBlocksCount = 0L;
     private volatile long underReplicatedBlocksCount = 0L;
@@ -219,11 +219,6 @@ public class BlockManager {
                 DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
         replicationThread = new Daemon(new ReplicationMonitor());
 
-        //[J] This should be done once the leader is elected
-        // Only the leader needs to generate and update keys in db
-    blockTokenSecretManager = createBlockTokenSecretManager(fsn, conf);
-//        blockTokenSecretManager = createBlockTokenSecretManager(conf);
-
         this.maxCorruptFilesReturned = conf.getInt(
                 DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY,
                 DFSConfigKeys.DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED);
@@ -316,11 +311,10 @@ public class BlockManager {
                 : false;
     }
 
-    public void activate(Configuration conf) {
+    public void activate(Configuration conf) throws IOException {
         datanodeManager.activate(conf);
         replicationThread.start();
-        // TODO -added from JUDE. Uncomment?
-//      blockTokenSecretManager = createBlockTokenSecretManager((FSNamesystem)namesystem, conf);
+      blockTokenSecretManager = createBlockTokenSecretManager((FSNamesystem)namesystem, conf);
     }
 
     public void close() {
@@ -2700,7 +2694,7 @@ public class BlockManager {
                 public void acquireLock() throws PersistanceException, IOException {
                     ReceivedDeletedBlockInfo receivedAndDeletedBlock = (ReceivedDeletedBlockInfo) getParams()[0];
                     TransactionLockManager lm = new TransactionLockManager();
-                    lm.addINode(TransactionLockManager.INodeLockType.READ).
+                    lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                             addBlock(LockType.WRITE, receivedAndDeletedBlock.getBlock().getBlockId()).
                             addReplica(LockType.WRITE).
                             addExcess(LockType.WRITE).
