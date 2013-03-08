@@ -1,17 +1,10 @@
 package se.kth.kthfsdashboard.rest.resources;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.security.RolesAllowed;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -72,8 +65,7 @@ public class CollectdResource {
 
          return Response.ok(new ByteArrayInputStream(imageData)).build();
       } catch (Exception e) {
-         
-         System.err.println(e);
+         System.err.println("image == null!");
          return Response.status(Response.Status.NOT_FOUND).build();
       }
    }

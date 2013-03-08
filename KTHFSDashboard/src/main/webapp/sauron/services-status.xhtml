@@ -105,8 +105,60 @@
                 </p:panel>                    
             </h:form>
 
-            <p:spacer width="1" height="10" />
+            <p:spacer width="1" height="50" />
 
+            
+               <h:form id="formcharts" style="text-align: center">  
+                  <h:panelGrid columns="6"> 
+                     <p:selectOneButton id ="periods" value="#{graphController.period}">  
+                        <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                        <p:ajax event="change" update="graphs, calstart, calend" listener="#{graphController.updateDates}"/>
+                     </p:selectOneButton>
+                     <h:outputText value="or from" />
+                     <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+                     <h:outputText value=" to " />
+                     <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+                     <p:commandButton value="Go" update="graphs, periods"  actionListener="#{graphController.useCalendar()}" >
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                     </p:commandButton> 
+                  </h:panelGrid>
+
+                  <p:separator id="separator"/>
+
+                  <p:dashboard styleClass="styleRrdGraph" id="graphs" model="#{graphController.model}"> 
+                     <p:panel  id="namenode_capacity" header="Namenode Capacity" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_capacity')}"/>
+                     </p:panel>  
+                     <p:panel  id="namenode_files" header="Total Files" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_files')}"/>
+                     </p:panel>              
+                     <p:panel  id="namenode_load" header="Total Load" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_load')}"/>
+                     </p:panel>   
+                     <p:panel  id="namenode_heartbeats" header="Heartbeats" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_heartbeats')}"/>
+                     </p:panel>   
+                     <p:panel  id="namenode_blockreplication" header="Block Replication" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_blockreplication')}"/>
+                     </p:panel>   
+                     <p:panel  id="namenode_blocks" header="Blocks" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_blocks')}"/>
+                     </p:panel> 
+                     <p:panel  id="namenode_specialblocks" header="Special Blocks" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_specialblocks')}"/>
+                     </p:panel> 
+                     <p:panel  id="namenode_datanodes" header="Number of Data Nodes" >
+                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystemState','','namenode_datanodes')}"/>
+                     </p:panel>                     
+                  </p:dashboard>          
+               </h:form>             
+            
+            
+            
+            
+            
+            
         </ui:define>
 
     </ui:composition>

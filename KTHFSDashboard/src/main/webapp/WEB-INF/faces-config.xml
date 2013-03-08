@@ -55,6 +55,11 @@
             <to-view-id>/sauron/services.xhtml</to-view-id>
             <redirect/>
         </navigation-case>
+        <navigation-case>
+            <from-outcome>addcluster</from-outcome>
+            <to-view-id>/sauron/addcluster.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>
     </navigation-rule>    
 
    

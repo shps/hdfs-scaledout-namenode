@@ -1,8 +1,12 @@
 package se.kth.kthfsdashboard.util;
 
 import java.awt.Color;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -10,16 +14,20 @@ import java.util.List;
  */
 public class RrdtoolCommand {
 
-   private static int DEFAULT_WIDTH = 300;
-   private static int DEFAULT_HEIGHT = 150;
-   private static int DEFAULT_LOWERLIMIT = 0;
-   private static boolean SHOW_DETAILS = false;
+   private static final int DEFAULT_WIDTH = 300;
+   private static final int DEFAULT_HEIGHT = 150;
+   private static final int DEFAULT_LOWERLIMIT = 0;
+   private static final boolean SHOW_DETAILS = false;
+   private static final String COLLECTD_PATH = "/var/lib/collectd/rrd/";
+// TODO This should not be static   
+   private static final String COLLECTD_LINK = "applications/KTHFSDashboard/jarmon/data/";   
+//   private static final String COLLECTD_LINK = "domain1/applications/KTHFSDashboard/jarmon/data/";   
+   private static final String RRD_EXT = ".rrd";   
    private List<String> cmds;
    private List<String> graphCommands;
    private String hostname;
    private String plugin;
    private String pluginInstance;
-   private String type;
    private int start;
    private int end;
    private int width;
@@ -35,11 +43,10 @@ public class RrdtoolCommand {
    }
 
    public RrdtoolCommand(String hostname, String plugin, String pluginInstance,
-           String type, int start, int end) {
+          int start, int end) {
       this.hostname = hostname;
       this.plugin = plugin;
       this.pluginInstance = pluginInstance;
-      this.type = type;
       this.start = start;
       this.end = end;
       this.width = DEFAULT_WIDTH;
@@ -96,10 +103,23 @@ public class RrdtoolCommand {
       cmds.addAll(graphCommands);
       return cmds;
    }
+   
+   
+   public void drawLine(String type, String typeInstance, String ds, String label, String color, String detailsFormat) {
+      addGraph(ChartType.LINE, type, typeInstance, ds, label, color, detailsFormat);
+   }
 
-   public void addGraph(ChartType chartType, String typeInstance, String ds, String label, String color,
+   public void drawArea(String type, String typeInstance, String ds, String label, String color, String detailsFormat) {
+      addGraph(ChartType.AREA, type, typeInstance, ds, label, color, detailsFormat);
+   }   
+
+   public void stackArea(String type, String typeInstance, String ds, String label, String color, String detailsFormat) {
+      addGraph(ChartType.AREA_STACK, type, typeInstance, ds, label, color, detailsFormat);
+   }    
+   
+   private void addGraph(ChartType chartType, String type, String typeInstance, String ds, String label, String color,
            String detailsFormat) {
-      String var = typeInstance + ds;
+      String var = type + typeInstance + ds;
       String rrdFile = getRrdFileName(hostname, plugin, pluginInstance, type, typeInstance);
       
       Color c = Color.decode("0x"+color).brighter().brighter();
@@ -125,7 +145,19 @@ public class RrdtoolCommand {
    }
 
    private String getRrdFileName(String hostname, String plugin, String pluginInstance, String type, String typeInstance) {
-      String rrdFile = "/var/lib/collectd/rrd/" + hostname;
+      
+      
+       String path = "";
+      try {
+         path = new File("..").getCanonicalPath();
+      } catch (IOException ex) {
+         Logger.getLogger(RrdtoolCommand.class.getName()).log(Level.SEVERE, null, ex);
+      }
+
+      
+      String rrdFile = COLLECTD_PATH;
+//      String rrdFile = path + "/" + COLLECTD_LINK;      
+      rrdFile += hostname;
       rrdFile += "/" + plugin;
       if (pluginInstance != null && !pluginInstance.equals("")) {
          rrdFile += "-" + pluginInstance;
@@ -134,7 +166,10 @@ public class RrdtoolCommand {
       if (typeInstance != null && !typeInstance.equals("")) {
          rrdFile += "-" + typeInstance;
       }
-      rrdFile += ".rrd";
+      rrdFile += RRD_EXT;     
+
+      System.err.println(rrdFile);
+
       return rrdFile;
    }
    

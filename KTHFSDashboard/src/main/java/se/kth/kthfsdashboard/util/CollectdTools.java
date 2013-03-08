@@ -149,7 +149,10 @@ public class CollectdTools {
 
    private enum GraphType {
 
-      plane, loadall, memoryall, dfall, interfaceall, swapall;
+      plane, loadall, memoryall, dfall, interfaceall, swapall, 
+      namenode_capacity, namenode_files, namenode_load, namenode_heartbeats,
+      namenode_blockreplication, namenode_blocks, namenode_specialblocks,
+      namenode_datanodes;
    }
 
    public InputStream getGraphStream(String chartType, String hostname, String plugin, String pluginInstance, String type, String typeInstance, String ds, int start, int end) throws IOException {
@@ -164,66 +167,131 @@ public class CollectdTools {
       try {
          GraphType.valueOf(chartType);
       } catch (Exception e) {
+         System.err.println(">> Chart type set to: plane");
          chartType = "plane";
       }
 
-      RrdtoolCommand cmd = new RrdtoolCommand(hostname, plugin, pluginInstance, type, start, end);
+      RrdtoolCommand cmd = new RrdtoolCommand(hostname, plugin, pluginInstance, start, end);
       switch (GraphType.valueOf(chartType)) {
          case loadall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Load");
             cmd.setVerticalLabel(" ");
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "longterm", "Longterm ", RED, "%5.2lf");
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "midterm", "Midterm  ", BLUE, "%5.2lf");
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "", "shortterm", "Shortterm", YELLOW, "%5.2lf");
+            cmd.drawLine(type, "", "longterm", "Longterm ", RED, "%5.2lf");
+            cmd.drawLine(type, "", "midterm", "Midterm  ", BLUE, "%5.2lf");
+            cmd.drawLine(type, "", "shortterm", "Shortterm", YELLOW, "%5.2lf");
             break;
 
          case memoryall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Memory");
             cmd.setVerticalLabel("Byte");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "used", "value", "Used    ", RED, "%5.2lf %S");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "buffered", "value", "Buffered", BLUE, "%5.2lf %S");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "cached", "value", "Cached  ", YELLOW, "%5.2lf %S");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "free", "value", "Free    ", GREEN, "%5.2lf %S");
+            cmd.drawArea(type, "used", "value", "Used    ", RED, "%5.2lf %S");
+            cmd.stackArea(type, "buffered", "value", "Buffered", BLUE, "%5.2lf %S");
+            cmd.stackArea(type, "cached", "value", "Cached  ", YELLOW, "%5.2lf %S");
+            cmd.stackArea(type, "free", "value", "Free    ", GREEN, "%5.2lf %S");
             break;
 
          case swapall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Swap");
             cmd.setVerticalLabel("Byte");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "used", "value", "Used    ", RED, "%5.2lf %s");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "cached", "value", "Cached  ", YELLOW, "%5.2lf %s");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "free", "value", "Free    ", GREEN, "%5.2lf %s");
+            cmd.drawArea(type, "used", "value", "Used    ", RED, "%5.2lf %s");
+            cmd.stackArea(type, "cached", "value", "Cached  ", YELLOW, "%5.2lf %s");
+            cmd.stackArea(type, "free", "value", "Free    ", GREEN, "%5.2lf %s");
             break;
-            
+
          case dfall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Physical Memory");
             cmd.setVerticalLabel("Byte");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA, "root", "used", "Used", RED, "%5.2lf %S");
-            cmd.addGraph(RrdtoolCommand.ChartType.AREA_STACK, "root", "free", "Free", GREEN, "%5.2lf %S");
+            cmd.drawArea(type, "root", "used", "Used", RED, "%5.2lf %S");
+            cmd.stackArea(type, "root", "free", "Free", GREEN, "%5.2lf %S");
             break;
 
          case interfaceall:
             cmd.setGraphSize(width, height);
             cmd.setTitle("Network Interface");
             cmd.setVerticalLabel("bps");
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "eth0", "rx", "RX", YELLOW, "%5.2lf %S");
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, "eth0", "tx", "TX", BLUE, "%5.2lf %S");
+            cmd.drawLine(type, "eth0", "rx", "RX", YELLOW, "%5.2lf %S");
+            cmd.drawLine(type, "eth0", "tx", "TX", BLUE, "%5.2lf %S");
             break;
 
+         case namenode_capacity:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Namenode Capacity");
+            cmd.setVerticalLabel("GB");
+            cmd.drawLine("memory-CapacityTotalGB", "", "value", "Total", BLUE, "%5.2lf %S");
+            cmd.drawLine("memory-CapacityRemainingGB", "", "value", "Remaining", GREEN, "%5.2lf %S");
+            cmd.drawLine("memory-CapacityUsedGB", "", "value", "Used", RED, "%5.2lf %S");
+            break;
+
+         case namenode_files:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Files");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("counter-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
+            break;            
+
+         case namenode_load:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Total Load");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("gauge-TotalLoad", "", "value", "Total Load", RED, "%5.2lf %S");
+            break;  
+
+         case namenode_heartbeats:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Heartbeats");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("counter-ExpiredHeartbeats", "", "value", "Expired Heartbeats", RED, "%5.2lf %S");
+            break;  
+
+         case namenode_blockreplication:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Block Replication");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("counter-UnderReplicatedBlocks", "", "value", "Under-Replicated", GREEN, "%5.2lf %S");
+            cmd.drawLine("counter-PendingReplicationBlocks", "", "value", "Pending", BLUE, "%5.2lf %S");
+            cmd.drawLine("counter-ScheduledReplicationBlocks", "", "value", "Scheduled", YELLOW, "%5.2lf %S");            
+            break; 
+            
+         case namenode_blocks:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Blocks");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("counter-BlockCapacity", "", "value", "Blocks Total", GREEN, "%5.2lf %S");
+            cmd.drawLine("counter-BlocksTotal", "", "value", "Block Capacity", BLUE, "%5.2lf %S");
+            break; 
+            
+         case namenode_specialblocks:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Special Blocks");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("counter-CorruptBlocks", "", "value", "Corrupt", RED, "%5.2lf %S");
+            cmd.drawLine("counter-ExcessBlocks", "", "value", "Excess", BLUE, "%5.2lf %S");
+            cmd.drawLine("counter-MissingBlocks", "", "value", "Missing", YELLOW, "%5.2lf %S");
+            cmd.drawLine("counter-PendingDeletionBlocks", "", "value", "Pending Delete", GREEN, "%5.2lf %S");
+            break; 
+            
+         case namenode_datanodes:
+            cmd.setGraphSize(width, height);
+            cmd.setTitle("Number of Data Nodes");
+            cmd.setVerticalLabel(" ");
+            cmd.drawLine("gauge-NumDeadDataNodes", "", "value", "Dead", RED, "%5.2lf %S");
+            cmd.drawLine("gauge-NumLiveDataNodes", "", "value", "Live", GREEN, "%5.2lf %S");
+            break;             
+            
          default:
             cmd.setTitle(plugin);
             cmd.setVerticalLabel(plugin);
-            cmd.addGraph(RrdtoolCommand.ChartType.LINE, typeInstance, ds, typeInstance, GREEN, null);
+            cmd.drawLine(type, typeInstance, ds, typeInstance, GREEN, null);
       }
 
-//      System.err.println();
-//      System.err.println("------------------------------------");
-//      for (String s: cmd.getCommands()) {
-//         System.err.println(s);
-//      }
+      System.err.println();
+      for (String s : cmd.getCommands()) {
+         System.err.println(s);
+      }
 
       Process process = new ProcessBuilder(cmd.getCommands()).directory(new File("/usr/bin/"))
               .redirectErrorStream(true).start();
@@ -235,6 +303,4 @@ public class CollectdTools {
       }
       return process.getInputStream();
    }
-
-
 }
