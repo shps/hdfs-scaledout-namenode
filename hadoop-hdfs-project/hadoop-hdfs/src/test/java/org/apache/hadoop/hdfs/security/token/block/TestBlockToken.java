@@ -86,6 +86,7 @@ public class TestBlockToken {
   static {
     conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    System.setProperty("java.security.krb5.conf", "src/test/resources/krb5.conf");
     UserGroupInformation.setConfiguration(conf);
   }
 
