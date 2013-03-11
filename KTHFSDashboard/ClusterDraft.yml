@@ -1,0 +1,54 @@
+## YAML Template.
+## Based on ironfan examples
+--- 
+!!se.kth.kthfsdashboard.virtualization.clusterparser.Cluster
+  name: test
+  services: 
+   [kthfs, YARN, MySQL_Cluster]
+  
+  environment: dev
+  ##Do we need to give the provider setup we want? also this probably varies from provider to provider
+  ##Do we specify chef attributes?
+  provider:
+    name: EC2
+    instanceType: m1.large
+    image: blabla
+    zones: 
+      [eu-west-1a, eu-west-1b]
+    securityGroups:
+      - name: ndbmgm
+        portRange:
+          [ 20, 50, 8080]
+      - name: ndbd
+        portRange:
+          [ 20, 50, 8080]
+      - name: mysqld 
+        portRange:
+          [ 20, 50, 8080]
+      - name: memcached
+        portRange:
+          [ 20, 50, 8080]
+  ##lists of service, we define a service with the number of instances and roles?  
+  instances:
+  - name: pepe
+    number: 2
+    roles:
+      [kthfs*namenode, kthfs*datanode]
+  - name: jose
+    number: 4
+    roles:
+      [MySQL_Cluster*ndbd, MySQL_Cluster*mysqld, MySQL_Cluster*mgm]
+  ##Override chef attributes for roles:
+  chefAttributes:
+    - serviceName: kthfsbase
+      roles:
+      - name: namenode
+        attributes:
+          { ? foo : bar, ? bar : double-foo}
+    - serviceName: mysql
+      roles:
+        - name: ndbd
+          attributes:
+           { ? foo : bar, ? bar : double-foo}
+...
+  
