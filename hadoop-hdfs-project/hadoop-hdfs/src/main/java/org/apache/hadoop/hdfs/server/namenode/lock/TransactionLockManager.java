@@ -517,6 +517,7 @@ public class TransactionLockManager {
           }
         }
         break;
+     
       default:
         throw new IllegalArgumentException("Unknown type " + lock.name());
     }
@@ -524,6 +525,8 @@ public class TransactionLockManager {
     return inodes;
   }
 
+
+  
   private List<BlockInfo> acquireBlockLock(LockType lock, Long param) throws PersistanceException {
 
     List<BlockInfo> blocks = new ArrayList<BlockInfo>();
@@ -562,15 +565,28 @@ public class TransactionLockManager {
 
     EntityManager.readCommited();
     BlockInfo rcBlock = EntityManager.find(BlockInfo.Finder.ById, blockParam);
-
     if (rcBlock == null) {
       return;
     }
 
-    EntityManager.clearContext();
+    EntityManager.readCommited();
+    INode inode = EntityManager.find(INode.Finder.ByPKey, rcBlock.getInodeId());
+    
+    ArrayList<INode> inodes = new ArrayList<INode>();
+    if(inode != null && this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT)
+    {
+       readFromLeafToRoot(inode, inodes);
+       EntityManager.clearContext();
+       takeLocksFromRootToLeaf(inodes, inodeLock);
+       
+    }
+    else
+    {
+        EntityManager.clearContext();
+        inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, rcBlock.getInodeId());
+    }
 
-    INode inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, rcBlock.getInodeId());
-
+    
     //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
     if (inode == null || !(inode instanceof INodeFile)) {
       return;
@@ -591,7 +607,49 @@ public class TransactionLockManager {
     acquireBlockRelatedLocksNormal();
 
   }
+  
+   private void readFromLeafToRoot(INode inode, ArrayList<INode> list) throws PersistanceException {
+        if (inode.getParentId() == -1) {
+            list.add(inode);
+            return;
+        }
 
+        readFromLeafToRoot(inode.getParent(), list);
+    
+        EntityManager.readCommited();
+        INode i = EntityManager.find(INode.Finder.ByPKey, inode.getId());
+        list.add(i);
+  }
+   
+  
+    private void takeLocksFromRootToLeaf(ArrayList<INode> inodes,INodeLockType inodeLock) throws PersistanceException {
+
+        StringBuilder msg = new StringBuilder();
+        msg.append("Took Lock on the entire path ");
+        for(int i = 0; i < inodes.size(); i++)
+        {
+            INode lockedINode;
+            if(i == (inodes.size() - 1)) // take specified lock
+            {
+                lockedINode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, inodes.get(i).getId());
+            }
+            else // take read commited lock
+            {
+                lockedINode = TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, inodes.get(i).getId());
+            }
+           
+            if(!lockedINode.getName().equals(""))
+            {
+               msg.append("/");
+               msg.append(lockedINode.getName());
+            }
+            
+           
+        }
+         LOG.debug(msg.toString());
+  }
+    
+  
   public void acquireByLease(INode rootDir) throws PersistanceException, UnresolvedPathException {
     this.rootDir = rootDir;
     if (leaseParam == null) {

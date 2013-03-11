@@ -3101,7 +3101,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(INodeLockType.WRITE).
+        tla.addINode(INodeResolveType.FROM_CHILD_TO_ROOT, INodeLockType.WRITE).
                 addBlock(LockType.WRITE, lastblock.getBlockId()).
                 addLease(LockType.WRITE).
                 addLeasePath(LockType.WRITE).
@@ -4127,7 +4127,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-//        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
+        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
         // TODO HOOMAN safemode??
       }
     };
