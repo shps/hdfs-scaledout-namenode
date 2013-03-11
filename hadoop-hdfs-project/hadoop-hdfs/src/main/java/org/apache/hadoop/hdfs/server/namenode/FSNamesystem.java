@@ -2078,6 +2078,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addLease(TransactionLockManager.LockType.READ).
                 addCorrupt(LockType.WRITE).
                 addReplicaUc(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
                 acquire();
       }
     };
@@ -2591,9 +2592,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        if (!DFSUtil.isValidName(src)) {
-          throw new InvalidPathException("Invalid file name: " + src);
-        }
+       
         if (isPermissionEnabled) {
           checkTraverse(src);
         }
@@ -2611,6 +2610,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 acquire();
       }
     };
+    
+     if (!DFSUtil.isValidName(src)) {
+          throw new InvalidPathException("Invalid file name: " + src);
+     }
     return (HdfsFileStatus) getFileInfoHandler.handleWithReadLock(this);
   }
 

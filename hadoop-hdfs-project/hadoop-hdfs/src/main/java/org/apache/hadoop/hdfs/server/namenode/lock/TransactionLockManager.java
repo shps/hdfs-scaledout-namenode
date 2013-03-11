@@ -164,8 +164,14 @@ public class TransactionLockManager {
         if (dir instanceof INodeDirectory) {
           children.addAll(((INodeDirectory) dir).getChildren());
         }
+        else
+        {
+            // immediate children of  INodeFile is the inode itself.
+            children.add(dir);
+        }
       }
     }
+    //if(child)
     inodes = new INode[children.size()];
     return children.toArray(inodes);
   }

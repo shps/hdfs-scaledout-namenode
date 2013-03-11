@@ -104,7 +104,7 @@ public class TestDFSAddressConfig extends TestCase {
     selfSocketAddr = dn.getSelfAddr().toString();
     LOG.info("DN Self Socket Addr == " + selfSocketAddr);
     // assert that default self socket address is 0.0.0.0
-    assertTrue(selfSocketAddr.startsWith("/0.0.0.0:"));
+    assertTrue(selfSocketAddr.startsWith("/0:0:0:0:"));
 
     cluster.shutdown();
   }

@@ -1448,16 +1448,21 @@ public class BlockManager {
             final int numOfReplicas, final DatanodeDescriptor client,
             final HashMap<Node, Node> excludedNodes,
             final long blocksize) throws IOException {
-        //Kamal: this was added for the caught bug for removed nodes in NetworkTopology
-        if (excludedNodes != null) {
-            Iterator<Node> iterator = excludedNodes.values().iterator();
-            while (iterator.hasNext()) {
-                Node node = iterator.next();
-                if (datanodeManager.getDatanodeByName(node.getName()) == null) {
-                    excludedNodes.remove(node);
-                }
-            }
-        }
+        
+          //[S] DFSOutputStream has a list of suspected datanodes
+          //it sends the list of suspected dead datanodes 
+          //there is no need to add them again as correct nodes. 
+        
+//        //Kamal: this was added for the caught bug for removed nodes in NetworkTopology
+//        if (excludedNodes != null) {
+//            Iterator<Node> iterator = excludedNodes.values().iterator();
+//            while (iterator.hasNext()) {
+//                Node node = iterator.next();
+//                if (datanodeManager.getDatanodeByName(node.getName()) == null) {
+//                    excludedNodes.remove(node);
+//                }
+//            }
+//        }
         // choose targets for the new block to be allocated.
         final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
                 src, numOfReplicas, client, excludedNodes, blocksize);

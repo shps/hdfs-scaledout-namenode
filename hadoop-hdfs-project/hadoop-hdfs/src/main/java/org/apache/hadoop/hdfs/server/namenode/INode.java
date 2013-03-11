@@ -466,7 +466,7 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
      */
     public static String[] getPathNames(String path) {
         if (path == null || !path.startsWith(Path.SEPARATOR)) {
-            throw new AssertionError("Absolute path required");
+            throw new AssertionError("Absolute path required. path "+path);
         }
         return StringUtils.split(path, Path.SEPARATOR_CHAR);
     }
