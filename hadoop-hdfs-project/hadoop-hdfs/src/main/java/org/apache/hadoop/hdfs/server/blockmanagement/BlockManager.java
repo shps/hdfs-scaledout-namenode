@@ -1089,20 +1089,9 @@ public class BlockManager {
         return blockCnt;
     }
 
-    private List<String> getStorageIdsOfIvalidatedBlocks(OperationType opType) throws IOException {
-        TransactionalRequestHandler getStorageIdsHandler = new TransactionalRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                return invalidateBlocks.getStorageIDs();
-            }
-
-            @Override
-            public void acquireLock() throws PersistanceException, IOException {
-                TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
-            }
-        };
-        return (List<String>) getStorageIdsHandler.handle();
-    }
+  private List<String> getStorageIdsOfIvalidatedBlocks(OperationType opType) throws IOException {
+    return invalidateBlocks.getStorageIDs(opType);
+  }
 
     /**
      * Scan blocks in {@link #neededReplications} and assign replication work to

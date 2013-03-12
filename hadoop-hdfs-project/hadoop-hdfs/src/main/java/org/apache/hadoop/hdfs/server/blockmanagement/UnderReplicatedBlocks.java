@@ -157,7 +157,7 @@ class UnderReplicatedBlocks {
       UnderReplicatedBlock urb = EntityManager.find(UnderReplicatedBlock.Finder.ByBlockId, block.getBlockId());
       if (urb == null) {
         urb = new UnderReplicatedBlock(priLevel, block.getBlockId());
-        EntityManager.add(new UnderReplicatedBlock(priLevel, block.getBlockId()));
+        EntityManager.add(urb);
       } else {
         urb.setLevel(priLevel);
         EntityManager.update(urb);
