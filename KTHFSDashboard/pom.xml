@@ -11,6 +11,7 @@
     <name>KTHFS Dashboard</name>
 
     <properties>
+        <jclouds.version>1.5.7</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -150,6 +151,64 @@
             <artifactId>java-rrd-hg</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.jclouds</groupId>
+            <artifactId>jclouds-compute</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>chef</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jclouds</groupId>
+            <artifactId>jclouds-allcompute</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jclouds.labs</groupId>
+            <artifactId>joyentcloud</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jclouds.labs</groupId>
+            <artifactId>virtualbox</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk16</artifactId>
+            <version>1.46</version>
+        </dependency> 
+        <dependency>
+            <groupId>org.jclouds.driver</groupId>
+            <artifactId>jclouds-bouncycastle</artifactId>
+            <version>${jclouds.version}</version>
+            
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jclouds.driver</groupId>
+            <artifactId>jclouds-sshj</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jclouds.driver</groupId>
+            <artifactId>jclouds-enterprise</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>13.0.1</version>
+        </dependency>
+        
         
         <!--        <dependency>
             <groupId>org.primefaces.extensions</groupId>
@@ -213,6 +272,7 @@
             <plugin>
                 <groupId>org.codehaus.cargo</groupId>
                 <artifactId>cargo-maven2-plugin</artifactId>
+                <!--<version>1.2.4</version>-->
                 <version>1.2.4</version>
                 <configuration>
                     <container>
@@ -232,7 +292,8 @@
                     <dependency>
                         <groupId>org.glassfish.deployment</groupId>
                         <artifactId>deployment-client</artifactId>
-                        <version>3.1</version>
+<!--                        <version>3.1</version>-->
+                        <version>3.1.1</version>
                     </dependency>
                 </dependencies>
             </plugin>

@@ -29,15 +29,15 @@ public class ClusterParserTest extends TestCase {
             assertNotNull(document);
             assertTrue(document.getClass().toString(), document instanceof Cluster);
             Cluster cluster =(Cluster) document;
-            System.out.println(cluster.getName());
-            System.out.println(cluster.getServices());
+            System.out.println("Cluster Name: "+cluster.getName());
+            System.out.println("Cluster environment: "+cluster.getEnvironment());
+            System.out.println("Global services:" +cluster.getGlobalServices());
+            System.out.println("Authorize ports:"+cluster.getAuthorizePorts());
+            System.out.println("Authorize specific ports:" +cluster.getAuthorizeSpecificPorts());
             System.out.println(cluster.getProvider().toString());
-            System.out.println(cluster.getInstances().toString());
+            System.out.println(cluster.getNodes());
             System.out.println(cluster.getChefAttributes().toString());
-            Map<String,String> map = cluster.getChefAttributes().get(0).getRoles().get(0).getAttributes();
-            System.out.println(map.keySet());
-            System.out.println(map.get("foo"));
-            System.out.println(map.get("bar"));
+            
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             System.out.println("File not found in the directory specified");

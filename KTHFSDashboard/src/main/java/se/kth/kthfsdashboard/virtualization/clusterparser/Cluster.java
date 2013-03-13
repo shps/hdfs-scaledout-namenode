@@ -12,23 +12,38 @@ import java.util.List;
  */
 public class Cluster {
     private String name;
-    private List<String> services;
+    private List<String> globalServices;
+    private List<String> authorizePorts;
+    private List<Integer> authorizeSpecificPorts;
     private String environment;
     private Provider provider;
-    private List<Instance> instances;
+    private List<NodeGroup> nodes;
     private List<ChefAttributes> chefAttributes;
 
-    public List<String> getServices() {
-        return services;
+    public List<String> getGlobalServices() {
+        return globalServices;
     }
 
-    public void setServices(List<String> services) {
-        this.services = services;
+    public void setGlobalServices(List<String> globalServices) {
+        this.globalServices = globalServices;
     }
 
-    
+    public List<String> getAuthorizePorts() {
+        return authorizePorts;
+    }
 
-    
+    public void setAuthorizePorts(List<String> authorizePorts) {
+        this.authorizePorts = authorizePorts;
+    }
+
+    public List<Integer> getAuthorizeSpecificPorts() {
+        return authorizeSpecificPorts;
+    }
+
+    public void setAuthorizeSpecificPorts(List<Integer> authorizeSpecificPorts) {
+        this.authorizeSpecificPorts = authorizeSpecificPorts;
+    }
+   
     public List<ChefAttributes> getChefAttributes() {
         return chefAttributes;
     }
@@ -60,18 +75,18 @@ public class Cluster {
     public void setProvider(Provider provider) {
         this.provider = provider;
     }
-
-    public List<Instance> getInstances() {
-        return instances;
+   
+    public List<NodeGroup> getNodes() {
+        return nodes;
     }
 
-    public void setInstances(List<Instance> instances) {
-        this.instances = instances;
+    public void setNodes(List<NodeGroup> nodes) {
+        this.nodes = nodes;
     }
 
     @Override
     public String toString() {
-        return "Cluster{" + "name=" + name + ", environment=" + environment + ", provider=" + provider + ", instances=" + instances + '}';
+        return "Cluster{" + "name=" + name + ", environment=" + environment + ", provider=" + provider + ", instances=" + nodes + '}';
     }
     
     

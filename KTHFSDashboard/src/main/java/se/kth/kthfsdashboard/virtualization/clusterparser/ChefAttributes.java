@@ -4,38 +4,35 @@
  */
 package se.kth.kthfsdashboard.virtualization.clusterparser;
 
-import java.util.List;
 
 /**
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
 public class ChefAttributes {
-    private String serviceName;
-    private List<Role> roles;
+    private String role;
+    private String chefJson;
 
-    public String getServiceName() {
-        return serviceName;
+    public String getRole() {
+        return role;
     }
 
-    public void setServiceName(String serviceName) {
-        this.serviceName = serviceName;
+    public void setRole(String role) {
+        this.role = role;
     }
 
-    public List<Role> getRoles() {
-        return roles;
+    public String getChefJson() {
+        return chefJson;
     }
 
-    public void setRoles(List<Role> roles) {
-        this.roles = roles;
+    public void setChefJson(String chefJson) {
+        this.chefJson = chefJson;
     }
 
     @Override
     public String toString() {
-        return "ChefAttributes{" + "serviceName=" + serviceName + ", roles=" + roles + '}';
+        return "ChefAttributes{" + "role=" + role + ", chefJson=" + chefJson + '}';
     }
-    
-    
-    
+       
     
 }
