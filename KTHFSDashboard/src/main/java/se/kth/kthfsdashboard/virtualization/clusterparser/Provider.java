@@ -15,8 +15,7 @@ public class Provider {
     private String instanceType;
     private String image;
     private List<String> zones;
-    private List<SecurityGroup> securityGroups;
-
+   
     public String getName() {
         return name;
     }
@@ -47,21 +46,11 @@ public class Provider {
 
     public void setZones(List<String> zones) {
         this.zones = zones;
-    }
-
-    public List<SecurityGroup> getSecurityGroups() {
-        return securityGroups;
-    }
-
-    public void setSecurityGroups(List<SecurityGroup> securityGroups) {
-        this.securityGroups = securityGroups;
-    }
+    }     
 
     @Override
     public String toString() {
-        return "Provider{" + "name=" + name + ", instanceType=" + instanceType + ", image=" + image + ", zones=" + zones + ", securityGroups=" + securityGroups + '}';
+        return "Provider{" + "name=" + name + ", instanceType=" + instanceType + ", image=" + image + ", zones=" + zones + '}';
     }
-    
-    
-    
+
 }

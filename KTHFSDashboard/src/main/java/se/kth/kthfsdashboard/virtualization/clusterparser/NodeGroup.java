@@ -10,17 +10,18 @@ import java.util.List;
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
-public class Instance {
-    private String name;
+public class NodeGroup {
+    private String securityGroup;
     private int number;
     private List<String> roles;
+    private List<String> authorizePorts;
 
-    public String getName() {
-        return name;
+    public String getSecurityGroup() {
+        return securityGroup;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setSecurityGroup(String securityGroup) {
+        this.securityGroup = securityGroup;
     }
 
     public int getNumber() {
@@ -39,10 +40,18 @@ public class Instance {
         this.roles = roles;
     }
 
+    public List<String> getAuthorizePorts() {
+        return authorizePorts;
+    }
+
+    public void setAuthorizePorts(List<String> authorizePorts) {
+        this.authorizePorts = authorizePorts;
+    }
+
     @Override
     public String toString() {
-        return "Instance{" + "name=" + name + ", number=" + number + ", roles=" + roles + '}';
+        return "NodeGroup{" + "securityGroup=" + securityGroup + ", number=" + number + ", roles=" + roles + ", authorizePorts=" + authorizePorts + '}';
     }
-    
+         
     
 }
