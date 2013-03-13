@@ -90,7 +90,8 @@ public class NameNodeAdapter {
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager.acquireByLeasePath(path, TransactionLockManager.LockType.READ, TransactionLockManager.LockType.READ);
+        TransactionLockManager tl = new TransactionLockManager();
+        tl.acquireByLeasePath(path, TransactionLockManager.LockType.READ, TransactionLockManager.LockType.READ);
       }
 
       @Override

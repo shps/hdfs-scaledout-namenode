@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
@@ -223,15 +224,18 @@ class FSImageFormat {
     }
 
   /** Update the root node's attributes */
-  private void updateRootAttr(INode root) {                                                           
+  private void updateRootAttr(INode root) throws PersistanceException, IOException{                                                           
     long nsQuota = root.getNsQuota();
     long dsQuota = root.getDsQuota();
     FSDirectory fsDir = namesystem.dir;
+    
+    INodeDirectoryWithQuota rootDir = fsDir.getRootDir(); 
     if (nsQuota != -1 || dsQuota != -1) {
-      fsDir.rootDir.setQuota(nsQuota, dsQuota);
+      rootDir.setQuota(nsQuota, dsQuota);
     }
-    fsDir.rootDir.setModificationTime(root.getModificationTime());
-    fsDir.rootDir.setPermissionStatus(root.getPermissionStatus());    
+    rootDir.setModificationTime(root.getModificationTime());
+    rootDir.setPermissionStatus(root.getPermissionStatus());    
+    EntityManager.update(rootDir);
   }
 
   /** 
@@ -277,7 +281,7 @@ class FSImageFormat {
      String parentPath = FSImageSerialization.readString(in); 
 
      FSDirectory fsDir = namesystem.dir;
-     INode parent = fsDir.rootDir.getNode(parentPath, true);
+     INode parent = fsDir.getRootDir().getNode(parentPath, true);
      if (parent == null || !parent.isDirectory()) {
        throw new IOException("Path " + parentPath + "is not a directory.");
      }
@@ -308,7 +312,7 @@ class FSImageFormat {
     byte[][] pathComponents;
     byte[][] parentPath = {{}};      
     FSDirectory fsDir = namesystem.dir;
-    INodeDirectory parentINode = fsDir.rootDir;
+    INodeDirectory parentINode = fsDir.getRootDir();
     for (long i = 0; i < numFiles; i++) {
       pathComponents = FSImageSerialization.readPathComponents(in);
       INode newNode = loadINode(in);
@@ -558,7 +562,7 @@ class FSImageFormat {
               long txid,
               FSNamesystem sourceNamesystem,
               FSImageCompression compression)
-      throws IOException {
+      throws IOException, PersistanceException {
       checkNotSaved();
 
       FSDirectory fsDir = sourceNamesystem.dir;
@@ -573,7 +577,7 @@ class FSImageFormat {
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
         out.writeInt(sourceNamesystem.getFSImage().getStorage().getNamespaceID()); // TODO bad dependency
-        out.writeLong(fsDir.rootDir.getNsCount());
+        out.writeLong(fsDir.getRootDir().getNsCount());
         long gs = (Long) new LightWeightRequestHandler(OperationType.GET_GENERATION_STAMP) {
 
           @Override

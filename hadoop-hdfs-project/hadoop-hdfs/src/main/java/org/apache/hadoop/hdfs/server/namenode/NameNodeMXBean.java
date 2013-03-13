@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * This is the JMX management interface for namenode information
@@ -116,7 +118,7 @@ public interface NameNodeMXBean {
    * 
    * @return the total number of files on the cluster
    */
-  public long getTotalFiles();
+  public long getTotalFiles() throws PersistanceException, IOException;
   
   /**
    * Gets the total number of missing blocks on the cluster

@@ -389,7 +389,7 @@ public class LeaseManager {
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.READ).
                 addGenerationStamp(LockType.WRITE).
-                acquireByLease(fsnamesystem.getFsDirectory().getRootDir());
+                acquireByLease();
       }
     };
   }

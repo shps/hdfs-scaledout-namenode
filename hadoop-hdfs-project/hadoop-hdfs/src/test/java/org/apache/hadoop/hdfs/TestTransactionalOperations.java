@@ -359,7 +359,7 @@ public class TestTransactionalOperations {
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.WRITE).
@@ -374,7 +374,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -391,7 +391,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 acquire();
 
@@ -401,7 +401,7 @@ public class TestTransactionalOperations {
         EntityManager.begin();
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
-                TransactionLockManager.INodeLockType.WRITE, new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                TransactionLockManager.INodeLockType.WRITE, new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 addReplica(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.READ).
@@ -416,7 +416,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, "IamAnotherHolder").
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -441,7 +441,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString()}).
                 addLease(TransactionLockManager.LockType.READ).
                 acquire();
 
@@ -452,7 +452,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString()}).
                 addBlock(TransactionLockManager.LockType.READ).
                 acquire();
 
@@ -463,7 +463,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString()}).
                 acquire();
 
         EntityManager.commit();
@@ -473,7 +473,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{f1.toString()});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, "IamAnotherHolder").
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -492,7 +492,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString()}).
                 acquire();
         EntityManager.commit();
 
@@ -502,7 +502,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{f1.toString()}, cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString()}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
@@ -517,8 +517,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{f1.toString(), f2.toString(), f3.toString()},
-                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.toString(), f2.toString(), f3.toString()}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
         EntityManager.commit();
@@ -529,8 +528,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{f1.getParent().toString()},
-                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.getParent().toString()}).
                 addBlock(TransactionLockManager.LockType.READ).
                 addReplica(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
@@ -545,8 +543,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f1.getParent().toString()},
-                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f1.getParent().toString()}).
                 addLease(TransactionLockManager.LockType.WRITE, "ZzZzZz").
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
@@ -562,8 +559,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{f8.getParent().toString()},
-                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f8.getParent().toString()}).
                 acquire();
         EntityManager.commit();
 
@@ -572,8 +568,7 @@ public class TestTransactionalOperations {
         tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{f7.toString()},
-                cluster.getNamesystem().getFsDirectory().getRootDir()).
+                new String[]{f7.toString()}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, "1234Holder").
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -622,7 +617,7 @@ public class TestTransactionalOperations {
                 addCorrupt(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.READ).
-                acquireByLease(cluster.getNamesystem().getFsDirectory().getRootDir());
+                acquireByLease();
         EntityManager.commit();
       } catch (PersistanceException ex) {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);

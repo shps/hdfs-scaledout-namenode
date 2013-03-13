@@ -148,7 +148,7 @@ public class TestBlockUnderConstruction {
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{file}, cluster.getNamesystem().getFsDirectory().getRootDir());
+                new String[]{file});
         lm.addBlock(TransactionLockManager.LockType.READ);
         lm.acquire();
       }
