@@ -107,32 +107,26 @@
 
          <p:spacer width="1" height="50" />
 
-
-         <h:form id="formcharts" style="text-align: center">  
-            
+         <h:form id="formdate" style="text-align: center">  
             <h:panelGrid columns="10"> 
                <p:selectOneButton id ="periods" value="#{graphController.period}">  
                   <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
                   <f:param name="hostname" value="#{hostController.hostname}"/>
                   <p:ajax event="change" process="@form" update=":graphs, calstart, calend" listener="#{graphController.updateDates}"/>
                </p:selectOneButton>
-               
                <h:outputText value="or from" />
                <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
                <h:outputText value=" to " />
                <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>
-               
                <h:outputText value=" in " />
                <p:selectOneMenu id="cols" value="#{graphController.numberOfColumns}" >  
                   <f:selectItems var="n" value="#{graphController.columns}" />  
                </p:selectOneMenu>
                <h:outputText value=" columns " />
-               
                <p:commandButton value="Go" update=":graphs, periods"  actionListener="#{graphController.useCalendar()}" >
                   <f:param name="hostname" value="#{hostController.hostname}"/>
                </p:commandButton> 
             </h:panelGrid>
-
          </h:form>        
          
          <h:form id="graphs">

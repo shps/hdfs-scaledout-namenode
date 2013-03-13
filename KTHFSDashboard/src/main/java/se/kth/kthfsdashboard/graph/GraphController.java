@@ -12,10 +12,6 @@ import java.util.Map.Entry;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import org.primefaces.model.DashboardColumn;
-import org.primefaces.model.DashboardModel;
-import org.primefaces.model.DefaultDashboardColumn;
-import org.primefaces.model.DefaultDashboardModel;
 import se.kth.kthfsdashboard.struct.DatePeriod;
 
 /**
@@ -37,6 +33,7 @@ public class GraphController implements Serializable {
    private int numberOfColumns;
    private List<DatePeriod> datePeriods = new ArrayList<DatePeriod>();
    private List<Integer> columns;
+   private List<String> hostGraphs;
    private List<String> namenodeGraphs;
    private List<String> namenodeActivitiesGraphs;
    
@@ -51,6 +48,7 @@ public class GraphController implements Serializable {
               "nn_o_getadditionaldatanode" , "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", "nn_o_syncs",
               "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));     
       
+      hostGraphs = new ArrayList<String>(Arrays.asList("load", "memory", "df", "interface", "swap"));
       
       columns = new ArrayList<Integer>(Arrays.asList(2,3,4,5));
 
@@ -210,6 +208,17 @@ public class GraphController implements Serializable {
       return url;
    }
 
+   public String getHostGraphUrl(String plugin) throws MalformedURLException {
+
+      String type;
+      if (plugin.equals("interface")) {
+         type = "if_octets";
+      } else {
+         type = plugin;
+      }
+      return getGraphUrl(hostname, plugin, type, plugin + "all");
+   }   
+   
    public String getGraphUrl(String host, String plugin, String type) throws MalformedURLException {
 //      TODO: host/hostname ?
       return getGraphUrl(hostname, plugin, type, plugin + "all");
@@ -246,6 +255,10 @@ public class GraphController implements Serializable {
 
    public List<String> getNamenodeActivitiesGraphs() {
       return namenodeActivitiesGraphs;
+   }
+
+   public List<String> getHostGraphs() {
+      return hostGraphs;
    }
 
 
