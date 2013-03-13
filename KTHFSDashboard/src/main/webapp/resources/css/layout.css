@@ -39,6 +39,10 @@ body {
    font-size: 9px;
 }
 
+/*Credentials Form*/
+#computeCredentialsForm{
+    width: 500px;
+}
 
 
 

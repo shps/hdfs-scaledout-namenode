@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InvalidateBlockDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
@@ -145,18 +146,21 @@ class InvalidateBlocks {
   /**
    * @return a list of the storage IDs.
    */
-  synchronized List<String> getStorageIDs() throws PersistanceException {
-    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) EntityManager.findList(InvalidatedBlock.Finder.All);
+  List<String> getStorageIDs(OperationType opType) throws IOException {
+    LightWeightRequestHandler getAllInvBlocksHandler = new LightWeightRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        InvalidateBlockDataAccess da = (InvalidateBlockDataAccess) StorageFactory.getDataAccess(InvalidateBlockDataAccess.class);
+        return da.findAllInvalidatedBlocks();
+      }
+    };
+    List<InvalidatedBlock> invBlocks = (List<InvalidatedBlock>) getAllInvBlocksHandler.handle();
     HashSet<String> storageIds = new HashSet<String>();
     for (InvalidatedBlock ib : invBlocks) {
       storageIds.add(ib.getStorageId());
     }
 
-    if (storageIds != null) {
-      return new ArrayList<String>(storageIds);
-    }
-
-    return new ArrayList<String>();
+    return new ArrayList<String>(storageIds);
   }
 
   /**
@@ -206,16 +210,11 @@ class InvalidateBlocks {
   }
   
   private List<InvalidatedBlock> findInvBlocksbyStorageId(final String sid, TransactionalRequestHandler.OperationType opType) throws IOException {
-    return (List<InvalidatedBlock>) new TransactionalRequestHandler(opType) {
-
+    return (List<InvalidatedBlock>) new LightWeightRequestHandler(opType) {
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.findList(InvalidatedBlock.Finder.ByStorageId, sid);
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.ByStorageId, sid);
+        InvalidateBlockDataAccess da = (InvalidateBlockDataAccess) StorageFactory.getDataAccess(InvalidateBlockDataAccess.class);
+        return da.findInvalidatedBlockByStorageId(sid);
       }
     }.handle();
   }

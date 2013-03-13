@@ -1089,20 +1089,9 @@ public class BlockManager {
         return blockCnt;
     }
 
-    private List<String> getStorageIdsOfIvalidatedBlocks(OperationType opType) throws IOException {
-        TransactionalRequestHandler getStorageIdsHandler = new TransactionalRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                return invalidateBlocks.getStorageIDs();
-            }
-
-            @Override
-            public void acquireLock() throws PersistanceException, IOException {
-                TransactionLockAcquirer.acquireLockList(LockType.READ_COMMITTED, InvalidatedBlock.Finder.All, null);
-            }
-        };
-        return (List<String>) getStorageIdsHandler.handle();
-    }
+  private List<String> getStorageIdsOfIvalidatedBlocks(OperationType opType) throws IOException {
+    return invalidateBlocks.getStorageIDs(opType);
+  }
 
     /**
      * Scan blocks in {@link #neededReplications} and assign replication work to
@@ -1448,16 +1437,21 @@ public class BlockManager {
             final int numOfReplicas, final DatanodeDescriptor client,
             final HashMap<Node, Node> excludedNodes,
             final long blocksize) throws IOException {
-        //Kamal: this was added for the caught bug for removed nodes in NetworkTopology
-        if (excludedNodes != null) {
-            Iterator<Node> iterator = excludedNodes.values().iterator();
-            while (iterator.hasNext()) {
-                Node node = iterator.next();
-                if (datanodeManager.getDatanodeByName(node.getName()) == null) {
-                    excludedNodes.remove(node);
-                }
-            }
-        }
+        
+          //[S] DFSOutputStream has a list of suspected datanodes
+          //it sends the list of suspected dead datanodes 
+          //there is no need to add them again as correct nodes. 
+        
+//        //Kamal: this was added for the caught bug for removed nodes in NetworkTopology
+//        if (excludedNodes != null) {
+//            Iterator<Node> iterator = excludedNodes.values().iterator();
+//            while (iterator.hasNext()) {
+//                Node node = iterator.next();
+//                if (datanodeManager.getDatanodeByName(node.getName()) == null) {
+//                    excludedNodes.remove(node);
+//                }
+//            }
+//        }
         // choose targets for the new block to be allocated.
         final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
                 src, numOfReplicas, client, excludedNodes, blocksize);

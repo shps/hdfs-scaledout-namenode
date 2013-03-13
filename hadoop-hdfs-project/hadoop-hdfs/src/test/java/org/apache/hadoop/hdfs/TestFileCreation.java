@@ -324,12 +324,13 @@ public class TestFileCreation extends junit.framework.TestCase {
         LOG.info("Encountered expected exception");
       }
 
+
       // verify that no blocks are associated with this file
       // bad block allocations were cleaned up earlier.
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       LOG.info("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up",
+      assertTrue("Error blocks were not cleaned up. expecting 0 bocks. got "+locations.locatedBlockCount(),
                  locations.locatedBlockCount() == 0);
     } finally {
       cluster.shutdown();

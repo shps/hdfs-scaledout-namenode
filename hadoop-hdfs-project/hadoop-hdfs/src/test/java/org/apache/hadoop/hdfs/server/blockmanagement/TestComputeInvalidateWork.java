@@ -21,6 +21,7 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -40,6 +41,10 @@ public class TestComputeInvalidateWork extends TestCase {
    */
   public void testCompInvalidate() throws Exception {
     final Configuration conf = new HdfsConfiguration();
+    // We need to stop ReplicationMonitor from computing invalidated blocks when running this test.
+    // In original HDFS it does it using write lock on FSNamesystem. We do it by setting the interval
+    // to a long period.
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, String.valueOf(1000000));
     final int NUM_OF_DATANODES = 3;
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES).build();
     try {
@@ -66,7 +71,7 @@ public class TestComputeInvalidateWork extends TestCase {
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          // TODO [lock] no lock is required. use ligh weight request handler
+          // No lock is required.
         }
       }.handleWithWriteLock(namesystem);
       namesystem.writeLock();

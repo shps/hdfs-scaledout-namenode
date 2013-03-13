@@ -2078,6 +2078,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addLease(TransactionLockManager.LockType.READ).
                 addCorrupt(LockType.WRITE).
                 addReplicaUc(LockType.WRITE).
+                addUnderReplicatedBlock(LockType.WRITE).
                 acquire();
       }
     };
@@ -2591,9 +2592,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        if (!DFSUtil.isValidName(src)) {
-          throw new InvalidPathException("Invalid file name: " + src);
-        }
+       
         if (isPermissionEnabled) {
           checkTraverse(src);
         }
@@ -2611,6 +2610,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 acquire();
       }
     };
+    
+     if (!DFSUtil.isValidName(src)) {
+          throw new InvalidPathException("Invalid file name: " + src);
+     }
     return (HdfsFileStatus) getFileInfoHandler.handleWithReadLock(this);
   }
 
@@ -3098,7 +3101,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(INodeLockType.WRITE).
+        tla.addINode(INodeResolveType.FROM_CHILD_TO_ROOT, INodeLockType.WRITE).
                 addBlock(LockType.WRITE, lastblock.getBlockId()).
                 addLease(LockType.WRITE).
                 addLeasePath(LockType.WRITE).
@@ -4124,7 +4127,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-//        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
+        throw new UnsupportedOperationException("Safemode is now supported using storage-lock.");
         // TODO HOOMAN safemode??
       }
     };
