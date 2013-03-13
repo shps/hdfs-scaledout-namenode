@@ -154,6 +154,13 @@ body {
     border-style: none;
 }
 
+
+/*datagrid*/
+.ui-datagrid-no-border .ui-datagrid-content {
+   border: none;
+}
+
+
 /*toolbar*/
 .MainToolbar {
     margin-top:     -6px;

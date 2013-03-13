@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"   
       xmlns:f="http://java.sun.com/jsf/core"
       xmlns:h="http://java.sun.com/jsf/html"
@@ -8,160 +8,166 @@
       xmlns:p="http://primefaces.org/ui"
       >
 
-    <ui:composition template="layout.xhtml">
+   <ui:composition template="layout.xhtml">
 
-        <ui:define name="title">
-            KTHFS Dashboard - Service Status
-        </ui:define>
+      <ui:define name="title">
+         KTHFS Dashboard - Service Status
+      </ui:define>
 
-        <ui:define name="css">
-        </ui:define>
+      <ui:define name="css">
+      </ui:define>
 
-        <ui:define name="scripts">
-        </ui:define>
+      <ui:define name="scripts">
+      </ui:define>
 
-        <ui:define name="content">
+      <ui:define name="content">
 
-            <!--Navigation Bar - Begin -->
-            <h:form styleClass="styleNav">
-                <p:panelGrid>  
-                    <p:row>  
-                        <p:column>
-                            <p:commandLink id="services" action="services" ajax="false">  
-                                <h:outputText value="Services" />
-                            </p:commandLink> 
-                            <h:outputText value=" &raquo;"/>
-                        </p:column>
-                    </p:row>
-                </p:panelGrid>
-            </h:form>
-            <!--Navigation Bar - End-->
+         <!--Navigation Bar - Begin -->
+         <h:form styleClass="styleNav">
+            <p:panelGrid>  
+               <p:row>  
+                  <p:column>
+                     <p:commandLink id="services" action="services" ajax="false">  
+                        <h:outputText value="Services" />
+                     </p:commandLink> 
+                     <h:outputText value=" &raquo;"/>
+                  </p:column>
+               </p:row>
+            </p:panelGrid>
+         </h:form>
+         <!--Navigation Bar - End-->
 
-            <!-- Second Toolbar-->
-            <h:form>  
-                <p:toolbar styleClass="SecondToolbarGood">  
-                    <p:toolbarGroup align="left">  
-                        <p:commandLink  action="#{serviceController.gotoServiceStatus()}" ajax="false">
-                            <h:outputText value="#{serviceController.kthfsInstance}"/>
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                         
-                        </p:commandLink>
+         <!-- Second Toolbar-->
+         <h:form>  
+            <p:toolbar styleClass="SecondToolbarGood">  
+               <p:toolbarGroup align="left">  
+                  <p:commandLink  action="#{serviceController.gotoServiceStatus()}" ajax="false">
+                     <h:outputText value="#{serviceController.kthfsInstance}"/>
+                     <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                         
+                  </p:commandLink>
 
-                        <p:commandButton styleClass="Selected" value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceStatus()}" ajax="false">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
-                        </p:commandButton>  
-                        <p:commandButton value="Instances" icon="ui-icon-note" action="#{serviceController.gotoServiceInstances()}">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>   
-                        </p:commandButton>  
-                        <p:commandButton value="Commands" icon="ui-icon-circle-triangle-e" action="#{serviceController.gotoServiceCommands()}">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
-                        </p:commandButton>  
-                    </p:toolbarGroup>  
+                  <p:commandButton styleClass="Selected" value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceStatus()}" ajax="false">
+                     <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                  </p:commandButton>  
+                  <p:commandButton value="Instances" icon="ui-icon-note" action="#{serviceController.gotoServiceInstances()}">
+                     <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>   
+                  </p:commandButton>  
+                  <p:commandButton value="Commands" icon="ui-icon-circle-triangle-e" action="#{serviceController.gotoServiceCommands()}">
+                     <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                  </p:commandButton>  
+               </p:toolbarGroup>  
 
-                    <p:toolbarGroup align="right">  
-                       <p:menuButton value="Actions" disabled="true">  
-                            <p:menuitem value="Start..." url="???" /> 
-                            <p:menuitem value="Stop..." url="???" /> 
-                        </p:menuButton>  
-                    </p:toolbarGroup>  
+               <p:toolbarGroup align="right">  
+                  <p:menuButton value="Actions" disabled="true">  
+                     <p:menuitem value="Start..." url="???" /> 
+                     <p:menuitem value="Stop..." url="???" /> 
+                  </p:menuButton>  
+               </p:toolbarGroup>  
 
-                </p:toolbar>  
-            </h:form>
+            </p:toolbar>  
+         </h:form>
 
-            <p:spacer width="1" height="10" />
+         <p:spacer width="1" height="10" />
 
-            <h:form styleClass="styleInfoPanel">
-                <p:panel header="Status and Health Summary">
+         <h:form styleClass="styleInfoPanel">
+            <p:panel header="Status and Health Summary">
 
-                    <p:dataTable id="serviceRole" var="serviceRole" value="#{serviceController.serviceRoles}">
+               <p:dataTable id="serviceRole" var="serviceRole" value="#{serviceController.serviceRoles}">
 
-                        <p:column headerText="">
+                  <p:column headerText="">
 
-                            <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
-                                <h:outputText value="#{serviceRole.name}"/>
-                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
-                                <f:param name="service" value="#{serviceRole.shortName}"/>
-                            </p:commandLink>                         
-                        </p:column>  
+                     <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
+                        <h:outputText value="#{serviceRole.name}"/>
+                        <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                        <f:param name="service" value="#{serviceRole.shortName}"/>
+                     </p:commandLink>                         
+                  </p:column>  
 
-                        <p:column headerText="Status">
-                            <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
-                                <h:outputText value="#{serviceRole.statusStarted}"/>
-                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
-                                <f:param name="service" value="#{serviceRole.shortName}"/>
-                                <f:param name="status" value="Started"/>
-                            </p:commandLink> 
-                            <p:spacer width="10" height="0" />
-                            <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
-                                <h:outputText value="#{serviceRole.statusStopped}"/>
-                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
-                                <f:param name="service" value="#{serviceRole.shortName}"/>
-                                <f:param name="status" value="Stopped"/>
-                            </p:commandLink> 
-                        </p:column>  
-                       
-                        <p:column headerText="Health"><h:outputText value="#{serviceRole.health}"/></p:column> 
-                    </p:dataTable> 
+                  <p:column headerText="Status">
+                     <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
+                        <h:outputText value="#{serviceRole.statusStarted}"/>
+                        <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                        <f:param name="service" value="#{serviceRole.shortName}"/>
+                        <f:param name="status" value="Started"/>
+                     </p:commandLink> 
+                     <p:spacer width="10" height="0" />
+                     <p:commandLink action="#{serviceController.gotoServiceInstances()}" ajax="false">
+                        <h:outputText value="#{serviceRole.statusStopped}"/>
+                        <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>
+                        <f:param name="service" value="#{serviceRole.shortName}"/>
+                        <f:param name="status" value="Stopped"/>
+                     </p:commandLink> 
+                  </p:column>  
 
-                </p:panel>                    
-            </h:form>
+                  <p:column headerText="Health"><h:outputText value="#{serviceRole.health}"/></p:column> 
+               </p:dataTable> 
 
-            <p:spacer width="1" height="50" />
+            </p:panel>                    
+         </h:form>
 
+         <p:spacer width="1" height="50" />
+
+
+         <h:form id="formcharts" style="text-align: center">  
             
-               <h:form id="formcharts" style="text-align: center">  
-                  <h:panelGrid columns="6"> 
-                     <p:selectOneButton id ="periods" value="#{graphController.period}">  
-                        <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
-                        <f:param name="hostname" value="#{hostController.hostname}"/>
-                        <p:ajax event="change" update="graphs, calstart, calend" listener="#{graphController.updateDates}"/>
-                     </p:selectOneButton>
-                     <h:outputText value="or from" />
-                     <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
-                     <h:outputText value=" to " />
-                     <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
-                     <p:commandButton value="Go" update="graphs, periods"  actionListener="#{graphController.useCalendar()}" >
-                        <f:param name="hostname" value="#{hostController.hostname}"/>
-                     </p:commandButton> 
-                  </h:panelGrid>
+            <h:panelGrid columns="10"> 
+               <p:selectOneButton id ="periods" value="#{graphController.period}">  
+                  <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
+                  <f:param name="hostname" value="#{hostController.hostname}"/>
+                  <p:ajax event="change" process="@form" update=":graphs, calstart, calend" listener="#{graphController.updateDates}"/>
+               </p:selectOneButton>
+               
+               <h:outputText value="or from" />
+               <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+               <h:outputText value=" to " />
+               <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>
+               
+               <h:outputText value=" in " />
+               <p:selectOneMenu id="cols" value="#{graphController.numberOfColumns}" >  
+                  <f:selectItems var="n" value="#{graphController.columns}" />  
+               </p:selectOneMenu>
+               <h:outputText value=" columns " />
+               
+               <p:commandButton value="Go" update=":graphs, periods"  actionListener="#{graphController.useCalendar()}" >
+                  <f:param name="hostname" value="#{hostController.hostname}"/>
+               </p:commandButton> 
+            </h:panelGrid>
 
-                  <p:separator id="separator"/>
+         </h:form>        
+         
+         <h:form id="graphs">
+            
+            <p:toolbar>
+               <p:toolbarGroup align="left"><p:outputLabel value="Name Nodes"/></p:toolbarGroup>
+            </p:toolbar>
 
-                  <p:dashboard styleClass="styleRrdGraph" id="graphs" model="#{graphController.model}"> 
-                     <p:panel  id="namenode_capacity" header="Namenode Capacity" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_capacity')}"/>
-                     </p:panel>  
-                     <p:panel  id="namenode_files" header="Total Files" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_files')}"/>
-                     </p:panel>              
-                     <p:panel  id="namenode_load" header="Total Load" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_load')}"/>
-                     </p:panel>   
-                     <p:panel  id="namenode_heartbeats" header="Heartbeats" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_heartbeats')}"/>
-                     </p:panel>   
-                     <p:panel  id="namenode_blockreplication" header="Block Replication" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_blockreplication')}"/>
-                     </p:panel>   
-                     <p:panel  id="namenode_blocks" header="Blocks" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_blocks')}"/>
-                     </p:panel> 
-                     <p:panel  id="namenode_specialblocks" header="Special Blocks" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystem','','namenode_specialblocks')}"/>
-                     </p:panel> 
-                     <p:panel  id="namenode_datanodes" header="Number of Data Nodes" >
-                        <p:graphicImage value="#{graphController.getGraphUrl('cloud1.sics.se','GenericJMX-FSNamesystemState','','namenode_datanodes')}"/>
-                     </p:panel>                     
-                  </p:dashboard>          
-               </h:form>             
-            
-            
-            
-            
-            
-            
-        </ui:define>
+            <p:dataGrid  var="g" value="#{graphController.namenodeGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
+               <p:graphicImage value="#{graphController.getNamenodeGraphUrl('kthfs1', g)}" height="223px" width="387"/>  
+            </p:dataGrid> 
 
-    </ui:composition>
+            <p:toolbar>
+               <p:toolbarGroup align="left"><p:outputLabel value="Name Nodes Activity"/></p:toolbarGroup>
+            </p:toolbar>
+
+            <p:dataGrid  var="g" value="#{graphController.namenodeActivitiesGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
+               <p:graphicImage value="#{graphController.getNamenodeGraphUrl('kthfs1', g)}" height="223px" width="387"/>  
+            </p:dataGrid>             
+            
+            <p:toolbar>
+               <p:toolbarGroup align="left"><p:outputLabel value="Data Nodes"/></p:toolbarGroup>
+            </p:toolbar>                        
+            
+            
+         </h:form>
+
+
+
+
+
+
+      </ui:define>
+
+   </ui:composition>
 
 </html>
 
