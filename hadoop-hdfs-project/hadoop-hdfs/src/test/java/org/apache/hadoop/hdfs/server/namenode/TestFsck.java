@@ -428,7 +428,7 @@ public class TestFsck extends TestCase {
       
       // intentionally corrupt NN data structure
       INodeFile node = 
-        (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(fileName,
+        (INodeFile)cluster.getNamesystem().dir.getRootDir().getNode(fileName,
                                                                true);
       assertEquals(node.getBlocks().size(), 1);
       node.getBlocks().get(0).setNumBytes(-1L);  // set the block length to be negative

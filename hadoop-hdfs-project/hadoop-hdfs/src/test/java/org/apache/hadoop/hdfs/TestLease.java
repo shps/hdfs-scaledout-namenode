@@ -42,7 +42,8 @@ public class TestLease {
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager.acquireByLeasePath(
+        TransactionLockManager tl = new TransactionLockManager();
+                tl.acquireByLeasePath(
                 src.toString(),
                 TransactionLockManager.LockType.READ,
                 TransactionLockManager.LockType.WRITE);

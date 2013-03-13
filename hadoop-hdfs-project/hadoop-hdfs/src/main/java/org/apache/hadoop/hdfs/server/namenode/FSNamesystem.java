@@ -354,14 +354,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        INode rootInode = EntityManager.find(INode.Finder.ByNameAndParentId, INodeDirectory.ROOT_NAME, -1L);
-        if (rootInode == null) {
-          dir.rootDir.setId(0);
-          dir.rootDir.setParentId(-1);
-          EntityManager.add(dir.rootDir);
-        } else {
-          dir.rootDir = (INodeDirectoryWithQuota) rootInode;
-        }
+        INode rootInode = dir.getRootDir();
+        if (rootInode == null) 
+        {
+          rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+                createFsOwnerPermissions(new FsPermission((short) 0755)),
+                Integer.MAX_VALUE, FSDirectory.UNKNOWN_DISK_SPACE);
+          rootInode.setId(0);
+          rootInode.setParentId(-1);
+          EntityManager.add(rootInode);
+        } 
         return null;
       }
 
@@ -771,7 +773,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(INodeResolveType.ONLY_PATH,
                 INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(LockType.READ).
                 acquire();
       }
@@ -826,7 +828,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(INodeResolveType.ONLY_PATH,
                 INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(LockType.READ).
                 acquire();
       }
@@ -873,7 +875,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager lm = new TransactionLockManager();
-        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.READ, new String[]{src}, getFsDirectory().getRootDir());
+        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.READ, new String[]{src});
         lm.addBlock(LockType.READ).
                 addReplica(LockType.READ).
                 addExcess(LockType.READ).
@@ -997,7 +999,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         System.arraycopy(srcs, 0, paths, 0, srcs.length);
         paths[srcs.length] = target;
         TransactionLockManager lm = new TransactionLockManager();
-        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.WRITE_ON_PARENT, paths, getFsDirectory().getRootDir());
+        lm.addINode(INodeResolveType.ONLY_PATH, INodeLockType.WRITE_ON_PARENT, paths);
         lm.addBlock(LockType.WRITE);
         lm.acquire();
       }
@@ -1153,7 +1155,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(TransactionLockManager.LockType.READ).
                 acquire();
       }
@@ -1186,8 +1188,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{link},
-                getFsDirectory().getRootDir()).
+                new String[]{link}).
                 acquire();
       }
     };
@@ -1279,7 +1280,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
@@ -1308,7 +1309,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{filename}, getFsDirectory().getRootDir()).
+                new String[]{filename}).
                 acquire();
       }
     };
@@ -1320,7 +1321,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 // TODO Ask Hooman - wny remove following: verifyParentDir(String src, INode [] inodesOnPath)
 
   private void verifyParentDir(String src) throws FileNotFoundException,
-          ParentNotDirectoryException, UnresolvedLinkException, PersistanceException {
+          ParentNotDirectoryException, UnresolvedLinkException, PersistanceException, IOException {
     assert hasReadOrWriteLock();
     Path parent = new Path(src).getParent();
     if (parent != null) {
@@ -1471,8 +1472,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{src},
-                getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -1667,8 +1667,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src},
-                getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -1789,7 +1788,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir());
+                new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -1858,7 +1857,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir());
+                new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addReplica(LockType.READ).
                 addLease(TransactionLockManager.LockType.READ).
@@ -2026,7 +2025,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addLease(TransactionLockManager.LockType.READ).
                 acquire();
       }
@@ -2072,7 +2071,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addReplica(LockType.WRITE).
                 addBlock(LockType.WRITE).
                 addLease(TransactionLockManager.LockType.READ).
@@ -2088,7 +2087,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // make sure that we still have the lease on this file.
   private INodeFile checkLease(String src, String holder)
-          throws LeaseExpiredException, UnresolvedLinkException, PersistanceException {
+          throws LeaseExpiredException, UnresolvedLinkException, 
+          PersistanceException, IOException {
     assert hasReadOrWriteLock();
     INodeFile file = dir.getFileINode(src);
     checkLease(src, holder, file);
@@ -2174,7 +2174,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src}, getFsDirectory().getRootDir());
+                new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -2466,8 +2466,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src},
-                getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
@@ -2605,7 +2604,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{src}, getFsDirectory().getRootDir());
+                new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 acquire();
       }
@@ -2646,8 +2645,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{src},
-                getFsDirectory().getRootDir()).
+                new String[]{src}).
                 acquire();
       }
     };
@@ -2710,7 +2708,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{src}, getFsDirectory().getRootDir());
+                new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 acquire();
       }
@@ -2743,7 +2741,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
-                new String[]{path}, getFsDirectory().getRootDir()).
+                new String[]{path}).
                 acquire();
       }
     };
@@ -2779,7 +2777,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{src}, getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(LockType.READ).
                 addLease(TransactionLockManager.LockType.READ).
                 acquire();
@@ -3192,8 +3190,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_IMMEDIATE_CHILDREN,
                 TransactionLockManager.INodeLockType.READ,
-                new String[]{src},
-                getFsDirectory().getRootDir()).
+                new String[]{src}).
                 addBlock(TransactionLockManager.LockType.READ).
                 addReplica(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
@@ -4371,23 +4368,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
-  private FSPermissionChecker checkOwner(String path) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+  private FSPermissionChecker checkOwner(String path) throws AccessControlException, 
+          UnresolvedLinkException, PersistanceException, IOException{
     return checkPermission(path, true, null, null, null, null);
   }
 
-  private FSPermissionChecker checkPathAccess(String path, FsAction access) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+  private FSPermissionChecker checkPathAccess(String path, FsAction access) 
+          throws AccessControlException, UnresolvedLinkException,
+          PersistanceException, IOException {
     return checkPermission(path, false, null, null, access, null);
   }
 
-  private FSPermissionChecker checkParentAccess(String path, FsAction access) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+  private FSPermissionChecker checkParentAccess(String path, FsAction access)
+          throws AccessControlException, UnresolvedLinkException, 
+          PersistanceException, IOException {
     return checkPermission(path, false, null, access, null, null);
   }
 
-  private FSPermissionChecker checkAncestorAccess(String path, FsAction access) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+  private FSPermissionChecker checkAncestorAccess(String path, FsAction access) 
+          throws AccessControlException, UnresolvedLinkException, 
+          PersistanceException , IOException{
     return checkPermission(path, false, access, null, null, null);
   }
 
-  private FSPermissionChecker checkTraverse(String path) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+  private FSPermissionChecker checkTraverse(String path) 
+          throws AccessControlException, UnresolvedLinkException, 
+          PersistanceException, IOException {
     return checkPermission(path, false, null, null, null, null);
   }
 
@@ -4405,14 +4411,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private FSPermissionChecker checkPermission(String path, boolean doCheckOwner,
           FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-          FsAction subAccess) throws AccessControlException, UnresolvedLinkException, PersistanceException {
+          FsAction subAccess) throws AccessControlException, 
+          UnresolvedLinkException, PersistanceException, IOException {
     FSPermissionChecker pc = new FSPermissionChecker(
             fsOwner.getShortUserName(), supergroup);
     if (!pc.isSuper) {
       dir.waitForReady();
       readLock();
       try {
-        pc.checkPermission(path, dir.rootDir, doCheckOwner,
+        pc.checkPermission(path, dir.getRootDir(), doCheckOwner,
                 ancestorAccess, parentAccess, access, subAccess);
       } finally {
         readUnlock();
@@ -4441,7 +4448,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // FSNamesystemMBean
   @Metric
-  public long getFilesTotal() {
+  public long getFilesTotal()  throws PersistanceException, IOException{
     readLock();
     try {
       return this.dir.totalInodes();
@@ -5237,7 +5244,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // NameNodeMXBean
   @Metric
-  public long getTotalFiles() {
+  public long getTotalFiles() throws PersistanceException, IOException {
     return getFilesTotal();
   }
 
@@ -5351,7 +5358,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private boolean setPartition(String src) throws UnresolvedLinkException,
-          PersistanceException {
+          PersistanceException, IOException {
     // fetching inodes in the begining and passing them over to the functions to restrict db access
     INodeFile inode = null;
     INode[] inodesOnPath = dir.getExistingPathINodes(src);
@@ -5368,5 +5375,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } else {
       return false;
     }
+  }
+  
+  public String getSupergroup()
+  {
+      return supergroup;
   }
 }

@@ -44,7 +44,6 @@ public class TransactionLockManager {
   private INodeResolveType inodeResolveType = null;
   private String[] inodeParam = null;
   private INode[] inodeResult = null;
-  private INode rootDir = null;
   //block
   private LockType blockLock = null;
   private Long blockParam = null;
@@ -80,6 +79,7 @@ public class TransactionLockManager {
   private LockType leaderLock = null;
   private int[] leaderIds = null;
 
+  
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
     checkStringParam(holder);
@@ -112,13 +112,14 @@ public class TransactionLockManager {
    *  the test cases.
    * @param leasePath 
    */
-  public static void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException
+  public void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException
   {
     LeasePath lp = TransactionLockAcquirer.acquireLock(leasePathLock, LeasePath.Finder.ByPKey, leasePath);
     if (lp != null)
     {
       TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByHolderId, lp.getHolderId());
     }
+    rootDir(); // acquire read lock on the root node
   }
 
   private void checkStringParam(Object param) {
@@ -247,16 +248,15 @@ public class TransactionLockManager {
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType,
-          INodeLockType lock, String[] param, INode rootDir) {
+          INodeLockType lock, String[] param) {
     this.inodeLock = lock;
     this.inodeResolveType = resolveType;
     this.inodeParam = param;
-    this.rootDir = rootDir;
     return this;
   }
 
   public TransactionLockManager addINode(INodeLockType lock) {
-    addINode(null, lock, null, null);
+    addINode(null, lock, null);
     return this;
   }
 
@@ -383,6 +383,7 @@ public class TransactionLockManager {
       blockResults = acquireBlockLock(blockLock, blockParam);
     }
 
+    rootDir(); // get Read Commited Lock on the root
     acquireLeaseAndLpathLockNormal();
     acquireBlockRelatedLocksNormal();
     acquireLeaderLock();
@@ -477,7 +478,7 @@ public class TransactionLockManager {
           // TODO - MemcacheD Lookup of path
           // On
           LinkedList<INode> resolvedInodes =
-                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir);
+                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir());
           if (resolvedInodes.size() > 0) {
             inodes[i] = resolvedInodes.peekLast();
           }
@@ -495,18 +496,18 @@ public class TransactionLockManager {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
 //          LOG.error("Full Path = " + fullPath);
-          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir);
+          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir());
           int resolvedSize = resolvedInodes.size();
 //          LOG.error("resolved size = " + resolvedSize);
           String existingPath = buildPath(fullPath, resolvedSize);
 //          LOG.error("existing path = " + existingPath);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
-          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir);
+          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir());
           if (resolvedSize <= resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
             INode baseDir = resolvedInodes.peekLast();
             if (baseDir == null) {
-              baseDir = rootDir;
+              baseDir = rootDir();
             }
 //            LOG.error("base dir = " + baseDir.getName());
             LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
@@ -603,6 +604,7 @@ public class TransactionLockManager {
     }
 
     // read-committed block is the same as block found by inode-file so everything is fine and continue the rest.
+    rootDir(); // acquire read lock on the root node
     acquireLeaseAndLpathLockNormal();
     acquireBlockRelatedLocksNormal();
 
@@ -650,8 +652,7 @@ public class TransactionLockManager {
   }
     
   
-  public void acquireByLease(INode rootDir) throws PersistanceException, UnresolvedPathException {
-    this.rootDir = rootDir;
+  public void acquireByLease() throws PersistanceException, UnresolvedPathException {
     if (leaseParam == null) {
       return;
     }
@@ -698,6 +699,29 @@ public class TransactionLockManager {
       return; // TODO: It should retry again, cause there are new lease-paths for this lease which we have not acquired their inodes locks.
     }
 
+    rootDir(); // acquire read lock on the root node
     acquireBlockRelatedLocksNormal();
   }
+  
+  
+  private INode rootDir() throws PersistanceException
+  {
+      // here is the catch
+      // calling this function will 
+      // acquire lock on the root node
+      // you need root node in almost every operation to resolve paths
+      // 
+      // we take read commited lock on the root unless specified otherwise
+      // 
+      
+      if(this.inodeLock != null && this.inodeParam !=  null && this.inodeParam[0].equals("/"))
+      {
+         return TransactionLockAcquirer.acquireINodeLockById(inodeLock, 0);
+      }
+      else
+      {
+          return TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, 0);
+      }
+  }
+  
 }

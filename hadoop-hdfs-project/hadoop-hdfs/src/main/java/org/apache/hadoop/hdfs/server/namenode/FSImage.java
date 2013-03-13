@@ -505,7 +505,7 @@ public class FSImage implements Closeable {
    * Toss the current image and namesystem, reloading from the specified
    * file.
    */
-  void reloadFromImageFile(File file) throws IOException {
+  void reloadFromImageFile(File file) throws IOException, PersistanceException {
     namesystem.dir.reset();
 
     LOG.debug("Reloading namespace from " + file);
@@ -688,7 +688,7 @@ public class FSImage implements Closeable {
   /**
    * Save the contents of the FS image to the file.
    */
-  void saveFSImage(StorageDirectory sd, long txid) throws IOException {
+  void saveFSImage(StorageDirectory sd, long txid) throws PersistanceException,IOException {
     File newFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE_NEW, txid);
     File dstFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE, txid);
     

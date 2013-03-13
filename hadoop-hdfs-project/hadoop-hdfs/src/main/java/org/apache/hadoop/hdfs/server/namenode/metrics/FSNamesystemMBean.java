@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 
 /**
  * 
@@ -75,7 +77,7 @@ public interface FSNamesystemMBean {
    * Total number of files and directories
    * @return -  num of files and directories
    */
-  public long getFilesTotal();
+  public long getFilesTotal() throws PersistanceException, IOException;
  
   /**
    * Blocks pending to be replicated
