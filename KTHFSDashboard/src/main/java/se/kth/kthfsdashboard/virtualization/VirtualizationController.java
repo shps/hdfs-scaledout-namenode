@@ -54,6 +54,7 @@ import static org.jclouds.scriptbuilder.domain.Statements.extractTargzAndFlatten
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.kthfsdashboard.virtualization.clusterparser.ClusterController;
 
 /**
  *
@@ -61,15 +62,15 @@ import org.slf4j.LoggerFactory;
  */
 @ManagedBean
 @RequestScoped
-public class CloudProviderController implements Serializable {
+public class VirtualizationController implements Serializable {
 
     private static final URI RUBYGEMS_URI = URI.create("http://production.cf.rubygems.org/rubygems/rubygems-1.8.10.tgz");
     @ManagedProperty(value = "#{messageController}")
     private MessageController messages;
-    @ManagedProperty(value = "#{providerMB}")
-    private ProviderMB providerMB;
     @ManagedProperty(value = "#{computeCredentialsMB}")
     private ComputeCredentialsMB computeCredentialsMB;
+    @ManagedProperty(value= "#{clusterController}")
+    private ClusterController clusterController;
     private String provider;
     private String id;
     private String key;
@@ -77,9 +78,9 @@ public class CloudProviderController implements Serializable {
     private String keystoneEndpoint;
 
     /**
-     * Creates a new instance of CloudProviderController
+     * Creates a new instance of VirtualizationController
      */
-    public CloudProviderController() {
+    public VirtualizationController() {
     }
 
     public ComputeCredentialsMB getComputeCredentialsMB() {
@@ -90,14 +91,6 @@ public class CloudProviderController implements Serializable {
         this.computeCredentialsMB = computeCredentialsMB;
     }
 
-    public ProviderMB getProviderMB() {
-        return providerMB;
-    }
-
-    public void setProviderMB(ProviderMB providerMB) {
-        this.providerMB = providerMB;
-    }
-
     public MessageController getMessages() {
         return messages;
     }
@@ -106,31 +99,13 @@ public class CloudProviderController implements Serializable {
         this.messages = messages;
     }
 
-    /*
-     * Enable the form if the user has specified it in the setup page.
-     * Choose between Amazon EC2, Openstack and Rackspace
-     */
-    public boolean isEnableForm() {
-        if (providerMB.getProviderName() != null) {
-            if (providerMB.getProviderName().equals("Amazon-EC2")) {
-                return computeCredentialsMB.isAwsec2();
-            }
-            if (providerMB.getProviderName().equals("OpenStack")) {
-                return computeCredentialsMB.isOpenstack();
-            }
-            if (providerMB.getProviderName().equals("Rackspace")) {
-                return computeCredentialsMB.isRackspace();
-            }
-        }
-        return false;
-    }
 
     /*
      * Command to launch the instance
      */
     public void launchInstance() {
         messages.addMessage("Configuring service context for " + provider);
-        setCredentials();
+        //setCredentials();
         ComputeService service = initComputeService();
 
         try {
@@ -142,23 +117,24 @@ public class CloudProviderController implements Serializable {
             selectProviderTemplateOptions(provider, kthfsTemplate);
 
             messages.addMessage("Security Group Ports [22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443]");
-            NodeMetadata node = getOnlyElement(service.createNodesInGroup(providerMB.getGroupName(), 1, kthfsTemplate.build()));
-
-
-            String address = "";
-
-            for (String ip : node.getPublicAddresses()) {
-                address = ip;
-                break;
-            }
-
-            messages.addSuccessMessage("http://" + address + ":8080/KTHFSDashboard");
-            messages.addMessage("VM launched with private IP: " + node.getPrivateAddresses() + ", public IP: " + node.getPublicAddresses());
-            messages.addMessage("Running chef-solo, deploying Architecture");
-            service.runScriptOnNodesMatching(
-                    Predicates.<NodeMetadata>and(not(TERMINATED), inGroup(providerMB.getGroupName())), runChefSolo(),
-                    RunScriptOptions.Builder.nameTask("runchef-solo")
-                    .overrideLoginCredentials(node.getCredentials()));
+            //changes
+            //NodeMetadata node = getOnlyElement(service.createNodesInGroup(providerMB.getGroupName(), 1, kthfsTemplate.build()));
+//
+//
+//            String address = "";
+//
+//            for (String ip : node.getPublicAddresses()) {
+//                address = ip;
+//                break;
+//            }
+//
+//            messages.addSuccessMessage("http://" + address + ":8080/KTHFSDashboard");
+//            messages.addMessage("VM launched with private IP: " + node.getPrivateAddresses() + ", public IP: " + node.getPublicAddresses());
+//            messages.addMessage("Running chef-solo, deploying Architecture");
+//            service.runScriptOnNodesMatching(
+//                    Predicates.<NodeMetadata>and(not(TERMINATED), inGroup(providerMB.getGroupName())), runChefSolo(),
+//                    RunScriptOptions.Builder.nameTask("runchef-solo")
+//                    .overrideLoginCredentials(node.getCredentials()));
 
 
 //            for (Map.Entry<? extends NodeMetadata, ExecResponse> response : responses.entrySet()) {
@@ -170,9 +146,9 @@ public class CloudProviderController implements Serializable {
 //            System.out.printf("<< node %s: %s%n", node.getId(),
 //                    concat(node.getPrivateAddresses(), node.getPublicAddresses()));
 
-        } catch (RunNodesException e) {
-            messages.addErrorMessage("error adding node to group " + providerMB.getGroupName()
-                    + "ups something got wrong on the node");
+//        } catch (RunNodesException e) {
+//            messages.addErrorMessage("error adding node to group " + providerMB.getGroupName()
+//                    + "ups something got wrong on the node");
         } catch (Exception e) {
             //System.err.println("error: " + e.getMessage());
             messages.addErrorMessage("Error: " + e.getMessage());
@@ -181,28 +157,8 @@ public class CloudProviderController implements Serializable {
         }
     }
 
-    /*
-     * Command to destroy the instances in a group
-     */
-    public void destroyInstance() {
-        messages.addMessage("Preparing to destroy instances in group: " + providerMB.getGroupName());
-        messages.addMessage("Configuring service context...");
-        setCredentials();
-        ComputeService service = initComputeService();
-
-        try {
-            messages.addMessage("Sending Destroy Request");
-            Set<? extends NodeMetadata> destroyed = service.destroyNodesMatching(//
-                    Predicates.<NodeMetadata>and(not(TERMINATED), inGroup(providerMB.getGroupName())));
-            messages.addSuccessMessage("Nodes in group destroyed succesfully");
-        } catch (Exception e) {
-            //System.err.println("error: " + e.getMessage());
-            messages.addErrorMessage("error: " + e.getMessage());
-        } finally {
-            service.getContext().close();
-        }
-    }
-
+   
+    //NEED TO CHANGE FOR USING PARSING FILE
     /*
      * Private methods used by the controller
      */
@@ -210,24 +166,24 @@ public class CloudProviderController implements Serializable {
      * Set the credentials chosen by the user to launch the instance
      * retrieves the information from the credentials page
      */
-    private void setCredentials() {
-        if (providerMB.getProviderName().equals("Amazon-EC2")) {
-            provider = Provider.AWS_EC2.toString();
-            id = computeCredentialsMB.getAwsec2Id();
-            key = computeCredentialsMB.getAwsec2Key();
-        }
-        if (providerMB.getProviderName().equals("OpenStack")) {
-            provider = Provider.OPENSTACK.toString();
-            id = computeCredentialsMB.getOpenstackId();
-            key = computeCredentialsMB.getOpenstackKey();
-            keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
-        }
-        if (providerMB.getProviderName().equals("Rackspace")) {
-            provider = Provider.RACKSPACE.toString();
-            id = computeCredentialsMB.getRackspaceId();
-            key = computeCredentialsMB.getRackspaceKey();
-        }
-    }
+//    private void setCredentials() {
+//        if (providerMB.getProviderName().equals("Amazon-EC2")) {
+//            provider = Provider.AWS_EC2.toString();
+//            id = computeCredentialsMB.getAwsec2Id();
+//            key = computeCredentialsMB.getAwsec2Key();
+//        }
+//        if (providerMB.getProviderName().equals("OpenStack")) {
+//            provider = Provider.OPENSTACK.toString();
+//            id = computeCredentialsMB.getOpenstackId();
+//            key = computeCredentialsMB.getOpenstackKey();
+//            keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
+//        }
+//        if (providerMB.getProviderName().equals("Rackspace")) {
+//            provider = Provider.RACKSPACE.toString();
+//            id = computeCredentialsMB.getRackspaceId();
+//            key = computeCredentialsMB.getRackspaceKey();
+//        }
+//    }
     /*
      * Define the computing cloud service you are going to use
      */
@@ -384,7 +340,7 @@ public class CloudProviderController implements Serializable {
             case AWS_EC2:
                 kthfsTemplate.options(EC2TemplateOptions.Builder
                         .inboundPorts(22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443)
-                        .authorizePublicKey(providerMB.getPublicKey())
+                        
                         .runScript(bootstrap));
                 break;
             case OPENSTACK:
@@ -392,7 +348,7 @@ public class CloudProviderController implements Serializable {
                         .inboundPorts(22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443)
                         .overrideLoginUser("ubuntu")
                         .generateKeyPair(true)
-                        .authorizePublicKey(providerMB.getPublicKey())
+                        
                         .runScript(bootstrap));
                 break;
             case RACKSPACE:
@@ -407,7 +363,7 @@ public class CloudProviderController implements Serializable {
     static enum ScriptLogger {
 
         INSTANCE;
-        Logger logger = LoggerFactory.getLogger(CloudProviderController.class);
+        Logger logger = LoggerFactory.getLogger(VirtualizationController.class);
 
         @Subscribe
         @AllowConcurrentEvents

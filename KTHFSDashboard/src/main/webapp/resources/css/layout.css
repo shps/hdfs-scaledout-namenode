@@ -40,7 +40,7 @@ body {
 }
 
 /*Credentials Form*/
-#computeCredentialsForm{
+#computeCredentialsForm,#clusterForm{
     width: 500px;
 }
 
