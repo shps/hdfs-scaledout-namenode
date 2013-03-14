@@ -30,10 +30,29 @@
             </h:form>
             <!--Navigation Bar - End-->
 
-            <div class="services-header">Add Cluster:</div>
+
+            <div id="content" align="center">
+                <div class="services-header">Add Cluster:</div>
 
 
-            <p:spacer width="1" height="8" />
+                <p:spacer width="1" height="8" />
+                <div id="clusterForm" >
+                    <h:form id="clusterUpload" enctype="multipart/form-data">  
+
+                        <p:fileUpload fileUploadListener="#{clusterController.handleFileUpload}"  
+                                      mode="advanced"   
+                                      update="messages startCluster"  
+                                      sizeLimit="5000"   
+                                      allowTypes="/(\.|\/)(yml)$/"/>  
+
+                        <p:growl id="messages" showDetail="true"/>
+                        <br/>            
+                        <p:commandButton id="startCluster" value="start cluster" disabled="#{clusterController.clusterLoaded()}"/>
+
+                    </h:form>  
+                </div>
+            </div>
         </ui:define>
+
     </ui:composition>
 </html>

@@ -28,10 +28,10 @@
         <glassfish.admin>admin</glassfish.admin>
         <glassfish.passwd>admin</glassfish.passwd>
 
-        <glassfish.hostname>54.246.64.96</glassfish.hostname>
-        <glassfish.admin>admin</glassfish.admin>
-        <glassfish.passwd>admin</glassfish.passwd>
--->               
+                <glassfish.hostname>54.246.64.96</glassfish.hostname>
+                <glassfish.admin>admin</glassfish.admin>
+                <glassfish.passwd>admin</glassfish.passwd>
+        -->               
         <netbeans.hint.deploy.server>gfv3ee6</netbeans.hint.deploy.server>
     </properties>
 
@@ -208,6 +208,16 @@
             <artifactId>guava</artifactId>
             <version>13.0.1</version>
         </dependency>
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
         
         
         <!--        <dependency>
@@ -302,16 +312,16 @@
     </build>
 
     <repositories>
-               <repository>
-                        <id>sics-release</id>
-                        <name>SICS Release Repository</name>
-                        <url>http://kompics.sics.se/maven/repository</url>
-                        <releases>
-                        </releases>
-                        <snapshots>
-                                <enabled>false</enabled>
-                        </snapshots>
-                </repository>
+        <repository>
+            <id>sics-release</id>
+            <name>SICS Release Repository</name>
+            <url>http://kompics.sics.se/maven/repository</url>
+            <releases>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
 
         <repository>
             <id>maven2-repository.dev.java.net</id>
