@@ -44,6 +44,7 @@ public class TransactionLockManager {
   private INodeResolveType inodeResolveType = null;
   private String[] inodeParam = null;
   private INode[] inodeResult = null;
+  private boolean resolveLink = true; // the file is a symlink should it resolve it?
   //block
   private LockType blockLock = null;
   private Long blockParam = null;
@@ -244,11 +245,17 @@ public class TransactionLockManager {
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType,
-          INodeLockType lock, String[] param) {
+          INodeLockType lock, boolean resolveLink, String[] param) {
     this.inodeLock = lock;
     this.inodeResolveType = resolveType;
     this.inodeParam = param;
+    this.resolveLink = resolveLink;
     return this;
+  }
+  
+  public TransactionLockManager addINode(INodeResolveType resolveType,
+          INodeLockType lock, String[] param) {
+    return addINode(resolveType, lock, true, param);
   }
 
   public TransactionLockManager addINode(INodeLockType lock) {
@@ -257,9 +264,7 @@ public class TransactionLockManager {
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType, INodeLockType lock) {
-    this.inodeResolveType = resolveType;
-    this.inodeLock = lock;
-    return this;
+    return addINode(resolveType, lock, true, null);
   }
 
   public TransactionLockManager addBlock(LockType lock, Long param) {
@@ -473,7 +478,7 @@ public class TransactionLockManager {
           // TODO - MemcacheD Lookup of path
           // On
           LinkedList<INode> resolvedInodes =
-                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir());
+                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir(), resolveLink);
           if (resolvedInodes.size() > 0) {
             inodes[i] = resolvedInodes.peekLast();
           }
@@ -491,13 +496,13 @@ public class TransactionLockManager {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
 //          LOG.error("Full Path = " + fullPath);
-          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir());
+          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir(), resolveLink);
           int resolvedSize = resolvedInodes.size();
 //          LOG.error("resolved size = " + resolvedSize);
           String existingPath = buildPath(fullPath, resolvedSize);
 //          LOG.error("existing path = " + existingPath);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
-          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir());
+          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir(), resolveLink);
           if (resolvedSize <= resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
             INode baseDir = resolvedInodes.peekLast();
@@ -506,7 +511,7 @@ public class TransactionLockManager {
             }
 //            LOG.error("base dir = " + baseDir.getName());
             LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
-                    fullPath, existingPath);
+                    fullPath, existingPath, resolveLink);
 //            LOG.error("rest size = " + rest.size());
             resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.peekLast();
