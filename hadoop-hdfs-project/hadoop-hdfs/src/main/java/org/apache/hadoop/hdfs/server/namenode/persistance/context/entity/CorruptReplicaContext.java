@@ -18,7 +18,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
   protected Map<CorruptReplica, CorruptReplica> corruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
   protected Map<Long, List<CorruptReplica>> blockCorruptReplicas = new HashMap<Long, List<CorruptReplica>>();
   protected Map<CorruptReplica, CorruptReplica> newCorruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
-//  protected Map<String, CorruptReplica> modifiedCorruptReplicas = new HashMap<String, CorruptReplica>();
   protected Map<CorruptReplica, CorruptReplica> removedCorruptReplicas = new HashMap<CorruptReplica, CorruptReplica>();
   protected boolean allCorruptBlocksRead = false;
   private CorruptReplicaDataAccess dataAccess;
@@ -48,7 +47,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
     corruptReplicas.clear();
     blockCorruptReplicas.clear();
     newCorruptReplicas.clear();
-//    modifiedCorruptReplicas.clear();
     removedCorruptReplicas.clear();
     allCorruptBlocksRead = false;
     nullCount = 0;
@@ -152,13 +150,8 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
 
   @Override
   public void remove(CorruptReplica entity) throws PersistanceException {
-    if (!corruptReplicas.containsKey(entity)) {
-      throw new TransactionContextException("Unattached corrupt replica passed to be removed");
-    }
-
     corruptReplicas.remove(entity);
     newCorruptReplicas.remove(entity);
-//    modifiedCorruptReplicas.remove(searchKey);
     removedCorruptReplicas.put(entity, entity);
     if (blockCorruptReplicas.containsKey(entity.getBlockId())) {
       blockCorruptReplicas.get(entity.getBlockId()).remove(entity);
