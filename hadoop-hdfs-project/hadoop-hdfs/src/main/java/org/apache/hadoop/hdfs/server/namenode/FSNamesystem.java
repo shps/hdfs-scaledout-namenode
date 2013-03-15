@@ -1176,7 +1176,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (!createParent) {
           verifyParentDir(link);
         }
-        createSymlinkInternal(target, link, dirPerms, createParent, true);
+        createSymlinkInternal(target, link, dirPerms, createParent);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
           return dir.getFileInfo(link, false);
         }
@@ -1186,8 +1186,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
+                false,
                 new String[]{link}).
                 acquire();
       }
@@ -1205,7 +1207,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a symbolic link.
    */
   private void createSymlinkInternal(String target, String link,
-          PermissionStatus dirPerms, boolean createParent, boolean transactional)
+          PermissionStatus dirPerms, boolean createParent)
           throws IOException, UnresolvedLinkException, PersistanceException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1307,8 +1309,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
+                false,
                 new String[]{filename}).
                 acquire();
       }
@@ -1470,8 +1474,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
+                false,
                 new String[]{src}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
@@ -1786,8 +1792,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.WRITE,
+                false,
                 new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
@@ -2464,8 +2472,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       public void acquireLock() throws PersistanceException, IOException {
         LOG.fatal("DELETE root dir is "+getFsDirectory().getRootDir());
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
+                false,
                 new String[]{src}).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
@@ -2588,10 +2598,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   HdfsFileStatus getFileInfo(final String src, final boolean resolveLink)
           throws AccessControlException, UnresolvedLinkException, IOException {
     TransactionalRequestHandler getFileInfoHandler = new TransactionalRequestHandler(OperationType.GET_FILE_INFO) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
-       
+
         if (isPermissionEnabled) {
           checkTraverse(src);
         }
@@ -2602,17 +2611,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
+                resolveLink,
                 new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.READ).
                 acquire();
       }
     };
-    
-     if (!DFSUtil.isValidName(src)) {
-          throw new InvalidPathException("Invalid file name: " + src);
-     }
+
+    if (!DFSUtil.isValidName(src)) {
+      throw new InvalidPathException("Invalid file name: " + src);
+    }
     return (HdfsFileStatus) getFileInfoHandler.handleWithReadLock(this);
   }
 
@@ -2643,8 +2654,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
+                false,
                 new String[]{src}).
                 acquire();
       }

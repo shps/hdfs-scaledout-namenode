@@ -58,13 +58,12 @@ public class TransactionLockAcquirer {
   }
 
   public static LinkedList<INode> acquireLockOnRestOfPath(INodeLockType lock, INode baseInode,
-          String fullPath, String prefix) throws PersistanceException, UnresolvedPathException {
+          String fullPath, String prefix, boolean resolveLink) throws PersistanceException, UnresolvedPathException {
     LinkedList<INode> resolved = new LinkedList<INode>();
     byte[][] fullComps = INode.getPathComponents(fullPath);
     byte[][] prefixComps = INode.getPathComponents(prefix);
     int[] count = new int[]{prefixComps.length - 1};
-    boolean resolveLink = true; // FIXME [H]: This can differ for different operations
-    boolean lastComp = (count[0] == fullComps.length - 1);
+    boolean lastComp;
     lockINode(lock);
     INode[] curInode = new INode[]{baseInode};
     while (count[0] < fullComps.length && curInode[0] != null) {
@@ -110,9 +109,8 @@ public class TransactionLockAcquirer {
     return lastComp;
   }
 
-  public static LinkedList<INode> acquireInodeLockByPath(INodeLockType lock, String path, INode rootDir) throws UnresolvedPathException, PersistanceException {
+  public static LinkedList<INode> acquireInodeLockByPath(INodeLockType lock, String path, INode rootDir, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
     LinkedList<INode> resolvedInodes = new LinkedList<INode>();
-    boolean resolveLink = true; // FIXME [H]: This can differ for different operations
 
     if (path == null) {
       return resolvedInodes;

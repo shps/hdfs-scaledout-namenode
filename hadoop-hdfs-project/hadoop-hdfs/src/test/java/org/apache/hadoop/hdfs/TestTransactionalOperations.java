@@ -643,22 +643,22 @@ public class TestTransactionalOperations {
       EntityManager.begin();
       // first get write lock on ed2
       LinkedList<INode> lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE, p1.toString(),
-              cluster.getNamesystem().getFsDirectory().getRootDir());
+              cluster.getNamesystem().getFsDirectory().getRootDir(), true);
       assert lockedINodes != null;
       assert lockedINodes.size() == 2; // first two path components
       lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE,
-              lockedINodes.getLast(), p2.toString(), p1.toString());
+              lockedINodes.getLast(), p2.toString(), p1.toString(), true);
       assert lockedINodes != null && lockedINodes.size() == 2; // the other two
       EntityManager.commit();
 
       EntityManager.begin();
       // The same thing with write on parent
       lockedINodes = TransactionLockAcquirer.acquireInodeLockByPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT, p1.toString(),
-              cluster.getNamesystem().getFsDirectory().getRootDir());
+              cluster.getNamesystem().getFsDirectory().getRootDir(), true);
       assert lockedINodes != null;
       assert lockedINodes.size() == 2; // first two path components
       lockedINodes = TransactionLockAcquirer.acquireLockOnRestOfPath(TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-              lockedINodes.getLast(), p2.toString(), p1.toString());
+              lockedINodes.getLast(), p2.toString(), p1.toString(), true);
       assert lockedINodes != null && lockedINodes.size() == 2; // the other two
       EntityManager.commit();
     } finally {

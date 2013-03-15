@@ -70,8 +70,8 @@ public class BlockTokenKeyContext extends EntityContext<BlockKey> {
     switch (bFinder) {
       case ById:
         int id = (Integer) params[0];
-        BlockKey result = keys.get(id);
-        if (result == null) {
+        BlockKey result;
+        if (!keys.containsKey(id)) {
           log("find-blockkey-by-kid", CacheHitState.LOSS, new String[]{"kid", Integer.toString(id)});
           aboutToAccessStorage();
           result = dataAccess.findByKeyId(id);
@@ -80,6 +80,7 @@ public class BlockTokenKeyContext extends EntityContext<BlockKey> {
           }
           keys.put(id, result);
         } else {
+          result = keys.get(id);
           log("find-blockkey-by-kid", CacheHitState.HIT, new String[]{"kid", Integer.toString(id)});
         }
         return result;

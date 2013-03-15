@@ -18,6 +18,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
@@ -71,18 +72,14 @@ class UnderReplicatedBlocks {
    * Return the number of under replication blocks excluding corrupt blocks
    */
   int getUnderReplicatedBlockCount(TransactionalRequestHandler.OperationType opType) throws IOException {
-    return (Integer) new TransactionalRequestHandler(opType) {
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        throw new UnsupportedOperationException("Not supported yet."); // FIXME Hooman: implement Finder.LessThanLevel
-      }
-
+    List<UnderReplicatedBlock> urbs = (List<UnderReplicatedBlock>) new LightWeightRequestHandler(opType) {
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        return EntityManager.count(UnderReplicatedBlock.Counter.LessThanLevel, QUEUE_WITH_CORRUPT_BLOCKS);
+        UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
+        return da.findAllLessThanLevel(QUEUE_WITH_CORRUPT_BLOCKS);
       }
     }.handle();
+    return urbs.size();
   }
 
   /**
