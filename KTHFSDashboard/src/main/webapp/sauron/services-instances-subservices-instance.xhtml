@@ -242,7 +242,8 @@
 
             <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.shoWLogs}">
                <h:form id="logsform">
-                  <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs">
+                  <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs"
+                                 onstart="dlgAction.show()" oncomplete="dlgAction.hide()">
                      <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
                      <f:param name="service" value="#{serviceController.service}"/>  
                      <f:param name="hostname" value="#{serviceController.hostname}"/>
