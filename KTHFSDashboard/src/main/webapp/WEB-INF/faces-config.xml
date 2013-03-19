@@ -51,6 +51,11 @@
             <redirect/>
         </navigation-case>        
         <navigation-case>
+            <from-outcome>backuprestore</from-outcome>
+            <to-view-id>/sauron/backup-restore.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case> 
+        <navigation-case>
             <from-outcome>services</from-outcome>
             <to-view-id>/sauron/services.xhtml</to-view-id>
             <redirect/>

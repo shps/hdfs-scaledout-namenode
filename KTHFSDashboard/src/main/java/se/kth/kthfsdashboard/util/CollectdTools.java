@@ -168,8 +168,8 @@ public class CollectdTools {
       String YELLOW = "EDC240";
       String GREEN = "4DA74D";
 
-      int height = 150;
-      int width = 290;
+      int height = 130;
+      int width = 260;
       try {
          GraphType.valueOf(chartType);
       } catch (Exception e) {

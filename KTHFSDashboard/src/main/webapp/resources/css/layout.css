@@ -166,6 +166,21 @@ body {
    border: none;
 }
 
+/*file upload*/
+
+.FileUpload .ui-widget-header{
+   
+   border: none;
+   background-color: transparent;
+}
+
+.FileUpload .fileupload-content.ui-widget-content{
+   border: none;   
+}
+
+.FileUpload .ui-progressbar.ui-widget.ui-widget-content{
+   border-width: 1px;   
+}
 
 /*toolbar*/
 .MainToolbar {
@@ -351,7 +366,7 @@ body {
 
 .CapacityUsage.priorityLow .bar {
     background-color: #080;
-}
+}/*datatable*/
 
 .CapacityUsage.priorityMed .bar {
     background-color: #AA881A;
@@ -430,3 +445,20 @@ body {
 .AlertSeverity_OKAY {
    color: green;
 }
+
+
+.BackupPanel {
+   height: 100px;
+   width: 600px;
+   text-align: left;
+}
+
+.RestorePanel {
+   height: 180px;
+   width: 600px;
+   text-align: left;
+}
+
+
+
+

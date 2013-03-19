@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,6 +89,7 @@ public class TestClusterId {
 
     // 1. should format without cluster id
     //StartupOption.FORMAT.setClusterId("");
+    StorageFactory.setConfiguration(config);
     NameNode.format(config);
     // see if cluster id not empty.
     String cid = getClusterId(config);
