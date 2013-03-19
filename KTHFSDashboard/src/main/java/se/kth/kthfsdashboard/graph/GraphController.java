@@ -36,21 +36,21 @@ public class GraphController implements Serializable {
    private List<String> hostGraphs;
    private List<String> namenodeGraphs;
    private List<String> namenodeActivitiesGraphs;
-   
+
    public GraphController() {
-      
-      namenodeGraphs = new ArrayList<String>(Arrays.asList("nn_capacity", "nn_files", 
+
+      namenodeGraphs = new ArrayList<String>(Arrays.asList("nn_capacity", "nn_files",
               "nn_load", "nn_heartbeats", "nn_blockreplication", "nn_blocks", "nn_specialblocks", "nn_datanodes"));
 
-      namenodeActivitiesGraphs = new ArrayList<String>(Arrays.asList("nn_r_fileinfo", "nn_r_getblocklocations", 
-              "nn_r_getlisting", "nn_r_getlinktarget", "nn_r_filesingetlisting", "nn_w_createfile_all", 
+      namenodeActivitiesGraphs = new ArrayList<String>(Arrays.asList("nn_r_fileinfo", "nn_r_getblocklocations",
+              "nn_r_getlisting", "nn_r_getlinktarget", "nn_r_filesingetlisting", "nn_w_createfile_all",
               "nn_w_filesappended", "nn_w_filesrenamed", "nn_w_deletefile_all", "nn_w_addblock", "nn_w_createsymlink",
-              "nn_o_getadditionaldatanode" , "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", "nn_o_syncs",
-              "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));     
-      
+              "nn_o_getadditionaldatanode", "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", "nn_o_syncs",
+              "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));
+
       hostGraphs = new ArrayList<String>(Arrays.asList("load", "memory", "df", "interface", "swap"));
-      
-      columns = new ArrayList<Integer>(Arrays.asList(2,3,4,5));
+
+      columns = new ArrayList<Integer>(Arrays.asList(2, 3, 4, 5));
 
       datePeriods.add(new DatePeriod("hour", "1h"));
       datePeriods.add(new DatePeriod("2hr", "2h"));
@@ -67,11 +67,8 @@ public class GraphController implements Serializable {
       end = new Date();
 
       period = "1h";
-      
-      if (numberOfColumns == 0 ){
-         numberOfColumns = 4;
-      }
 
+      numberOfColumns = 5;
    }
 
    public String getKthfsInstance() {
@@ -171,7 +168,7 @@ public class GraphController implements Serializable {
    public List<DatePeriod> getDatePeriods() {
       return datePeriods;
    }
-   
+
    public List<String> getNamenodeGraphs() {
       return namenodeGraphs;
    }
@@ -194,7 +191,7 @@ public class GraphController implements Serializable {
    }
 
    public String getGraphUrl(String host, String plugin, String type, String chartType) throws MalformedURLException {
-      String url = "../rest/collectd/graph?";      
+      String url = "../rest/collectd/graph?";
       HashMap<String, String> params = new HashMap<String, String>();
       params.put("chart_type", chartType);
       params.put("start", getStartTime().toString());
@@ -217,13 +214,13 @@ public class GraphController implements Serializable {
          type = plugin;
       }
       return getGraphUrl(hostname, plugin, type, plugin + "all");
-   }   
-   
+   }
+
    public String getGraphUrl(String host, String plugin, String type) throws MalformedURLException {
 //      TODO: host/hostname ?
       return getGraphUrl(hostname, plugin, type, plugin + "all");
    }
-   
+
    public String getNamenodeGraphUrl(String service, String chartType) {
       String url = "../rest/collectd/graph?";
       HashMap<String, String> params = new HashMap<String, String>();
@@ -234,7 +231,7 @@ public class GraphController implements Serializable {
          url += entry.getKey() + "=" + entry.getValue() + "&";
       }
       return url;
-      
+
    }
 
    public int getNumberOfColumns() {
@@ -260,7 +257,4 @@ public class GraphController implements Serializable {
    public List<String> getHostGraphs() {
       return hostGraphs;
    }
-
-
-   
 }

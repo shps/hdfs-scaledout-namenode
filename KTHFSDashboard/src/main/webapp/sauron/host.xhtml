@@ -193,7 +193,7 @@
                <p:toolbarGroup align="left"><p:outputLabel value="Host Info"/></p:toolbarGroup>
             </p:toolbar>
             <p:dataGrid  var="g" value="#{graphController.hostGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
-               <p:graphicImage value="#{graphController.getHostGraphUrl(g)}" height="223px" width="387"/>  
+               <p:graphicImage value="#{graphController.getHostGraphUrl(g)}" />  
             </p:dataGrid> 
          </h:form>           
 
