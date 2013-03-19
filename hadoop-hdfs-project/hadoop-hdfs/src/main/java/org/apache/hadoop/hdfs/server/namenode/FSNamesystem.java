@@ -4432,8 +4432,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Check to see if we have exceeded the limit on the number of inodes.
    */
   void checkFsObjectLimit(OperationType opType) throws IOException, PersistanceException {
+      
+      long totalInodes = dir.totalInodes();
+      long totalBlocks = getBlocksTotalNoTx(opType);
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("checkFsObjectLimit limit "
+                  +maxFsObjects+" cur objs "
+                  + (totalInodes + totalBlocks) 
+                  + " (inodes: "+totalInodes+", blocks "+totalBlocks+")");
+      }
+      
     if (maxFsObjects != 0
-            && maxFsObjects <= dir.totalInodes() + getBlocksTotalNoTx(opType)) {
+            && maxFsObjects <= totalInodes + totalBlocks) {
       throw new IOException("Exceeded the configured number of objects "
               + maxFsObjects + " in the filesystem.");
     }
