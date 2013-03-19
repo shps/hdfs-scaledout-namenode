@@ -4,10 +4,6 @@
  */
 package se.kth.kthfsdashboard.virtualization.clusterparser;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import javax.faces.application.FacesMessage;
@@ -16,22 +12,26 @@ import javax.faces.bean.RequestScoped;
 import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 import org.primefaces.event.FileUploadEvent;
+import org.primefaces.model.DefaultTreeNode;
+import org.primefaces.model.TreeNode;
 import org.primefaces.model.UploadedFile;
 import org.yaml.snakeyaml.Yaml;
-import sun.awt.geom.Crossings;
 
 /**
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
 @ManagedBean
-@RequestScoped
+@SessionScoped
 public class ClusterController implements Serializable {
 
     private Cluster cluster;
     private boolean disableStart = true;
     private UploadedFile file;
     private Yaml yaml = new Yaml();
+    private TreeNode root;
+    private TreeNode selectedItem;
+    private TreeNode[] selectedItems;
 
     /**
      * Creates a new instance of ClusterController
@@ -58,8 +58,33 @@ public class ClusterController implements Serializable {
     public void handleFileUpload(FileUploadEvent event) {
         file = event.getFile();
         parseYMLtoCluster();
+        generateTreeTable();
         FacesMessage msg = new FacesMessage("Succesful", event.getFile().getFileName() + " is uploaded.");
         FacesContext.getCurrentInstance().addMessage(null, msg);
+    }
+
+    public boolean clusterLoaded() {
+        return disableStart;
+    }
+
+    public TreeNode getRoot() {
+        return root;
+    }
+
+    public TreeNode getSelectedItem() {
+        return selectedItem;
+    }
+
+    public void setSelectedItem(TreeNode selectedItem) {
+        this.selectedItem = selectedItem;
+    }
+
+    public TreeNode[] getSelectedItems() {
+        return selectedItems;
+    }
+
+    public void setSelectedItems(TreeNode[] selectedItems) {
+        this.selectedItems = selectedItems;
     }
 
     private void parseYMLtoCluster() {
@@ -81,7 +106,57 @@ public class ClusterController implements Serializable {
 
     }
 
-    public boolean clusterLoaded() {
-        return disableStart;
+    private void generateTreeTable() {
+        root = new DefaultTreeNode("root", null);
+
+
+        int namenode = 0;
+        int datanode = 0;
+        int mgmd = 0;
+        int ndbd = 0;
+        int mysql = 0;
+
+        for (NodeGroup group : cluster.getNodes()) {
+            if (group.getRoles().contains("kthfs*namenode")) {
+                namenode += group.getNumber();
+            }
+            if (group.getRoles().contains("kthfs*datanode")) {
+                datanode += group.getNumber();
+            }
+            if (group.getRoles().contains("MySQL_Cluster*mgm")) {
+                mgmd += group.getNumber();
+            }
+            if (group.getRoles().contains("MySQL_Cluster*mysqld")) {
+                mysql += group.getNumber();
+            }
+            if (group.getRoles().contains("MySQL_Cluster*ndbd")) {
+                ndbd += group.getNumber();
+            }
+
+        }
+
+        if (namenode != 0 || datanode != 0) {
+            TreeNode node1 = new DefaultTreeNode("node", new InstanceElement("KTHFS", datanode + namenode, ""), root);
+            if (namenode != 0) {
+                TreeNode node11 = new DefaultTreeNode("leaf", new InstanceElement("namenode", namenode, "pending"), node1);
+            }
+            if (datanode != 0) {
+                TreeNode node12 = new DefaultTreeNode("leaf", new InstanceElement("datanode", datanode, "pending"), node1);
+            }
+        }
+
+
+        if (mgmd != 0 || ndbd != 0 || mysql != 0) {
+            TreeNode node2 = new DefaultTreeNode("node", new InstanceElement("MYSQL", mgmd + ndbd + mysql, ""), root);
+            if (mgmd != 0) {   
+                TreeNode node21 = new DefaultTreeNode("leaf", new InstanceElement("mgmd", mgmd, "pending"), node2);
+            }
+            if (ndbd != 0) {
+                TreeNode node22 = new DefaultTreeNode("leaf", new InstanceElement("ndbd", ndbd, "pending"), node2);
+            }
+            if (mysql != 0) {
+                TreeNode node23 = new DefaultTreeNode("leaf", new InstanceElement("mysql", mysql, "pending"), node2);
+            }
+        }
     }
 }

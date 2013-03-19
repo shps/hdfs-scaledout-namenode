@@ -13,7 +13,7 @@
     <ui:composition template="layout.xhtml">
 
         <ui:define name="title">
-            KTHFS Dashboard - Add Cluster
+            KTHFS Dashboard - Cluster Setup
         </ui:define>
         <ui:define name="css"/>
         <ui:define name="scripts"/>
@@ -23,7 +23,7 @@
                 <p:panelGrid>  
                     <p:row>  
                         <p:column>
-                            <h:outputText value="Add Clutser"/>
+                            <h:outputText value="Cluster"/>
                         </p:column>
                     </p:row>
                 </p:panelGrid>
@@ -40,14 +40,14 @@
                     <h:form id="clusterUpload" enctype="multipart/form-data">  
 
                         <p:fileUpload fileUploadListener="#{clusterController.handleFileUpload}"  
-                                      mode="advanced"   
-                                      update="messages startCluster"  
+                                      mode="advanced"   showButtons="false"
+                                      update="messages next"  
                                       sizeLimit="5000"   
                                       allowTypes="/(\.|\/)(yml)$/"/>  
 
                         <p:growl id="messages" showDetail="true"/>
                         <br/>            
-                        <p:commandButton id="startCluster" value="start cluster" disabled="#{clusterController.clusterLoaded()}"/>
+                        <p:commandButton id="next" value="Next" action="proceedLaunchCluster" ajax="false" disabled="#{clusterController.clusterLoaded()}" />
 
                     </h:form>  
                 </div>

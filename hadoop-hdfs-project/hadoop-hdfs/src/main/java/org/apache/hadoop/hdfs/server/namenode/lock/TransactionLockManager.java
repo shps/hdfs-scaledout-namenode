@@ -44,6 +44,7 @@ public class TransactionLockManager {
   private INodeResolveType inodeResolveType = null;
   private String[] inodeParam = null;
   private INode[] inodeResult = null;
+  private boolean resolveLink = true; // the file is a symlink should it resolve it?
   //block
   private LockType blockLock = null;
   private Long blockParam = null;
@@ -79,7 +80,6 @@ public class TransactionLockManager {
   private LockType leaderLock = null;
   private int[] leaderIds = null;
 
-  
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
     checkStringParam(holder);
@@ -106,17 +106,16 @@ public class TransactionLockManager {
 
     return leases;
   }
-  
+
   /**
-   * Acquires lock on lease path and lease having leasepath. This is used by
-   *  the test cases.
-   * @param leasePath 
+   * Acquires lock on lease path and lease having leasepath. This is used by the
+   * test cases.
+   *
+   * @param leasePath
    */
-  public void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException
-  {
+  public void acquireByLeasePath(String leasePath, LockType leasePathLock, LockType leaseLock) throws PersistanceException {
     LeasePath lp = TransactionLockAcquirer.acquireLock(leasePathLock, LeasePath.Finder.ByPKey, leasePath);
-    if (lp != null)
-    {
+    if (lp != null) {
       TransactionLockAcquirer.acquireLock(leaseLock, Lease.Finder.ByHolderId, lp.getHolderId());
     }
     rootDir(); // acquire read lock on the root node
@@ -164,11 +163,9 @@ public class TransactionLockManager {
       for (INode dir : inodes) {
         if (dir instanceof INodeDirectory) {
           children.addAll(((INodeDirectory) dir).getChildren());
-        }
-        else
-        {
-            // immediate children of  INodeFile is the inode itself.
-            children.add(dir);
+        } else {
+          // immediate children of  INodeFile is the inode itself.
+          children.add(dir);
         }
       }
     }
@@ -248,11 +245,17 @@ public class TransactionLockManager {
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType,
-          INodeLockType lock, String[] param) {
+          INodeLockType lock, boolean resolveLink, String[] param) {
     this.inodeLock = lock;
     this.inodeResolveType = resolveType;
     this.inodeParam = param;
+    this.resolveLink = resolveLink;
     return this;
+  }
+  
+  public TransactionLockManager addINode(INodeResolveType resolveType,
+          INodeLockType lock, String[] param) {
+    return addINode(resolveType, lock, true, param);
   }
 
   public TransactionLockManager addINode(INodeLockType lock) {
@@ -261,9 +264,7 @@ public class TransactionLockManager {
   }
 
   public TransactionLockManager addINode(INodeResolveType resolveType, INodeLockType lock) {
-    this.inodeResolveType = resolveType;
-    this.inodeLock = lock;
-    return this;
+    return addINode(resolveType, lock, true, null);
   }
 
   public TransactionLockManager addBlock(LockType lock, Long param) {
@@ -330,9 +331,10 @@ public class TransactionLockManager {
 
   /**
    * Lock on block token key data.
+   *
    * @param lock
    * @param keyId
-   * @return 
+   * @return
    */
   public TransactionLockManager addBlockKeyLockById(LockType lock, int keyId) {
     blockKeyLock = lock;
@@ -351,9 +353,8 @@ public class TransactionLockManager {
     blockKeyTypes.add(type);
     return this;
   }
-  
-  public TransactionLockManager addLeaderLock(LockType lock, int... ids)
-  {
+
+  public TransactionLockManager addLeaderLock(LockType lock, int... ids) {
     this.leaderLock = lock;
     this.leaderIds = ids;
     return this;
@@ -388,7 +389,7 @@ public class TransactionLockManager {
     acquireBlockRelatedLocksNormal();
     acquireLeaderLock();
   }
-  
+
   private void acquireLeaderLock() throws PersistanceException {
     if (leaderLock != null) {
       if (leaderIds.length == 0) {
@@ -412,12 +413,12 @@ public class TransactionLockManager {
   }
 
   /**
-   * Acquires lock on the lease, lease-path, replicas, excess, corrupt, invalidated,
-   * under-replicated and pending blocks.
-   * @throws PersistanceException 
+   * Acquires lock on the lease, lease-path, replicas, excess, corrupt,
+   * invalidated, under-replicated and pending blocks.
+   *
+   * @throws PersistanceException
    */
   private void acquireBlockRelatedLocksNormal() throws PersistanceException {
-
 
     if (blockResults != null && !blockResults.isEmpty()) {
       if (replicaLock != null) {
@@ -447,24 +448,23 @@ public class TransactionLockManager {
       if (pbLock != null) {
         acquireBlockRelatedLock(pbLock, PendingBlockInfo.Finder.ByPKey);
       }
+    }
 
-      if (blockKeyLock != null) {
-        if (blockKeyIds != null) {
-          for (int id : blockKeyIds) {
-            TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ById, id);
-          }
-        }
-        if (blockKeyTypes != null) {
-          for (short type : blockKeyTypes) {
-            TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ByType, type);
-          }
+    if (blockKeyLock != null) {
+      if (blockKeyIds != null) {
+        for (int id : blockKeyIds) {
+          TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ById, id);
         }
       }
-      
-      if (generationStampLock != null)
-      {
-        TransactionLockAcquirer.acquireLock(generationStampLock, GenerationStamp.Finder.Counter);
+      if (blockKeyTypes != null) {
+        for (short type : blockKeyTypes) {
+          TransactionLockAcquirer.acquireLock(blockKeyLock, BlockKey.Finder.ByType, type);
+        }
       }
+    }
+
+    if (generationStampLock != null) {
+      TransactionLockAcquirer.acquireLock(generationStampLock, GenerationStamp.Finder.Counter);
     }
   }
 
@@ -478,7 +478,7 @@ public class TransactionLockManager {
           // TODO - MemcacheD Lookup of path
           // On
           LinkedList<INode> resolvedInodes =
-                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir());
+                  TransactionLockAcquirer.acquireInodeLockByPath(lock, params[i], rootDir(), resolveLink);
           if (resolvedInodes.size() > 0) {
             inodes[i] = resolvedInodes.peekLast();
           }
@@ -496,13 +496,13 @@ public class TransactionLockManager {
           // TODO Test this in all different possible scenarios
           String fullPath = params[i];
 //          LOG.error("Full Path = " + fullPath);
-          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir());
+          LinkedList<INode> resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(INodeLockType.READ_COMMITED, fullPath, rootDir(), resolveLink);
           int resolvedSize = resolvedInodes.size();
 //          LOG.error("resolved size = " + resolvedSize);
           String existingPath = buildPath(fullPath, resolvedSize);
 //          LOG.error("existing path = " + existingPath);
           EntityManager.clearContext(); // clear the context, so it won't use in-memory data.
-          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir());
+          resolvedInodes = TransactionLockAcquirer.acquireInodeLockByPath(lock, existingPath, rootDir(), resolveLink);
           if (resolvedSize <= resolvedInodes.size()) { // FIXME: Due to removing a dir, this could become false. So we may retry. Anyway, it can be livelock-prone
             // lock any remained path component if added between the two transactions
             INode baseDir = resolvedInodes.peekLast();
@@ -511,14 +511,14 @@ public class TransactionLockManager {
             }
 //            LOG.error("base dir = " + baseDir.getName());
             LinkedList<INode> rest = TransactionLockAcquirer.acquireLockOnRestOfPath(lock, baseDir,
-                    fullPath, existingPath);
+                    fullPath, existingPath, resolveLink);
 //            LOG.error("rest size = " + rest.size());
             resolvedInodes.addAll(rest);
             inodes[i] = resolvedInodes.peekLast();
           }
         }
         break;
-     
+
       default:
         throw new IllegalArgumentException("Unknown type " + lock.name());
     }
@@ -526,8 +526,6 @@ public class TransactionLockManager {
     return inodes;
   }
 
-
-  
   private List<BlockInfo> acquireBlockLock(LockType lock, Long param) throws PersistanceException {
 
     List<BlockInfo> blocks = new ArrayList<BlockInfo>();
@@ -551,9 +549,11 @@ public class TransactionLockManager {
   }
 
   /**
-   * This method acquires lockk on the inode starting with a block-id. The lock-types
-   * should be set before using add* methods. Otherwise, no lock would be acquired.
-   * @throws PersistanceException 
+   * This method acquires lockk on the inode starting with a block-id. The
+   * lock-types should be set before using add* methods. Otherwise, no lock
+   * would be acquired.
+   *
+   * @throws PersistanceException
    */
   public void acquireByBlock() throws PersistanceException, UnresolvedPathException {
     if (inodeLock == null) // inodelock must be set before.
@@ -572,22 +572,19 @@ public class TransactionLockManager {
 
     EntityManager.readCommited();
     INode inode = EntityManager.find(INode.Finder.ByPKey, rcBlock.getInodeId());
-    
+
     ArrayList<INode> inodes = new ArrayList<INode>();
-    if(inode != null && this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT)
-    {
-       readFromLeafToRoot(inode, inodes);
-       EntityManager.clearContext();
-       takeLocksFromRootToLeaf(inodes, inodeLock);
-       
-    }
-    else
-    {
-        EntityManager.clearContext();
-        inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, rcBlock.getInodeId());
+    if (inode != null && this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT) {
+      readFromLeafToRoot(inode, inodes);
+      EntityManager.clearContext();
+      takeLocksFromRootToLeaf(inodes, inodeLock);
+
+    } else {
+      EntityManager.clearContext();
+      inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, rcBlock.getInodeId());
     }
 
-    
+
     //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
     if (inode == null || !(inode instanceof INodeFile)) {
       return;
@@ -609,49 +606,44 @@ public class TransactionLockManager {
     acquireBlockRelatedLocksNormal();
 
   }
-  
-   private void readFromLeafToRoot(INode inode, ArrayList<INode> list) throws PersistanceException {
-        if (inode.getParentId() == -1) {
-            list.add(inode);
-            return;
-        }
 
-        readFromLeafToRoot(inode.getParent(), list);
-    
-        EntityManager.readCommited();
-        INode i = EntityManager.find(INode.Finder.ByPKey, inode.getId());
-        list.add(i);
-  }
-   
-  
-    private void takeLocksFromRootToLeaf(ArrayList<INode> inodes,INodeLockType inodeLock) throws PersistanceException {
+  private void readFromLeafToRoot(INode inode, ArrayList<INode> list) throws PersistanceException {
+    if (inode.getParentId() == -1) {
+      list.add(inode);
+      return;
+    }
 
-        StringBuilder msg = new StringBuilder();
-        msg.append("Took Lock on the entire path ");
-        for(int i = 0; i < inodes.size(); i++)
-        {
-            INode lockedINode;
-            if(i == (inodes.size() - 1)) // take specified lock
-            {
-                lockedINode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, inodes.get(i).getId());
-            }
-            else // take read commited lock
-            {
-                lockedINode = TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, inodes.get(i).getId());
-            }
-           
-            if(!lockedINode.getName().equals(""))
-            {
-               msg.append("/");
-               msg.append(lockedINode.getName());
-            }
-            
-           
-        }
-         LOG.debug(msg.toString());
+    readFromLeafToRoot(inode.getParent(), list);
+
+    EntityManager.readCommited();
+    INode i = EntityManager.find(INode.Finder.ByPKey, inode.getId());
+    list.add(i);
   }
-    
-  
+
+  private void takeLocksFromRootToLeaf(ArrayList<INode> inodes, INodeLockType inodeLock) throws PersistanceException {
+
+    StringBuilder msg = new StringBuilder();
+    msg.append("Took Lock on the entire path ");
+    for (int i = 0; i < inodes.size(); i++) {
+      INode lockedINode;
+      if (i == (inodes.size() - 1)) // take specified lock
+      {
+        lockedINode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, inodes.get(i).getId());
+      } else // take read commited lock
+      {
+        lockedINode = TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, inodes.get(i).getId());
+      }
+
+      if (!lockedINode.getName().equals("")) {
+        msg.append("/");
+        msg.append(lockedINode.getName());
+      }
+
+
+    }
+    LOG.debug(msg.toString());
+  }
+
   public void acquireByLease() throws PersistanceException, UnresolvedPathException {
     if (leaseParam == null) {
       return;
@@ -702,26 +694,20 @@ public class TransactionLockManager {
     rootDir(); // acquire read lock on the root node
     acquireBlockRelatedLocksNormal();
   }
-  
-  
-  private INode rootDir() throws PersistanceException
-  {
-      // here is the catch
-      // calling this function will 
-      // acquire lock on the root node
-      // you need root node in almost every operation to resolve paths
-      // 
-      // we take read commited lock on the root unless specified otherwise
-      // 
-      
-      if(this.inodeLock != null && this.inodeParam !=  null && this.inodeParam[0].equals("/"))
-      {
-         return TransactionLockAcquirer.acquireINodeLockById(inodeLock, 0);
-      }
-      else
-      {
-          return TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, 0);
-      }
+
+  private INode rootDir() throws PersistanceException {
+    // here is the catch
+    // calling this function will 
+    // acquire lock on the root node
+    // you need root node in almost every operation to resolve paths
+    // 
+    // we take read commited lock on the root unless specified otherwise
+    // 
+
+    if (this.inodeLock != null && this.inodeParam != null && this.inodeParam[0].equals("/")) {
+      return TransactionLockAcquirer.acquireINodeLockById(inodeLock, 0);
+    } else {
+      return TransactionLockAcquirer.acquireINodeLockById(INodeLockType.READ_COMMITED, 0);
+    }
   }
-  
 }

@@ -66,6 +66,11 @@
             <to-view-id>/sauron/addcluster.xhtml</to-view-id>
             <redirect/>
         </navigation-case>
+        <navigation-case>
+            <from-outcome>proceedLaunchCluster</from-outcome>
+            <to-view-id>/sauron/clusterLauncher.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>
     </navigation-rule>    
 
    
