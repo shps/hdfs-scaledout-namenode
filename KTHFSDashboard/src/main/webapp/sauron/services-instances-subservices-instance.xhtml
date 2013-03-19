@@ -76,7 +76,6 @@
          </h:form>
          <!--Navigation Bar - End-->
 
-
          <!-- Second Toolbar-->
          <h:form>  
             <p:toolbar styleClass="SecondToolbarGood">  
@@ -95,32 +94,36 @@
                      <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                 
                      <f:param name="hostname" value="#{serviceController.hostname}"/>                          
                   </p:commandButton>                        
-
                </p:toolbarGroup>  
 
                <p:toolbarGroup align="right">  
                   <p:menuButton value="Actions">  
-                     <p:menuitem value="Start" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance">
+                     <p:menuitem value="Start" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance"
+                                 onstart="dlgAction.show()" oncomplete="dlgAction.hide()">
                         <f:param name="hostname" value="#{hostController.hostname}" />
                         <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
                         <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                  
                         <f:param name="service" value="#{hostController.service}" />
                         <f:param name="command" value="start" />
                      </p:menuitem>
-                     <p:menuitem value="Stop" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance">
+                     <p:menuitem value="Stop" actionListener="#{hostController.doCommand}" ajax ="true" update="@form :Instance"
+                                 onstart="dlgAction.show()" oncomplete="dlgAction.hide()">
                         <f:param name="hostname" value="#{hostController.hostname}" />
                         <f:param name="kthfsinstance" value="#{hostController.khfsInstance}" />
                         <f:param name="service" value="#{hostController.service}" />
                         <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>                                  
                         <f:param name="command" value="stop" /> 
                      </p:menuitem>
-
                   </p:menuButton>  
                </p:toolbarGroup>  
-
             </p:toolbar>  
-
          </h:form>
+
+         <!-- Second Toolbar - End -->        
+
+         <p:dialog modal="true" widgetVar="dlgAction" header="Action in progress..." draggable="false" closable="false" resizable="false">  
+            <p:graphicImage library="images" name="ajaxloadingbar.gif" />  
+         </p:dialog>             
 
          <p:spacer width="1" height="10" />
 
