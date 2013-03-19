@@ -27,9 +27,9 @@
   - securityGroup: jose
     number: 4
     roles:
-     [MySQL_Cluster*ndbd, MySQL_Cluster*mysqld, MySQL_Cluster*mgm]
+     [MySQLCluster*ndbd, MySQLCluster*mysqld, MySQLCluster*mgm]
     authorizePorts:
-     [MySQL_Cluster*ndbd, MySQL_Cluster*mysqld, MySQL_Cluster*mgm]
+     [MySQLCluster*ndbd, MySQLCluster*mysqld, MySQLCluster*mgm]
   ##Override chef attributes for roles:
   chefAttributes:
     - role: kthfs

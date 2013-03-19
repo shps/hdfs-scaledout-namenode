@@ -13,7 +13,25 @@ import java.util.List;
 public class Provider {
     private String name;
     private String instanceType;
+    private String loginUser;
     private String image;
+    private String region;
+
+    public String getLoginUser() {
+        return loginUser;
+    }
+
+    public void setLoginUser(String loginUser) {
+        this.loginUser = loginUser;
+    }
+        
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
     private List<String> zones;
    
     public String getName() {

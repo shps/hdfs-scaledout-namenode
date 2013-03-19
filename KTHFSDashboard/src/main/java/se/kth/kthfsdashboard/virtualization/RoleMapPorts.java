@@ -1,0 +1,90 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package se.kth.kthfsdashboard.virtualization;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import org.omg.CORBA.INTERNAL;
+
+/**
+ *
+ * @author Alberto Lorente Leal <albll@kth.se>
+ */
+public class RoleMapPorts {
+
+    private final HashMap<String, int[]> roleMappings;
+
+    public enum PortType {
+
+        TCP, UDP, COMMON
+    }
+
+    public RoleMapPorts(PortType type) {
+        roleMappings = new HashMap();
+        //TCP rolemappings for KTHFS
+        int[] namenodeTCP = {6000,6001};
+        int[] datanodeTCP = {6002,6003,6004,6007};
+        int[] mgmTCP = {0};
+        int[] ndbdTCP = {0};
+        int[] mysqldTCP = {0};
+        //UDP rolemappings for KTHFS
+        int[] namenodeUDP = {25826};
+        int[] datanodeUDP = {25826};
+        int[] mgmUDP = {25826};
+        int[] ndbdUDP = {25826};
+        int[] mysqldUDP = {25826};
+        //common Roles
+        int[] ssh={22};
+        int[] webserver={8080,8181};
+        int[] chefClient={4000};
+        int[] chefServer={4000,443,4040,444};
+        int[] httphttps={80,443};
+
+        switch (type) {
+            case TCP:
+                roleMappings.put("kthfs*namenode", namenodeTCP);
+                roleMappings.put("kthfs*datanode", datanodeTCP);
+                roleMappings.put("MySQLCluster*mgm", mgmTCP);
+                roleMappings.put("MySQLCluster*ndbd", ndbdTCP);
+                roleMappings.put("MySQLCluster*mysqld", mysqldTCP);
+                break;
+            case UDP:
+                roleMappings.put("kthfs*namenode", namenodeUDP);
+                roleMappings.put("kthfs*datanode", datanodeUDP);
+                roleMappings.put("MySQLCluster*mgm", mgmUDP);
+                roleMappings.put("MySQLCluster*ndbd", ndbdUDP);
+                roleMappings.put("MySQLCluster*mysqld", mysqldUDP);
+                break;
+            case COMMON:
+                roleMappings.put("ssh", ssh);
+                roleMappings.put("webServer",webserver);
+                roleMappings.put("chefClient", chefClient);
+                roleMappings.put("chefServer",chefServer);
+                roleMappings.put("http&https", httphttps);
+                break;
+        }
+    }
+
+    public int[] get(String key) {
+        return roleMappings.get(key);
+    }
+
+    public boolean containsKey(String key) {
+        return roleMappings.containsKey(key);
+    }
+
+    public Set<String> keySet() {
+        return roleMappings.keySet();
+    }
+
+    public Collection<int[]> values() {
+        return roleMappings.values();
+    }
+    
+    
+}
