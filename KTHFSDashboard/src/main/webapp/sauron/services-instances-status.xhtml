@@ -239,11 +239,9 @@
 
          <p:spacer width="1" height="20" />
 
-         <p:accordionPanel activeIndex="-1">
+         <p:accordionPanel id="panels" activeIndex="2">
             <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />            
-            <p:tab id="jmxinfo" title ="JMX Info" rendered="#{jarmonController.showJarmonChartForJmx}">
-               <iframe id="iframe-jarmon-jmx" src="#{jarmonController.jarmonUrlForJmx}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
-            </p:tab>
+
             <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.shoWLogs}">
                <h:form id="logsform">
                   <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs"
@@ -272,14 +270,73 @@
             </p:tab>   
             <p:tab title="Configuration File" rendered="#{serviceInstanceController.showConfiguration}">
                <h:form id="configform">
-
                   Configuration:<br/>
                   <p:inputTextarea id ="config" readonly="true" style="width:100%" rows="25" value="#{serviceController.showConfig()}" autoResize="false"/>
-
                </h:form>
-
             </p:tab>
+
+            <p:tab id="jmxinfo" title ="JMX Info" rendered="#{jarmonController.showJarmonChartForJmx}" >
+               <iframe id="iframe-jarmon-jmx" src="#{jarmonController.jarmonUrlForJmx}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
+            </p:tab>            
          </p:accordionPanel>
+
+         <p:spacer width="1" height="20" />    
+
+
+         <h:form id="formdate" style="text-align: center">  
+            <h:panelGrid columns="10"> 
+               <p:selectOneButton id ="periods" value="#{graphController.period}">  
+                  <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
+                  <f:param name="hostname" value="#{hostController.hostname}"/>
+                  <f:param name="service" value="#{serviceController.service}"/>                  
+                  <p:ajax event="change" process="@form" update=":graphs, calstart, calend" listener="#{graphController.updateDates}"/>
+               </p:selectOneButton>
+               <h:outputText value="or from" />
+               <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+               <h:outputText value=" to " />
+               <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>
+               <h:outputText value=" in " />
+               <p:selectOneMenu id="cols" value="#{graphController.numberOfColumns}" >  
+                  <f:selectItems var="n" value="#{graphController.columns}" />  
+               </p:selectOneMenu>
+               <h:outputText value=" columns " />
+               <p:commandButton value="Go" update=":graphs, periods"  actionListener="#{graphController.useCalendar()}" >
+                  <f:param name="hostname" value="#{hostController.hostname}"/>
+                  <f:param name="service" value="#{serviceController.service}"/>                  
+               </p:commandButton> 
+            </h:panelGrid>
+         </h:form> 
+
+         <h:form id="graphs">
+
+            <p:outputPanel rendered="#{serviceController.showNamenodeGraphs()}">
+               <p:toolbar>
+                  <p:toolbarGroup align="left"><p:outputLabel value="Name Node Info"/></p:toolbarGroup>
+               </p:toolbar>                     
+               <p:dataGrid  var="g" value="#{graphController.namenodeInstanceGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
+                  <p:graphicImage value="#{graphController.getNamenodeInstanceGraphUrl('kthfs1', g)}" />  
+               </p:dataGrid> 
+
+               <p:toolbar>
+                  <p:toolbarGroup align="left"><p:outputLabel value="Name Node Activity"/></p:toolbarGroup>
+               </p:toolbar>
+               <p:dataGrid  var="g" value="#{graphController.namenodeInstanceActivitiesGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
+                  <p:graphicImage value="#{graphController.getNamenodeInstanceGraphUrl('kthfs1', g)}" />   
+               </p:dataGrid>               
+            </p:outputPanel>
+            
+            <p:outputPanel rendered="#{serviceController.showDatanodeGraphs()}">
+               <p:toolbar>
+                  <p:toolbarGroup align="left"><p:outputLabel value="Data Node Activity"/></p:toolbarGroup>
+               </p:toolbar>
+               <p:dataGrid  var="g" value="#{graphController.datanodeInstanceActivitiesGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
+                  <p:graphicImage value="#{graphController.getDatanodeInstanceGraphUrl('kthfs1', g)}" />   
+               </p:dataGrid>                 
+            </p:outputPanel>            
+
+
+
+         </h:form>         
 
       </ui:define>
 

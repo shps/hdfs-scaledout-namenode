@@ -206,6 +206,10 @@ bash "unpack_kthfsmgr" do
   group node['glassfish']['group']
  code <<-EOF
    #{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd deploy --force=true --name KTHFSDashboard #{cached_kthfsmgr_filename}
+
+// This command prevents jclouds client threads (that take a long time to install chef) from timing out, before they have installed their software.
+   #{node['glassfish']['base_dir']}/glassfish/bin/asadmin set server-config.network-config.protocols.protocol.http-listener-1.http.request-timeout-seconds=1200
+
 #  --keepstate=true
  EOF
   not_if "#{node['glassfish']['base_dir']}/glassfish/bin/asadmin -u admin -W #{node['glassfish']['base_dir']}/glassfish/domains/domain1_admin_passwd list-applications --type ejb | grep -w 'KTHFSDashboard'"

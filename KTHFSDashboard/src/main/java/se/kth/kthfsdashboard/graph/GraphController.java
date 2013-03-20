@@ -22,6 +22,7 @@ import se.kth.kthfsdashboard.struct.DatePeriod;
 @RequestScoped
 public class GraphController implements Serializable {
 
+   @ManagedProperty("#{param.kthfsinstance}")  
    private String kthfsInstance;
    @ManagedProperty("#{param.hostname}")
    private String hostname;
@@ -34,20 +35,54 @@ public class GraphController implements Serializable {
    private List<DatePeriod> datePeriods = new ArrayList<DatePeriod>();
    private List<Integer> columns;
    private List<String> hostGraphs;
-   private List<String> namenodeGraphs;
-   private List<String> namenodeActivitiesGraphs;
+   private List<String> namenodeServiceGraphs;
+   private List<String> namenodeInstanceGraphs;   
+   private List<String> namenodeServiceActivitiesGraphs;
+   private List<String> namenodeInstanceActivitiesGraphs;
 
+   private List<String> datanodeInstanceActivitiesGraphs;   
+   
+   private List<String> mysqlclusterInstanceActivitiesGraphs;
+   
    public GraphController() {
+      
+      namenodeServiceGraphs = new ArrayList<String>(Arrays.asList("serv_nn_capacity", "serv_nn_files",
+              "serv_nn_load", "serv_nn_heartbeats", "serv_nn_blockreplication", 
+              "serv_nn_blocks", "serv_nn_specialblocks", "serv_nn_datanodes"));
 
-      namenodeGraphs = new ArrayList<String>(Arrays.asList("nn_capacity", "nn_files",
-              "nn_load", "nn_heartbeats", "nn_blockreplication", "nn_blocks", "nn_specialblocks", "nn_datanodes"));
+      namenodeServiceActivitiesGraphs = new ArrayList<String>(Arrays.asList("serv_nn_r_fileinfo", "serv_nn_r_getblocklocations",
+              "serv_nn_r_getlisting", "serv_nn_r_getlinktarget", "serv_nn_r_filesingetlisting", 
+              "serv_nn_w_createfile_all", "serv_nn_w_filesappended", "serv_nn_w_filesrenamed", 
+              "serv_nn_w_deletefile_all", "serv_nn_w_addblock", "serv_nn_w_createsymlink", 
+              "serv_nn_o_getadditionaldatanode", "serv_nn_o_transactions", "serv_nn_o_transactionsbatchedinsync", 
+              "serv_nn_o_blockreport", "serv_nn_o_syncs", "serv_nn_t_fsimageloadtime",
+              "serv_nn_t_safemodetime", "serv_nn_t_transactionsavgtime", "serv_nn_t_syncsavgtime", 
+              "serv_nn_t_blockreportavgtime"));
+      
 
-      namenodeActivitiesGraphs = new ArrayList<String>(Arrays.asList("nn_r_fileinfo", "nn_r_getblocklocations",
-              "nn_r_getlisting", "nn_r_getlinktarget", "nn_r_filesingetlisting", "nn_w_createfile_all",
-              "nn_w_filesappended", "nn_w_filesrenamed", "nn_w_deletefile_all", "nn_w_addblock", "nn_w_createsymlink",
-              "nn_o_getadditionaldatanode", "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", "nn_o_syncs",
-              "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));
+      namenodeInstanceGraphs = new ArrayList<String>(Arrays.asList("nn_capacity", "nn_files", "nn_load", 
+              "nn_heartbeats", "nn_blockreplication", "nn_blocks", "nn_specialblocks", "nn_datanodes"));      
 
+      namenodeInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("nn_r_fileinfo", "nn_r_getblocklocations",
+              "nn_r_getlisting", "nn_r_getlinktarget", "nn_r_filesingetlisting", "nn_w_createfile_all", 
+              "nn_w_filesappended", "nn_w_filesrenamed", "nn_w_deletefile_all", "nn_w_addblock", "nn_w_createsymlink", 
+              "nn_o_getadditionaldatanode", "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", 
+              "nn_o_syncs", "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", 
+              "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));
+
+      datanodeInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("dd_heartbeats", "dd_avgTimeHeartbeats",
+              "dd_bytes", "dd_opsReads", "dd_opsWrites", "dd_blocksRead", "dd_blocksWritten", 
+              "dd_blocksRemoved", "dd_blocksReplicated", "dd_blocksVerified",
+              "dd_opsReadBlock", "dd_opsWriteBlock", "dd_opsCopyBlock", "dd_opsReplaceBlock",
+              "dd_avgTimeReadBlock", "dd_avgTimeWriteBlock", "dd_avgTimeCopyBlock", "dd_avgTimeReplaceBlock",
+              "dd_opsBlockChecksum", "dd_opsBlockReports", "dd_avgTimeBlockChecksum", "dd_avgTimeBlockReports",
+              "dd_blockVerificationFailures", "dd_volumeFailures"
+              
+              ));
+
+      mysqlclusterInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("mysql_dataMemory"
+              ));
+      
       hostGraphs = new ArrayList<String>(Arrays.asList("load", "memory", "df", "interface", "swap"));
 
       columns = new ArrayList<Integer>(Arrays.asList(2, 3, 4, 5));
@@ -150,6 +185,9 @@ public class GraphController implements Serializable {
    }
 
    public void useCalendar() {
+      
+      System.err.println("adasd");
+              
       period = null;
    }
 
@@ -169,8 +207,8 @@ public class GraphController implements Serializable {
       return datePeriods;
    }
 
-   public List<String> getNamenodeGraphs() {
-      return namenodeGraphs;
+   public List<String> getNamenodeServiceGraphs() {
+      return namenodeServiceGraphs;
    }
 
    public String getPlaneGraphUrl() throws MalformedURLException {
@@ -231,7 +269,23 @@ public class GraphController implements Serializable {
          url += entry.getKey() + "=" + entry.getValue() + "&";
       }
       return url;
-
+   }
+   
+   public String getNamenodeInstanceGraphUrl(String service, String chartType) {
+      String url = "../rest/collectd/graph?";
+      HashMap<String, String> params = new HashMap<String, String>();
+      params.put("chart_type", chartType);
+      params.put("start", getStartTime().toString());
+      params.put("end", getEndTime().toString());
+      params.put("hostname", hostname);
+      for (Entry<String, String> entry : params.entrySet()) {
+         url += entry.getKey() + "=" + entry.getValue() + "&";
+      }
+      return url;
+   }   
+   
+   public String getDatanodeInstanceGraphUrl(String service, String chartType) {
+      return getNamenodeInstanceGraphUrl(service, chartType);
    }
 
    public int getNumberOfColumns() {
@@ -250,11 +304,27 @@ public class GraphController implements Serializable {
       this.columns = columns;
    }
 
-   public List<String> getNamenodeActivitiesGraphs() {
-      return namenodeActivitiesGraphs;
+   public List<String> getNamenodeServiceActivitiesGraphs() {
+      return namenodeServiceActivitiesGraphs;
    }
 
    public List<String> getHostGraphs() {
       return hostGraphs;
+   }
+
+   public List<String> getNamenodeInstanceGraphs() {
+      return namenodeInstanceGraphs;
+   }
+
+   public List<String> getNamenodeInstanceActivitiesGraphs() {
+      return namenodeInstanceActivitiesGraphs;
+   }
+
+   public List<String> getDatanodeInstanceActivitiesGraphs() {
+      return datanodeInstanceActivitiesGraphs;
+   }
+
+   public List<String> getMysqlclusterInstanceActivitiesGraphs() {
+      return mysqlclusterInstanceActivitiesGraphs;
    }
 }

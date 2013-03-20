@@ -58,8 +58,8 @@ public class JarmonController implements Serializable {
    public String getKthfsInstance() {
       return kthfsInstance;
    }
-
-   public boolean getShowJarmonChartForJmx() {
+   
+   public boolean getShowJmxGraphs() {
       if (service == null) {
          return false;
       }
@@ -68,7 +68,18 @@ public class JarmonController implements Serializable {
          return true;
       }
       return false;
-   }
+   }     
+
+   public boolean getShowJarmonChartForJmx() {
+//      if (service == null) {
+//         return false;
+//      }
+//      if (service.equalsIgnoreCase("namenode")
+//              || service.equalsIgnoreCase("datanode")) {
+//         return true;
+//      }
+      return false;
+   }  
 
    public String getJarmonUrlForJmx() {
 

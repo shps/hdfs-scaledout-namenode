@@ -158,7 +158,7 @@
 
          <p:spacer width="1" height="20" />
 
-         <p:accordionPanel activeIndex="1">
+         <p:accordionPanel activeIndex="1" rendered="false">
             <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />                           
             <p:tab id="host-collectd" title ="Collectd">
                <iframe id="iframe-jarmon-host" src="jarmon-host.xhtml?hostname=#{hostController.hostname}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
