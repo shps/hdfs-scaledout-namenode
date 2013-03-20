@@ -997,10 +997,10 @@ public class CollectdTools {
             cmd.drawLine(type, typeInstance, ds, typeInstance, GREEN, null);
       }
 
-      System.err.println();
-      for (String s : cmd.getCommands()) {
-         System.err.println(s);
-      }
+//      System.err.println();
+//      for (String s : cmd.getCommands()) {
+//         System.err.println(s);
+//      }
 
       Process process = new ProcessBuilder(cmd.getCommands()).directory(new File("/usr/bin/"))
               .redirectErrorStream(true).start();
