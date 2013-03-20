@@ -403,4 +403,18 @@ public class ServiceController {
       }
       return false;
    }
+      
+     public boolean showNamenodeGraphs() {
+        if (service.equals("namenode")) {
+           return true;
+        }
+        return false;
+     }
+     
+     public boolean showDatanodeGraphs() {
+        if (service.equals("datanode")) {
+           return true;
+        }
+        return false;
+     }     
 }
