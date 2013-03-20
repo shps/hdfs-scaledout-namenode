@@ -63,3 +63,10 @@ cookbook_file "#{node['glassfish']['base_dir']}/glassfish/lib/templates/domain.x
   group node['glassfish']['group']
   mode 0644
 end
+
+template "#{node['glassfish']['base_dir']}/glassfish/lib/templates/server.policy" do
+  source 'server.policy.erb'
+  owner node['glassfish']['user']
+  group node['glassfish']['group']
+  mode 0644
+end
