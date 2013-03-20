@@ -59,6 +59,8 @@
                                             <h:outputText value="#{clusterController.cluster.provider.instanceType}" />
                                             <h:outputLabel value="Image Details:"/>
                                             <h:outputText value="#{clusterController.cluster.provider.image}" />
+                                            <h:outputLabel value="Region:"/>
+                                            <h:outputText value="#{clusterController.cluster.provider.region}" />
                                             <h:outputLabel value="Zones:"/>
                                             <h:outputText value="#{clusterController.cluster.provider.zones}" />
                                         </h:panelGrid>
@@ -90,7 +92,7 @@
                                     </p:tab>
                                 </p:accordionPanel>
                                 <br/>
-                                <p:commandButton id="startCluster" value="startCluster" />
+                                <p:commandButton id="startCluster" value="startCluster" action="#{virtualizationController.launchCluster()}"/>
                             </h:form>
 
                         </p:layoutUnit>

@@ -4,6 +4,7 @@
  */
 package se.kth.kthfsdashboard.virtualization;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import static com.google.common.base.Predicates.not;
 import com.google.common.collect.ImmutableList;
@@ -40,13 +41,33 @@ import org.jclouds.compute.events.StatementOnNodeFailure;
 import org.jclouds.compute.events.StatementOnNodeSubmission;
 import org.jclouds.compute.options.RunScriptOptions;
 import static com.google.common.io.Closeables.closeQuietly;
+import com.google.common.primitives.Ints;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import javax.faces.bean.SessionScoped;
+import org.jclouds.compute.domain.internal.TemplateBuilderImpl;
 import static org.jclouds.compute.predicates.NodePredicates.TERMINATED;
 import static org.jclouds.compute.predicates.NodePredicates.inGroup;
+import org.jclouds.ec2.EC2AsyncClient;
+import org.jclouds.ec2.EC2Client;
 import org.jclouds.ec2.compute.options.EC2TemplateOptions;
 import org.jclouds.ec2.domain.InstanceType;
+import org.jclouds.ec2.domain.IpProtocol;
 import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
+import org.jclouds.openstack.nova.ec2.NovaEC2Client;
+import org.jclouds.openstack.nova.v2_0.NovaApi;
+import org.jclouds.openstack.nova.v2_0.NovaAsyncApi;
+import org.jclouds.openstack.nova.v2_0.compute.NovaComputeService;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
+import org.jclouds.openstack.nova.v2_0.domain.Ingress;
+import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
+import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
+import org.jclouds.openstack.nova.v2_0.features.ServerApi;
+import org.jclouds.rest.RestContext;
 import org.jclouds.scriptbuilder.domain.Statement;
 import org.jclouds.scriptbuilder.domain.StatementList;
 import static org.jclouds.scriptbuilder.domain.Statements.exec;
@@ -54,28 +75,30 @@ import static org.jclouds.scriptbuilder.domain.Statements.extractTargzAndFlatten
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.kthfsdashboard.user.Group;
 import se.kth.kthfsdashboard.virtualization.clusterparser.ClusterController;
+import se.kth.kthfsdashboard.virtualization.clusterparser.NodeGroup;
 
 /**
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
 @ManagedBean
-@RequestScoped
+@SessionScoped
 public class VirtualizationController implements Serializable {
 
     private static final URI RUBYGEMS_URI = URI.create("http://production.cf.rubygems.org/rubygems/rubygems-1.8.10.tgz");
-    @ManagedProperty(value = "#{messageController}")
-    private MessageController messages;
     @ManagedProperty(value = "#{computeCredentialsMB}")
     private ComputeCredentialsMB computeCredentialsMB;
-    @ManagedProperty(value= "#{clusterController}")
+    @ManagedProperty(value = "#{clusterController}")
     private ClusterController clusterController;
     private String provider;
     private String id;
     private String key;
     //If Openstack selected, endpoint for keystone API
     private String keystoneEndpoint;
+    private ComputeService service;
+    private ComputeServiceContext context;
 
     /**
      * Creates a new instance of VirtualizationController
@@ -91,74 +114,26 @@ public class VirtualizationController implements Serializable {
         this.computeCredentialsMB = computeCredentialsMB;
     }
 
-    public MessageController getMessages() {
-        return messages;
+    public ClusterController getClusterController() {
+        return clusterController;
     }
 
-    public void setMessages(MessageController messages) {
-        this.messages = messages;
+    public void setClusterController(ClusterController clusterController) {
+        this.clusterController = clusterController;
     }
-
 
     /*
      * Command to launch the instance
      */
-    public void launchInstance() {
-        messages.addMessage("Configuring service context for " + provider);
-        //setCredentials();
-        ComputeService service = initComputeService();
+    public void launchCluster() {
+        setCredentials();
+        service = initContexts();
 
-        try {
-
-            TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
-
-            messages.addMessage("Configuring bootstrap script and specifying ports for security group");
-
-            selectProviderTemplateOptions(provider, kthfsTemplate);
-
-            messages.addMessage("Security Group Ports [22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443]");
-            //changes
-            //NodeMetadata node = getOnlyElement(service.createNodesInGroup(providerMB.getGroupName(), 1, kthfsTemplate.build()));
-//
-//
-//            String address = "";
-//
-//            for (String ip : node.getPublicAddresses()) {
-//                address = ip;
-//                break;
-//            }
-//
-//            messages.addSuccessMessage("http://" + address + ":8080/KTHFSDashboard");
-//            messages.addMessage("VM launched with private IP: " + node.getPrivateAddresses() + ", public IP: " + node.getPublicAddresses());
-//            messages.addMessage("Running chef-solo, deploying Architecture");
-//            service.runScriptOnNodesMatching(
-//                    Predicates.<NodeMetadata>and(not(TERMINATED), inGroup(providerMB.getGroupName())), runChefSolo(),
-//                    RunScriptOptions.Builder.nameTask("runchef-solo")
-//                    .overrideLoginCredentials(node.getCredentials()));
-
-
-//            for (Map.Entry<? extends NodeMetadata, ExecResponse> response : responses.entrySet()) {
-//                System.out.printf("<< node %s: %s%n", response.getKey().getId(),
-//                        concat(response.getKey().getPrivateAddresses(), response.getKey().getPublicAddresses()));
-//                System.out.printf("<<     %s%n", response.getValue());
-//            }
-//
-//            System.out.printf("<< node %s: %s%n", node.getId(),
-//                    concat(node.getPrivateAddresses(), node.getPublicAddresses()));
-
-//        } catch (RunNodesException e) {
-//            messages.addErrorMessage("error adding node to group " + providerMB.getGroupName()
-//                    + "ups something got wrong on the node");
-        } catch (Exception e) {
-            //System.err.println("error: " + e.getMessage());
-            messages.addErrorMessage("Error: " + e.getMessage());
-        } finally {
-            closeQuietly(service.getContext());
-        }
+        createSecurityGroups();
+        launchNodesBasicSetup();
+        //installRoles();
     }
 
-   
-    //NEED TO CHANGE FOR USING PARSING FILE
     /*
      * Private methods used by the controller
      */
@@ -166,29 +141,31 @@ public class VirtualizationController implements Serializable {
      * Set the credentials chosen by the user to launch the instance
      * retrieves the information from the credentials page
      */
-//    private void setCredentials() {
-//        if (providerMB.getProviderName().equals("Amazon-EC2")) {
-//            provider = Provider.AWS_EC2.toString();
-//            id = computeCredentialsMB.getAwsec2Id();
-//            key = computeCredentialsMB.getAwsec2Key();
-//        }
-//        if (providerMB.getProviderName().equals("OpenStack")) {
-//            provider = Provider.OPENSTACK.toString();
-//            id = computeCredentialsMB.getOpenstackId();
-//            key = computeCredentialsMB.getOpenstackKey();
-//            keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
-//        }
-//        if (providerMB.getProviderName().equals("Rackspace")) {
-//            provider = Provider.RACKSPACE.toString();
-//            id = computeCredentialsMB.getRackspaceId();
-//            key = computeCredentialsMB.getRackspaceKey();
-//        }
-//    }
+    private void setCredentials() {
+        Provider check = Provider.fromString(clusterController.getCluster().getProvider().getName());
+        if (!computeCredentialsMB.isAwsec2()
+                && Provider.AWS_EC2
+                .equals(check)) {
+            provider = Provider.AWS_EC2.toString();
+            id = computeCredentialsMB.getAwsec2Id();
+            key = computeCredentialsMB.getAwsec2Key();
+        }
+
+        if (!computeCredentialsMB.isOpenstack()
+                && Provider.OPENSTACK
+                .equals(check)) {
+            provider = Provider.OPENSTACK.toString();
+            id = computeCredentialsMB.getOpenstackId();
+            key = computeCredentialsMB.getOpenstackKey();
+            keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
+        }
+
+    }
     /*
      * Define the computing cloud service you are going to use
      */
 
-    private ComputeService initComputeService() {
+    private ComputeService initContexts() {
         Provider check = Provider.fromString(provider);
         //We define the properties of our service
         Properties serviceDetails = serviceProperties(check);
@@ -207,6 +184,7 @@ public class VirtualizationController implements Serializable {
                         .credentials(id, key)
                         .modules(modules)
                         .overrides(serviceDetails);
+
                 break;
             case OPENSTACK:
                 build = ContextBuilder.newBuilder(provider)
@@ -214,6 +192,7 @@ public class VirtualizationController implements Serializable {
                         .credentials(id, key)
                         .modules(modules)
                         .overrides(serviceDetails);
+
                 break;
             case RACKSPACE:
                 build = ContextBuilder.newBuilder(provider)
@@ -227,7 +206,7 @@ public class VirtualizationController implements Serializable {
             throw new NullPointerException("Not selected supported provider");
         }
 
-        ComputeServiceContext context = build.buildView(ComputeServiceContext.class);
+        context = build.buildView(ComputeServiceContext.class);
 
         //From minecraft example, how to include your own event handlers!
         context.utils().eventBus().register(ScriptLogger.INSTANCE);
@@ -253,7 +232,7 @@ public class VirtualizationController implements Serializable {
             case AWS_EC2:
                 properties.setProperty(PROPERTY_EC2_AMI_QUERY, "owner-id=137112412989;state=available;image-type=machine");
                 properties.setProperty(PROPERTY_EC2_CC_AMI_QUERY, "");
-                properties.setProperty(PROPERTY_EC2_CC_REGIONS, Region.EU_WEST_1);
+
                 break;
             case OPENSTACK:
                 break;
@@ -270,18 +249,19 @@ public class VirtualizationController implements Serializable {
      */
     private TemplateBuilder templateKTHFS(String provider, TemplateBuilder template) {
         Provider check = Provider.fromString(provider);
+
         switch (check) {
             case AWS_EC2:
-                template.osFamily(OsFamily.UBUNTU);
                 template.os64Bit(true);
-                template.hardwareId(InstanceType.M1_LARGE);
-                template.imageId(Region.EU_WEST_1 + "/ami-ffcdce8b");
-                template.locationId(Region.EU_WEST_1);
+                template.hardwareId(clusterController.getCluster().getProvider().getInstanceType());
+                template.imageId(clusterController.getCluster().getProvider().getImage());
+                template.locationId(clusterController.getCluster().getProvider().getRegion());
                 break;
             case OPENSTACK:
                 template.os64Bit(true);
-                template.imageNameMatches("Ubuntu_12.04");
-                template.hardwareId("RegionSICS/" + 4);
+                template.imageId(clusterController.getCluster().getProvider().getImage());
+                template.hardwareId(clusterController.getCluster().getProvider().getRegion()
+                        + "/" + clusterController.getCluster().getProvider().getInstanceType());
                 break;
             case RACKSPACE:
                 break;
@@ -339,16 +319,12 @@ public class VirtualizationController implements Serializable {
         switch (check) {
             case AWS_EC2:
                 kthfsTemplate.options(EC2TemplateOptions.Builder
-                        .inboundPorts(22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443)
-                        
                         .runScript(bootstrap));
                 break;
             case OPENSTACK:
                 kthfsTemplate.options(NovaTemplateOptions.Builder
-                        .inboundPorts(22, 80, 8080, 8181, 8686, 8983, 4848, 4040, 4000, 443)
-                        .overrideLoginUser("ubuntu")
+                        .overrideLoginUser(clusterController.getCluster().getProvider().getLoginUser())
                         .generateKeyPair(true)
-                        
                         .runScript(bootstrap));
                 break;
             case RACKSPACE:
@@ -358,6 +334,170 @@ public class VirtualizationController implements Serializable {
                 throw new AssertionError();
         }
 
+    }
+
+    private void launchNodesBasicSetup() {
+        try {
+            TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
+            selectProviderTemplateOptions(provider, kthfsTemplate);
+            for (NodeGroup group : clusterController.getCluster().getNodes()) {
+                service.createNodesInGroup(group.getSecurityGroup(), group.getNumber(), kthfsTemplate.build());
+            }
+        } catch (RunNodesException e) {
+            System.out.println("error adding nodes to group "
+                    + "ups something got wrong on the nodes");
+        } catch (Exception e) {
+            System.err.println("error: " + e.getMessage());
+
+        }
+    }
+
+    private void installRoles() {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    /*
+     * Private Method which creates the securitygroups for the cluster 
+     * through the rest client implementations in jclouds.
+     */
+    private void createSecurityGroups() {
+        RoleMapPorts commonTCP = new RoleMapPorts(RoleMapPorts.PortType.COMMON);
+        RoleMapPorts portsTCP = new RoleMapPorts(RoleMapPorts.PortType.TCP);
+        RoleMapPorts portsUDP = new RoleMapPorts(RoleMapPorts.PortType.UDP);
+
+        String region = clusterController.getCluster().getProvider().getRegion();
+        //List to gather  ports, we initialize with the ports defined by the user
+        List<Integer> globalPorts = new LinkedList<Integer>(clusterController.getCluster().getAuthorizeSpecificPorts());
+
+        //For each basic role, we map the ports in that role into a list which we append to the commonPorts
+        for (String commonRole : clusterController.getCluster().getAuthorizePorts()) {
+            if (commonTCP.containsKey(commonRole)) {
+                List<Integer> portsRole = Ints.asList(commonTCP.get(commonRole));
+                globalPorts.addAll(portsRole);
+            }
+        }
+
+
+        //If EC2 client
+        if (provider.equals(Provider.AWS_EC2.toString())) {
+            RestContext<EC2Client, EC2AsyncClient> temp = context.unwrap();
+            EC2Client client = temp.getApi();
+            //For each group of the security groups
+            for (NodeGroup group : clusterController.getCluster().getNodes()) {
+                String groupName = "jclouds#" + group.getSecurityGroup();// jclouds way of defining groups
+                Set<Integer> openTCP = new HashSet<Integer>(); //To avoid opening duplicate ports
+                Set<Integer> openUDP = new HashSet<Integer>();// gives exception upon trying to open duplicate ports in a group
+                System.out.printf("%d: creating security group: %s%n", System.currentTimeMillis(),
+                        group.getSecurityGroup());
+                //create security group
+                client.getSecurityGroupServices().createSecurityGroupInRegion(
+                        region, groupName, group.getSecurityGroup());
+                //get the ports
+                for (String authPort : group.getAuthorizePorts()) {
+
+                    //Authorize the ports for TCP and UDP
+
+                    if (portsTCP.containsKey(authPort)) {
+                        for (int port : portsTCP.get(authPort)) {
+                            if (!openTCP.contains(port)) {
+                                client.getSecurityGroupServices().authorizeSecurityGroupIngressInRegion(region,
+                                        groupName, IpProtocol.TCP, port, port, "0.0.0.0/0");
+                                openTCP.add(port);
+                            }
+                        }
+
+                        for (int port : portsUDP.get(authPort)) {
+                            if (!openUDP.contains(port)) {
+                                client.getSecurityGroupServices().authorizeSecurityGroupIngressInRegion(region,
+                                        groupName, IpProtocol.UDP, port, port, "0.0.0.0/0");
+                                openUDP.add(port);
+                            }
+                        }
+                    }
+                }
+                //Authorize the global ports TCP
+                for (int port : Ints.toArray(globalPorts)) {
+                    if (!openTCP.contains(port)) {
+                        client.getSecurityGroupServices().authorizeSecurityGroupIngressInRegion(region,
+                                groupName, IpProtocol.TCP, port, port, "0.0.0.0/0");
+                        openTCP.add(port);
+                    }
+                }
+            }
+
+
+        }
+
+
+        //need to test with nova2
+        //If openstack nova2 client
+
+        if (provider.equals(Provider.OPENSTACK.toString())) {
+            RestContext<NovaApi, NovaAsyncApi> temp = context.unwrap();
+
+            //SecurityGroupApi client = temp.getApi().getSecurityGroupExtensionForZone(region);
+
+            //This stuff below is weird, founded in a code snippet in a workshop on jclouds
+            Optional<? extends SecurityGroupApi> securityGroupExt = temp.getApi().getSecurityGroupExtensionForZone(region);
+            System.out.println("  Security Group Support: " + securityGroupExt.isPresent());
+            if (securityGroupExt.isPresent()) {
+                SecurityGroupApi client = securityGroupExt.get();
+
+                //For each group of the security groups
+                for (NodeGroup group : clusterController.getCluster().getNodes()) {
+                    String groupName = "jclouds#" + group.getSecurityGroup(); //jclouds way of defining groups
+                    Set<Integer> openTCP = new HashSet<Integer>(); //To avoid opening duplicate ports
+                    Set<Integer> openUDP = new HashSet<Integer>();// gives exception upon trying to open duplicate ports in a group
+                    System.out.printf("%d: creating security group: %s%n", System.currentTimeMillis(),
+                            group.getSecurityGroup());
+                    //create security group
+                    SecurityGroup created=client.createWithDescription(groupName, group.getSecurityGroup());
+                    //get the ports
+                    for (String authPort : group.getAuthorizePorts()) {
+                        //Authorize the ports for TCP and UDP
+                        if (portsTCP.containsKey(authPort)) {
+                            for (int port : portsTCP.get(authPort)) {
+                                if (!openTCP.contains(port)) {
+                                    Ingress ingress = Ingress.builder()
+                                            .fromPort(port)
+                                            .toPort(port)
+                                            .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
+                                            .build();
+                                    client.createRuleAllowingSecurityGroupId(created.getId(), ingress, "0.0.0.0/0");
+                                    openTCP.add(port);
+                                }
+
+                            }
+                            for (int port : portsUDP.get(authPort)) {
+                                if (!openUDP.contains(port)) {
+                                    Ingress ingress = Ingress.builder()
+                                            .fromPort(port)
+                                            .toPort(port)
+                                            .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.UDP)
+                                            .build();
+                                    client.createRuleAllowingSecurityGroupId(created.getId(), ingress, "0.0.0.0/0");
+                                    openUDP.add(port);
+                                }
+
+                            }
+                        }
+
+                    }
+                    //Authorize the global ports
+                    for (int port : Ints.toArray(globalPorts)) {
+                        if (!openTCP.contains(port)) {
+                            Ingress ingress = Ingress.builder()
+                                    .fromPort(port)
+                                    .toPort(port)
+                                    .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
+                                    .build();
+                            client.createRuleAllowingSecurityGroupId(created.getId(), ingress, "0.0.0.0/0");
+                            openTCP.add(port);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     static enum ScriptLogger {
