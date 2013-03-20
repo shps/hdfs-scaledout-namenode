@@ -77,10 +77,11 @@ public class GraphController implements Serializable {
               "dd_avgTimeReadBlock", "dd_avgTimeWriteBlock", "dd_avgTimeCopyBlock", "dd_avgTimeReplaceBlock",
               "dd_opsBlockChecksum", "dd_opsBlockReports", "dd_avgTimeBlockChecksum", "dd_avgTimeBlockReports",
               "dd_blockVerificationFailures", "dd_volumeFailures"
-              
               ));
 
-      mysqlclusterInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("mysql_dataMemory"
+      mysqlclusterInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("mysql_freeDataMemory", "mysql_totalDataMemory",
+              "mysql_freeIndexMemory", "mysql_totalIndexMemory", "mysql_simpleReads", "mysql_Reads", "mysql_Writes", 
+              "mysql_rangeScans", "mysql_tableScans"
               ));
       
       hostGraphs = new ArrayList<String>(Arrays.asList("load", "memory", "df", "interface", "swap"));
@@ -287,6 +288,10 @@ public class GraphController implements Serializable {
    public String getDatanodeInstanceGraphUrl(String service, String chartType) {
       return getNamenodeInstanceGraphUrl(service, chartType);
    }
+   
+   public String getMysqlclusterInstanceGraphUrl(String service, String chartType) {
+      return getNamenodeInstanceGraphUrl(service, chartType);
+   }   
 
    public int getNumberOfColumns() {
       return numberOfColumns;
