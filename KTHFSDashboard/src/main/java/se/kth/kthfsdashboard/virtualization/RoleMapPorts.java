@@ -27,11 +27,11 @@ public class RoleMapPorts {
     public RoleMapPorts(PortType type) {
         roleMappings = new HashMap();
         //TCP rolemappings for KTHFS
-        int[] namenodeTCP = {6000,6001};
-        int[] datanodeTCP = {6002,6003,6004,6007};
-        int[] mgmTCP = {0};
-        int[] ndbdTCP = {0};
-        int[] mysqldTCP = {0};
+        int[] namenodeTCP = {6000,6001,60190,60113};
+        int[] datanodeTCP = {6002,6003,6004,6007,34244,60186,60231,60676};
+        int[] mgmTCP = {3306,4848,8080};
+        int[] ndbdTCP = {1186,10000,11211};
+        int[] mysqldTCP = {3306};
         //UDP rolemappings for KTHFS
         int[] namenodeUDP = {25826};
         int[] datanodeUDP = {25826};
@@ -42,7 +42,7 @@ public class RoleMapPorts {
         int[] ssh={22};
         int[] webserver={8080,8181};
         int[] chefClient={4000};
-        int[] chefServer={4000,443,4040,444};
+        int[] chefServer={4000,443,4040,444,8983};
         int[] httphttps={80,443};
 
         switch (type) {
@@ -50,14 +50,14 @@ public class RoleMapPorts {
                 roleMappings.put("kthfs*namenode", namenodeTCP);
                 roleMappings.put("kthfs*datanode", datanodeTCP);
                 roleMappings.put("MySQLCluster*mgm", mgmTCP);
-                roleMappings.put("MySQLCluster*ndbd", ndbdTCP);
+                roleMappings.put("MySQLCluster*ndb", ndbdTCP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldTCP);
                 break;
             case UDP:
                 roleMappings.put("kthfs*namenode", namenodeUDP);
                 roleMappings.put("kthfs*datanode", datanodeUDP);
                 roleMappings.put("MySQLCluster*mgm", mgmUDP);
-                roleMappings.put("MySQLCluster*ndbd", ndbdUDP);
+                roleMappings.put("MySQLCluster*ndb", ndbdUDP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldUDP);
                 break;
             case COMMON:

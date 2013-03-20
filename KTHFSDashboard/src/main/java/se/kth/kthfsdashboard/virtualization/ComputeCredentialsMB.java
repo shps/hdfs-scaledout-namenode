@@ -28,7 +28,15 @@ public class ComputeCredentialsMB implements Serializable{
     private boolean rackspace=false;
     private String rackspaceId;
     private String rackspaceKey;
-   
+   private String privateIP;
+
+    public String getPrivateIP() {
+        return privateIP;
+    }
+
+    public void setPrivateIP(String privateIP) {
+        this.privateIP = privateIP;
+    }
 
     /**
      * Creates a new instance of ComputeCredentialsMB

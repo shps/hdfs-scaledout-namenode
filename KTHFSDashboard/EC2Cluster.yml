@@ -18,18 +18,18 @@
       [eu-west-1a]
   ##lists of service, we define a service with the number of instances and roles?  
   nodes:
-  - securityGroup: namenodes
+  - securityGroup: ndb
     number: 2
     roles:
-     [kthfs*namenode]
+     [MySQLCluster*ndb]
     authorizePorts:
-     [kthfs*namenode]
-  - securityGroup: datanodes
+     [MySQLCluster*ndb]
+  - securityGroup: jumbo
     number: 1
     roles:
-     [kthfs*datanode]
+     [MySQLCluster*mgm,MySQLCluster*mysqld]
     authorizePorts:
-     [kthfs*datanode]
+     [MySQLCluster*mgm,MySQLCluster*mysqld]
   ##Override chef attributes for roles:
   chefAttributes:
 
