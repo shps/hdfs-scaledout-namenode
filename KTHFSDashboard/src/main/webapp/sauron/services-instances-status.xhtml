@@ -337,7 +337,7 @@
             
             <p:outputPanel rendered="#{serviceController.showMysqlclusterGraphs()}">
                <p:toolbar>
-                  <p:toolbarGroup align="left"><p:outputLabel value="MySQL Cluster JMX Info"/></p:toolbarGroup>
+                  <p:toolbarGroup align="left"><p:outputLabel value="MySQL Cluster NDB Info"/></p:toolbarGroup>
                </p:toolbar>
                <p:dataGrid  var="g" value="#{graphController.mysqlclusterInstanceActivitiesGraphs}" columns="#{graphController.numberOfColumns}"  paginator="false" styleClass="ui-datagrid-no-border" >  
                   <p:graphicImage value="#{graphController.getMysqlclusterInstanceGraphUrl('kthfs1', g)}" />   

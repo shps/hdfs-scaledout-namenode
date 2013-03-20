@@ -17,29 +17,9 @@
       </ui:define>
 
       <ui:define name="css">
-
       </ui:define>
 
       <ui:define name="scripts">
-         <script type="text/javascript">
-            reloaded_ndb = false;
-            function reload(id) {
-               if (id == 'ndbinfo') {
-                  if (reloaded_ndb == false) {
-                     reloaded_ndb = true;
-                     document.getElementById("iframe-jarmon-ndbinfo").contentWindow.location.reload();
-                  }
-               }
-            }
-         </script>
-
-
-         <!--         <script type="text/javascript">
-                     $(document).ready(function() {
-                        update_storms ();
-                     });           
-                  </script>-->
-
       </ui:define>
 
 
@@ -205,12 +185,7 @@
          </h:form>   
 
 
-         <p:accordionPanel id="accordion1" activeIndex="1" >
-
-            <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />
-            <p:tab id="ndbinfo" title ="NDB Info" rendered="#{serviceController.showNdbInfo}">
-               <iframe id="iframe-jarmon-ndbinfo" src="#{jarmonController.jarmonUrlForNdb}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
-            </p:tab>
+         <p:accordionPanel id="accordion1" activeIndex="-1" >
 
             <p:tab id="nodes" title="NDB Info (Nodes)" rendered="#{serviceController.showNdbInfo}">
                <h:form id ="frm" >
