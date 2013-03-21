@@ -3220,16 +3220,29 @@ public class BlockManager {
     }
 
     public List<DatanodeDescriptor> getDatanodes(BlockInfo block) throws PersistanceException {
-        List<DatanodeDescriptor> dscs = new ArrayList<DatanodeDescriptor>();
-
+        List<DatanodeDescriptor> nonDecommissionedNodesForTheBlock = new ArrayList<DatanodeDescriptor>();
+        List<DatanodeDescriptor> decommissionedNodesForTheBlock = new ArrayList<DatanodeDescriptor>();
+        
         for (IndexedReplica replica : block.getReplicas()) {
-            DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(replica.getStorageId());
-            if (dn != null) {
-                dscs.add(dn);
+            DatanodeDescriptor dn = datanodeManager.getDatanodeByStorageId(replica.getStorageId()); 
+            if (dn != null) 
+            {
+                
+                if(dn.isDecommissioned())
+                {
+                    decommissionedNodesForTheBlock.add(dn);
+                }
+                else
+                {    
+                    nonDecommissionedNodesForTheBlock.add(dn);
+                }
             }
         }
 
-        return dscs;
+        List<DatanodeDescriptor> allDatanodeDescForTheBlock = new ArrayList<DatanodeDescriptor>();
+        allDatanodeDescForTheBlock.addAll(nonDecommissionedNodesForTheBlock);
+        allDatanodeDescForTheBlock.addAll(decommissionedNodesForTheBlock);
+        return allDatanodeDescForTheBlock;
     }
 
     public DatanodeDescriptor[] getExpectedDatanodes(BlockInfoUnderConstruction block) throws PersistanceException {

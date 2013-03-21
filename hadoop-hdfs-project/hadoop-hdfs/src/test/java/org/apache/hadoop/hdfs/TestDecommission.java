@@ -163,6 +163,7 @@ public class TestDecommission {
             return "For block " + blk.getBlock() + " decommissioned node "
               + nodes[j].getName() + " was not last node in list: "
               + (j + 1) + " of " + nodes.length;
+//              return null;
           }
           LOG.info("Block " + blk.getBlock() + " replica on " +
             nodes[j].getName() + " is decommissioned.");
@@ -371,7 +372,11 @@ public class TestDecommission {
         DFSClient client = getDfsClient(cluster.getNameNode(i), conf);
         assertEquals("All datanodes must be alive", numDatanodes, 
             client.datanodeReport(DatanodeReportType.LIVE).length);
-        assertNull(checkFile(fileSys, file1, replicas, decomNode.getName(), numDatanodes));
+        String msg  = checkFile(fileSys, file1, replicas, decomNode.getName(), numDatanodes);
+        if(msg!=null)
+        System.out.println("ERROR: "+msg);
+        
+        assertNull(msg);
         cleanupFile(fileSys, file1);
       }
     }
