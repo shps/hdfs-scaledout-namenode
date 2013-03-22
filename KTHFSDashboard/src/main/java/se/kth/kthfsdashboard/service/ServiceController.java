@@ -364,9 +364,7 @@ public class ServiceController {
       addMessage("Delete not implemented!");
    }
 
-   public boolean hasWebUI() {
-
-
+   public boolean hasWebUi() {
       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
       if (s.getWebPort() == null) {
          return false;
@@ -374,14 +372,14 @@ public class ServiceController {
       return true;
    }
 
-   public String showStdoutLog() {
+   public String showStdoutLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdOut();
+      return webComm.getStdOut(lines);
    }
 
-   public String showStderrLog() {
+   public String showStderrLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdErr();
+      return webComm.getStdErr(lines);
    }
 
    public String showConfig() throws Exception {

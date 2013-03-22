@@ -209,7 +209,7 @@ public class ServiceInstanceController implements Serializable {
       return false;
    }
 
-   public boolean getShoWLogs() {
+   public boolean getShowLogs() {
 
         if (service != null &&  service.equalsIgnoreCase("mysqlcluster")) {
             return false;

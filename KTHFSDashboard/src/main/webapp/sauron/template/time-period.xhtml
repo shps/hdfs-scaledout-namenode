@@ -3,42 +3,30 @@
 <html xmlns="http://www.w3.org/1999/xhtml"   
       xmlns:f="http://java.sun.com/jsf/core"
       xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:ui="http://java.sun.com/jsf/facelets"
-      xmlns:p="http://primefaces.org/ui"
-      xmlns:fn="http://java.sun.com/jsp/jstl/functions" 
-      xmlns:c="http://java.sun.com/jsp/jstl/core"
-      >
+      xmlns:p="http://primefaces.org/ui">
 
     <h:body>
-        <h:form>
-            <p:treeTable  value="#{clusterController.root}" var="element">
-                <p:column style="width:50px">
-                    <f:facet name="header">
-                        Name
-                    </f:facet>    
-                    <h:outputText value="#{element.name}" />
-                </p:column>
-                <p:column style="width:50px">
-                    <f:facet name="header">
-                        Instances
-                    </f:facet>             
-                    <h:outputText value="#{element.number}" />
-                </p:column>
-                <p:column style="width:50px">
-                    <f:facet name="header">
-                        Status
-                    </f:facet>
-                    <h:outputText value="#{element.status}" />
-                </p:column>
-                <p:column style="width:150px" >
-                    <f:facet name="header">
-                        Notes
-                    </f:facet>
-                </p:column>
-            </p:treeTable>
-
-            
-        </h:form>
+               <h:form id="formdate" style="text-align: center">  
+                  <h:panelGrid columns="10"> 
+                     <p:selectOneButton id ="periods" value="#{graphController.period}">  
+                        <f:selectItems var="d" value="#{graphController.datePeriods}" itemLabel ="#{d.label}" itemValue="#{d.value}"/> 
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                        <p:ajax event="change" process="@form" update=":panels:graphs, calstart, calend" listener="#{graphController.updateDates}"/>
+                     </p:selectOneButton>
+                     <h:outputText value="or from" />
+                     <p:calendar title="from" value="#{graphController.start}" id="calstart" showOn="button" pattern="dd/MM/yyyy HH:mm"/>  
+                     <h:outputText value=" to " />
+                     <p:calendar title="to" value="#{graphController.end}" id="calend" showOn="button" pattern="dd/MM/yyyy HH:mm"/>
+                     <h:outputText value=" in " />
+                     <p:selectOneMenu id="cols" value="#{graphController.numberOfColumns}" >  
+                        <f:selectItems var="n" value="#{graphController.columns}" />  
+                     </p:selectOneMenu>
+                     <h:outputText value=" columns " />
+                     <p:commandButton value="Go" update=":panels:graphs, periods"  actionListener="#{graphController.useCalendar()}" >
+                        <f:param name="hostname" value="#{hostController.hostname}"/>
+                     </p:commandButton> 
+                  </h:panelGrid>
+               </h:form>  
     </h:body>
 </html>
 

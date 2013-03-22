@@ -9,7 +9,7 @@
       xmlns:ui="http://java.sun.com/jsf/facelets">
 
     <h:head>
-        <title>KTHFS Dashboard - Login</title>
+       <title>#{settingsController.name} - Login</title>
         <link rel="stylesheet" type="text/css" href="#{resource['/css/layout.css']}" />
     </h:head>
 
@@ -48,7 +48,7 @@
          <br/>          
            
        </div>
-        <p:panel header="KTHFS-Dashboard Login" style="width: 300px; margin: 0 auto;">
+       <p:panel header="#{settingsController.name} Login" style="width: 300px; margin: 0 auto;">
 
             <p> Login to access secure pages:</p>  
             <h:messages />  
