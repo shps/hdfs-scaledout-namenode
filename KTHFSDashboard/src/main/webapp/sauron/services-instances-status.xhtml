@@ -243,13 +243,13 @@
                         <p:column  styleClass="LogOutput column">
                            Stdout<br/>
                            <div>
-                              <h:outputText escape="false" value="#{serviceController.showStdoutLog()}"/>                       
+                              <h:outputText escape="false" value="#{serviceController.showStdoutLog(20)}"/>                       
                            </div>
                         </p:column>
                         <p:column styleClass="LogOutput column">
                            Stderr<br/>
                            <div>
-                              <h:outputText escape="false" value="#{serviceController.showStderrLog()}"/> 
+                              <h:outputText escape="false" value="#{serviceController.showStderrLog(20)}"/> 
                            </div>
                         </p:column>
                      </p:row>

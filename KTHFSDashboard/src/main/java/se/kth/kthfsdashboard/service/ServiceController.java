@@ -372,14 +372,14 @@ public class ServiceController {
       return true;
    }
 
-   public String showStdoutLog() {
+   public String showStdoutLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdOut();
+      return webComm.getStdOut(lines);
    }
 
-   public String showStderrLog() {
+   public String showStderrLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdErr();
+      return webComm.getStdErr(lines);
    }
 
    public String showConfig() throws Exception {
