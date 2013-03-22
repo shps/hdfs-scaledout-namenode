@@ -159,7 +159,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
             cluster.enterOrLeaveSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
         } finally {
             if (cluster != null) {
-                //cluster.shutdown();
+                cluster.shutdown();
             }
         }
     }

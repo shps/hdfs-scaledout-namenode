@@ -677,7 +677,17 @@ public class DatanodeManager {
    * update the hosts and exclude lists. It checks if any of the hosts have
    * changed states:
    */
-  public void refreshNodes(final Configuration conf) throws IOException {
+  public void refreshNodes(final Configuration conf) throws IOException 
+  {
+    // refreshNodes starts/stops decommission/recommission process
+    // it should only be handled by the leader node. 
+    // because it depends upon threads like replication_deamon which is only active
+    // on the leader node. 
+      
+    if(!this.namesystem.isLeader())
+    {
+        throw new UnsupportedOperationException("Only Leader NameNode can do refreshNodes");
+    }
     namesystem.checkSuperuserPrivilege();
     refreshHostsReader(conf);
     namesystem.writeLock();
@@ -703,9 +713,10 @@ public class DatanodeManager {
   }
 
   /**
-   * 1. Added to hosts --> no further work needed here. 2. Removed from hosts
-   * --> mark AdminState as decommissioned. 3. Added to exclude --> start
-   * decommission. 4. Removed from exclude --> stop decommission.
+   * 1. Added to hosts --> no further work needed here. 
+   * 2. Removed from hosts --> mark AdminState as decommissioned. 
+   * 3. Added to exclude --> start decommission. 
+   * 4. Removed from exclude --> stop decommission.
    */
   private void refreshDatanodes(OperationType opType) throws IOException{
     for (DatanodeDescriptor node : datanodeMap.values()) {

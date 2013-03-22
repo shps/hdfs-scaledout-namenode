@@ -3286,7 +3286,7 @@ public class BlockManager {
                 try {
                     computeDatanodeWork(OperationType.REPLICATION_MONITOR);
                     processPendingReplications(OperationType.REPLICATION_MONITOR);
-                  // TODO - JIM do we want the leader to wait before
+                    // TODO - JIM do we want the leader to wait before
                     // rechecking replication state?
                     Thread.sleep(replicationRecheckInterval);
                 } catch (InterruptedException ie) {
