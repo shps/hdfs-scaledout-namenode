@@ -10,28 +10,10 @@
    <ui:composition template="layout.xhtml">
 
       <ui:define name="title">
-         #{settingsController.shortName} - Services Instances Status
+         #{settingsController.name} - Services Instances Status
       </ui:define>
-
-      <ui:define name="css">
-
-      </ui:define>
-
-
-      <ui:define name="scripts">
-
-         <script>
-            jQuery(document).ready(function() {
-               jQuery('select[id*="Name"]').val('#{serviceInstanceController.service}');             
-               jQuery('select[id*="Status1"]').val('#{serviceInstanceController.status}');
-            });
-         </script>
-
-      </ui:define>
-
 
       <ui:define name="content">
-
          <!--Navigation Bar - Begin -->
          <h:form styleClass="styleNav">
             <p:panelGrid>  
@@ -62,7 +44,7 @@
          <!--Navigation Bar - End-->
 
 
-         <!-- Second Toolbar-->
+         <!-- Second Toolbar -->
          <h:form>  
             <p:toolbar styleClass="SecondToolbarGood">  
                <p:toolbarGroup align="left">  
@@ -109,9 +91,7 @@
 
                   </p:menuButton>  
                </p:toolbarGroup>  
-
             </p:toolbar>  
-
          </h:form>
 
          <p:spacer width="1" height="10" />

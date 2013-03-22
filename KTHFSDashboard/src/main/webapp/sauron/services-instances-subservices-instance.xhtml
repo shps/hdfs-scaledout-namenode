@@ -5,15 +5,12 @@
       xmlns:f="http://java.sun.com/jsf/core"
       xmlns:h="http://java.sun.com/jsf/html"
       xmlns:ui="http://java.sun.com/jsf/facelets"
-      xmlns:p="http://primefaces.org/ui"
-      >
-
-
-
+      xmlns:p="http://primefaces.org/ui">
+   
    <ui:composition template="layout.xhtml">
 
       <ui:define name="title">
-         #{settingsController.shortName} - Services Instances Status
+         #{settingsController.name} - Services Instances Status
       </ui:define>
 
       <ui:define name="css">
@@ -21,7 +18,6 @@
 
       <ui:define name="scripts">
       </ui:define>
-
 
       <ui:define name="content">
 
@@ -48,15 +44,13 @@
                         <f:param name="servicegroup" value="#{serviceController.serviceGroup}"/>
                      </p:commandLink> 
                      <h:outputText value=" &raquo; "/>
-
-
                   </p:column>
                </p:row>
             </p:panelGrid>
          </h:form>
          <!--Navigation Bar - End-->
 
-         <!-- Second Toolbar-->
+         <!-- Second Toolbar -->
          <h:form>  
             <p:toolbar styleClass="SecondToolbarGood">  
                <p:toolbarGroup align="left">  
@@ -98,7 +92,6 @@
                </p:toolbarGroup>  
             </p:toolbar>  
          </h:form>
-
          <!-- Second Toolbar - End -->        
 
          <p:dialog modal="true" widgetVar="dlgAction" header="Action in progress..." draggable="false" closable="false" resizable="false">  
@@ -107,12 +100,9 @@
 
          <p:spacer width="1" height="10" />
 
-
-
          <h:form id="form_messages" >
             <p:messages id="messages" showDetail="true" autoUpdate="true"/>  
          </h:form>
-
 
          <h:form id="Instance" styleClass="styleInfoPanel">
             <p:panel header="Service Status">
@@ -126,7 +116,6 @@
                         <h:outputText value="#{instance.host}"/>
                         <f:param name="hostname" value="#{instance.host}"/>
                      </h:outputLink>
-
                   </p:column>
 
                   <p:column headerText="Status"><h:outputText value="#{instance.status}"/></p:column>
@@ -215,7 +204,7 @@
 
             </p:tab>
 
-            <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.shoWLogs}">
+            <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.showLogs}">
                <h:form id="logsform">
                   <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs"
                                  onstart="dlgAction.show()" oncomplete="dlgAction.hide()">

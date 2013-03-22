@@ -364,9 +364,7 @@ public class ServiceController {
       addMessage("Delete not implemented!");
    }
 
-   public boolean hasWebUI() {
-
-
+   public boolean hasWebUi() {
       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
       if (s.getWebPort() == null) {
          return false;

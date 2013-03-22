@@ -11,30 +11,11 @@
    <ui:composition template="layout.xhtml">
 
       <ui:define name="title">
-         #{settingsController.shortName} - Hosts
-      </ui:define>
-
-      <ui:define name="css">
-         <!--            <link rel="stylesheet" type="text/css" href="jarmon/assets/css/style.css" />
-                     <link rel="stylesheet" type="text/css" href="jarmon/assets/css/tabs-no-images.css" />
-                     <link rel="stylesheet" type="text/css" href="jarmon/assets/css/jquerytools.dateinput.skin1.css" />            -->
-      </ui:define>
-
-      <ui:define name="scripts">
-         <script type="text/javascript">
-            reloaded_host = false;
-            function reload(id) {
-               if (id == 'host-collectd') {
-                  if (reloaded_host == false) {
-                     reloaded_host = true;
-                     document.getElementById("iframe-jarmon-host").contentWindow.location.reload();
-                  }
-               }
-            }
-         </script>
+         #{settingsController.name} - Hosts
       </ui:define>
 
       <ui:define name="content">
+         
          <!--Navigation Bar - Begin -->
          <h:form styleClass="styleNav">
             <p:panelGrid>  
@@ -50,7 +31,7 @@
          </h:form>
          <!--Navigation Bar - End-->
 
-         <!-- Host Toolbar-->
+         <!-- Host Toolbar -->
          <h:form>  
             <p:toolbar styleClass="SecondToolbar#{hostController.host.health}">  
                <p:toolbarGroup align="left">  
@@ -81,7 +62,6 @@
                </p:commandButton> 
             </h:form>  
          </p:dialog>  
-         <!-- Dialog -->
 
          <h:form styleClass="styleInfoPanel" id="form_host">
             <p:panel  header="Details">
@@ -155,16 +135,7 @@
             </div>
          </p:panel>
 
-
          <p:spacer width="1" height="20" />
-
-         <p:accordionPanel activeIndex="1" rendered="false">
-            <p:ajax event="tabChange" listener="#{jarmonController.onTabChange}" />                           
-            <p:tab id="host-collectd" title ="Collectd">
-               <iframe id="iframe-jarmon-host" src="jarmon-host.xhtml?hostname=#{hostController.hostname}" frameborder="0" scrolling="no" style="width:100%; height:100%;"/>
-            </p:tab>
-
-         </p:accordionPanel>
          
          <h:form id="formdate" style="text-align: center">  
             <h:panelGrid columns="10"> 
@@ -196,7 +167,6 @@
                <p:graphicImage value="#{graphController.getHostGraphUrl(g)}" />  
             </p:dataGrid> 
          </h:form>           
-
 
       </ui:define>
 

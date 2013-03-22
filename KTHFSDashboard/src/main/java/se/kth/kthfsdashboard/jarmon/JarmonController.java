@@ -71,13 +71,13 @@ public class JarmonController implements Serializable {
    }     
 
    public boolean getShowJarmonChartForJmx() {
-//      if (service == null) {
-//         return false;
-//      }
-//      if (service.equalsIgnoreCase("namenode")
-//              || service.equalsIgnoreCase("datanode")) {
-//         return true;
-//      }
+      if (service == null) {
+         return false;
+      }
+      if (service.equalsIgnoreCase("namenode")
+              || service.equalsIgnoreCase("datanode")) {
+         return true;
+      }
       return false;
    }  
 

@@ -97,5 +97,13 @@ public class InstanceFullInfo implements Serializable {
    public void setServiceGroup(String serviceGroup) {
       this.serviceGroup = serviceGroup;
    }
+   
+   public String getWebUiLink() {
+      return "http://" + host + ":" + webPort;
+   }
+   
+   public String getWebUiLabel() {
+      return host + ":" + webPort;
+   }   
      
 }
