@@ -11,22 +11,29 @@ import javax.faces.bean.SessionScoped;
 @SessionScoped
 public class SettingsController {
    
-   private String name;
-
+   private String longName;
+   private String shortName;
+   private int logLines;
 
    public SettingsController() {
       
-      name = "Jumbo Hadoop Dashboard";
-
+      shortName = "JHadoop Dashboard";
+      longName = "Jumbo Hadoop Dashboard";      
+      logLines = 2;
    }
 
-   public String getName() {
-      return name;
+   public String getLongName() {
+      return longName;
    }
 
-   public void setName(String name) {
-      this.name = name;
+   public String getShortName() {
+      return shortName;
    }
+
+   public int getLogLines() {
+      return logLines;
+   }
+
    
    
 
