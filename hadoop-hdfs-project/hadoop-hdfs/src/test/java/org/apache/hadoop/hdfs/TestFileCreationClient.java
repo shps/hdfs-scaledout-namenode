@@ -58,7 +58,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
 
     try {
       final FileSystem fs = cluster.getFileSystem();
-      final Path dir = new Path("/wrwelkj");
+      final Path dir = new Path("/test_dir");
       // [J] Avoiding race condition where all writers try to create the directory 'wrwelkj'
       // TODO: Should handle race condition and retry!
       fs.mkdirs(dir);
@@ -74,14 +74,14 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         }
 
         // Wait till each thread has a chance to create a file and write something
-        Thread.sleep(10000);  
+        Thread.sleep(1000);  
 
         //stop a datanode, it should have least recover.
         cluster.stopDataNode(AppendTestUtil.nextInt(REPLICATION));
         
         //let the slow writer writes a few more seconds
         LOG.info("Wait a few seconds");
-        Thread.sleep(100);
+        Thread.sleep(5000);
       }
       finally {
         for(int i = 0; i < slowwriters.length; i++) {
@@ -105,18 +105,9 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         FSDataInputStream in = null;
         try {
           in = fs.open(slowwriters[i].filepath);
-          int j=0, x=0;
-          boolean eof = false;
-          //for(int j = 0, x; (x = in.read()) != -1; j++) {
-          while(!eof) {
-            try {
-              x=in.readInt();
-              assertEquals(j, x);
-              j++;
-            }
-            catch(EOFException ex) {
-              eof = true; // finished reading file
-            }
+          for(int j = 0, x; (x = in.read()) != -1; j++) {
+            LOG.info("reads "+slowwriters[i].filepath+" "+x);
+            assertEquals(j, x);
           }
         }
         finally {
@@ -146,7 +137,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         out = fs.create(filepath);
         for(; running; i++) {
           LOG.info(getName() + " writes " + i);
-          out.writeInt(i);
+          out.write(i);
           out.hflush();
           sleep(100);
         }

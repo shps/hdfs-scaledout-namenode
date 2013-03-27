@@ -370,7 +370,7 @@ public class TransactionLockManager {
     return this;
   }
 
-  public void acquire() throws PersistanceException, UnresolvedPathException {
+        public void acquire() throws PersistanceException, UnresolvedPathException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null && inodeParam.length > 0) {
       inodeResult = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam);
