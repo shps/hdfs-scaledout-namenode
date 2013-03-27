@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * This test ensures the appropriate response (successful or failure) from 
@@ -236,6 +237,7 @@ public class TestDFSStartupVersions extends TestCase {
    * </pre>
    */
   public void testVersions() throws Exception {
+    StorageFactory.setConfiguration(new HdfsConfiguration());
     UpgradeUtilities.initialize();
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
                                                       new HdfsConfiguration());
