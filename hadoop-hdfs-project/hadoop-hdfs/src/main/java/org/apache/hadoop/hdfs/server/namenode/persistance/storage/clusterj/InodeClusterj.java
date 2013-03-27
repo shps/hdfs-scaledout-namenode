@@ -32,6 +32,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 public class InodeClusterj extends InodeDataAccess {
 
   @PersistenceCapable(table = TABLE_NAME)
+  @Index(name = "path_lookup_idx")
   public interface InodeDTO {
 
     @PrimaryKey
@@ -41,14 +42,13 @@ public class InodeClusterj extends InodeDataAccess {
     void setId(long id);
 
     @Column(name = NAME)
-    @Index(name = "path_lookup_idx")
     String getName();     //name of the inode
 
     void setName(String name);
 
     //id of the parent inode 
     @Column(name = PARENT_ID)
-    @Index(name = "path_lookup_idx")
+    @Index(name = "parent_idx")
     long getParentId();     // id of the inode
 
     void setParentId(long parentid);

@@ -51,6 +51,7 @@ public class InodeContext extends EntityContext<INode> {
 
   @Override
   public void clear() {
+    log("CLEARING THE INODE CONTEXT");
     storageCallPrevented = false;
     inodesIdIndex.clear();
     inodesNameParentIndex.clear();
@@ -73,7 +74,11 @@ public class InodeContext extends EntityContext<INode> {
         } else if (inodesIdIndex.containsKey(inodeId)) {
           log("find-inode-by-pk", CacheHitState.HIT, new String[]{"id", Long.toString(inodeId)});
           result = inodesIdIndex.get(inodeId);
-        } else {
+        } else if(isRemoved(inodeId))
+        {
+            return result;
+        }
+        else {
           log("find-inode-by-pk", CacheHitState.LOSS, new String[]{"id", Long.toString(inodeId)});
           aboutToAccessStorage();
           result = dataAccess.findInodeById(inodeId);
@@ -93,8 +98,12 @@ public class InodeContext extends EntityContext<INode> {
           log("find-inode-by-name-new-parentid", CacheHitState.HIT,
                   new String[]{"name", name, "pid", Long.toString(parentId)});
           result = null;
-        } else {
-          aboutToAccessStorage();
+        } else if(isRemoved(parentId, name))
+        {
+            return result; // return null; the node was remove. 
+        }
+        else {
+          aboutToAccessStorage(getClass().getSimpleName()+" findInodeByNameAndParentId. name "+name+" parent_id "+parentId);
           result = dataAccess.findInodeByNameAndParentId(name, parentId);
           if (result != null) {
             if (removedInodes.containsKey(result.getId())) {
@@ -204,5 +213,32 @@ public class InodeContext extends EntityContext<INode> {
     }
 
     return finalList;
+  }
+  
+  private boolean isRemoved(final long parent_id, final String name)
+  {
+      for(INode inode : removedInodes.values())
+      {
+          if(inode.getParentId() == parent_id && 
+                  inode.getName().equals(name))
+          {
+              return true;
+          }
+      }
+      
+      return false;
+  }
+  
+  private boolean isRemoved(final long id)
+  {
+      for(INode inode : removedInodes.values())
+      {
+          if(inode.getId() == id)
+          {
+              return true;
+          }
+      }
+      
+      return false;
   }
 }

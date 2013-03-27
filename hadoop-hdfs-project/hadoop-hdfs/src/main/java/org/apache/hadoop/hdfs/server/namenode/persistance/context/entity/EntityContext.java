@@ -113,4 +113,10 @@ public abstract class EntityContext<T> {
       throw new StorageCallPreventedException("Trying to access storage while it is disable in transaction, inconsistent transaction context statement.");
     }
   }
+  
+  protected void aboutToAccessStorage(String msg) throws StorageCallPreventedException {
+    if (storageCallPrevented) {
+      throw new StorageCallPreventedException("Trying to access storage while it is disable in transaction, inconsistent transaction context statement. Msg "+msg);
+    }
+  }
 }
