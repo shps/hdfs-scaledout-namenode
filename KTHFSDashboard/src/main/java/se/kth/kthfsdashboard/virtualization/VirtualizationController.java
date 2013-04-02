@@ -269,6 +269,7 @@ public class VirtualizationController implements Serializable {
 
         ImmutableList.Builder<Statement> bootstrapBuilder = ImmutableList.builder();
         bootstrapBuilder.add(exec("apt-get update;"));
+        bootstrapBuilder.add(exec("apt-get install -y make"));
         bootstrapBuilder.add(exec("apt-get install -y ruby1.9.1-full;"));
         bootstrapBuilder.add(new StatementList(//
                 exec("if ! hash gem 2>/dev/null; then"), //
@@ -516,8 +517,7 @@ public class VirtualizationController implements Serializable {
         List<String> runlist = createRunList(group);
         StringBuilder json = new StringBuilder();
         json.append("{");
-        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(jumbo.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[\"").append(jumbo.get(0)).append("\"]},");
-        json.append("\"ndbapi\":{\"addrs\":[");
+        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(jumbo.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[");
         for (int i = 0; i < ndbs.size(); i++) {
             if (i == ndbs.size() - 1) {
                 json.append("\"").append(ndbs.get(i)).append("\"]},");
@@ -525,6 +525,15 @@ public class VirtualizationController implements Serializable {
                 json.append("\"").append(ndbs.get(i)).append("\",");
             }
         }
+        
+        json.append("\"ndbapi\":{\"addrs\":[\"").append(jumbo.get(0)).append("\"]},");
+//        for (int i = 0; i < ndbs.size(); i++) {
+//            if (i == ndbs.size() - 1) {
+//                json.append("\"").append(ndbs.get(i)).append("\"]},");
+//            } else {
+//                json.append("\"").append(ndbs.get(i)).append("\",");
+//            }
+//        }
         List<String> ips = new LinkedList(data.getPrivateAddresses());
         json.append("\"private_ip\":\"").append(ips.get(0)).append("\",");
         json.append("\"data_memory\":\"120\",");
@@ -547,8 +556,8 @@ public class VirtualizationController implements Serializable {
 
     private List<String> createRunList(NodeGroup group) {
         RunListBuilder builder = new RunListBuilder();
-        builder.addRecipe("kthfsagent");
-        builder.addRecipe("collectd::client");
+        //builder.addRecipe("kthfsagent");
+        //builder.addRecipe("collectd::client");
         for (String role : group.getRoles()) {
             if (role.equals("MySQLCluster*ndb")) {
 
