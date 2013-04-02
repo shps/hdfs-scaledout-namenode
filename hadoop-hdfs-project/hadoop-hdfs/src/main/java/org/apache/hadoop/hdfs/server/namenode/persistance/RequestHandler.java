@@ -103,6 +103,10 @@ public abstract class RequestHandler {
     return run(false, false, null);
   }
 
+  public Object handle(Namesystem namesystem) throws IOException {
+    return run(false, false, namesystem);
+  }
+   
   public Object handleWithWriteLock(Namesystem namesystem) throws IOException {
     return run(true, false, namesystem);
   }

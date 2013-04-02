@@ -241,8 +241,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
                                           long length) 
       throws IOException {
     metrics.incrGetBlockLocations();
-    LOG.info("getBlockLocations for " + src);
-    return namesystem.getBlockLocations(src, offset, length, true, true);
+    LocatedBlocks locatedBlocks = namesystem.getBlockLocations(src, offset, length, true, true);
+    LOG.info(this.getRpcAddress()+" getBlockLocation called.");
+    return locatedBlocks;
   }
   
   @Override // ClientProtocol
@@ -260,7 +261,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
                      long blockSize) throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.create: file "
+      stateChangeLog.debug(this.nn.getId()+") "
+              + "*DIR* NameNode.create: file "
                          +src+" for "+clientName+" at "+clientMachine);
     }
     if (!checkPathLength(src)) {

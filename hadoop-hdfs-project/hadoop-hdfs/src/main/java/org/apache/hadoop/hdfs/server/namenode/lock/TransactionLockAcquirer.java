@@ -2,8 +2,11 @@ package org.apache.hadoop.hdfs.server.namenode.lock;
 
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -22,7 +25,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 public class TransactionLockAcquirer {
 
   public static ConcurrentHashMap<String, ReentrantLock> datanodeLocks = new ConcurrentHashMap<String, ReentrantLock>();
-
+  private final static Log LOG = LogFactory.getLog(TransactionLockAcquirer.class);
   public static void addToDataNodeLockMap(String storageId) {
     datanodeLocks.put(storageId, new ReentrantLock(true));
   }
@@ -140,11 +143,15 @@ public class TransactionLockAcquirer {
       if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count[0] + 1 == components.length - 1))
               || (lock == INodeLockType.WRITE_ON_PARENT && (count[0] + 1 == components.length - 2))) {
         EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
+//        LOG.debug("Set the lock level to WRITE for next op");
       } else if (lock == INodeLockType.READ_COMMITED) {
         EntityManager.readCommited();
+//        LOG.debug("Set the lock level to READ_COMMITTED for next op");
       } else {
         EntityManager.readLock();
+//        LOG.debug("Set the lock level to READ for next op");
       }
+      
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);
       if (lastComp)
         break;
@@ -178,12 +185,17 @@ public class TransactionLockAcquirer {
   }
 
   private static INode acquireLockOnRoot(INodeLockType lock) throws PersistanceException {
+    
     lockINode(lock);
-    return EntityManager.find(INode.Finder.ByPKey, 0L);
+    INode inode = EntityManager.find(INode.Finder.ByPKey, 0L);
+    LOG.debug("Acquired "+lock+" on the root node");
+    return inode;
   }
 
   private static INode getChildINode(byte[] name, long parentId) throws PersistanceException {
       // TODO - Memcache success check - do primary key instead.
+    LOG.debug("about to acquire lock on "+DFSUtil.bytes2String(name));
+    
     return EntityManager.find(INode.Finder.ByNameAndParentId,
             DFSUtil.bytes2String(name), parentId);
   }

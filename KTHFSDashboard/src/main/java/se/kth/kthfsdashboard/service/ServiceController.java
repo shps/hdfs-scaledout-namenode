@@ -131,20 +131,20 @@ public class ServiceController {
 
       List<String> instances = serviceEJB.findDistinctInstances();
       for (String instance : instances) {
-         
-         
+
+
          KthfsInstanceInfo instanceInfo = new KthfsInstanceInfo(instance, serviceEJB.findServiceClass(instance).toString(), "?", "?");
-         
+
          List<Service> services = serviceEJB.findByInstance(instance);
-         for (Service s: services) {
+         for (Service s : services) {
             if (instanceInfo.getRoleCounts().containsKey(s.getService())) {
                Integer count = (Integer) instanceInfo.getRoleCounts().get(s.getService());
-                instanceInfo.putToRoleCounts(s.getService(), count + 1);
+               instanceInfo.putToRoleCounts(s.getService(), count + 1);
             } else {
                instanceInfo.putToRoleCounts(s.getService(), 1);
             }
          }
-         
+
          allKthfsInstances.add(instanceInfo);
       }
       return allKthfsInstances;
@@ -308,7 +308,7 @@ public class ServiceController {
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
       if (serviceGroup != null) { // serviceGroup = mysqlcluster
          for (ServiceRoleInfo role : rolesMap.get(serviceGroup)) {
-         serviceRoles.add(setStatus(kthfsInstance, role, true));
+            serviceRoles.add(setStatus(kthfsInstance, role, true));
          }
       }
       return serviceRoles;
@@ -334,7 +334,7 @@ public class ServiceController {
    public int getFailedServiceCount(String kthfsInstance, String service, boolean subService) {
       return serviceEJB.getFailedServicesCount(kthfsInstance, service, subService);
    }
-   
+
    public Long getNdbCount() {
       return serviceEJB.findServiceCount(kthfsInstance, serviceGroup, "ndb");
    }
@@ -364,9 +364,7 @@ public class ServiceController {
       addMessage("Delete not implemented!");
    }
 
-   public boolean hasWebUI() {
-
-
+   public boolean hasWebUi() {
       Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
       if (s.getWebPort() == null) {
          return false;
@@ -374,14 +372,14 @@ public class ServiceController {
       return true;
    }
 
-   public String showStdoutLog() {
+   public String showStdoutLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdOut();
+      return webComm.getStdOut(lines);
    }
 
-   public String showStderrLog() {
+   public String showStderrLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, kthfsInstance, service);
-      return webComm.getStdErr();
+      return webComm.getStdErr(lines);
    }
 
    public String showConfig() throws Exception {
@@ -392,9 +390,8 @@ public class ServiceController {
    public String getNotAvailable() {
       return NOT_AVAILABLE;
    }
-   
-   
-      public boolean getShowNdbInfo() {
+
+   public boolean getShowNdbInfo() {
       if (service == null) {
          return false;
       }
@@ -403,18 +400,25 @@ public class ServiceController {
       }
       return false;
    }
-      
-     public boolean showNamenodeGraphs() {
-        if (service.equals("namenode")) {
-           return true;
-        }
-        return false;
-     }
-     
-     public boolean showDatanodeGraphs() {
-        if (service.equals("datanode")) {
-           return true;
-        }
-        return false;
-     }     
+
+   public boolean showNamenodeGraphs() {
+      if (service.equals("namenode")) {
+         return true;
+      }
+      return false;
+   }
+
+   public boolean showDatanodeGraphs() {
+      if (service.equals("datanode")) {
+         return true;
+      }
+      return false;
+   }
+
+   public boolean showMysqlclusterGraphs() {
+      if (service.equals("mysqlcluster")) {
+         return true;
+      }
+      return false;
+   }
 }

@@ -9,6 +9,7 @@ import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -170,7 +171,8 @@ public class CollectdTools {
       dd_opsBlockChecksum, dd_opsBlockReports, dd_avgTimeBlockChecksum, dd_avgTimeBlockReports,
       dd_blockVerificationFailures, dd_volumeFailures,
       
-      mysql_dataMemory
+      mysql_freeDataMemory, mysql_totalDataMemory, mysql_freeIndexMemory, mysql_totalIndexMemory,
+      mysql_simpleReads, mysql_Reads, mysql_Writes, mysql_rangeScans, mysql_tableScans
       
       ;
    }
@@ -181,6 +183,11 @@ public class CollectdTools {
       String BLUE = "AFD8F8";
       String YELLOW = "EDC240";
       String GREEN = "4DA74D";
+      List<String> col = new LinkedList<String>();
+      col.add(RED);
+      col.add(GREEN);
+      col.add(BLUE);
+      col.add(YELLOW);
 
       int height = 130;
       int width = 260;
@@ -911,27 +918,89 @@ public class CollectdTools {
             cmd.drawLine("gauge-VolumeFailures", "", "value", "Volume Failures", GREEN, "%5.2lf %S");            
             break;             
 
+//- Mysqlcluster ---------------------------------------------------------------
             
-         case mysql_dataMemory:
-            cmd.setTitle("Data Memory");
+         case mysql_freeDataMemory:
+            cmd.setTitle("Free Data Memory");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-free_data_memory-1", "", "value", "node 1", GREEN, "%5.2lf %S");            
+            for (int i=1; i<= 4; i++) {
+               cmd.drawLine("gauge-free_data_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            }
             break;             
             
+         case mysql_totalDataMemory:
+            cmd.setTitle("Total Data Memory");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            for (int i=1; i<= 4; i++) {
+               cmd.drawLine("gauge-total_data_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            }
+            break;             
             
+         case mysql_freeIndexMemory:
+            cmd.setTitle("Free Index Memory");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            for (int i=1; i<= 4; i++) {
+               cmd.drawLine("gauge-free_index_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            }
+            break;             
             
+         case mysql_totalIndexMemory:
+            cmd.setTitle("Total Index Memory");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            for (int i=1; i<= 4; i++) {
+               cmd.drawLine("gauge-total_index_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            }
+            break; 
+            
+         case mysql_simpleReads:
+            cmd.setTitle("Simple Reads");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            cmd.drawLine("gauge-counters_sum-SIMPLE_READS", "", "value", "Simple Reads", GREEN, "%5.2lf %S");            
+            break;               
 
+         case mysql_Reads:
+            cmd.setTitle("Reads");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            cmd.drawLine("gauge-counters_sum-READS", "", "value", "Reads", GREEN, "%5.2lf %S");            
+            break; 
+
+         case mysql_Writes:
+            cmd.setTitle("Writes");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            cmd.drawLine("gauge-counters_sum-WRITES", "", "value", "Writes", GREEN, "%5.2lf %S");            
+            break; 
+            
+         case mysql_rangeScans:
+            cmd.setTitle("Range Scans");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            cmd.drawLine("gauge-counters_sum-RANGE_SCANS", "", "value", "Range Scans", GREEN, "%5.2lf %S");            
+            break;             
+            
+         case mysql_tableScans:
+            cmd.setTitle("Table Scans");
+            cmd.setVerticalLabel(" ");
+            cmd.setPlugin("dbi-ndbinfo", "");
+            cmd.drawLine("gauge-counters_sum-TABLE_SCANS", "", "value", "Table Scans", GREEN, "%5.2lf %S");            
+            break;                
+            
          default:
             cmd.setTitle(plugin);
             cmd.setVerticalLabel(plugin);
             cmd.drawLine(type, typeInstance, ds, typeInstance, GREEN, null);
       }
 
-      System.err.println();
-      for (String s : cmd.getCommands()) {
-         System.err.println(s);
-      }
+//      System.err.println();
+//      for (String s : cmd.getCommands()) {
+//         System.err.println(s);
+//      }
 
       Process process = new ProcessBuilder(cmd.getCommands()).directory(new File("/usr/bin/"))
               .redirectErrorStream(true).start();

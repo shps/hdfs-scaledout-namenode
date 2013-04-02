@@ -797,7 +797,14 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void refreshNodes() throws IOException {
     //dfs.refreshNodes();
-    nnSelector.getNextNamenode().refreshNodes();
+    //TODO [S] Fixme 
+    // refreshNodes does this like start/stop decommission/recommission etc
+    // only the leader node should do that. 
+    
+    // what to do here. send the refreshNode request only to the node
+    // updatet the list of clients and send the request to the leader
+    throw new UnsupportedOperationException("refresh Node not fully implemented yet. ");
+    //nnSelector.getNextNamenode().refreshNodes();
   }
 
   /**

@@ -1487,6 +1487,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.WRITE).
                 addGenerationStamp(LockType.WRITE).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
       }
     };
