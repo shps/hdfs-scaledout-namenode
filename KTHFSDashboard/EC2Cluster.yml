@@ -12,7 +12,7 @@
   provider:
     name: aws-ec2
     instanceType: m1.large
-    image: eu-west-1/ami-ffcdce8b
+    image: eu-west-1/ami-da1810ae
     region: eu-west-1
     zones: 
       [eu-west-1a]
