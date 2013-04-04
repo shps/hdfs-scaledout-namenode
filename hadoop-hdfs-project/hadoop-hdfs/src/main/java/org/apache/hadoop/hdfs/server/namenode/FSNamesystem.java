@@ -2277,29 +2277,41 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // check all blocks of the file.
         //
         for (BlockInfo block : v.getBlocks()) {
-          // checks if the blocks are complete, i.e. atleast one replica is present for each block
-          // [J] This is an appropriate check to see whether the block has reached minimum replication. i.e. it should be either committed or complete
-          // or accordingly check if the replicas of this block are equal to the minimum replication atleast
-          //if(!block.getBlockUCState().equals(BlockUCState.COMPLETE) && !block.getBlockUCState().equals(BlockUCState.COMMITTED)) {  
-// TODO - JIM . Jude wrote following
-          if (block.getReplicas().size() < blockManager.minReplication) {
-//                    if (!block.isComplete()) {
-            LOG.info("BLOCK* NameSystem.checkFileProgress: "
-                    + "block " + block + " has not reached minimal replication "
-                    + blockManager.minReplication);
-            return false;
+            if (!block.isComplete())
+            {
+                BlockInfo completedBlock = kthfsTryToCompleteBlock(v, block.getBlockIndex()); // see kthfsTryToCompleteBlock(...) for comments about this fix
+                if(completedBlock != null)
+                {
+                    block = completedBlock;
+                }
+                if(!block.isComplete())
+                {
+                    LOG.info("BLOCK* NameSystem.checkFileProgress: "
+                        + "block " + block + " has not reached minimal replication "
+                        + blockManager.minReplication);
+                    return false;
+                }
+
           }
         }
       } else {
         //
         // check the penultimate block of this file
         //
+          
+        
         BlockInfo b = v.getPenultimateBlock();
         if (b != null && !b.isComplete()) {
-          LOG.info("BLOCK* NameSystem.checkFileProgress: "
+            
+            kthfsTryToCompleteBlock(v, v.numBlocks() - 2);  // see kthfsTryToCompleteBlock(...) for comments about this fix
+            b = v.getPenultimateBlock();
+            
+            if(!b.isComplete()) {
+                LOG.info("BLOCK* NameSystem.checkFileProgress: "
                   + "block " + b + " has not reached minimal replication "
                   + blockManager.minReplication);
-          return false;
+                return false;
+            }
         }
       }
       return true;
@@ -2964,7 +2976,40 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     EntityManager.update(pendingFile);
     return leaseManager.reassignLease(lease, src, newHolder);
   }
-
+  
+  
+   /**
+     * Why this fix was needed
+     * 
+     * first two important states for block
+     * Committed: state where the client tells the NN that it has written to DN
+     * Completed: Committed + the data node tells the NN that it has successfully received the file 
+     * When writing a file following events happen
+     * client asks NN for block
+     * client writes to the block. When the block is full client
+     * asks the NN for a new block. NN marks the last block COMPLETED (if it has
+     * received ack from the DN) and it issues a new block. 
+     * Sometimes ack from DN is delayed. While issuing a new block the NN checks for
+     * the state of penultimate block. It will not be in COMPLETED state and 
+     * it throws an exception. 
+     * 
+     * 
+     * 
+     * @param fileINode inode file
+     * @param blockIndex block index that you want to fix
+     * @return returns the fixed block or null if fails
+     *
+     */
+ 
+  private BlockInfo kthfsTryToCompleteBlock(final INodeFile fileINode, int blockIndex)
+          throws IOException, PersistanceException
+  {
+        assert fileINode.isUnderConstruction();
+        assert hasWriteLock();
+        return blockManager.kthfsTryToCompleteBlock(fileINode, blockIndex);
+      
+  }
+  
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
           final Block commitBlock) throws IOException, PersistanceException {
     assert fileINode.isUnderConstruction();
