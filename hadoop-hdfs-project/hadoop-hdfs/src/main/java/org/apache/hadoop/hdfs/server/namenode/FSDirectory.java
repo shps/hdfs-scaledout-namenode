@@ -631,13 +631,16 @@ public class FSDirectory implements Closeable {
         }
 
         // Ensure dst has quota to accommodate rename
-        verifyQuotaForRename(srcInodes, dstInodes);
-
+        if (isQuotaEnabled())
+        {
+            verifyQuotaForRename(srcInodes, dstInodes);
+        }
+        
         INode dstChild = null;
         INode srcChild = null;
         String srcChildName = null;
         try {
-            srcChild = srcInodes[srcInodes.length - 1];
+            srcChild = removeChild(srcInodes, srcInodes.length-1);
             if (srcChild == null) {
                 NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                         + "failed to rename " + src + " to " + dst
@@ -663,6 +666,12 @@ public class FSDirectory implements Closeable {
                 EntityManager.update(srcInodes[srcInodes.length - 2]);
                 EntityManager.update(dstInodes[dstInodes.length - 2]);
                 return true;
+            }
+            else 
+            {
+                 NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                + "failed to rename " + src + " to " + dst+
+                          " dstChild is null");
             }
         } finally {
             if (dstChild == null && srcChild != null) {
