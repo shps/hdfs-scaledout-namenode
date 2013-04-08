@@ -4,7 +4,6 @@
  */
 package se.kth.kthfsdashboard.virtualization;
 
-import static org.jclouds.scriptbuilder.domain.Statements.createOrOverwriteFile;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -57,8 +56,12 @@ import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
 import org.jclouds.rest.RestContext;
 import org.jclouds.scriptbuilder.domain.Statement;
 import org.jclouds.scriptbuilder.domain.StatementList;
+import static org.jclouds.scriptbuilder.domain.Statements.createOrOverwriteFile;
+import static org.jclouds.openstack.nova.v2_0.predicates.SecurityGroupPredicates.nameEquals;
 import static org.jclouds.scriptbuilder.domain.Statements.exec;
-import static org.jclouds.scriptbuilder.domain.Statements.extractTargzAndFlattenIntoDirectory;
+import org.jclouds.scriptbuilder.statements.chef.InstallChefGems;
+import org.jclouds.scriptbuilder.statements.git.InstallGit;
+import org.jclouds.scriptbuilder.statements.ruby.InstallRubyGems;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +150,7 @@ public class VirtualizationController implements Serializable {
             key = computeCredentialsMB.getOpenstackKey();
             keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
         }
-        privateIP=computeCredentialsMB.getPrivateIP();
+        privateIP = computeCredentialsMB.getPrivateIP();
 
     }
     /*
@@ -268,19 +271,17 @@ public class VirtualizationController implements Serializable {
     private StatementList initBootstrapScript() {
 
         ImmutableList.Builder<Statement> bootstrapBuilder = ImmutableList.builder();
-        bootstrapBuilder.add(exec("apt-get update;"));
-        bootstrapBuilder.add(exec("apt-get install -y make"));
-        bootstrapBuilder.add(exec("apt-get install -y ruby1.9.1-full;"));
-        bootstrapBuilder.add(new StatementList(//
-                exec("if ! hash gem 2>/dev/null; then"), //
-                exec("("), //
-                extractTargzAndFlattenIntoDirectory(RUBYGEMS_URI, "/tmp/rubygems"), //
-                exec("{cd} /tmp/rubygems"), //
-                exec("ruby setup.rb --no-format-executable"), //
-                exec("{rm} -fr /tmp/rubygems"), //
-                exec(")"), //
-                exec("fi"), //
-                exec("gem install chef -v 10.20.0 --no-rdoc --no-ri")));
+        bootstrapBuilder.add(exec("sudo apt-get update -qq;"));
+        bootstrapBuilder.add(exec("sudo apt-get install make;"));
+        bootstrapBuilder.add(exec("sudo apt-get update -qq;"));
+        bootstrapBuilder.add(exec("sudo apt-get install -f -y -qq --force-yes ruby1.9.1-full;"));
+        bootstrapBuilder.add(InstallRubyGems.builder()
+                .version("1.8.10")
+                .build());
+        bootstrapBuilder.add(
+                InstallChefGems.builder()
+                .version("10.20.0").build());
+        InstallGit git = new InstallGit();
         bootstrapBuilder.add(exec("sudo mkdir /etc/chef;"));
         bootstrapBuilder.add(exec("cd /etc/chef;"));
         bootstrapBuilder.add(exec("sudo wget http://lucan.sics.se/kthfs/solo.rb;"));
@@ -432,48 +433,50 @@ public class VirtualizationController implements Serializable {
                     System.out.printf("%d: creating security group: %s%n", System.currentTimeMillis(),
                             group.getSecurityGroup());
                     //create security group
-                    SecurityGroup created = client.createWithDescription(groupName, group.getSecurityGroup());
-                    //get the ports
-                    for (String authPort : group.getAuthorizePorts()) {
-                        //Authorize the ports for TCP and UDP
-                        if (portsTCP.containsKey(authPort)) {
-                            for (int port : portsTCP.get(authPort)) {
-                                if (!openTCP.contains(port)) {
-                                    Ingress ingress = Ingress.builder()
-                                            .fromPort(port)
-                                            .toPort(port)
-                                            .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
-                                            .build();
-                                    client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
-                                    openTCP.add(port);
-                                }
+                    if (!client.list().anyMatch(nameEquals(groupName))) {
+                        SecurityGroup created = client.createWithDescription(groupName, group.getSecurityGroup());
+                        //get the ports
+                        for (String authPort : group.getAuthorizePorts()) {
+                            //Authorize the ports for TCP and UDP
+                            if (portsTCP.containsKey(authPort)) {
+                                for (int port : portsTCP.get(authPort)) {
+                                    if (!openTCP.contains(port)) {
+                                        Ingress ingress = Ingress.builder()
+                                                .fromPort(port)
+                                                .toPort(port)
+                                                .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
+                                                .build();
+                                        client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
+                                        openTCP.add(port);
+                                    }
 
-                            }
-                            for (int port : portsUDP.get(authPort)) {
-                                if (!openUDP.contains(port)) {
-                                    Ingress ingress = Ingress.builder()
-                                            .fromPort(port)
-                                            .toPort(port)
-                                            .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.UDP)
-                                            .build();
-                                    client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
-                                    openUDP.add(port);
                                 }
+                                for (int port : portsUDP.get(authPort)) {
+                                    if (!openUDP.contains(port)) {
+                                        Ingress ingress = Ingress.builder()
+                                                .fromPort(port)
+                                                .toPort(port)
+                                                .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.UDP)
+                                                .build();
+                                        client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
+                                        openUDP.add(port);
+                                    }
 
+                                }
                             }
+
                         }
-
-                    }
-                    //Authorize the global ports
-                    for (int port : Ints.toArray(globalPorts)) {
-                        if (!openTCP.contains(port)) {
-                            Ingress ingress = Ingress.builder()
-                                    .fromPort(port)
-                                    .toPort(port)
-                                    .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
-                                    .build();
-                            client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
-                            openTCP.add(port);
+                        //Authorize the global ports
+                        for (int port : Ints.toArray(globalPorts)) {
+                            if (!openTCP.contains(port)) {
+                                Ingress ingress = Ingress.builder()
+                                        .fromPort(port)
+                                        .toPort(port)
+                                        .ipProtocol(org.jclouds.openstack.nova.v2_0.domain.IpProtocol.TCP)
+                                        .build();
+                                client.createRuleAllowingCidrBlock(created.getId(), ingress, "0.0.0.0/0");
+                                openTCP.add(port);
+                            }
                         }
                     }
                 }
@@ -505,7 +508,7 @@ public class VirtualizationController implements Serializable {
             while (iter.hasNext()) {
                 NodeMetadata data = iter.next();
                 ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
-                createNodeConfiguration(roleBuilder,  ndbs, jumbo, data, group);
+                createNodeConfiguration(roleBuilder, ndbs, jumbo, data, group);
                 runChefSolo(roleBuilder);
                 service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
             }
@@ -525,15 +528,9 @@ public class VirtualizationController implements Serializable {
                 json.append("\"").append(ndbs.get(i)).append("\",");
             }
         }
-        
+
         json.append("\"ndbapi\":{\"addrs\":[\"").append(jumbo.get(0)).append("\"]},");
-//        for (int i = 0; i < ndbs.size(); i++) {
-//            if (i == ndbs.size() - 1) {
-//                json.append("\"").append(ndbs.get(i)).append("\"]},");
-//            } else {
-//                json.append("\"").append(ndbs.get(i)).append("\",");
-//            }
-//        }
+
         List<String> ips = new LinkedList(data.getPrivateAddresses());
         json.append("\"private_ip\":\"").append(ips.get(0)).append("\",");
         json.append("\"data_memory\":\"120\",");
@@ -542,10 +539,10 @@ public class VirtualizationController implements Serializable {
         json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\"},");
 
         json.append("\"run_list\":[");
-        for(int i = 0; i<runlist.size();i++){
-            if(i==runlist.size()-1){
+        for (int i = 0; i < runlist.size(); i++) {
+            if (i == runlist.size() - 1) {
                 json.append("\"").append(runlist.get(i)).append("\"]");
-            }else{
+            } else {
                 json.append("\"").append(runlist.get(i)).append("\",");
             }
         }
@@ -582,7 +579,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mgmd-kthfs");
 
             }
-            if (role.equals("MySQLCluste*memcached")) {
+            if (role.equals("MySQLCluster*memcached")) {
 
                 builder.addRecipe("ndb::memcached");
 

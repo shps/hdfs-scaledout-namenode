@@ -10,12 +10,11 @@
   authorizeSpecificPorts:
     [3306, 4343, 3321]
   provider:
-    name: aws-ec2
-    instanceType: m1.large
-    image: eu-west-1/ami-ffcdce8b
-    region: eu-west-1
-    zones: 
-      [eu-west-1a]
+    name: openstack-nova
+    instanceType: 4
+    loginUser: ubuntu
+    image: RegionSICS/281956fa-198e-4da9-9404-cd5c958318df
+    region: RegionSICS
   ##lists of service, we define a service with the number of instances and roles?  
   nodes:
   - securityGroup: ndb

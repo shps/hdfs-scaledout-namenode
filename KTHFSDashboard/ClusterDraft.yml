@@ -13,7 +13,7 @@
   provider:
     name: EC2
     instanceType: m1.large
-    image: blabla
+    image: ami-ffcdce8b
     zones: 
       [eu-west-1a, eu-west-1b]
   ##lists of service, we define a service with the number of instances and roles?  

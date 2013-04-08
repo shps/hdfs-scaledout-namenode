@@ -11,7 +11,7 @@
     <name>KTHFS Dashboard</name>
 
     <properties>
-        <jclouds.version>1.5.7</jclouds.version>
+        <jclouds.version>1.6.0-rc.1</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -180,12 +180,23 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk16</artifactId>
             <version>1.46</version>
-        </dependency> 
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.jclouds.driver</groupId>
             <artifactId>jclouds-bouncycastle</artifactId>
             <version>${jclouds.version}</version>
-            
+                    <exclusions><!--
+                bouncy castle is a provider, so
+                  it must be signed and used as-is.
+                  we are doing this to prevent its
+                  classes from getting into the 
+                  jar-with-dependencies               
+-->               <exclusion>
+                  <groupId>org.bouncycastle</groupId>
+                  <artifactId>bcprov-jdk16</artifactId>
+               </exclusion>
+            </exclusions>
         </dependency>
         
         <dependency>
