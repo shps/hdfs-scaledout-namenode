@@ -487,6 +487,35 @@ public class BlockManager {
         }
         return b;
     }
+    
+    
+    public BlockInfo kthfsTryToCompleteBlock(final INodeFile fileINode,
+            final int blkIndex) throws IOException, PersistanceException
+    {
+        if (blkIndex < 0) {
+            return null;
+        }
+        
+        BlockInfo curBlock = fileINode.getBlocks().get(blkIndex);
+        if (curBlock.isComplete()) {
+           return curBlock;
+        }
+        
+        BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction) curBlock;
+        if (ucBlock.getReplicas().size() < minReplication) {
+            return null;
+        }
+        BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
+        // replace penultimate block in file
+        fileINode.setBlock(blkIndex, completeBlock);
+        completeBlock.setINode(fileINode);
+        EntityManager.update(completeBlock);
+        for (ReplicaUnderConstruction rep : ucBlock.getExpectedReplicas()) {
+            EntityManager.remove(rep);
+        }
+        ucBlock.getExpectedReplicas().clear();
+        return completeBlock;
+    }
 
     /**
      * Convert a specified block of the file to a complete block.

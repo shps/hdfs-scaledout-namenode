@@ -179,6 +179,7 @@ public class TestFileAppend{
    * Test a simple flush on a simple HDFS file.
    * @throws IOException an exception might be thrown
    */
+  
   @Test
   public void testSimpleFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();

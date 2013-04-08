@@ -87,6 +87,14 @@ public abstract class EntityContext<T> {
     }
     LOG.debug(message.toString());
   }
+  
+  public void logError(String msg) {
+    StringBuilder message = new StringBuilder();
+    message.append(ANSI_RED);
+    message.append(msg).append(" ");
+    message.append(ANSI_RESET);
+    LOG.fatal(message.toString());
+  }
 
   public void log(String opName) {
     log(opName, CacheHitState.NA, (String) null);

@@ -370,10 +370,35 @@ public class TransactionLockManager {
     return this;
   }
 
-        public void acquire() throws PersistanceException, UnresolvedPathException {
+  public void acquire() throws PersistanceException, UnresolvedPathException {
     // acuires lock in order
     if (inodeLock != null && inodeParam != null && inodeParam.length > 0) {
       inodeResult = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam);
+    }
+
+    if (blockLock != null) {
+      if (inodeLock != null && blockParam != null) {
+        throw new RuntimeException("Acquiring locks on block-infos using inode-id and block-id concurrently is not allowed!");
+      }
+
+      blockResults = acquireBlockLock(blockLock, blockParam);
+    }
+
+    rootDir(); // get Read Commited Lock on the root
+    acquireLeaseAndLpathLockNormal();
+    acquireBlockRelatedLocksNormal();
+    acquireLeaderLock();
+  }
+  
+  
+    public void acquireForRename() throws PersistanceException, UnresolvedPathException {
+    // acuires lock in order
+    if (inodeLock != null && inodeParam != null && inodeParam.length > 0) {
+      INode[] inodeResult1 = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam[0]);
+      INode[] inodeResult2 = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam[1]);
+      inodeResult = new INode[inodeResult1.length + inodeResult2.length];
+      System.arraycopy(inodeResult1, 0, inodeResult, 0, inodeResult1.length);
+      System.arraycopy(inodeResult2, 0, inodeResult, inodeResult1.length, inodeResult2.length);
     }
 
     if (blockLock != null) {

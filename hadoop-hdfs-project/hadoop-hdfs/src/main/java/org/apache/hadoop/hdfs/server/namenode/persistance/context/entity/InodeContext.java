@@ -5,9 +5,11 @@ import org.apache.hadoop.hdfs.server.namenode.CounterType;
 import org.apache.hadoop.hdfs.server.namenode.FinderType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.log4j.NDC;
 
 /**
  *
@@ -174,8 +176,17 @@ public class InodeContext extends EntityContext<INode> {
   @Override
   public void update(INode inode) throws PersistanceException {
 
-    if (removedInodes.containsKey(inode.getId())) {
-      throw new TransactionContextException("Removed  inode passed to be persisted");
+    if (removedInodes.containsKey(inode.getId())) 
+    {
+      if(NDC.peek().contains(RequestHandler.OperationType.RENAME_TO.toString()) )
+      {
+        removedInodes.remove(inode.getId());  
+        logError("Check for removed  inode passed for persistance SKIPPED. This check should only be skipped for RENAME Operation' ");
+      }
+      else
+      {
+        throw new TransactionContextException("Removed  inode passed to be persisted. NDC peek "+NDC.peek());
+      }
     }
 
     inodesIdIndex.put(inode.getId(), inode);

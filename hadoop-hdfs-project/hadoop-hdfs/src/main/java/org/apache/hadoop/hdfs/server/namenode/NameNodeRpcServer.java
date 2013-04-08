@@ -750,10 +750,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
           +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length
-          +" blocks.");
+          +" blocks. DN: "+ nodeReg.storageID+" first block id "+ receivedAndDeletedBlocks[0].getBlock().getBlockId());
     }
     
-    LOG.debug("blockReceivedAndDeleted DN:" + nodeReg.storageID + " B:" + receivedAndDeletedBlocks[0].getBlock().getBlockId());
     namesystem.getBlockManager().blockReceivedAndDeleted(
         nodeReg, poolId, receivedAndDeletedBlocks);
   }
