@@ -88,6 +88,9 @@ public class FSDirectory implements Closeable {
     private Condition cond;
     private boolean quotaEnabled;
     private String supergroup;  // need this to initialize the root inode
+    public final static long ROOT_ID = 0L;
+    public final static String ROOT = "";
+    public final static long ROOT_PARENT_ID = -1L;
 
     // utility methods to acquire and release read lock and write lock
     void readLock() {
@@ -2312,43 +2315,16 @@ public class FSDirectory implements Closeable {
         }
     }
 
-    /**
-     * Created for acquiring locks in KTHFS
-     *
-     * @return
-     */
-    public INodeDirectoryWithQuota getRootDir()  throws PersistanceException, IOException {
-                LightWeightRequestHandler reqHandler = (LightWeightRequestHandler) new LightWeightRequestHandler(OperationType.GET_ROOT) {
-                @Override
-                public Object performTask() throws PersistanceException, IOException {
-                    InodeDataAccess ida = (InodeDataAccess) StorageFactory.getDataAccess(InodeDataAccess.class);
-                    INodeDirectoryWithQuota rootDir = (INodeDirectoryWithQuota) ida.findInodeById(0);
-                    
-                    
-                    if(rootDir == null)
-                    {
-                        UserGroupInformation fsOwner = UserGroupInformation.getCurrentUser();
-                        //see FSNamesystem for creating the root noot
-                        // if does not exist then create and save it first
-                        rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-                        new PermissionStatus(fsOwner.getShortUserName(), supergroup,new FsPermission((short) 0755)),
-                        Integer.MAX_VALUE, FSDirectory.UNKNOWN_DISK_SPACE);
-                        rootDir.setId(0);
-                        rootDir.setParentId(-1);
-                        
-                        // Saving the root node
-                        ArrayList<INode> newnodes = new ArrayList<INode>();
-                        newnodes.add(rootDir);
-                        ida.prepare(new ArrayList<INode>(), newnodes, new ArrayList<INode>());
-                    }
-                    return rootDir;
-                }
-            };
-            return (INodeDirectoryWithQuota)reqHandler.handle();
-    }
+  /**
+   * Created for acquiring locks in KTHFS
+   *
+   * @return
+   */
+  public INodeDirectoryWithQuota getRootDir() throws PersistanceException, IOException {
+    return (INodeDirectoryWithQuota) EntityManager.find(INode.Finder.ByNameAndParentId, ROOT, ROOT_PARENT_ID);
+  }
 
-    public boolean isQuotaEnabled() {
-        return this.quotaEnabled;
-    }
-
+  public boolean isQuotaEnabled() {
+    return this.quotaEnabled;
+  }
 }

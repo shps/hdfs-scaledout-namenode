@@ -589,7 +589,8 @@ public class FSImage implements Closeable {
                                                     numLoaded);
     
     // update the txid for the edit log
-    editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
+    // FIXME[H]: The following throws exception.
+//    editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
     return needToSave;
   }
 
@@ -666,23 +667,24 @@ public class FSImage implements Closeable {
   private void loadFSImage(File curFile, MD5Hash expectedMd5) throws IOException {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, getFSNamesystem());
-    loader.load(curFile);
+    // FIXME[H]: commented out the followings.
+//    loader.load(curFile);
     namesystem.setBlockPoolId(this.getBlockPoolID());
 
-    // Check that the image digest we loaded matches up with what
-    // we expected
-    MD5Hash readImageMd5 = loader.getLoadedImageMd5();
-    if (expectedMd5 != null &&
-        !expectedMd5.equals(readImageMd5)) {
-      throw new IOException("Image file " + curFile +
-          " is corrupt with MD5 checksum of " + readImageMd5 +
-          " but expecting " + expectedMd5);
-    }
-
-    long txId = loader.getLoadedImageTxId();
-    LOG.info("Loaded image for txid " + txId + " from " + curFile);
-    lastAppliedTxId = txId;
-    storage.setMostRecentCheckpointTxId(txId);
+//    // Check that the image digest we loaded matches up with what
+//    // we expected
+//    MD5Hash readImageMd5 = loader.getLoadedImageMd5();
+//    if (expectedMd5 != null &&
+//        !expectedMd5.equals(readImageMd5)) {
+//      throw new IOException("Image file " + curFile +
+//          " is corrupt with MD5 checksum of " + readImageMd5 +
+//          " but expecting " + expectedMd5);
+//    }
+//
+//    long txId = loader.getLoadedImageTxId();
+//    LOG.info("Loaded image for txid " + txId + " from " + curFile);
+//    lastAppliedTxId = txId;
+//    storage.setMostRecentCheckpointTxId(txId);
   }
 
   /**

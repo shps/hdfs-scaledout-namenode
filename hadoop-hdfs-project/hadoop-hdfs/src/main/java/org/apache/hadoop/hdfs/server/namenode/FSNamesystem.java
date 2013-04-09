@@ -138,6 +138,7 @@ import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
@@ -4529,10 +4530,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // FSNamesystemMBean
   @Metric
-  public long getFilesTotal()  throws PersistanceException, IOException{
+  public long getFilesTotal() throws PersistanceException, IOException {
     readLock();
     try {
-      return this.dir.totalInodes();
+      TransactionalRequestHandler filesTotalRequestHandler = new TransactionalRequestHandler(OperationType.TOTAL_FILES) {
+        @Override
+        public void acquireLock() throws PersistanceException, IOException {
+          TransactionLockManager tlm = new TransactionLockManager();
+          tlm.addINode(
+                  INodeResolveType.ONLY_PATH,
+                  INodeLockType.READ_COMMITED,
+                  new String[]{"/"})
+                  .acquire();
+        }
+
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          return dir.totalInodes();
+        }
+      };
+      return (Long) filesTotalRequestHandler.handle();
     } finally {
       readUnlock();
     }
