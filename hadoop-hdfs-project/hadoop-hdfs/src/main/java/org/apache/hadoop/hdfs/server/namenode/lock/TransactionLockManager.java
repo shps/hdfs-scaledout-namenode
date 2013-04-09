@@ -78,7 +78,7 @@ public class TransactionLockManager {
   private LockType generationStampLock = null;
   // Leader
   private LockType leaderLock = null;
-  private int[] leaderIds = null;
+  private long[] leaderIds = null;
 
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
@@ -353,7 +353,7 @@ public class TransactionLockManager {
     return this;
   }
 
-  public TransactionLockManager addLeaderLock(LockType lock, int... ids) {
+  public TransactionLockManager addLeaderLock(LockType lock, long... ids) {
     this.leaderLock = lock;
     this.leaderIds = ids;
     return this;
@@ -417,7 +417,7 @@ public class TransactionLockManager {
       if (leaderIds.length == 0) {
         TransactionLockAcquirer.acquireLockList(leaderLock, Leader.Finder.All);
       } else {
-        for (int id : leaderIds) {
+        for (long id : leaderIds) {
           TransactionLockAcquirer.acquireLock(leaderLock, Leader.Finder.ById, id);
         }
       }

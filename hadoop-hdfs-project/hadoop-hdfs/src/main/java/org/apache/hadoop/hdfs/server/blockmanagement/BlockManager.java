@@ -930,7 +930,9 @@ public class BlockManager {
                         addReplica(LockType.WRITE).
                         addExcess(LockType.WRITE).
                         addCorrupt(LockType.WRITE).
-                        addUnderReplicatedBlock(LockType.WRITE);
+                        addUnderReplicatedBlock(LockType.WRITE).
+                        addReplicaUc(LockType.WRITE);
+                
                 lm.acquireByBlock();
             }
         };

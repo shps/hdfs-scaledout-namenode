@@ -4650,20 +4650,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public Object performTask() throws PersistanceException, IOException {
 
-          EntityManager.remove(new Leader(nameNode.getId(), 0, 0, null));
+          Leader leader = EntityManager.find(Leader.Finder.ById, nameNode.getId());
+          if (leader != null)
+            EntityManager.remove(leader);
           return null;
         }
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          // TODO safemode
+          TransactionLockManager tlm = new TransactionLockManager();
+          tlm.addLeaderLock(LockType.WRITE, nameNode.getId());
         }
       };
       leaderExitHandler.handle();
     } catch (IOException ex) {
       LOG.error(ex);
     }
-
   }
 
   @Override // FSNamesystemMBean
