@@ -112,7 +112,7 @@ public class TransactionLockAcquirer {
     return lastComp;
   }
 
-  public static LinkedList<INode> acquireInodeLockByPath(INodeLockType lock, String path, INode rootDir, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
+  public static LinkedList<INode> acquireInodeLockByPath(INodeLockType lock, String path, boolean resolveLink) throws UnresolvedPathException, PersistanceException {
     LinkedList<INode> resolvedInodes = new LinkedList<INode>();
 
     if (path == null) {
@@ -120,11 +120,7 @@ public class TransactionLockAcquirer {
     }
 
     byte[][] components = INode.getPathComponents(path);
-    INode[] curNode = new INode[]{rootDir};
-
-    assert INode.compareBytes(curNode[0].getNameBytes(), components[0]) == 0 :
-            "Incorrect name " + curNode[0].getName() + " expected "
-            + DFSUtil.bytes2String(components[0]);
+    INode[] curNode = new INode[1];
 
     int[] count = new int[]{0};
     boolean lastComp = (count[0] == components.length - 1);
@@ -135,6 +131,8 @@ public class TransactionLockAcquirer {
     } else if ((count[0] == components.length - 2) && lock == INodeLockType.WRITE_ON_PARENT) // if Root is the parent
     {
       curNode[0] = acquireLockOnRoot(lock);
+    } else {
+      curNode[0] = acquireLockOnRoot(INodeLockType.READ_COMMITED);
     }
 
     while (count[0] < components.length && curNode[0] != null) {
@@ -143,13 +141,10 @@ public class TransactionLockAcquirer {
       if (((lock == INodeLockType.WRITE || lock == INodeLockType.WRITE_ON_PARENT) && (count[0] + 1 == components.length - 1))
               || (lock == INodeLockType.WRITE_ON_PARENT && (count[0] + 1 == components.length - 2))) {
         EntityManager.writeLock(); // if the next p-component is the last one or is the parent (in case of write on parent), acquire the write lock
-//        LOG.debug("Set the lock level to WRITE for next op");
       } else if (lock == INodeLockType.READ_COMMITED) {
         EntityManager.readCommited();
-//        LOG.debug("Set the lock level to READ_COMMITTED for next op");
       } else {
         EntityManager.readLock();
-//        LOG.debug("Set the lock level to READ for next op");
       }
       
       lastComp = getNextChild(curNode, components, count, resolvedInodes, resolveLink);

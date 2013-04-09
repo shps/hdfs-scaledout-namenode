@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.GenerationStampDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -565,7 +566,7 @@ class FSImageFormat {
       throws IOException, PersistanceException {
       checkNotSaved();
 
-      FSDirectory fsDir = sourceNamesystem.dir;
+      final FSDirectory fsDir = sourceNamesystem.dir;
       long startTime = now();
       //
       // Write out data
@@ -577,15 +578,20 @@ class FSImageFormat {
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
         out.writeInt(sourceNamesystem.getFSImage().getStorage().getNamespaceID()); // TODO bad dependency
-        out.writeLong(fsDir.getRootDir().getNsCount());
         long gs = (Long) new LightWeightRequestHandler(OperationType.GET_GENERATION_STAMP) {
 
           @Override
           public Object performTask() throws PersistanceException, IOException {
-            GenerationStampDataAccess da = (GenerationStampDataAccess) StorageFactory.getDataAccess(GenerationStampDataAccess.class);
-            return da.findCounter();
+            DataOutputStream out = (DataOutputStream) getParams()[0];
+            InodeDataAccess inodeDa = (InodeDataAccess) StorageFactory.getDataAccess(InodeDataAccess.class);
+            INodeDirectoryWithQuota root = (INodeDirectoryWithQuota) inodeDa.findInodeById(FSDirectory.ROOT_ID);
+            if (root == null)
+              return 0L;
+            out.writeLong(root.getNsCount());
+            GenerationStampDataAccess genDa = (GenerationStampDataAccess) StorageFactory.getDataAccess(GenerationStampDataAccess.class);
+            return genDa.findCounter();
           }
-        }.handle();
+        }.setParams(out).handle();
         out.writeLong(gs);
         out.writeLong(txid);
 
