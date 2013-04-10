@@ -4,17 +4,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import org.apache.commons.logging.Log;
-
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -32,10 +29,6 @@ public class TestHAReadWrite extends junit.framework.TestCase {
     ((Log4JLogger) LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
   }
   final Path dir = new Path("/test/HA/");
-
-  static int countLease(MiniDFSCluster cluster) throws IOException, PersistanceException {
-    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
-  }
 
   int list(FileSystem fs) throws IOException {
     int totalFiles = 0;
