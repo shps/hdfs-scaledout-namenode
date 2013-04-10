@@ -418,7 +418,11 @@ public class TransactionLockManager {
         TransactionLockAcquirer.acquireLockList(leaderLock, Leader.Finder.All);
       } else {
         for (long id : leaderIds) {
-          TransactionLockAcquirer.acquireLock(leaderLock, Leader.Finder.ById, id);
+          TransactionLockAcquirer.acquireLock(
+                  leaderLock,
+                  Leader.Finder.ById,
+                  id,
+                  Leader.DEFAULT_PARTITION_VALUE);
         }
       }
     }

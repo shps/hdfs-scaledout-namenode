@@ -155,6 +155,7 @@ public class LeaderContext extends EntityContext<Leader> {
     switch (lFinder) {
       case ById:
         Long id = (Long) params[0];
+        int partitionKey = (Integer) params[1];
         if (allRead || allReadLeaders.containsKey(id)) {
           log("find-leader-by-id", CacheHitState.HIT, new String[]{"leaderId", Long.toString(id)});
           leader = allReadLeaders.get(id);
@@ -163,7 +164,7 @@ public class LeaderContext extends EntityContext<Leader> {
             "leaderId", Long.toString(id)
           });
           aboutToAccessStorage();
-          leader = dataAccess.findById(id);
+          leader = dataAccess.findByPkey(id, partitionKey);
           allReadLeaders.put(id, leader);
         }
         return leader;

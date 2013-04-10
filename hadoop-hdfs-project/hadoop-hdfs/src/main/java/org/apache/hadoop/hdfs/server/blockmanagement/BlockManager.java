@@ -1159,13 +1159,14 @@ public class BlockManager {
             @Override
             public void acquireLock() throws PersistanceException, IOException {
                 TransactionLockManager lm = new TransactionLockManager();
-                lm.addINode(TransactionLockManager.INodeLockType.READ).
+                lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                         addBlock(LockType.WRITE, b.getBlockId()).
                         addReplica(LockType.READ).
                         addExcess(LockType.READ).
                         addCorrupt(LockType.READ).
                         addPendingBlock(LockType.READ).
-                        addUnderReplicatedBlock(LockType.WRITE);
+                        addUnderReplicatedBlock(LockType.WRITE).
+                        addReplicaUc(LockType.READ);
                 lm.acquireByBlock();
             }
         };

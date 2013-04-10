@@ -22,6 +22,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 public class Leader implements Comparable<Leader>
 { 
 
+    public static final int DEFAULT_PARTITION_VALUE = 0;
+    
     public static enum Finder implements org.apache.hadoop.hdfs.server.namenode.FinderType<Leader>
     {
         ById, AllByCounterGTN, AllByIDLT, All;

@@ -4650,7 +4650,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public Object performTask() throws PersistanceException, IOException {
 
-          Leader leader = EntityManager.find(Leader.Finder.ById, nameNode.getId());
+          Leader leader = EntityManager.find(Leader.Finder.ById, nameNode.getId(), Leader.DEFAULT_PARTITION_VALUE);
           if (leader != null)
             EntityManager.remove(leader);
           return null;
@@ -4659,7 +4659,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public void acquireLock() throws PersistanceException, IOException {
           TransactionLockManager tlm = new TransactionLockManager();
-          tlm.addLeaderLock(LockType.WRITE, nameNode.getId());
+          tlm.addLeaderLock(LockType.WRITE, nameNode.getId())
+                  .acquire();
         }
       };
       leaderExitHandler.handle();
