@@ -14,11 +14,11 @@
         <jclouds.version>1.6.0-rc.1</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-<!--        
-        <glassfish.hostname>localhost</glassfish.hostname>
+        
+<!--        <glassfish.hostname>localhost</glassfish.hostname>
         <glassfish.admin></glassfish.admin>
-        <glassfish.passwd></glassfish.passwd>
--->            
+        <glassfish.passwd></glassfish.passwd>-->
+            
         <glassfish.hostname>lucan.sics.se</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
         <glassfish.passwd>dight12</glassfish.passwd>  
