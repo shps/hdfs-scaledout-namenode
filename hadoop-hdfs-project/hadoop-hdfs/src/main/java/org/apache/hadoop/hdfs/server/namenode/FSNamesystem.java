@@ -2186,7 +2186,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 TransactionLockManager.INodeLockType.WRITE,
                 new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
-                addLease(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.READ).
@@ -4650,20 +4650,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         @Override
         public Object performTask() throws PersistanceException, IOException {
 
-          EntityManager.remove(new Leader(nameNode.getId(), 0, 0, null));
+          Leader leader = EntityManager.find(Leader.Finder.ById, nameNode.getId(), Leader.DEFAULT_PARTITION_VALUE);
+          if (leader != null)
+            EntityManager.remove(leader);
           return null;
         }
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          // TODO safemode
+          TransactionLockManager tlm = new TransactionLockManager();
+          tlm.addLeaderLock(LockType.WRITE, nameNode.getId())
+                  .acquire();
         }
       };
       leaderExitHandler.handle();
     } catch (IOException ex) {
       LOG.error(ex);
     }
-
   }
 
   @Override // FSNamesystemMBean

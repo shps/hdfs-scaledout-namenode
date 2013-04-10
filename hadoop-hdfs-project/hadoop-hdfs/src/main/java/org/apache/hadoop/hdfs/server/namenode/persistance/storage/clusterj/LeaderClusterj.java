@@ -24,8 +24,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageExcepti
 public class LeaderClusterj extends LeaderDataAccess
 {
 
-
-
     @PersistenceCapable(table = TABLE_NAME)
     public interface LeaderDTO
     {
@@ -115,24 +113,41 @@ public class LeaderClusterj extends LeaderDataAccess
     }
     
 
-    @Override
-    public Leader findById(long id) throws StorageException
-    {
-        try
-        {
-            Session session = connector.obtainSession();
-            LeaderDTO lTable = session.find(LeaderDTO.class, id);
-            if (lTable != null)
-            {
-                Leader leader = createLeader(lTable);
-                return leader;
-            }
-            return null;
-        } catch (Exception e)
-        {
-            throw new StorageException(e);
-        }
+//    @Override
+//    public Leader findById(long id) throws StorageException
+//    {
+//        try
+//        {
+//            Session session = connector.obtainSession();
+//            LeaderDTO lTable = session.find(LeaderDTO.class, id);
+//            if (lTable != null)
+//            {
+//                Leader leader = createLeader(lTable);
+//                return leader;
+//            }
+//            return null;
+//        } catch (Exception e)
+//        {
+//            throw new StorageException(e);
+//        }
+//    }
+    
+   @Override
+  public Leader findByPkey(long id, int partitionKey) throws StorageException {
+
+    try {
+      Session session = connector.obtainSession();
+      Object[] keys = new Object[]{id, partitionKey};
+      LeaderDTO lTable = session.find(LeaderDTO.class, keys);
+      if (lTable != null) {
+        Leader leader = createLeader(lTable);
+        return leader;
+      }
+      return null;
+    } catch (Exception e) {
+      throw new StorageException(e);
     }
+  }
 
     @Override
     public Collection<Leader> findAllByCounterGT(long counter) throws StorageException

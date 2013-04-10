@@ -132,7 +132,7 @@ public class LeaderElection extends Thread {
         LOG.info(hostname+") LeaderElection thread received InterruptedException.", ie);
         break;
       } catch (Throwable t) {
-        LOG.info(hostname+") LeaderElection thread received Runtime exception. ", t);
+        LOG.fatal(hostname+") LeaderElection thread received Runtime exception. ", t);
         nn.stop();
         Runtime.getRuntime().exit(-1);
       }
@@ -198,7 +198,7 @@ public class LeaderElection extends Thread {
 
   private boolean doesNamenodeExist(long leaderId) throws PersistanceException {
 
-    Leader leader = EntityManager.find(Leader.Finder.ById, leaderId);
+    Leader leader = EntityManager.find(Leader.Finder.ById, leaderId, Leader.DEFAULT_PARTITION_VALUE);
 
     if (leader == null) {
       return false;
