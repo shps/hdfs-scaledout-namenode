@@ -26,6 +26,8 @@ public class AlertController {
     private String serviceGroup;
     @ManagedProperty("#{param.kthfsinstance}")
     private String kthfsInstance;
+    
+    private List<Alert> selectedAlerts;
 
 
     public AlertController() {
@@ -69,6 +71,16 @@ public class AlertController {
         List<Alert> alert = alertEJB.findAll();
         return alert;
     }
+    
+    public List<Alert> getSelectedAlerts() {
+       return selectedAlerts;
+    }
+    
+    public void setSelectedAlerts(List<Alert> alerts) {
+       selectedAlerts = alerts;
+       
+    }
+            
 
 
 
