@@ -2452,8 +2452,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // FIXME JUDE - this code is not in JUDE's branch. Ask KAMAL.
-        throw new UnsupportedOperationException("Not supported yet.");
+        TransactionLockManager tla = new TransactionLockManager();
+        tla.addINode(
+                TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
+                TransactionLockManager.INodeLockType.WRITE,
+                false,
+                new String[]{src,dst}).
+                addLease(TransactionLockManager.LockType.WRITE).
+                addLeasePath(TransactionLockManager.LockType.WRITE).
+                addBlock(TransactionLockManager.LockType.WRITE).
+                //addReplica(TransactionLockManager.LockType.WRITE).
+                //addCorrupt(TransactionLockManager.LockType.WRITE).
+                //addReplicaUc(TransactionLockManager.LockType.WRITE).
+                //addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                acquireForRename();
       }
     };
     renameTo2Handler.handleWithWriteLock(this);
