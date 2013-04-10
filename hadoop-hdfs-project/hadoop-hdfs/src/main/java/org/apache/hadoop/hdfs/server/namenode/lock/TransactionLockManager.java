@@ -593,6 +593,7 @@ public class TransactionLockManager {
 
     ArrayList<INode> inodes = new ArrayList<INode>();
     if (inode != null && this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT) {
+      EntityManager.readCommited();
       readFromLeafToRoot(inode, inodes);
       EntityManager.clearContext();
       takeLocksFromRootToLeaf(inodes, inodeLock);
@@ -631,8 +632,6 @@ public class TransactionLockManager {
     }
 
     readFromLeafToRoot(inode.getParent(), list);
-
-    EntityManager.readCommited();
     INode i = EntityManager.find(INode.Finder.ByPKey, inode.getId());
     list.add(i);
   }

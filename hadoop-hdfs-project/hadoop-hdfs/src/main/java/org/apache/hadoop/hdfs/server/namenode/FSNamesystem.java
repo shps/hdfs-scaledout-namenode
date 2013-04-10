@@ -2186,7 +2186,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 TransactionLockManager.INodeLockType.WRITE,
                 new String[]{src});
         tla.addBlock(TransactionLockManager.LockType.WRITE).
-                addLease(TransactionLockManager.LockType.WRITE).
+                addLease(TransactionLockManager.LockType.WRITE, holder).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addReplica(TransactionLockManager.LockType.READ).
                 addCorrupt(TransactionLockManager.LockType.READ).
