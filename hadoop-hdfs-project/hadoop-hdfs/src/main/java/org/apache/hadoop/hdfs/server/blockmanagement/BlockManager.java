@@ -1000,7 +1000,8 @@ public class BlockManager {
                         addReplica(LockType.READ).
                         addExcess(LockType.WRITE).
                         addCorrupt(LockType.WRITE).
-                        addUnderReplicatedBlock(LockType.WRITE);
+                        addUnderReplicatedBlock(LockType.WRITE).
+                        addReplicaUc(LockType.READ);
                 lm.acquireByBlock();
             }
         };
@@ -1768,7 +1769,7 @@ public class BlockManager {
             public void acquireLock() throws PersistanceException, IOException {
                 Block iblk = (Block) getParams()[0];
                 TransactionLockManager lm = new TransactionLockManager();
-                lm.addINode(TransactionLockManager.INodeLockType.READ).
+                lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                         addBlock(LockType.WRITE, iblk.getBlockId()).
                         addReplica(LockType.WRITE).
                         addCorrupt(LockType.WRITE).
@@ -2633,56 +2634,61 @@ public class BlockManager {
     }
 
     /**
-     * The given node is reporting that it received a certain block.
-     */
-    @VisibleForTesting
-    void addBlock(DatanodeDescriptor node, Block block, String delHint)
-            throws IOException, PersistanceException {
-        // decrement number of blocks scheduled to this datanode.
-        node.decBlocksScheduled();
+   * The given node is reporting that it received a certain block.
+   */
+  @VisibleForTesting
+  void addBlock(DatanodeDescriptor node, Block block, String delHint)
+          throws IOException, PersistanceException {
+    // decrement number of blocks scheduled to this datanode.
+    node.decBlocksScheduled();
 
-        // get the deletion hint node
-        DatanodeDescriptor delHintNode = null;
-        if (delHint != null && delHint.length() != 0) {
-            delHintNode = datanodeManager.getDatanodeByStorageId(delHint);
-            if (delHintNode == null) {
-                NameNode.stateChangeLog.warn("BLOCK* blockReceived: " + block
-                        + " is expected to be removed from an unrecorded node " + delHint);
-            }
-        }
-
-        //
-        // Modify the blocks->datanode map and node's map.
-        //
-        pendingReplications.remove(block);
-
-        // blockReceived reports a finalized block
-        Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
-        Collection<Block> toInvalidate = new LinkedList<Block>();
-        Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
-        Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-        processReportedBlock(node, block, ReplicaState.FINALIZED,
-                toAdd, toInvalidate, toCorrupt, toUC);
-        // the block is only in one of the to-do lists
-        // if it is in none then data-node already has it
-        assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1 : "The block should be only in one of the lists.";
-
-        for (StatefulBlockInfo b : toUC) {
-            addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
-        }
-        for (BlockInfo b : toAdd) {
-            addStoredBlock(b, node, delHintNode, true);
-        }
-        for (Block b : toInvalidate) {
-            NameNode.stateChangeLog.info("BLOCK* addBlock: block "
-                    + b + " on " + node.getName() + " size " + b.getNumBytes()
-                    + " does not belong to any file.");
-            addToInvalidates(b, node);
-        }
-        for (BlockInfo b : toCorrupt) {
-            markBlockAsCorrupt(b, node);
-        }
+    // get the deletion hint node
+    DatanodeDescriptor delHintNode = null;
+    if (delHint != null && delHint.length() != 0) {
+      delHintNode = datanodeManager.getDatanodeByStorageId(delHint);
+      if (delHintNode == null) {
+        NameNode.stateChangeLog.warn("BLOCK* blockReceived: " + block
+                + " is expected to be removed from an unrecorded node " + delHint);
+      }
     }
+
+    Block storedBlock = EntityManager.find(BlockInfo.Finder.ById, block.getBlockId());
+    if (storedBlock == null) // [H] We cannot allow to remove or add anything related to an non-existing block.
+    {
+      return;
+    }
+    //
+    // Modify the blocks->datanode map and node's map.
+    //
+    pendingReplications.remove(block);
+
+    // blockReceived reports a finalized block
+    Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
+    Collection<Block> toInvalidate = new LinkedList<Block>();
+    Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
+    Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
+    processReportedBlock(node, block, ReplicaState.FINALIZED,
+            toAdd, toInvalidate, toCorrupt, toUC);
+    // the block is only in one of the to-do lists
+    // if it is in none then data-node already has it
+    assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1 : "The block should be only in one of the lists.";
+
+    for (StatefulBlockInfo b : toUC) {
+      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
+    }
+    for (BlockInfo b : toAdd) {
+      addStoredBlock(b, node, delHintNode, true);
+    }
+    for (Block b : toInvalidate) {
+      NameNode.stateChangeLog.info("BLOCK* addBlock: block "
+              + b + " on " + node.getName() + " size " + b.getNumBytes()
+              + " does not belong to any file.");
+      addToInvalidates(b, node);
+    }
+    for (BlockInfo b : toCorrupt) {
+      markBlockAsCorrupt(b, node);
+    }
+  }
 
     /**
      * The given node is reporting that it received/deleted certain blocks.

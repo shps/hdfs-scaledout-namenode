@@ -100,8 +100,14 @@ public class LeaseManager {
   /**
    * @return the number of leases currently in the system
    */
-  public int countLease() throws PersistanceException {
-    return EntityManager.findList(Lease.Finder.All).size();
+  public int countLease() throws IOException {
+    return (Integer) new LightWeightRequestHandler(OperationType.COUNT_LEASE) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        LeaseDataAccess da = (LeaseDataAccess) StorageFactory.getDataAccess(LeaseDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
   }
 
   /**

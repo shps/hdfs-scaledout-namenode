@@ -33,8 +33,9 @@ import org.junit.Test;
  * Configuration.writeXML holds a lock on itself while writing to DFS.
  */
 public class TestWriteConfigurationToDFS {
-  public static final Log LOG = LogFactory.getLog(TestWriteConfigurationToDFS.class);  
-  @Test(timeout=60000)
+  public static final Log LOG = LogFactory.getLog(TestWriteConfigurationToDFS.class);
+  // The time constraint is not applicable for KTHFS.
+  @Test(timeout=600000)
   public void testWriteConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
