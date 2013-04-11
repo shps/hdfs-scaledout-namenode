@@ -45,8 +45,9 @@ import org.apache.commons.logging.LogFactory;
  */
 public class TestGetBlocks extends TestCase {
   static final Log LOG = LogFactory.getLog(TestGetBlocks.class);
+  //[kthfs] NamenodeProtocol was removed.
   /** test getBlocks */
-  public void testGetBlocks() throws Exception {
+  public void xxxtestGetBlocks() throws Exception {
     final Configuration CONF = new HdfsConfiguration();
 
     final short REPLICATION_FACTOR = (short)2;
