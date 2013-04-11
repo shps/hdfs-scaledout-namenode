@@ -11,7 +11,7 @@
     <name>KTHFS Dashboard</name>
 
     <properties>
-        <jclouds.version>1.5.7</jclouds.version>
+        <jclouds.version>1.6.0-rc.1</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
@@ -169,11 +169,11 @@
             <artifactId>joyentcloud</artifactId>
             <version>${jclouds.version}</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>org.jclouds.labs</groupId>
             <artifactId>virtualbox</artifactId>
             <version>${jclouds.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk16</artifactId>
