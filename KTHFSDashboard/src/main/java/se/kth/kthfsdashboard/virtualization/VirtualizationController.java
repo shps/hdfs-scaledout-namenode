@@ -292,6 +292,12 @@ public class VirtualizationController implements Serializable {
         bootstrapBuilder.add(exec("sudo mkdir /etc/chef;"));
         bootstrapBuilder.add(exec("cd /etc/chef;"));
         bootstrapBuilder.add(exec("sudo wget http://lucan.sics.se/kthfs/solo.rb;"));
+        //Setup and fetch git recipes
+        bootstrapBuilder.add(exec("git config --global user.name \"Jim Dowling\";"));
+        bootstrapBuilder.add(exec("git config --global user.email \"jdowling@sics.se\";"));
+        bootstrapBuilder.add(exec("git config --global http.sslVerify false;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        
 
 
         return new StatementList(bootstrapBuilder.build());
@@ -301,7 +307,7 @@ public class VirtualizationController implements Serializable {
      * Script to run Chef Solo
      */
     private void runChefSolo(ImmutableList.Builder<Statement> statements) {
-        statements.add(exec("sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json -r http://lucan.sics.se/kthfs/kthfs-dash.tar.gz;"));
+        statements.add(exec("sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json"));
     }
 
     /*
