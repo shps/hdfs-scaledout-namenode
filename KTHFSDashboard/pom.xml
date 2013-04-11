@@ -11,7 +11,7 @@
     <name>KTHFS Dashboard</name>
 
     <properties>
-        <jclouds.version>1.6.0-rc.1</jclouds.version>
+        <jclouds.version>1.5.7</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
@@ -130,18 +130,40 @@
         <dependency>
             <groupId>org.jclouds</groupId>
             <artifactId>jclouds-compute</artifactId>
-            <version>${jclouds.version}</version>
+            <version>1.6.0-rc.1</version>
         </dependency>
         <dependency>
             <groupId>org.jclouds.api</groupId>
             <artifactId>chef</artifactId>
-            <version>${jclouds.version}</version>
+            <version>1.6.0-rc.1</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>org.jclouds</groupId>
             <artifactId>jclouds-allcompute</artifactId>
             <version>${jclouds.version}</version>
+        </dependency>-->
+
+        <dependency>
+            <groupId>org.jclouds.provider</groupId>
+            <artifactId>aws-ec2</artifactId>
+            <version>${jclouds.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>openstack-nova</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>        
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>openstack-nova-ec2</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency> 
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>ec2</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>             
+                                
         <dependency>
             <groupId>org.jclouds.labs</groupId>
             <artifactId>joyentcloud</artifactId>
