@@ -13,6 +13,7 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Module;
 import java.io.Serializable;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -53,15 +54,16 @@ import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
 import org.jclouds.openstack.nova.v2_0.domain.Ingress;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
+import static org.jclouds.openstack.nova.v2_0.predicates.SecurityGroupPredicates.nameEquals;
 import org.jclouds.rest.RestContext;
 import org.jclouds.scriptbuilder.domain.Statement;
 import org.jclouds.scriptbuilder.domain.StatementList;
 import static org.jclouds.scriptbuilder.domain.Statements.createOrOverwriteFile;
-import static org.jclouds.openstack.nova.v2_0.predicates.SecurityGroupPredicates.nameEquals;
 import static org.jclouds.scriptbuilder.domain.Statements.exec;
 import org.jclouds.scriptbuilder.statements.chef.InstallChefGems;
 import org.jclouds.scriptbuilder.statements.git.InstallGit;
 import org.jclouds.scriptbuilder.statements.ruby.InstallRubyGems;
+import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +87,7 @@ public class VirtualizationController implements Serializable {
     private String id;
     private String key;
     private String privateIP;
+    private String publicKey;
     //If Openstack selected, endpoint for keystone API
     private String keystoneEndpoint;
     private ComputeService service;
@@ -151,6 +154,7 @@ public class VirtualizationController implements Serializable {
             keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
         }
         privateIP = computeCredentialsMB.getPrivateIP();
+        publicKey=computeCredentialsMB.getPublicKey();
 
     }
     /*
@@ -272,8 +276,11 @@ public class VirtualizationController implements Serializable {
 
         ImmutableList.Builder<Statement> bootstrapBuilder = ImmutableList.builder();
         bootstrapBuilder.add(exec("sudo apt-get update -qq;"));
-        bootstrapBuilder.add(exec("sudo apt-get install make;"));
+        List<String> keys = new ArrayList();
+        keys.add(publicKey);
+        bootstrapBuilder.add(new AuthorizeRSAPublicKeys(keys));
         bootstrapBuilder.add(exec("sudo apt-get update -qq;"));
+        bootstrapBuilder.add(exec("sudo apt-get install make;"));
         bootstrapBuilder.add(exec("sudo apt-get install -f -y -qq --force-yes ruby1.9.1-full;"));
         bootstrapBuilder.add(InstallRubyGems.builder()
                 .version("1.8.10")
