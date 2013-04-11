@@ -1000,7 +1000,8 @@ public class BlockManager {
                         addReplica(LockType.READ).
                         addExcess(LockType.WRITE).
                         addCorrupt(LockType.WRITE).
-                        addUnderReplicatedBlock(LockType.WRITE);
+                        addUnderReplicatedBlock(LockType.WRITE).
+                        addReplicaUc(LockType.READ);
                 lm.acquireByBlock();
             }
         };
@@ -1768,7 +1769,7 @@ public class BlockManager {
             public void acquireLock() throws PersistanceException, IOException {
                 Block iblk = (Block) getParams()[0];
                 TransactionLockManager lm = new TransactionLockManager();
-                lm.addINode(TransactionLockManager.INodeLockType.READ).
+                lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                         addBlock(LockType.WRITE, iblk.getBlockId()).
                         addReplica(LockType.WRITE).
                         addCorrupt(LockType.WRITE).

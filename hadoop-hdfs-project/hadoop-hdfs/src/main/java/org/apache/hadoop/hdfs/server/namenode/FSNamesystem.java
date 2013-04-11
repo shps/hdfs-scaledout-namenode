@@ -143,6 +143,8 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -3844,6 +3846,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.warn("Replication queues already initialized.");
       }
       long startTimeMisReplicatedScan = now();
+      // FIXME[H]: This is not feasible to fetch all blocks in memory and process it.
       blockManager.processMisReplicatedBlocks();
       initializedReplQueues = true;
       NameNode.stateChangeLog.info("STATE* Replication Queue initialization "
@@ -4979,58 +4982,72 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(final String path,
           final String startBlockAfter) throws IOException {
-    TransactionalRequestHandler listCorruptFileBlocksHandler = new TransactionalRequestHandler(OperationType.LIST_CORRUPT_FILE_BLOCKS) {
+    
+    final Collection<UnderReplicatedBlock> urBlocks = findUnderReplicatedBlocks(OperationType.LIST_CORRUPT_FILE_BLOCKS);
+    
+    if (!isPopulatingReplQueues()) {
+      throw new IOException("Cannot run listCorruptFileBlocks because "
+              + "replication queues have not been initialized.");
+    }
+    checkSuperuserPrivilege();
+    long startBlockId = 0;
+    // print a limited # of corrupt files per call
+    final ArrayList<CorruptFileBlockInfo> corruptFiles = new ArrayList<CorruptFileBlockInfo>();
 
+    if (startBlockAfter != null) {
+      startBlockId = Block.filename2id(startBlockAfter);
+    }
+    
+    TransactionalRequestHandler listCorruptFileBlocksHandler = new TransactionalRequestHandler(OperationType.LIST_CORRUPT_FILE_BLOCKS) {
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        if (!isPopulatingReplQueues()) {
-          throw new IOException("Cannot run listCorruptFileBlocks because "
-                  + "replication queues have not been initialized.");
-        }
-        checkSuperuserPrivilege();
-        long startBlockId = 0;
-        // print a limited # of corrupt files per call
-        int count = 0;
-        ArrayList<CorruptFileBlockInfo> corruptFiles = new ArrayList<CorruptFileBlockInfo>();
-
-        if (startBlockAfter != null) {
-          startBlockId = Block.filename2id(startBlockAfter);
-        }
-
-        // TODO JIM  -- jude did this differently
-        Collection<UnderReplicatedBlock> urblks = EntityManager.findList(UnderReplicatedBlock.Finder.ByLevel, blockManager.UNDER_REPLICATED_LEVEL_FOR_CORRUPTS);
-        for (UnderReplicatedBlock urblk : urblks) {
-          BlockInfo blk = EntityManager.find(BlockInfo.Finder.ById, urblk.getBlockId());
-          INode inode = blk.getINode();
-          if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
-            String src = inode.getFullPathName();
-            if (((startBlockAfter == null) || (blk.getBlockId() > startBlockId))
-                    && (src.startsWith(path))) {
-              corruptFiles.add(new CorruptFileBlockInfo(src, blk));
-              count++;
-              if (count >= DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED) {
-                break;
-              }
-            }
+        UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
+        long startBlockId = (Long) getParams()[1];
+        BlockInfo blk = EntityManager.find(BlockInfo.Finder.ById, urblk.getBlockId());
+        INode inode = blk.getINode();
+        if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
+          String src = inode.getFullPathName();
+          if (((startBlockAfter == null) || (blk.getBlockId() > startBlockId))
+                  && (src.startsWith(path))) {
+            corruptFiles.add(new CorruptFileBlockInfo(src, blk));
           }
         }
-
-        LOG.info("list corrupt file blocks returned: " + count);
         return corruptFiles;
       }
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        // FIXME JIM - Not done yet?
-        // locks are acquired in order i.e. first inodes , then blocks etc
-        // in this function the order is reversed. 
-        // solution make each operation a transaction
-        // i.e. read urb in a transaction and then read blocks in anther transaction etc
-          
-        throw new UnsupportedOperationException("Not supported yet.");
+        UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(INodeResolveType.FROM_CHILD_TO_ROOT, INodeLockType.READ_COMMITED).
+                addBlock(LockType.READ_COMMITTED, urblk.getBlockId()).
+                addReplica(LockType.READ_COMMITTED).
+                addCorrupt(LockType.READ_COMMITTED).
+                addExcess(LockType.READ_COMMITTED)
+                .acquireByBlock();
       }
     };
-    return (Collection<CorruptFileBlockInfo>) listCorruptFileBlocksHandler.handleWithReadLock(this);
+
+    for (UnderReplicatedBlock urblk : urBlocks) {
+      listCorruptFileBlocksHandler.
+              setParams(urblk, startBlockId).
+              handleWithReadLock(this);
+      if (corruptFiles.size() >= DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED) {
+        break;
+      }
+    }
+    LOG.info("list corrupt file blocks returned: " + corruptFiles.size());
+    return corruptFiles;
+  }
+  
+  private Collection<UnderReplicatedBlock> findUnderReplicatedBlocks(OperationType opType) throws IOException {
+    return (Collection<UnderReplicatedBlock>) new LightWeightRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
+        return da.findByLevel(BlockManager.UNDER_REPLICATED_LEVEL_FOR_CORRUPTS);
+      }
+    }.handle();
   }
 
   /**
