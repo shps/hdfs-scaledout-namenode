@@ -1,6 +1,5 @@
 package se.kth.kthfsdashboard.util;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -157,13 +156,13 @@ public class CollectdTools {
       serv_nn_w_createfile, serv_nn_w_filescreated, serv_nn_w_createfile_all, serv_nn_w_filesappended, serv_nn_w_filesrenamed,
       serv_nn_w_deletefile, serv_nn_w_filesdeleted, serv_nn_w_deletefile_all, serv_nn_w_addblock, serv_nn_w_createsymlink,
       serv_nn_o_getadditionaldatanode, serv_nn_o_transactions, serv_nn_o_blockreport, serv_nn_o_syncs, serv_nn_o_transactionsbatchedinsync,
-      serv_nn_t_fsimageloadtime, serv_nn_t_safemodetime, serv_nn_t_transactionsavgtime, serv_nn_t_syncsavgtime, serv_nn_t_blockreportavgtime,
+      serv_nn_t_safemodetime, serv_nn_t_transactionsavgtime, serv_nn_t_syncsavgtime, serv_nn_t_blockreportavgtime,
       nn_capacity, nn_files, nn_load, nn_heartbeats, nn_blockreplication, nn_blocks, nn_specialblocks, nn_datanodes,
       nn_r_fileinfo, nn_r_getblocklocations, nn_r_getlisting, nn_r_getlinktarget, nn_r_filesingetlisting,
       nn_w_createfile, nn_w_filescreated, nn_w_createfile_all, nn_w_filesappended, nn_w_filesrenamed,
       nn_w_deletefile, nn_w_filesdeleted, nn_w_deletefile_all, nn_w_addblock, nn_w_createsymlink,
       nn_o_getadditionaldatanode, nn_o_transactions, nn_o_blockreport, nn_o_syncs, nn_o_transactionsbatchedinsync,
-      nn_t_fsimageloadtime, nn_t_safemodetime, nn_t_transactionsavgtime, nn_t_syncsavgtime, nn_t_blockreportavgtime,
+      nn_t_safemodetime, nn_t_transactionsavgtime, nn_t_syncsavgtime, nn_t_blockreportavgtime,
       dd_heartbeats, dd_avgTimeHeartbeats, dd_bytes, dd_opsReads, dd_opsWrites, dd_blocksRead, dd_blocksWritten,
       dd_blocksRemoved, dd_blocksReplicated, dd_blocksVerified,
       dd_opsReadBlock, dd_opsWriteBlock, dd_opsCopyBlock, dd_opsReplaceBlock,
@@ -490,13 +489,6 @@ public class CollectdTools {
             cmd.drawSummedLines(namenodes, "gauge-SafeModeTime", "", "value", "SafeMode Time", RED, "%5.2lf %S");
             break;
 
-         case serv_nn_t_fsimageloadtime:
-            cmd.setTitle("FsImage Load Time");
-            cmd.setVerticalLabel("?");
-            cmd.setPlugin("GenericJMX-NameNodeActivity", "");
-            cmd.drawSummedLines(namenodes, "gauge-FsImageLoadTime", "", "value", "FsImage Load Time", RED, "%5.2lf %S");
-            break;
-
 //- Namenode Instance -----------------------------------------------------------
 
          case nn_capacity:
@@ -736,13 +728,6 @@ public class CollectdTools {
             cmd.setVerticalLabel("?");
             cmd.setPlugin("GenericJMX-NameNodeActivity", "");
             cmd.drawLine("gauge-SafeModeTime", "", "value", "SafeMode Time", RED, "%5.2lf %S");
-            break;
-
-         case nn_t_fsimageloadtime:
-            cmd.setTitle("FsImage Load Time");
-            cmd.setVerticalLabel("?");
-            cmd.setPlugin("GenericJMX-NameNodeActivity", "");
-            cmd.drawLine("gauge-FsImageLoadTime", "", "value", "FsImage Load Time", GREEN, "%5.2lf %S");
             break;
 
 //- Datanode Instance Activities------------------------------------------------
