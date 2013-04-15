@@ -78,7 +78,7 @@ public class TransactionLockManager {
   private LockType generationStampLock = null;
   // Leader
   private LockType leaderLock = null;
-  private int[] leaderIds = null;
+  private long[] leaderIds = null;
 
   private List<Lease> acquireLeaseLock(LockType lock, String holder) throws PersistanceException {
 
@@ -353,7 +353,7 @@ public class TransactionLockManager {
     return this;
   }
 
-  public TransactionLockManager addLeaderLock(LockType lock, int... ids) {
+  public TransactionLockManager addLeaderLock(LockType lock, long... ids) {
     this.leaderLock = lock;
     this.leaderIds = ids;
     return this;
@@ -417,8 +417,12 @@ public class TransactionLockManager {
       if (leaderIds.length == 0) {
         TransactionLockAcquirer.acquireLockList(leaderLock, Leader.Finder.All);
       } else {
-        for (int id : leaderIds) {
-          TransactionLockAcquirer.acquireLock(leaderLock, Leader.Finder.ById, id);
+        for (long id : leaderIds) {
+          TransactionLockAcquirer.acquireLock(
+                  leaderLock,
+                  Leader.Finder.ById,
+                  id,
+                  Leader.DEFAULT_PARTITION_VALUE);
         }
       }
     }
@@ -589,6 +593,7 @@ public class TransactionLockManager {
 
     ArrayList<INode> inodes = new ArrayList<INode>();
     if (inode != null && this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT) {
+      EntityManager.readCommited();
       readFromLeafToRoot(inode, inodes);
       EntityManager.clearContext();
       takeLocksFromRootToLeaf(inodes, inodeLock);
@@ -627,8 +632,6 @@ public class TransactionLockManager {
     }
 
     readFromLeafToRoot(inode.getParent(), list);
-
-    EntityManager.readCommited();
     INode i = EntityManager.find(INode.Finder.ByPKey, inode.getId());
     list.add(i);
   }

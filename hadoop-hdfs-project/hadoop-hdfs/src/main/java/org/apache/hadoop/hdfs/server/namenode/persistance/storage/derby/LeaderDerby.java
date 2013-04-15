@@ -72,25 +72,25 @@ public class LeaderDerby extends LeaderDataAccess {
         }
     }
 
-    @Override
-    public Leader findById(long id) throws StorageException {
-        try {
-            String query = String.format("select * from %s where %s=?", TABLE_NAME, ID);
-            Connection conn = connector.obtainSession();
-            PreparedStatement s = conn.prepareStatement(query);
-            s.setLong(1, id);
-            ResultSet rSet = s.executeQuery();
-            if (rSet.next()) {
-                return new Leader(rSet.getLong("ID"), rSet.getLong(COUNTER),
-                        rSet.getLong(TIMESTAMP), rSet.getString(HOSTNAME));
-            } else {
-                return null;
-            }
-        } catch (SQLException ex) {
-            handleSQLException(ex);
-            return null;
-        }
-    }
+//    @Override
+//    public Leader findById(long id) throws StorageException {
+//        try {
+//            String query = String.format("select * from %s where %s=?", TABLE_NAME, ID);
+//            Connection conn = connector.obtainSession();
+//            PreparedStatement s = conn.prepareStatement(query);
+//            s.setLong(1, id);
+//            ResultSet rSet = s.executeQuery();
+//            if (rSet.next()) {
+//                return new Leader(rSet.getLong("ID"), rSet.getLong(COUNTER),
+//                        rSet.getLong(TIMESTAMP), rSet.getString(HOSTNAME));
+//            } else {
+//                return null;
+//            }
+//        } catch (SQLException ex) {
+//            handleSQLException(ex);
+//            return null;
+//        }
+//    }
 
     @Override
     public Collection<Leader> findAllByCounterGT(long counter) throws StorageException {
@@ -193,4 +193,9 @@ public class LeaderDerby extends LeaderDataAccess {
         }
         return lSet;
     }
+
+  @Override
+  public Leader findByPkey(long id, int partitionKey) throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+  }
 }

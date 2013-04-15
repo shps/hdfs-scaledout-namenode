@@ -100,6 +100,7 @@ public class TestDatanodeDescriptor extends TestCase {
         assertNotNull(removeReplica);
         EntityManager.remove(removeReplica);
         assertEquals(0, dd.numBlocks());
+        EntityManager.clearContext(); // Clear cache so that it does not remove non-persisted objects.
         return null;
       }
 

@@ -14,24 +14,15 @@
         <jclouds.version>1.6.0-rc.1</jclouds.version>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-<!--        
-        <glassfish.hostname>localhost</glassfish.hostname>
+        
+<!--        <glassfish.hostname>localhost</glassfish.hostname>
         <glassfish.admin></glassfish.admin>
-        <glassfish.passwd></glassfish.passwd>
--->            
+        <glassfish.passwd></glassfish.passwd>-->
+            
         <glassfish.hostname>lucan.sics.se</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
         <glassfish.passwd>dight12</glassfish.passwd>  
-<!--
-        <glassfish.hostname>cloud16.sics.se</glassfish.hostname>
-        <glassfish.admin>admin</glassfish.admin>
-        <glassfish.passwd>admin</glassfish.passwd>
-
-                <glassfish.hostname>54.246.64.96</glassfish.hostname>
-                <glassfish.admin>admin</glassfish.admin>
-                <glassfish.passwd>admin</glassfish.passwd>
-        -->               
+           
         <netbeans.hint.deploy.server>gfv3ee6</netbeans.hint.deploy.server>
     </properties>
 
@@ -54,21 +45,6 @@
             <version>1.11</version>
         </dependency>
         
-        <!--        <dependency>
-            <groupId>org.eclipse.persistence</groupId>
-            <artifactId>eclipselink</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.persistence</groupId>
-            <artifactId>javax.persistence</artifactId>
-            <version>2.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.persistence</groupId>
-            <artifactId>org.eclipse.persistence.jpa.modelgen.processor</artifactId>
-            <version>2.3.0</version>
-        </dependency>-->
         <dependency>
             <groupId>com.sun.jersey.glassfish.v3.osgi</groupId>
             <artifactId>jettison</artifactId>
@@ -154,28 +130,50 @@
         <dependency>
             <groupId>org.jclouds</groupId>
             <artifactId>jclouds-compute</artifactId>
-            <version>${jclouds.version}</version>
+            <version>1.6.0-rc.1</version>
         </dependency>
         <dependency>
             <groupId>org.jclouds.api</groupId>
             <artifactId>chef</artifactId>
-            <version>${jclouds.version}</version>
+            <version>1.6.0-rc.1</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>org.jclouds</groupId>
             <artifactId>jclouds-allcompute</artifactId>
             <version>${jclouds.version}</version>
+        </dependency>-->
+
+        <dependency>
+            <groupId>org.jclouds.provider</groupId>
+            <artifactId>aws-ec2</artifactId>
+            <version>${jclouds.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>openstack-nova</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>        
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>openstack-nova-ec2</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency> 
+        <dependency>
+            <groupId>org.jclouds.api</groupId>
+            <artifactId>ec2</artifactId>
+            <version>${jclouds.version}</version>
+        </dependency>             
+                                
         <dependency>
             <groupId>org.jclouds.labs</groupId>
             <artifactId>joyentcloud</artifactId>
             <version>${jclouds.version}</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>org.jclouds.labs</groupId>
             <artifactId>virtualbox</artifactId>
             <version>${jclouds.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk16</artifactId>
@@ -229,14 +227,14 @@
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
         </dependency>
-        
-        
-        <!--        <dependency>
+                
+<!--
+        <dependency>
             <groupId>org.primefaces.extensions</groupId>
             <artifactId>primefaces-extensions</artifactId>
             <version>0.5.1</version>
-        </dependency>-->
-
+        </dependency>
+-->
 
     </dependencies>
 
@@ -293,7 +291,6 @@
             <plugin>
                 <groupId>org.codehaus.cargo</groupId>
                 <artifactId>cargo-maven2-plugin</artifactId>
-                <!--<version>1.2.4</version>-->
                 <version>1.2.4</version>
                 <configuration>
                     <container>
@@ -313,7 +310,6 @@
                     <dependency>
                         <groupId>org.glassfish.deployment</groupId>
                         <artifactId>deployment-client</artifactId>
-<!--                        <version>3.1</version>-->
                         <version>3.1.1</version>
                     </dependency>
                 </dependencies>
