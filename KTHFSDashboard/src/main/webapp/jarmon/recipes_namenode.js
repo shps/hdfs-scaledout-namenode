@@ -62,7 +62,7 @@ jarmon.CHART_RECIPES_COLLECTD = function (){
         charts['files'] =  {
             title: 'Total Files',
             data: [
-            [path + '/GenericJMX-FSNamesystem/counter-FilesTotal.rrd', 0, 'Total Files', ''],
+            [path + '/GenericJMX-FSNamesystem/gauge-FilesTotal.rrd', 0, 'Total Files', ''],
             ],
             options: jQuery.extend(true, {}, jarmon.Chart.BASE_OPTIONS,
                 jarmon.Chart.BASE_OPTIONS)

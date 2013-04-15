@@ -259,7 +259,7 @@ public class CollectdTools {
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
             cmd.setHostname("cloud1.sics.se");
-            cmd.drawLine("counter-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
+            cmd.drawLine("gauge-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
             break;
 
          case serv_nn_load:
