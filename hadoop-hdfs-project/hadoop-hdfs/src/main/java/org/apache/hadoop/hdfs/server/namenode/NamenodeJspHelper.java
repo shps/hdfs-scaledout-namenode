@@ -27,6 +27,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.ServletContext;
@@ -48,10 +49,12 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -749,12 +752,22 @@ class NamenodeJspHelper {
               return blockManager.getINode(block);
             }
 
+            private LinkedList<INode> resolvedInodes = null;
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-              TransactionLockManager lm = new TransactionLockManager();
+              TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
               lm.addINode(TransactionLockManager.INodeLockType.READ).
                       addBlock(TransactionLockManager.LockType.READ, block.getBlockId());
               lm.acquireByBlock();
+            }
+      
+            @Override
+            public void setUp() throws StorageException {
+              resolvedInodes = new LinkedList<INode>();
+              INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
+              if (inode != null) {
+                resolvedInodes.add(inode);
+              }
             }
           }.handle();
         } catch (IOException e) {

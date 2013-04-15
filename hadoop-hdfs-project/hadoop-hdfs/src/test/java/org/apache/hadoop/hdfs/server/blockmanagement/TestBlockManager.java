@@ -41,12 +41,16 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import java.util.LinkedList;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 public class TestBlockManager {
   private final List<DatanodeDescriptor> nodes = ImmutableList.of( 
@@ -329,10 +333,11 @@ public class TestBlockManager {
         return null;
       }
 
+      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager();
-        lm.addINode(TransactionLockManager.INodeLockType.READ).
+        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, blockInfo.getBlockId()).
                 addReplica(LockType.WRITE).
                 addExcess(LockType.WRITE).
@@ -342,6 +347,15 @@ public class TestBlockManager {
                 addReplicaUc(LockType.WRITE).
                 addInvalidatedBlock(LockType.READ);
         lm.acquireByBlock();
+      }
+      
+      @Override
+      public void setUp() throws StorageException {
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(blockInfo.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
       }
     };
     for (int i = 1; i < pipeline.length; i++) {
@@ -427,10 +441,11 @@ public class TestBlockManager {
         return pipeline;
       }
 
+      private LinkedList resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager();
-        lm.addINode(TransactionLockManager.INodeLockType.READ).
+        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, block.getBlockId()).
                 addReplica(LockType.READ).
                 addExcess(LockType.READ).
@@ -438,6 +453,15 @@ public class TestBlockManager {
                 addPendingBlock(LockType.READ).
                 addUnderReplicatedBlock(LockType.WRITE);
         lm.acquireByBlock();
+      }
+      
+      @Override
+      public void setUp() throws StorageException {
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
       }
     }.handle();
   }

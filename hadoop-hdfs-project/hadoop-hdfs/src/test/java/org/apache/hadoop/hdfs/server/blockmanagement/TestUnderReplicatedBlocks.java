@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,10 +29,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 public class TestUnderReplicatedBlocks extends TestCase {
 
@@ -60,14 +64,24 @@ public class TestUnderReplicatedBlocks extends TestCase {
           return null;
         }
 
+        private LinkedList<INode> resolvedInodes = null;
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockManager lm = new TransactionLockManager();
+          TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
           lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                   addBlock(TransactionLockManager.LockType.WRITE, b.getBlockId()).
                   addReplica(TransactionLockManager.LockType.WRITE).
                   acquireByBlock();
         }
+        
+      @Override
+      public void setUp() throws StorageException {
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
+      }
       }.handle();
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

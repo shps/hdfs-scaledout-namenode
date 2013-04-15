@@ -1,7 +1,9 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
@@ -12,7 +14,7 @@ import org.apache.log4j.NDC;
  * @author kamal hakimzadeh<kamal@sics.se>
  */
 public abstract class TransactionalRequestHandler extends RequestHandler {
-
+  
     public TransactionalRequestHandler(OperationType opType) {
         super(opType);
     }
@@ -51,6 +53,7 @@ public abstract class TransactionalRequestHandler extends RequestHandler {
                     } else {
                         NDC.push(opType.name());
                     }
+                    setUp();
                     txStartTime = System.currentTimeMillis();
                     oldTime = 0;
                     EntityManager.begin();
@@ -130,5 +133,11 @@ public abstract class TransactionalRequestHandler extends RequestHandler {
     public TransactionalRequestHandler setParams(Object... params) {
         this.params = params;
         return this;
+    }
+    
+    public void setUp() throws PersistanceException, IOException
+    {
+      // Do nothing.
+      // This can be overriden.
     }
 }

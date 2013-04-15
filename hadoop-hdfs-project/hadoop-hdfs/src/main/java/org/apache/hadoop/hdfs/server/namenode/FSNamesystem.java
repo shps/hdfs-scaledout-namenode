@@ -75,6 +75,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -121,6 +122,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
@@ -133,6 +135,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.*;
@@ -143,7 +146,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
-import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -167,7 +169,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
@@ -1355,6 +1356,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final short replication, final long blockSize) throws AccessControlException,
           SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
           FileNotFoundException, ParentNotDirectoryException, IOException {
+    final boolean resolveLink = false;
     TransactionalRequestHandler startFileHanlder = new TransactionalRequestHandler(OperationType.START_FILE) {
 
       @Override
@@ -1474,13 +1476,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return null;
       }
 
+      protected LinkedList<INode> resolvedInodes = null; // For the operations requires to have inodes before starting transactions.
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tla = new TransactionLockManager();
+        TransactionLockManager tla = new TransactionLockManager(resolvedInodes);
         tla.addINode(
                 TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE_ON_PARENT,
-                false,
+                resolveLink,
                 new String[]{src}).
                 addBlock(TransactionLockManager.LockType.WRITE).
                 addLease(TransactionLockManager.LockType.WRITE, holder).
@@ -1492,6 +1495,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addGenerationStamp(LockType.WRITE).
                 addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
+      }
+      
+      @Override
+      public void setUp() throws PersistanceException, IOException
+      {
+        resolvedInodes = INodeUtil.resolvePathWithNoTransaction(src, resolveLink);
       }
     };
     startFileHanlder.handleWithWriteLock(this);
@@ -2672,15 +2681,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean mkdirs(final String src, final PermissionStatus permissions,
           final boolean createParent) throws IOException, UnresolvedLinkException {
+    final boolean resolvedLink = false;
     TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler(OperationType.MKDIRS) {
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        boolean status = false;
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
         }
-        status = mkdirsInternal(src, permissions, createParent);
+        boolean status = mkdirsInternal(src, permissions, createParent);
         //getEditLog().logSync();
         if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
           final HdfsFileStatus stat = dir.getFileInfo(src, false);
@@ -2691,15 +2700,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return status;
       }
 
+      private LinkedList<INode> resolvedINodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tla = new TransactionLockManager();
+        TransactionLockManager tla = new TransactionLockManager(resolvedINodes);
         tla.addINode(
                 TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
-                false,
+                resolvedLink,
                 new String[]{src}).
                 acquire();
+      }
+      
+      @Override
+      public void setUp() throws UnresolvedPathException, PersistanceException
+      {
+        resolvedINodes = INodeUtil.resolvePathWithNoTransaction(src, resolvedLink);
       }
     };
     return (Boolean) mkdirsHanlder.handleWithWriteLock(this);
@@ -3182,9 +3198,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return src;
       }
 
+      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tla = new TransactionLockManager();
+        TransactionLockManager tla = new TransactionLockManager(resolvedInodes);
         tla.addINode(INodeResolveType.FROM_CHILD_TO_ROOT, INodeLockType.WRITE).
                 addBlock(LockType.WRITE, lastblock.getBlockId()).
                 addLease(LockType.WRITE).
@@ -3195,6 +3212,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addReplicaUc(LockType.WRITE).
                 addUnderReplicatedBlock(LockType.WRITE).
                 acquireByBlock();
+      }
+            @Override
+      public void setUp() throws PersistanceException {
+        resolvedInodes = INodeUtil.findPathINodesByBlock(lastblock.getBlockId());
       }
     };
     String src = (String) commitBlockSyncHanlder.handleWithWriteLock(this);
@@ -4786,13 +4807,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return locatedBlock;
       }
 
+      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager();
+        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
         lm.addINode(INodeLockType.READ).
                 addBlock(LockType.READ, block.getBlockId()).
                 addGenerationStamp(LockType.WRITE);
         lm.acquireByBlock();
+      }
+      
+      @Override
+      public void setUp() throws StorageException {
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
       }
     };
     return (LocatedBlock) updateBlockForPipelineHandler.handleWithWriteLock(this);
@@ -4830,13 +4861,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return null;
       }
 
+      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager();
+        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
         lm.addINode(INodeLockType.WRITE).
                 addBlock(LockType.WRITE, oldBlock.getBlockId()).
                 addReplicaUc(LockType.READ);
         lm.acquireByBlock();
+      }
+
+      @Override
+      public void setUp() throws StorageException {
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(oldBlock.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
       }
     };
     updatePipelineHanlder.handleWithWriteLock(this);
@@ -5015,6 +5056,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return corruptFiles;
       }
 
+      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
@@ -5025,6 +5067,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addCorrupt(LockType.READ_COMMITTED).
                 addExcess(LockType.READ_COMMITTED)
                 .acquireByBlock();
+      }
+
+      @Override
+      public void setUp() throws StorageException {
+        UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
+        resolvedInodes = new LinkedList<INode>();
+        INode inode = INodeUtil.findINodeByBlock(urblk.getBlockId());
+        if (inode != null) {
+          resolvedInodes.add(inode);
+        }
       }
     };
 

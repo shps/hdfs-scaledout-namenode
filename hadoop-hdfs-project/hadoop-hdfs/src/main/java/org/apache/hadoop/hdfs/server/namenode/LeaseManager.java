@@ -39,10 +39,12 @@ import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockTy
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeaseDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
@@ -381,6 +383,7 @@ public class LeaseManager {
         return null;
       }
 
+      private SortedSet<String> leasePaths = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         String holder = (String) getParams()[0];
@@ -395,7 +398,14 @@ public class LeaseManager {
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.READ).
                 addGenerationStamp(LockType.WRITE).
-                acquireByLease();
+                acquireByLease(leasePaths);
+      }
+      
+      @Override
+      public void setUp() throws StorageException
+      {
+        String holder = (String) getParams()[0];
+        leasePaths = INodeUtil.findPathsByLeaseHolder(holder);
       }
     };
   }
