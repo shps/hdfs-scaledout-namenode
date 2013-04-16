@@ -66,6 +66,9 @@ public class AlertController implements Serializable{
    }
 
    public List<Alert> getAlerts() {
+      
+            
+      System.err.println("Init");
       List<Alert> alert = alertEJB.findAll();
       return alert;
    }

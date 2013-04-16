@@ -42,7 +42,7 @@
 
             <p:confirmDialog id="confirmDelectedDialog" message="Are you sure about deleting the selected alerts?"  
                              header="Delete confirmation" severity="alert" widgetVar="confirmSelected">  
-               <p:commandButton id="confirm2" value="Yes" update="@form" oncomplete="confirmSelected.hide()"  
+               <p:commandButton id="confirm2" value="Yes" update="@form" onclick="confirmSelected.hide()"  
                                 actionListener="#{alertController.deleteSelectedAlerts()}" />  
                <p:commandButton id="decline2" value="No" onclick="confirmSelected.hide()" type="button" />   
             </p:confirmDialog>
@@ -53,14 +53,12 @@
 
             <p:commandLink styleClass="PanelLink" value="Refresh Alerts" update="@form"
                            onstart="dlgAction.show()" oncomplete="dlgAction.hide()">
-
             </p:commandLink>
-
 
             <p:panel header="Alerts">               
                <p:dataTable id="alerts" var="alert" value="#{alertController.alerts}" 
                             selection="#{alertController.selectedAlerts}"
-                            rowKey="#{alert.alertTime}"
+                            rowKey="#{alert.id}"
                             paginator="true" rows="25"
                             rowsPerPageTemplate="10,25,50,100"  
                             styleClass="AlertsTable">
@@ -88,7 +86,4 @@
 
    </ui:composition>
 
-
-
 </html>
-

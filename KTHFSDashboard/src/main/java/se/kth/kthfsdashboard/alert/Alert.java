@@ -32,13 +32,13 @@ public class Alert implements Serializable {
    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
    private Date alertTime;
    private long agentTime;
-   @Column(name = "plugin", length = 16)
+   @Column(name = "plugin", length = 32)
    private String plugin;
-   @Column(name = "plugin_instance", length = 16)
+   @Column(name = "plugin_instance", length = 32)
    private String pluginInstance;
-   @Column(name = "type", length = 16)
+   @Column(name = "type", length = 32)
    private String type;
-   @Column(name = "type_instance", length = 16)
+   @Column(name = "type_instance", length = 32)
    private String typeInstance;
 
    @Column(name = "data_source", length = 32)
