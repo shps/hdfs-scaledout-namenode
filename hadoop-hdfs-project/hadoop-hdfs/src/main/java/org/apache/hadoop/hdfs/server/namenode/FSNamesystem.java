@@ -1625,8 +1625,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         // increment global generation stamp
         long genstamp = nextGenerationStamp();
-        INodeFile newNode = dir.addFile(src, permissions,
-                replication, blockSize, holder, clientMachine, clientNode, genstamp);
+        INodeFile newNode = dir.addFile(
+                src,
+                permissions,
+                replication,
+                blockSize,
+                holder,
+                clientMachine,
+                clientNode,
+                genstamp,
+                (INodeFile) myFile);
 
         if (newNode == null) {
           throw new IOException("DIR* NameSystem.startFile: "
