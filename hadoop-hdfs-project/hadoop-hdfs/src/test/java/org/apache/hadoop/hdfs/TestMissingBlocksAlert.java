@@ -83,6 +83,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       LOG.info("Waiting for missing blocks count to increase...");
       
+      Thread.sleep(1000); // Wait till NN finds the missing blocks.
       while (dfs.getMissingBlocksCount() <= 0) {
         Thread.sleep(100);
       }

@@ -587,37 +587,31 @@ public class TransactionLockManager {
    *
    * @throws PersistanceException
    */
-  public void acquireByBlock() throws PersistanceException, UnresolvedPathException {
-    if (inodeLock == null) // inodelock must be set before.
+  public void acquireByBlock(long inodeId) throws PersistanceException, UnresolvedPathException {
+    if (inodeLock == null || blockParam == null) // inodelock must be set before.
     {
       return;
     }
-    if (blockParam == null) {
-      return;
-    }
-
-    checkPathIsResolved();
-    INode inode = null;
-    if (!resolvedInodes.isEmpty()) {
-      inode = resolvedInodes.get(0);
-
-      if (this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT) {
+    INode inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, inodeId);
+    if (this.inodeResolveType == INodeResolveType.FROM_CHILD_TO_ROOT) {
+      checkPathIsResolved();
+      if (!resolvedInodes.isEmpty())
         takeLocksFromRootToLeaf(resolvedInodes, inodeLock);
-      } else {
-        inode = TransactionLockAcquirer.acquireINodeLockById(inodeLock, inode.getId());
+    }
+    
+    if (inode != null) {
+      if (!(inode instanceof INodeFile))
+      {
+        return; //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
       }
+      inodeResult = new INode[1];
+      inodeResult[0] = inode;
     }
 
-
-    //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
-    if (inode == null || !(inode instanceof INodeFile)) {
-      return;
-    }
-    inodeResult = new INode[1];
-    inodeResult[0] = inode;
-
-    blockResults = TransactionLockAcquirer.acquireLockList(blockLock,
-            BlockInfo.Finder.ByInodeId, ((INodeFile) inode).getId());
+    blockResults = TransactionLockAcquirer.acquireLockList(
+            blockLock,
+            BlockInfo.Finder.ByInodeId,
+            inodeId);
 
     //TODO: it should abort the transaction and retry at this stage. Cause something is changed in the storage.
     int i = 0;
@@ -636,7 +630,7 @@ public class TransactionLockManager {
     acquireBlockRelatedLocksNormal();
 
   }
-
+  
   private void takeLocksFromRootToLeaf(LinkedList<INode> inodes, INodeLockType inodeLock) throws PersistanceException {
 
     StringBuilder msg = new StringBuilder();

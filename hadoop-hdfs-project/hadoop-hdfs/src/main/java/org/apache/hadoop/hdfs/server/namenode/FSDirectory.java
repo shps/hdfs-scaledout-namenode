@@ -56,10 +56,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.util.ByteArray;
@@ -2083,14 +2085,14 @@ public class FSDirectory implements Closeable {
         }
     }
 
-    long totalInodes() throws PersistanceException, IOException {
-        readLock();
-        try {
-            return getRootDir().getNsCount();
-        } finally {
-            readUnlock();
-        }
+  long totalInodes() throws PersistanceException, IOException {
+    readLock();
+    try {
+          return getRootDir().getNsCount();
+    } finally {
+      readUnlock();
     }
+  }
 
     /**
      * Sets the access time on the file. Logs it in the transaction log.

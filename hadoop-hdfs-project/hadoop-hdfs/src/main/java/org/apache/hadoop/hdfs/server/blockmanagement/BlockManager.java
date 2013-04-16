@@ -924,10 +924,10 @@ public class BlockManager {
         return null;
       }
 
-      LinkedList<INode> resolvedInodes = null;
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, UnresolvedPathException {
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, b.getBlockId()).
                 addReplica(LockType.WRITE).
@@ -936,15 +936,12 @@ public class BlockManager {
                 addUnderReplicatedBlock(LockType.WRITE).
                 addReplicaUc(LockType.WRITE);
 
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
-        if (inode != null)
-          resolvedInodes.add(inode);
+        inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
       }
     };
     removeBlockHandler.setParams(node).handle();
@@ -1003,10 +1000,10 @@ public class BlockManager {
                 return null;
             }
 
-            private LinkedList<INode> resolvedInodes = null;
+            long inodeId;
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-                TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+                TransactionLockManager lm = new TransactionLockManager();
                 lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                         addBlock(LockType.WRITE, blk.getBlockId()).
                         addReplica(LockType.READ).
@@ -1014,16 +1011,12 @@ public class BlockManager {
                         addCorrupt(LockType.WRITE).
                         addUnderReplicatedBlock(LockType.WRITE).
                         addReplicaUc(LockType.READ);
-                lm.acquireByBlock();
+                lm.acquireByBlock(inodeId);
           }
 
           @Override
           public void setUp() throws StorageException {
-            resolvedInodes = new LinkedList<INode>();
-            INode inode = INodeUtil.findINodeByBlock(blk.getBlockId());
-            if (inode != null) {
-              resolvedInodes.add(inode);
-            }
+            inodeId = INodeUtil.findINodeIdByBlock(blk.getBlockId());
           }
         };
         findAndMarkBlockAsCorruptHandler.handleWithWriteLock(namesystem);
@@ -1171,39 +1164,35 @@ public class BlockManager {
         return scheduledReplicationCount;
     }
 
-    private boolean computeReplicationWorkForBlock(final Block b, final int priority, OperationType opType) throws IOException {
-        TransactionalRequestHandler computeReplicationWorkHandler = new TransactionalRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                return computeReplicationWorkForBlock(b, priority);
-            }
+  private boolean computeReplicationWorkForBlock(final Block b, final int priority, OperationType opType) throws IOException {
+    TransactionalRequestHandler computeReplicationWorkHandler = new TransactionalRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return computeReplicationWorkForBlock(b, priority);
+      }
+      private long inodeId;
 
-            private LinkedList<INode> resolvedInodes = null;
-            @Override
-            public void acquireLock() throws PersistanceException, IOException {
-                TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
-                lm.addINode(TransactionLockManager.INodeLockType.WRITE).
-                        addBlock(LockType.WRITE, b.getBlockId()).
-                        addReplica(LockType.READ).
-                        addExcess(LockType.READ).
-                        addCorrupt(LockType.READ).
-                        addPendingBlock(LockType.READ).
-                        addUnderReplicatedBlock(LockType.WRITE).
-                        addReplicaUc(LockType.READ);
-                lm.acquireByBlock();
-            }
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addINode(TransactionLockManager.INodeLockType.WRITE).
+                addBlock(LockType.WRITE, b.getBlockId()).
+                addReplica(LockType.READ).
+                addExcess(LockType.READ).
+                addCorrupt(LockType.READ).
+                addPendingBlock(LockType.READ).
+                addUnderReplicatedBlock(LockType.WRITE).
+                addReplicaUc(LockType.READ);
+        lm.acquireByBlock(inodeId);
+      }
 
-          @Override
-          public void setUp() throws StorageException {
-            resolvedInodes = new LinkedList<INode>();
-            INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
-            if (inode != null) {
-              resolvedInodes.add(inode);
-            }
-          }
-        };
-        return (Boolean) computeReplicationWorkHandler.handle();
-    }
+      @Override
+      public void setUp() throws StorageException {
+        inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
+      }
+    };
+    return (Boolean) computeReplicationWorkHandler.handle();
+  }
 
     private Collection<UnderReplicatedBlock> getUnderReplicatedBlocks(OperationType opType) throws IOException {
         TransactionalRequestHandler findAllUrbHander = new TransactionalRequestHandler(opType) {
@@ -1656,11 +1645,11 @@ public class BlockManager {
         }
         return null;
       }
-      private LinkedList<INode> resolvedInodes = null;
 
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE).
                 addReplica(LockType.READ).
@@ -1668,16 +1657,12 @@ public class BlockManager {
                 addCorrupt(LockType.READ).
                 addPendingBlock(LockType.READ).
                 addUnderReplicatedBlock(LockType.WRITE);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(p.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(p.getBlockId());
       }
     }.handle();
   }
@@ -1805,12 +1790,12 @@ public class BlockManager {
         }
         return null;
       }
-      private LinkedList<INode> resolvedInodes = null;
 
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         Block iblk = (Block) getParams()[0];
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, iblk.getBlockId()).
                 addReplica(LockType.WRITE).
@@ -1820,17 +1805,13 @@ public class BlockManager {
                 addUnderReplicatedBlock(LockType.WRITE).
                 addInvalidatedBlock(LockType.READ).
                 addPendingBlock(LockType.READ);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
         Block iblk = (Block) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(iblk.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(iblk.getBlockId());
       }
     };
 
@@ -1848,29 +1829,25 @@ public class BlockManager {
         removeStoredBlock(b, node);
         return null;
       }
-      private LinkedList<INode> resolvedInodes = null;
 
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         Block b = (Block) getParams()[0];
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, b.getBlockId()).
                 addReplica(LockType.WRITE).
                 addExcess(LockType.WRITE).
                 addCorrupt(LockType.WRITE).
                 addUnderReplicatedBlock(LockType.WRITE);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
         Block b = (Block) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
       }
     };
 
@@ -1937,11 +1914,11 @@ public class BlockManager {
         return null;
       }
 
-      private LinkedList<INode> resolvedInodes = null;
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         Block b = (Block) getParams()[0];
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, b.getBlockId()).
                 addReplica(LockType.WRITE).
@@ -1951,17 +1928,13 @@ public class BlockManager {
                 addUnderReplicatedBlock(LockType.WRITE).
                 addInvalidatedBlock(LockType.READ).
                 addPendingBlock(LockType.READ);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
         Block b = (Block) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
       }
     };
 
@@ -2796,11 +2769,11 @@ public class BlockManager {
           return null;
         }
 
-        private LinkedList<INode> resolvedInodes = null;
+        long inodeId;
         @Override
         public void acquireLock() throws PersistanceException, IOException {
           ReceivedDeletedBlockInfo receivedAndDeletedBlock = (ReceivedDeletedBlockInfo) getParams()[0];
-          TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+          TransactionLockManager lm = new TransactionLockManager();
           lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                   addBlock(LockType.WRITE, receivedAndDeletedBlock.getBlock().getBlockId()).
                   addReplica(LockType.WRITE).
@@ -2812,17 +2785,13 @@ public class BlockManager {
                     addReplicaUc(LockType.WRITE).
                     addInvalidatedBlock(LockType.READ);
           }
-          lm.acquireByBlock();
+          lm.acquireByBlock(inodeId);
         }
         
         @Override
         public void setUp() throws StorageException {
           ReceivedDeletedBlockInfo receivedAndDeletedBlock = (ReceivedDeletedBlockInfo) getParams()[0];
-          resolvedInodes = new LinkedList<INode>();
-          INode inode = INodeUtil.findINodeByBlock(receivedAndDeletedBlock.getBlock().getBlockId());
-          if (inode != null) {
-            resolvedInodes.add(inode);
-          }
+          inodeId = INodeUtil.findINodeIdByBlock(receivedAndDeletedBlock.getBlock().getBlockId());
         }
       };
 
@@ -2994,11 +2963,11 @@ public class BlockManager {
         return null;
       }
 
-      private LinkedList<INode> resolvedInodes = null;
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         final Block block = (Block) getParams()[0];
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, block.getBlockId()).
                 addReplica(LockType.READ).
@@ -3006,17 +2975,13 @@ public class BlockManager {
                 addCorrupt(LockType.READ).
                 addPendingBlock(LockType.READ).
                 addUnderReplicatedBlock(LockType.WRITE);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
         Block block = (Block) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(block.getBlockId());
       }
     };
 
@@ -3083,11 +3048,11 @@ public class BlockManager {
         return null;
       }
 
-      private LinkedList<INode> resolvedInodes = null;
+      long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         final Block block = (Block) getParams()[0];
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(LockType.WRITE, block.getBlockId()).
                 addReplica(LockType.READ).
@@ -3095,16 +3060,12 @@ public class BlockManager {
                 addCorrupt(LockType.READ).
                 addUnderReplicatedBlock(LockType.WRITE).
                 addPendingBlock(LockType.READ);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
       @Override
       public void setUp() throws StorageException {
         Block block = (Block) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(block.getBlockId());
       }
     };
 

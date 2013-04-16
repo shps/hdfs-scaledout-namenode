@@ -586,9 +586,8 @@ public class TestTransactionalOperations {
         // BLOCK_RECEIVED_AND_DELETED
         long bid = locatedBlocks.getLocatedBlocks().get(0).getBlock().getBlockId();
         EntityManager.begin();
-        LinkedList<INode> resolvedInodes = new LinkedList<INode>();
-        resolvedInodes.add(INodeUtil.findINodeByBlock(bid));
-        tla = new TransactionLockManager(resolvedInodes);
+        long inodeId = INodeUtil.findINodeIdByBlock(bid);
+        tla = new TransactionLockManager();
         tla.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE, bid).
                 addReplica(TransactionLockManager.LockType.WRITE).
@@ -598,7 +597,7 @@ public class TestTransactionalOperations {
                 addPendingBlock(TransactionLockManager.LockType.WRITE).
                 addReplicaUc(TransactionLockManager.LockType.WRITE).
                 addInvalidatedBlock(TransactionLockManager.LockType.READ).
-                acquireByBlock();
+                acquireByBlock(inodeId);
         EntityManager.commit();
 
         // HANDLE_HEARTBEAT

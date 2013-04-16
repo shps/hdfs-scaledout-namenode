@@ -63,25 +63,21 @@ public class TestUnderReplicatedBlocks extends TestCase {
           bm.removeNode(b.getLocalBlock(), dn);
           return null;
         }
+        long inodeId;
 
-        private LinkedList<INode> resolvedInodes = null;
         @Override
         public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+          TransactionLockManager lm = new TransactionLockManager();
           lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                   addBlock(TransactionLockManager.LockType.WRITE, b.getBlockId()).
                   addReplica(TransactionLockManager.LockType.WRITE).
-                  acquireByBlock();
+                  acquireByBlock(inodeId);
         }
-        
-      @Override
-      public void setUp() throws StorageException {
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(b.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
+
+        @Override
+        public void setUp() throws StorageException {
+          inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
         }
-      }
       }.handle();
       // increment this file's replication factor
       FsShell shell = new FsShell(conf);

@@ -153,25 +153,27 @@ public class INodeUtil {
     return resolvedInodes;
   }
 
-  public static INode findINodeByBlock(long blockId) throws StorageException {
+  public static long findINodeIdByBlock(long blockId) throws StorageException {
     LOG.info(String.format(
             "Read block with no transaction by bid=%d",
             blockId));
     BlockInfoDataAccess bda = (BlockInfoDataAccess) StorageFactory.getDataAccess(BlockInfoDataAccess.class);
     BlockInfo bInfo = bda.findById(blockId);
     if (bInfo == null) {
-      return null;
+      return INode.NON_EXISTING_ID;
     }
-    return readById(bInfo.getInodeId());
+    return bInfo.getInodeId();
   }
 
-  public static LinkedList<INode> findPathINodesByBlock(long blockId) throws PersistanceException {
-    INode inode = findINodeByBlock(blockId);
+  public static LinkedList<INode> findPathINodesByBlock(long inodeId) throws PersistanceException {
     LinkedList<INode> pathInodes = new LinkedList<INode>();
-    if (inode == null) {
-      return pathInodes;
+    if (inodeId != INode.NON_EXISTING_ID) {
+      INode inode = readById(inodeId);
+      if (inode == null) {
+        return pathInodes;
+      }
+      readFromLeafToRoot(inode, pathInodes);
     }
-    readFromLeafToRoot(inode, pathInodes);
     return pathInodes;
   }
 

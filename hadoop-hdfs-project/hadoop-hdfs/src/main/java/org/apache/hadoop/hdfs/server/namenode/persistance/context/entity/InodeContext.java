@@ -85,7 +85,8 @@ public class InodeContext extends EntityContext<INode> {
           aboutToAccessStorage();
           result = dataAccess.findInodeById(inodeId);
           inodesIdIndex.put(inodeId, result);
-          inodesNameParentIndex.put(result.nameParentKey(), result);
+          if (result != null)
+            inodesNameParentIndex.put(result.nameParentKey(), result);
         }
         break;
       case ByNameAndParentId:

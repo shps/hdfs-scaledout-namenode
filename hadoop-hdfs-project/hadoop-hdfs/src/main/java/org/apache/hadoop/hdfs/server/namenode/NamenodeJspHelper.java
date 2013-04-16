@@ -27,7 +27,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.ServletContext;
@@ -99,9 +98,25 @@ class NamenodeJspHelper {
     }
   }
 
-  static String getInodeLimitText(FSNamesystem fsn)  throws PersistanceException,
+  static String getInodeLimitText(final FSNamesystem fsn)  throws PersistanceException,
           IOException{
-    long inodes = fsn.dir.totalInodes();
+      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{"/"});
+        tlm.acquire();
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return fsn.dir.totalInodes();
+      }
+    };
+    long inodes = (Long) totalInodesHandler.handle();
     long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
 
@@ -752,22 +767,18 @@ class NamenodeJspHelper {
               return blockManager.getINode(block);
             }
 
-            private LinkedList<INode> resolvedInodes = null;
+            long inodeId;
             @Override
             public void acquireLock() throws PersistanceException, IOException {
-              TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+              TransactionLockManager lm = new TransactionLockManager();
               lm.addINode(TransactionLockManager.INodeLockType.READ).
                       addBlock(TransactionLockManager.LockType.READ, block.getBlockId());
-              lm.acquireByBlock();
+              lm.acquireByBlock(inodeId);
             }
       
             @Override
             public void setUp() throws StorageException {
-              resolvedInodes = new LinkedList<INode>();
-              INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
-              if (inode != null) {
-                resolvedInodes.add(inode);
-              }
+              inodeId = INodeUtil.findINodeIdByBlock(block.getBlockId());
             }
           }.handle();
         } catch (IOException e) {

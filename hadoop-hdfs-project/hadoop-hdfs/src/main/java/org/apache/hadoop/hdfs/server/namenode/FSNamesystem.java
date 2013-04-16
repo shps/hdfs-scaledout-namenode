@@ -193,12 +193,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   private static final ThreadLocal<StringBuilder> auditBuffer =
           new ThreadLocal<StringBuilder>() {
-
-            @Override
-            protected StringBuilder initialValue() {
-              return new StringBuilder();
-            }
-          };
+    @Override
+    protected StringBuilder initialValue() {
+      return new StringBuilder();
+    }
+  };
 
   private static final void logAuditEvent(UserGroupInformation ugi,
           InetAddress addr, String cmd, String src, String dst,
@@ -355,19 +354,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     TransactionalRequestHandler initHandler = new TransactionalRequestHandler(OperationType.INITIALIZE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         INode rootInode = dir.getRootDir();
-        if (rootInode == null) 
-        {
+        if (rootInode == null) {
           rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-                createFsOwnerPermissions(new FsPermission((short) 0755)),
-                Integer.MAX_VALUE, FSDirectory.UNKNOWN_DISK_SPACE);
+                  createFsOwnerPermissions(new FsPermission((short) 0755)),
+                  Integer.MAX_VALUE, FSDirectory.UNKNOWN_DISK_SPACE);
           rootInode.setId(0);
           rootInode.setParentId(-1);
           EntityManager.add(rootInode);
-        } 
+        }
         return null;
       }
 
@@ -634,9 +631,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Close down this file system manager. Causes heartbeat and lease daemons
-   * to stop; waits briefly for them to finish, but a short timeout returns
-   * control back to caller.
+   * Close down this file system manager. Causes heartbeat and lease daemons to
+   * stop; waits briefly for them to finish, but a short timeout returns control
+   * back to caller.
    */
   void close() {
     fsRunning = false;
@@ -684,39 +681,52 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Dump all metadata into specified file
    */
   void metaSave(final String filename) throws IOException {
-    TransactionalRequestHandler metasaveHandler = new TransactionalRequestHandler(OperationType.META_SAVE) {
+
+    TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(
+                INodeResolveType.ONLY_PATH,
+                INodeLockType.READ_COMMITED,
+                new String[]{"/"});
+        tlm.acquire();
+      }
 
       @Override
       public Object performTask() throws PersistanceException, IOException {
-        checkSuperuserPrivilege();
-        File file = new File(System.getProperty("hadoop.log.dir"), filename);
-        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
-                true)));
+        return dir.totalInodes();
+      }
+    };
+    final long totalInodes = (Long) totalInodesHandler.handle();
+            checkSuperuserPrivilege();
+    File file = new File(System.getProperty("hadoop.log.dir"), filename);
+    final PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
+            true)));
+    long totalBlocks = getBlocksTotal();
+    out.println(totalInodes + " files and directories, " + totalBlocks
+            + " blocks = " + (totalInodes + totalBlocks) + " total");
 
-        long totalInodes = dir.totalInodes();
-        long totalBlocks = getBlocksTotal();
-        out.println(totalInodes + " files and directories, " + totalBlocks
-                + " blocks = " + (totalInodes + totalBlocks) + " total");
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    blockManager.getDatanodeManager().fetchDatanodes(live, dead, false);
+    out.println("Live Datanodes: " + live.size());
+    out.println("Dead Datanodes: " + dead.size());
+    TransactionalRequestHandler metaSaveHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+      }
 
-        final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-        final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-        blockManager.getDatanodeManager().fetchDatanodes(live, dead, false);
-        out.println("Live Datanodes: " + live.size());
-        out.println("Dead Datanodes: " + dead.size());
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
         blockManager.metaSave(out);
-
         out.flush();
         out.close();
         return null;
       }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // TODO
-        throw new UnsupportedOperationException("Not supported yet.");
-      }
     };
-    metasaveHandler.handleWithWriteLock(this);
+    metaSaveHandler.handle();
   }
 
   long getDefaultBlockSize() {
@@ -749,7 +759,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, FileNotFoundException, SafeModeException,
           UnresolvedLinkException, IOException {
     TransactionalRequestHandler setPermissionHanlder = new TransactionalRequestHandler(OperationType.SET_PERMISSION) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         HdfsFileStatus resultingStat = null;
@@ -794,7 +803,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, FileNotFoundException, SafeModeException,
           UnresolvedLinkException, IOException {
     TransactionalRequestHandler setOwnerHandler = new TransactionalRequestHandler(OperationType.SET_OWNER) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
 
@@ -850,7 +858,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final boolean doAccessTime, final boolean needBlockToken) throws FileNotFoundException,
           UnresolvedLinkException, IOException {
     TransactionalRequestHandler getBlockLocationsHandler = new TransactionalRequestHandler(OperationType.GET_BLOCK_LOCATIONS) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
 
@@ -984,7 +991,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     TransactionalRequestHandler concatHandler = new TransactionalRequestHandler(OperationType.CONCAT) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -1122,9 +1128,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * stores the modification and access time for this inode. The access time
-   * is precise upto an hour. The transaction, if needed, is written to the
-   * edits log but is not flushed.
+   * stores the modification and access time for this inode. The access time is
+   * precise upto an hour. The transaction, if needed, is written to the edits
+   * log but is not flushed.
    */
   void setTimes(final String src, final long mtime, final long atime)
           throws IOException, UnresolvedLinkException {
@@ -1133,7 +1139,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               + " Please set dfs.support.accessTime configuration parameter.");
     }
     TransactionalRequestHandler setTimesHandler = new TransactionalRequestHandler(OperationType.SET_TIMES) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isPermissionEnabled) {
@@ -1173,8 +1178,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void createSymlink(final String target, final String link,
           final PermissionStatus dirPerms, final boolean createParent)
           throws IOException, UnresolvedLinkException {
+    final boolean resolveLink = false;
     TransactionalRequestHandler createSymLinkHandler = new TransactionalRequestHandler(OperationType.CREATE_SYM_LINK) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (!createParent) {
@@ -1186,16 +1191,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return null;
       }
+      private LinkedList<INode> resolvedInodes = null;
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tla = new TransactionLockManager();
+        TransactionLockManager tla = new TransactionLockManager(resolvedInodes);
         tla.addINode(
                 TransactionLockManager.INodeResolveType.ONLY_PATH_WITH_UNKNOWN_HEAD,
                 TransactionLockManager.INodeLockType.WRITE,
-                false,
+                resolveLink,
                 new String[]{link}).
                 acquire();
+      }
+
+      @Override
+      public void setUp() throws UnresolvedPathException, PersistanceException {
+        resolvedInodes = INodeUtil.resolvePathWithNoTransaction(link, resolveLink);
       }
     };
     HdfsFileStatus resultingStat = (HdfsFileStatus) createSymLinkHandler.handleWithWriteLock(this);
@@ -1248,14 +1259,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#setReplication(String, short)
    * @param src file name
    * @param replication new replication
-   * @return true if successful; false if file does not exist or is a
-   * directory
+   * @return true if successful; false if file does not exist or is a directory
    */
   // TODO - JIM. Is this ok? Why keep the old version of oldSetReplication?
   boolean setReplication(final String src, final short replication) throws IOException {
     blockManager.verifyReplication(src, replication, null);
     TransactionalRequestHandler setReplicationHandler = new TransactionalRequestHandler(OperationType.SET_REPLICATION) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         boolean isFile = false;
@@ -1301,7 +1310,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   long getPreferredBlockSize(final String filename)
           throws IOException, UnresolvedLinkException {
     TransactionalRequestHandler getPreferredBlockSizeHandler = new TransactionalRequestHandler(OperationType.GET_PREFERRED_BLOCK_SIZE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isPermissionEnabled) {
@@ -1358,7 +1366,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           FileNotFoundException, ParentNotDirectoryException, IOException {
     final boolean resolveLink = false;
     TransactionalRequestHandler startFileHanlder = new TransactionalRequestHandler(OperationType.START_FILE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
 //        LOG.error(src);
@@ -1475,8 +1482,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         return null;
       }
-
       protected LinkedList<INode> resolvedInodes = null; // For the operations requires to have inodes before starting transactions.
+
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager(resolvedInodes);
@@ -1496,10 +1503,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquire();
       }
-      
+
       @Override
-      public void setUp() throws PersistanceException, IOException
-      {
+      public void setUp() throws PersistanceException, IOException {
         resolvedInodes = INodeUtil.resolvePathWithNoTransaction(src, resolveLink);
       }
     };
@@ -1510,17 +1516,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create new or open an existing file for append.<p>
    *
    * In case of opening the file for append, the method returns the last block
-   * of the file if this is a partial block, which can still be used for
-   * writing more data. The client uses the returned block locations to form
-   * the data pipeline for this block.<br> The method returns null if the last
-   * block is full or if this is a new file. The client then allocates a new
-   * block with the next call using {@link NameNode#addBlock()}.<p>
+   * of the file if this is a partial block, which can still be used for writing
+   * more data. The client uses the returned block locations to form the data
+   * pipeline for this block.<br> The method returns null if the last block is
+   * full or if this is a new file. The client then allocates a new block with
+   * the next call using {@link NameNode#addBlock()}.<p>
    *
    * For description of parameters and exceptions thrown see
    * {@link ClientProtocol#create()}
    *
-   * @return the last block locations if the block is partial or null
-   * otherwise
+   * @return the last block locations if the block is partial or null otherwise
    */
   private LocatedBlock startFileInternal(String src,
           PermissionStatus permissions, String holder, String clientMachine,
@@ -1643,8 +1648,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Recover lease; Immediately revoke the lease of the current lease holder
-   * and start lease recovery so that the file can be forced to be closed.
+   * Recover lease; Immediately revoke the lease of the current lease holder and
+   * start lease recovery so that the file can be forced to be closed.
    *
    * @param src the path of the file to start lease recovery
    * @param holder the lease holder's name
@@ -1655,7 +1660,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean recoverLease(final String src, final String holder, final String clientMachine)
           throws IOException {
     TransactionalRequestHandler recoverLeaseHandler = new TransactionalRequestHandler(OperationType.RECOVER_LEASE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -1793,7 +1797,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               + " Please refer to dfs.support.append configuration parameter.");
     }
     TransactionalRequestHandler appendFileHandler = new TransactionalRequestHandler(OperationType.APPEND_FILE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         // TODO JIM - Wasif had some code setting the partition key here
@@ -1845,19 +1848,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void setBlockPoolId(String bpid) {
-    blockPoolId = bpid; 
+    blockPoolId = bpid;
   }
 
   /**
    * The client would like to obtain an additional block for the indicated
-   * filename (which is being written-to). Return an array that consists of
-   * the block, plus a set of machines. The first on this list should be where
-   * the client writes data. Subsequent items in the list must be provided in
-   * the connection to the first datanode.
+   * filename (which is being written-to). Return an array that consists of the
+   * block, plus a set of machines. The first on this list should be where the
+   * client writes data. Subsequent items in the list must be provided in the
+   * connection to the first datanode.
    *
    * Make sure the previous blocks have been reported by datanodes and are
-   * replicated. Will return an empty 2-elt array if we want the client to
-   * "try again later".
+   * replicated. Will return an empty 2-elt array if we want the client to "try
+   * again later".
    */
   LocatedBlock getAdditionalBlockWithTransaction(final String src,
           final String clientName,
@@ -1867,7 +1870,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           QuotaExceededException, SafeModeException, UnresolvedLinkException,
           IOException {
     TransactionalRequestHandler additionalBlockHanlder = new TransactionalRequestHandler(OperationType.GET_ADDITIONAL_BLOCK) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return getAdditionalBlock(src, clientName, previous, excludedNodes);
@@ -1894,14 +1896,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * The client would like to obtain an additional block for the indicated
-   * filename (which is being written-to). Return an array that consists of
-   * the block, plus a set of machines. The first on this list should be where
-   * the client writes data. Subsequent items in the list must be provided in
-   * the connection to the first datanode.
+   * filename (which is being written-to). Return an array that consists of the
+   * block, plus a set of machines. The first on this list should be where the
+   * client writes data. Subsequent items in the list must be provided in the
+   * connection to the first datanode.
    *
    * Make sure the previous blocks have been reported by datanodes and are
-   * replicated. Will return an empty 2-elt array if we want the client to
-   * "try again later".
+   * replicated. Will return an empty 2-elt array if we want the client to "try
+   * again later".
    */
   LocatedBlock getAdditionalBlock(String src,
           String clientName,
@@ -1994,14 +1996,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * @see NameNode#getAdditionalDatanode(String, ExtendedBlock,
-   * DatanodeInfo[], DatanodeInfo[], int, String)
+   * @see NameNode#getAdditionalDatanode(String, ExtendedBlock, DatanodeInfo[],
+   * DatanodeInfo[], int, String)
    */
   LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
           final DatanodeInfo[] existings, final HashMap<Node, Node> excludes,
           final int numAdditionalNodes, final String clientName) throws IOException {
     TransactionalRequestHandler getAdditionalDatanodeHandler = new TransactionalRequestHandler(OperationType.GET_ADDITIONAL_DATANODE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
 
@@ -2061,7 +2062,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws LeaseExpiredException, FileNotFoundException,
           UnresolvedLinkException, IOException {
     TransactionalRequestHandler abandonBlockHandler = new TransactionalRequestHandler(OperationType.ABANDON_BLOCK) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         //
@@ -2108,7 +2108,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // make sure that we still have the lease on this file.
   private INodeFile checkLease(String src, String holder)
-          throws LeaseExpiredException, UnresolvedLinkException, 
+          throws LeaseExpiredException, UnresolvedLinkException,
           PersistanceException, IOException {
     assert hasReadOrWriteLock();
     INodeFile file = dir.getFileINode(src);
@@ -2177,7 +2177,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws SafeModeException, UnresolvedLinkException, IOException {
     checkBlock(last);
     TransactionalRequestHandler completeFileHandler = new TransactionalRequestHandler(OperationType.COMPLETE_FILE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         boolean success = completeFileInternal(src, holder,
@@ -2275,9 +2274,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Check that the indicated file's blocks are present and replicated. If
-   * not, return false. If checkall is true, then check all blocks, otherwise
-   * check only penultimate block.
+   * Check that the indicated file's blocks are present and replicated. If not,
+   * return false. If checkall is true, then check all blocks, otherwise check
+   * only penultimate block.
    *
    * @throws IOException
    */
@@ -2289,20 +2288,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // check all blocks of the file.
         //
         for (BlockInfo block : v.getBlocks()) {
-            if (!block.isComplete())
-            {
-                BlockInfo completedBlock = kthfsTryToCompleteBlock(v, block.getBlockIndex()); // see kthfsTryToCompleteBlock(...) for comments about this fix
-                if(completedBlock != null)
-                {
-                    block = completedBlock;
-                }
-                if(!block.isComplete())
-                {
-                    LOG.info("BLOCK* NameSystem.checkFileProgress: "
-                        + "block " + block + " has not reached minimal replication "
-                        + blockManager.minReplication);
-                    return false;
-                }
+          if (!block.isComplete()) {
+            BlockInfo completedBlock = kthfsTryToCompleteBlock(v, block.getBlockIndex()); // see kthfsTryToCompleteBlock(...) for comments about this fix
+            if (completedBlock != null) {
+              block = completedBlock;
+            }
+            if (!block.isComplete()) {
+              LOG.info("BLOCK* NameSystem.checkFileProgress: "
+                      + "block " + block + " has not reached minimal replication "
+                      + blockManager.minReplication);
+              return false;
+            }
 
           }
         }
@@ -2310,20 +2306,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //
         // check the penultimate block of this file
         //
-          
-        
+
+
         BlockInfo b = v.getPenultimateBlock();
         if (b != null && !b.isComplete()) {
-            
-            kthfsTryToCompleteBlock(v, v.numBlocks() - 2);  // see kthfsTryToCompleteBlock(...) for comments about this fix
-            b = v.getPenultimateBlock();
-            
-            if(!b.isComplete()) {
-                LOG.info("BLOCK* NameSystem.checkFileProgress: "
-                  + "block " + b + " has not reached minimal replication "
-                  + blockManager.minReplication);
-                return false;
-            }
+
+          kthfsTryToCompleteBlock(v, v.numBlocks() - 2);  // see kthfsTryToCompleteBlock(...) for comments about this fix
+          b = v.getPenultimateBlock();
+
+          if (!b.isComplete()) {
+            LOG.info("BLOCK* NameSystem.checkFileProgress: "
+                    + "block " + b + " has not reached minimal replication "
+                    + blockManager.minReplication);
+            return false;
+          }
         }
       }
       return true;
@@ -2352,7 +2348,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean renameTo(final String src, final String dst)
           throws IOException, UnresolvedLinkException, ImproperUsageException {
     TransactionalRequestHandler renameToHandler = new TransactionalRequestHandler(OperationType.RENAME_TO) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         boolean status = false;
@@ -2381,7 +2376,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
                 false,
-                new String[]{src,dst}).
+                new String[]{src, dst}).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
@@ -2436,7 +2431,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void renameTo(final String src, final String dst, final Options.Rename... options)
           throws IOException, UnresolvedLinkException {
     TransactionalRequestHandler renameTo2Handler = new TransactionalRequestHandler(OperationType.RENAME_TO2) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         HdfsFileStatus resultingStat = null;
@@ -2468,7 +2462,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
                 TransactionLockManager.INodeLockType.WRITE,
                 false,
-                new String[]{src,dst}).
+                new String[]{src, dst}).
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
@@ -2511,7 +2505,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws AccessControlException, SafeModeException,
           UnresolvedLinkException, IOException {
     TransactionalRequestHandler deleteHandler = new TransactionalRequestHandler(OperationType.DELETE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return delete(src, recursive);
@@ -2519,7 +2512,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        LOG.fatal("DELETE root dir is "+getFsDirectory().getRootDir());
+        LOG.fatal("DELETE root dir is " + getFsDirectory().getRootDir());
         TransactionLockManager tla = new TransactionLockManager();
         tla.addINode(
                 TransactionLockManager.INodeResolveType.PATH_AND_ALL_CHILDREN_RECURESIVELY,
@@ -2683,7 +2676,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final boolean createParent) throws IOException, UnresolvedLinkException {
     final boolean resolvedLink = false;
     TransactionalRequestHandler mkdirsHanlder = new TransactionalRequestHandler(OperationType.MKDIRS) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -2699,8 +2691,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return status;
       }
-
       private LinkedList<INode> resolvedINodes = null;
+
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager(resolvedINodes);
@@ -2711,10 +2703,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 new String[]{src}).
                 acquire();
       }
-      
+
       @Override
-      public void setUp() throws UnresolvedPathException, PersistanceException
-      {
+      public void setUp() throws UnresolvedPathException, PersistanceException {
         resolvedINodes = INodeUtil.resolvePathWithNoTransaction(src, resolvedLink);
       }
     };
@@ -2763,7 +2754,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   ContentSummary getContentSummary(final String src) throws AccessControlException,
           FileNotFoundException, UnresolvedLinkException, IOException {
     TransactionalRequestHandler getContentSummaryHandler = new TransactionalRequestHandler(OperationType.GET_CONTENT_SUMMARY) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isPermissionEnabled) {
@@ -2792,7 +2782,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void setQuota(final String path, final long nsQuota, final long dsQuota)
           throws IOException, UnresolvedLinkException {
     TransactionalRequestHandler setQuotaHanlder = new TransactionalRequestHandler(OperationType.SET_QUOTA) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -2829,7 +2818,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     NameNode.stateChangeLog.info("BLOCK* NameSystem.fsync: file "
             + src + " for " + clientName);
     TransactionalRequestHandler fsyncHandler = new TransactionalRequestHandler(OperationType.FSYNC) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -2861,13 +2849,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *
    * @param src The filename
    * @param lease The lease for the client creating the file
-   * @param recoveryLeaseHolder reassign lease to this holder if the last
-   * block needs recovery; keep current holder if null.
-   * @throws AlreadyBeingCreatedException if file is waiting to achieve
-   * minimal replication;<br> RecoveryInProgressException if lease recovery is
-   * in progress.<br> IOException in case of an error.
-   * @return true if file has been successfully finalized and closed or false
-   * if block recovery has been initiated
+   * @param recoveryLeaseHolder reassign lease to this holder if the last block
+   * needs recovery; keep current holder if null.
+   * @throws AlreadyBeingCreatedException if file is waiting to achieve minimal
+   * replication;<br> RecoveryInProgressException if lease recovery is in
+   * progress.<br> IOException in case of an error.
+   * @return true if file has been successfully finalized and closed or false if
+   * block recovery has been initiated
    */
   boolean internalReleaseLease(Lease lease, String src,
           String recoveryLeaseHolder) throws AlreadyBeingCreatedException,
@@ -3019,40 +3007,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     EntityManager.update(pendingFile);
     return leaseManager.reassignLease(lease, src, newHolder);
   }
-  
-  
-   /**
-     * Why this fix was needed
-     * 
-     * first two important states for block
-     * Committed: state where the client tells the NN that it has written to DN
-     * Completed: Committed + the data node tells the NN that it has successfully received the file 
-     * When writing a file following events happen
-     * client asks NN for block
-     * client writes to the block. When the block is full client
-     * asks the NN for a new block. NN marks the last block COMPLETED (if it has
-     * received ack from the DN) and it issues a new block. 
-     * Sometimes ack from DN is delayed. While issuing a new block the NN checks for
-     * the state of penultimate block. It will not be in COMPLETED state and 
-     * it throws an exception. 
-     * 
-     * 
-     * 
-     * @param fileINode inode file
-     * @param blockIndex block index that you want to fix
-     * @return returns the fixed block or null if fails
-     *
-     */
- 
+
+  /**
+   * Why this fix was needed
+   *
+   * first two important states for block Committed: state where the client
+   * tells the NN that it has written to DN Completed: Committed + the data node
+   * tells the NN that it has successfully received the file When writing a file
+   * following events happen client asks NN for block client writes to the
+   * block. When the block is full client asks the NN for a new block. NN marks
+   * the last block COMPLETED (if it has received ack from the DN) and it issues
+   * a new block. Sometimes ack from DN is delayed. While issuing a new block
+   * the NN checks for the state of penultimate block. It will not be in
+   * COMPLETED state and it throws an exception.
+   *
+   *
+   *
+   * @param fileINode inode file
+   * @param blockIndex block index that you want to fix
+   * @return returns the fixed block or null if fails
+   *
+   */
   private BlockInfo kthfsTryToCompleteBlock(final INodeFile fileINode, int blockIndex)
-          throws IOException, PersistanceException
-  {
-        assert fileINode.isUnderConstruction();
-        assert hasWriteLock();
-        return blockManager.kthfsTryToCompleteBlock(fileINode, blockIndex);
-      
+          throws IOException, PersistanceException {
+    assert fileINode.isUnderConstruction();
+    assert hasWriteLock();
+    return blockManager.kthfsTryToCompleteBlock(fileINode, blockIndex);
+
   }
-  
+
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
           final Block commitBlock) throws IOException, PersistanceException {
     assert fileINode.isUnderConstruction();
@@ -3100,7 +3083,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException, UnresolvedLinkException {
 
     TransactionalRequestHandler commitBlockSyncHanlder = new TransactionalRequestHandler(OperationType.COMMIT_BLOCK_SYNCHRONIZATION) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         String src = "";
@@ -3197,8 +3179,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         return src;
       }
-
       private LinkedList<INode> resolvedInodes = null;
+      private long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tla = new TransactionLockManager(resolvedInodes);
@@ -3211,11 +3193,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addExcess(LockType.READ).
                 addReplicaUc(LockType.WRITE).
                 addUnderReplicatedBlock(LockType.WRITE).
-                acquireByBlock();
+                acquireByBlock(inodeId);
       }
-            @Override
+
+      @Override
       public void setUp() throws PersistanceException {
-        resolvedInodes = INodeUtil.findPathINodesByBlock(lastblock.getBlockId());
+        inodeId = INodeUtil.findINodeIdByBlock(lastblock.getBlockId());
+        resolvedInodes = INodeUtil.findPathINodesByBlock(inodeId);
       }
     };
     String src = (String) commitBlockSyncHanlder.handleWithWriteLock(this);
@@ -3237,7 +3221,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void renewLease(final String holder) throws ImproperUsageException, IOException {
     TransactionalRequestHandler renewLeaseHandler = new TransactionalRequestHandler(OperationType.RENEW_LEASE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -3273,7 +3256,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final boolean needLocation)
           throws AccessControlException, UnresolvedLinkException, IOException {
     TransactionalRequestHandler getListingHandler = new TransactionalRequestHandler(OperationType.GET_LISTING) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isPermissionEnabled) {
@@ -3319,19 +3301,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /////////////////////////////////////////////////////////
   /**
    * Register Datanode. <p> The purpose of registration is to identify whether
-   * the new datanode serves a new data storage, and will report new data
-   * block copies, which the namenode was not aware of; or the datanode is a
+   * the new datanode serves a new data storage, and will report new data block
+   * copies, which the namenode was not aware of; or the datanode is a
    * replacement node for the data storage that was previously served by a
    * different or the same (in terms of host:port) datanode. The data storages
-   * are distinguished by their storageIDs. When a new data storage is
-   * reported the namenode issues a new unique storageID. <p> Finally, the
-   * namenode returns its namespaceID as the registrationID for the datanodes.
-   * namespaceID is a persistent attribute of the name space. The
-   * registrationID is checked every time the datanode is communicating with
-   * the namenode. Datanodes with inappropriate registrationID are rejected.
-   * If the namenode stops, and then restarts it can restore its namespaceID
-   * and will continue serving the datanodes that has previously registered
-   * with the namenode without restarting the whole cluster.
+   * are distinguished by their storageIDs. When a new data storage is reported
+   * the namenode issues a new unique storageID. <p> Finally, the namenode
+   * returns its namespaceID as the registrationID for the datanodes.
+   * namespaceID is a persistent attribute of the name space. The registrationID
+   * is checked every time the datanode is communicating with the namenode.
+   * Datanodes with inappropriate registrationID are rejected. If the namenode
+   * stops, and then restarts it can restore its namespaceID and will continue
+   * serving the datanodes that has previously registered with the namenode
+   * without restarting the whole cluster.
    *
    * @see org.apache.hadoop.hdfs.server.datanode.DataNode
    */
@@ -3341,7 +3323,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // TODO JIM - should next line not go in performTask() ?
       getBlockManager().getDatanodeManager().registerDatanode(nodeReg, true, OperationType.REGISTER_DATANODE);
       new TransactionalRequestHandler(OperationType.REGISTER_DATANODE) {
-
         @Override
         public Object performTask() throws PersistanceException, IOException {
           checkSafeMode();
@@ -3370,8 +3351,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * The given node has reported in. This method should: 1) Record the
-   * heartbeat, so the datanode isn't timed out 2) Adjust usage stats for
-   * future block allocation
+   * heartbeat, so the datanode isn't timed out 2) Adjust usage stats for future
+   * block allocation
    *
    * If a substantial amount of time passed since the last datanode heartbeat
    * then request an immediate block report.
@@ -3589,7 +3570,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void saveNamespace() throws AccessControlException, IOException {
     TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler(OperationType.SAVE_NAMESPACE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         checkSuperuserPrivilege();
@@ -3652,18 +3632,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * SafeModeInfo contains information related to the safe mode. <p> An
-   * instance of {@link SafeModeInfo} is created when the name node enters
-   * safe mode. <p> During name node startup {@link SafeModeInfo} counts the
-   * number of <EntityManager>safe blocks</EntityManager>, those that have at
-   * least the minimal number of replicas, and calculates the ratio of safe
-   * blocks to the total number of blocks in the system, which is the size of
-   * blocks in {@link FSNamesystem#blockManager}. When the ratio reaches the
-   * {@link #threshold} it starts the {@link SafeModeMonitor} daemon in order
-   * to monitor whether the safe mode {@link #extension} is passed. Then it
-   * leaves safe mode and destroys itself. <p> If safe mode is turned on
-   * manually then the number of safe blocks is not tracked because the name
-   * node is not intended to leave safe mode automatically in the case.
+   * SafeModeInfo contains information related to the safe mode. <p> An instance
+   * of {@link SafeModeInfo} is created when the name node enters safe mode. <p>
+   * During name node startup {@link SafeModeInfo} counts the number of
+   * <EntityManager>safe blocks</EntityManager>, those that have at least the
+   * minimal number of replicas, and calculates the ratio of safe blocks to the
+   * total number of blocks in the system, which is the size of blocks in
+   * {@link FSNamesystem#blockManager}. When the ratio reaches the
+   * {@link #threshold} it starts the {@link SafeModeMonitor} daemon in order to
+   * monitor whether the safe mode {@link #extension} is passed. Then it leaves
+   * safe mode and destroys itself. <p> If safe mode is turned on manually then
+   * the number of safe blocks is not tracked because the name node is not
+   * intended to leave safe mode automatically in the case.
    *
    * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction)
    * @see SafeModeMonitor
@@ -3724,8 +3704,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private boolean initializedReplQueues = false;
     /**
-     * Was safemode entered automatically because available resources were
-     * low.
+     * Was safemode entered automatically because available resources were low.
      */
     private boolean resourcesLow = false;
 
@@ -3756,9 +3735,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Creates SafeModeInfo when safe mode is entered manually, or because
      * available resources are low.
      *
-     * The {@link #threshold} is set to 1.5 so that it could never be
-     * reached. {@link #blockTotal} is set to -1 to indicate that safe mode
-     * is manual.
+     * The {@link #threshold} is set to 1.5 so that it could never be reached.
+     * {@link #blockTotal} is set to -1 to indicate that safe mode is manual.
      *
      * @see SafeModeInfo
      */
@@ -3809,9 +3787,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     /**
-     * Leave safe mode. <p> Switch to manual safe mode if distributed
-     * upgrade is required.<br> Check for invalid, under- & over-replicated
-     * blocks in the end of startup.
+     * Leave safe mode. <p> Switch to manual safe mode if distributed upgrade is
+     * required.<br> Check for invalid, under- & over-replicated blocks in the
+     * end of startup.
      *
      * @throws IOException
      */
@@ -3877,8 +3855,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     /**
-     * Check whether we have reached the threshold for initializing
-     * replication queues.
+     * Check whether we have reached the threshold for initializing replication
+     * queues.
      */
     private synchronized boolean canInitializeReplQueues() {
       return blockSafe >= blockReplQueueThreshold;
@@ -3902,8 +3880,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     /**
-     * There is no need to enter safe mode if DFS is empty or
-     * {@link #threshold} == 0
+     * There is no need to enter safe mode if DFS is empty or {@link #threshold}
+     * == 0
      */
     private boolean needEnter() {
       return (threshold != 0 && blockSafe < blockThreshold)
@@ -3998,8 +3976,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     /**
-     * Decrement number of safe blocks if current block has fallen below
-     * minimal replication.
+     * Decrement number of safe blocks if current block has fallen below minimal
+     * replication.
      *
      * @param replication current replication
      * @throws IOException
@@ -4020,8 +3998,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //      blockSafe = completeBlocks.size();
 //    }
     /**
-     * Check if safe mode was entered manually or automatically (at startup,
-     * or when disk space is low).
+     * Check if safe mode was entered manually or automatically (at startup, or
+     * when disk space is low).
      */
     private boolean isManual() {
       return extension == Integer.MAX_VALUE && !resourcesLow;
@@ -4049,8 +4027,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     /**
-     * A tip on how safe mode is to be turned off: manually or
-     * automatically.
+     * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
       if (reached < 0) {
@@ -4183,7 +4160,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // leave safe mode and stop the monitor
         try {
           TransactionalRequestHandler handler = new TransactionalRequestHandler(OperationType.SAFE_MODE_MONITOR) {
-
             @Override
             public Object performTask() throws PersistanceException, IOException {
               leaveSafeMode(true);
@@ -4213,7 +4189,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   boolean setSafeMode(final SafeModeAction action) throws IOException {
     TransactionalRequestHandler setSafemodeLeaveHandler = new TransactionalRequestHandler(OperationType.SET_SAFE_MODE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (action != SafeModeAction.SAFEMODE_GET) {
@@ -4458,7 +4433,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   UpgradeCommand processDistributedUpgradeCommand(final UpgradeCommand comm) throws IOException {
     TransactionalRequestHandler upgradeHandler = new TransactionalRequestHandler(OperationType.PROCESS_DISTRIBUTED_UPGRADE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         return upgradeManager.processUpgradeCommand(comm, true);
@@ -4476,31 +4450,31 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
-  private FSPermissionChecker checkOwner(String path) throws AccessControlException, 
-          UnresolvedLinkException, PersistanceException, IOException{
+  private FSPermissionChecker checkOwner(String path) throws AccessControlException,
+          UnresolvedLinkException, PersistanceException, IOException {
     return checkPermission(path, true, null, null, null, null);
   }
 
-  private FSPermissionChecker checkPathAccess(String path, FsAction access) 
+  private FSPermissionChecker checkPathAccess(String path, FsAction access)
           throws AccessControlException, UnresolvedLinkException,
           PersistanceException, IOException {
     return checkPermission(path, false, null, null, access, null);
   }
 
   private FSPermissionChecker checkParentAccess(String path, FsAction access)
-          throws AccessControlException, UnresolvedLinkException, 
+          throws AccessControlException, UnresolvedLinkException,
           PersistanceException, IOException {
     return checkPermission(path, false, null, access, null, null);
   }
 
-  private FSPermissionChecker checkAncestorAccess(String path, FsAction access) 
-          throws AccessControlException, UnresolvedLinkException, 
-          PersistanceException , IOException{
+  private FSPermissionChecker checkAncestorAccess(String path, FsAction access)
+          throws AccessControlException, UnresolvedLinkException,
+          PersistanceException, IOException {
     return checkPermission(path, false, access, null, null, null);
   }
 
-  private FSPermissionChecker checkTraverse(String path) 
-          throws AccessControlException, UnresolvedLinkException, 
+  private FSPermissionChecker checkTraverse(String path)
+          throws AccessControlException, UnresolvedLinkException,
           PersistanceException, IOException {
     return checkPermission(path, false, null, null, null, null);
   }
@@ -4519,7 +4493,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private FSPermissionChecker checkPermission(String path, boolean doCheckOwner,
           FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-          FsAction subAccess) throws AccessControlException, 
+          FsAction subAccess) throws AccessControlException,
           UnresolvedLinkException, PersistanceException, IOException {
     FSPermissionChecker pc = new FSPermissionChecker(
             fsOwner.getShortUserName(), supergroup);
@@ -4540,16 +4514,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Check to see if we have exceeded the limit on the number of inodes.
    */
   void checkFsObjectLimit(OperationType opType) throws IOException, PersistanceException {
-      
-      long totalInodes = dir.totalInodes();
-      long totalBlocks = getBlocksTotalNoTx(opType);
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("checkFsObjectLimit limit "
-                  +maxFsObjects+" cur objs "
-                  + (totalInodes + totalBlocks) 
-                  + " (inodes: "+totalInodes+", blocks "+totalBlocks+")");
-      }
-      
+
+    long totalInodes = dir.totalInodes();
+    long totalBlocks = getBlocksTotalNoTx(opType);
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("checkFsObjectLimit limit "
+              + maxFsObjects + " cur objs "
+              + (totalInodes + totalBlocks)
+              + " (inodes: " + totalInodes + ", blocks " + totalBlocks + ")");
+    }
+
     if (maxFsObjects != 0
             && maxFsObjects <= totalInodes + totalBlocks) {
       throw new IOException("Exceeded the configured number of objects "
@@ -4636,7 +4610,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public String getFSState() {
     try {
       TransactionalRequestHandler getFSStateHandler = new TransactionalRequestHandler(OperationType.GET_FS_STATE) {
-
         @Override
         public Object performTask() throws PersistanceException, IOException {
           return isInSafeMode() ? "safeMode" : "Operational";
@@ -4682,13 +4655,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // TODO Jim - Leader leaves
     try {
       TransactionalRequestHandler leaderExitHandler = new TransactionalRequestHandler(OperationType.LEADER_EXIT) {
-
         @Override
         public Object performTask() throws PersistanceException, IOException {
 
           Leader leader = EntityManager.find(Leader.Finder.ById, nameNode.getId(), Leader.DEFAULT_PARTITION_VALUE);
-          if (leader != null)
+          if (leader != null) {
             EntityManager.remove(leader);
+          }
           return null;
         }
 
@@ -4777,8 +4750,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Get a new generation stamp together with an access token for a block
-   * under construction
+   * Get a new generation stamp together with an access token for a block under
+   * construction
    *
    * This method is called for recovering a failed pipeline or setting up a
    * pipeline to append to a block.
@@ -4791,7 +4764,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock updateBlockForPipeline(final ExtendedBlock block,
           final String clientName) throws IOException {
     TransactionalRequestHandler updateBlockForPipelineHandler = new TransactionalRequestHandler(OperationType.UPDATE_BLOCK_FOR_PIPELINE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         LocatedBlock locatedBlock;
@@ -4806,24 +4778,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //getEditLog().logSync();
         return locatedBlock;
       }
+      long inodeId;
 
-      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(INodeLockType.READ).
                 addBlock(LockType.READ, block.getBlockId()).
                 addGenerationStamp(LockType.WRITE);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
-      
+
       @Override
       public void setUp() throws StorageException {
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(block.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(block.getBlockId());
       }
     };
     return (LocatedBlock) updateBlockForPipelineHandler.handleWithWriteLock(this);
@@ -4842,7 +4810,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           final ExtendedBlock newBlock, final DatanodeID[] newNodes)
           throws IOException, ImproperUsageException {
     TransactionalRequestHandler updatePipelineHanlder = new TransactionalRequestHandler(OperationType.UPDATE_PIPELINE) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -4860,24 +4827,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         updatePipelineInternal(clientName, oldBlock, newBlock, newNodes);
         return null;
       }
+      long inodeId;
 
-      private LinkedList<INode> resolvedInodes = null;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager lm = new TransactionLockManager(resolvedInodes);
+        TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(INodeLockType.WRITE).
                 addBlock(LockType.WRITE, oldBlock.getBlockId()).
                 addReplicaUc(LockType.READ);
-        lm.acquireByBlock();
+        lm.acquireByBlock(inodeId);
       }
 
       @Override
       public void setUp() throws StorageException {
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(oldBlock.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(oldBlock.getBlockId());
       }
     };
     updatePipelineHanlder.handleWithWriteLock(this);
@@ -5014,18 +4977,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * @param path Restrict corrupt files to this portion of namespace.
-   * @param startBlockAfter Support for continuation; the set of files we
-   * return back is ordered by blockid; startBlockAfter tells where to start
-   * from
+   * @param startBlockAfter Support for continuation; the set of files we return
+   * back is ordered by blockid; startBlockAfter tells where to start from
    * @return a list in which each entry describes a corrupt file/block
    * @throws AccessControlException
    * @throws IOException
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(final String path,
           final String startBlockAfter) throws IOException {
-    
+
     final Collection<UnderReplicatedBlock> urBlocks = findUnderReplicatedBlocks(OperationType.LIST_CORRUPT_FILE_BLOCKS);
-    
+
     if (!isPopulatingReplQueues()) {
       throw new IOException("Cannot run listCorruptFileBlocks because "
               + "replication queues have not been initialized.");
@@ -5038,7 +5000,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (startBlockAfter != null) {
       startBlockId = Block.filename2id(startBlockAfter);
     }
-    
+
     TransactionalRequestHandler listCorruptFileBlocksHandler = new TransactionalRequestHandler(OperationType.LIST_CORRUPT_FILE_BLOCKS) {
       @Override
       public Object performTask() throws PersistanceException, IOException {
@@ -5055,28 +5017,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         return corruptFiles;
       }
-
       private LinkedList<INode> resolvedInodes = null;
+      private long inodeId;
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
-        TransactionLockManager tlm = new TransactionLockManager();
+        TransactionLockManager tlm = new TransactionLockManager(resolvedInodes);
         tlm.addINode(INodeResolveType.FROM_CHILD_TO_ROOT, INodeLockType.READ_COMMITED).
                 addBlock(LockType.READ_COMMITTED, urblk.getBlockId()).
                 addReplica(LockType.READ_COMMITTED).
                 addCorrupt(LockType.READ_COMMITTED).
                 addExcess(LockType.READ_COMMITTED)
-                .acquireByBlock();
+                .acquireByBlock(inodeId);
       }
 
       @Override
-      public void setUp() throws StorageException {
+      public void setUp() throws PersistanceException {
         UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
-        resolvedInodes = new LinkedList<INode>();
-        INode inode = INodeUtil.findINodeByBlock(urblk.getBlockId());
-        if (inode != null) {
-          resolvedInodes.add(inode);
-        }
+        inodeId = INodeUtil.findINodeIdByBlock(urblk.getBlockId());
+        resolvedInodes = INodeUtil.findPathINodesByBlock(inodeId);
       }
     };
 
@@ -5091,7 +5050,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("list corrupt file blocks returned: " + corruptFiles.size());
     return corruptFiles;
   }
-  
+
   private Collection<UnderReplicatedBlock> findUnderReplicatedBlocks(OperationType opType) throws IOException {
     return (Collection<UnderReplicatedBlock>) new LightWeightRequestHandler(opType) {
       @Override
@@ -5134,7 +5093,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   Token<DelegationTokenIdentifier> getDelegationToken(final Text renewer)
           throws IOException {
     TransactionalRequestHandler getDelegationTokenHandler = new TransactionalRequestHandler(OperationType.GET_DELEGATION_TOKEN) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         Token<DelegationTokenIdentifier> token;
@@ -5183,7 +5141,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   long renewDelegationToken(final Token<DelegationTokenIdentifier> token)
           throws InvalidToken, IOException {
     TransactionalRequestHandler renewDelegationTokenHanlder = new TransactionalRequestHandler(OperationType.RENEW_DELEGATION_TOKEN) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         long expiryTime;
@@ -5221,7 +5178,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void cancelDelegationToken(final Token<DelegationTokenIdentifier> token)
           throws IOException {
     TransactionalRequestHandler cancelDelegationTokenHandler = new TransactionalRequestHandler(OperationType.CANCEL_DELEGATION_TOKEN) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         if (isInSafeMode()) {
@@ -5316,8 +5272,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Client invoked methods are invoked over RPC and will be in RPC call
-   * context even if the client exits.
+   * Client invoked methods are invoked over RPC and will be in RPC call context
+   * even if the client exits.
    */
   private boolean isExternalInvocation() {
     return Server.isRpcInvocation();
@@ -5368,7 +5324,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public String getSafemode() {
     try {
       TransactionalRequestHandler getSafemodeHandler = new TransactionalRequestHandler(OperationType.GET_SAFE_MODE) {
-
         @Override
         public Object performTask() throws PersistanceException, IOException {
           if (!isInSafeMode()) {
@@ -5441,8 +5396,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Returned information is a JSON representation of map with host name as
-   * the key and value is a map of live node attribute keys to its values
+   * Returned information is a JSON representation of map with host name as the
+   * key and value is a map of live node attribute keys to its values
    */
   @Override // NameNodeMXBean
   public String getLiveNodes() {
@@ -5461,8 +5416,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Returned information is a JSON representation of map with host name as
-   * the key and value is a map of dead node attribute keys to its values
+   * Returned information is a JSON representation of map with host name as the
+   * key and value is a map of dead node attribute keys to its values
    */
   @Override // NameNodeMXBean
   public String getDeadNodes() {
@@ -5480,9 +5435,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Returned information is a JSON representation of map with host name as
-   * the key and value is a map of decomisioning node attribute keys to its
-   * values
+   * Returned information is a JSON representation of map with host name as the
+   * key and value is a map of decomisioning node attribute keys to its values
    */
   @Override // NameNodeMXBean
   public String getDecomNodes() {
@@ -5558,9 +5512,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return false;
     }
   }
-  
-  public String getSupergroup()
-  {
-      return supergroup;
+
+  public String getSupergroup() {
+    return supergroup;
   }
 }
