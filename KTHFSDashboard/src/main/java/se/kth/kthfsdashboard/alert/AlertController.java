@@ -1,10 +1,13 @@
 package se.kth.kthfsdashboard.alert;
 
+import java.io.Serializable;
 import java.util.List;
 import javax.ejb.EJB;
+import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
+import javax.faces.context.FacesContext;
 
 /**
  *
@@ -13,75 +16,82 @@ import javax.faces.bean.RequestScoped;
 @ManagedBean
 @RequestScoped
 //@ViewScoped
-public class AlertController {
+public class AlertController implements Serializable{
 
-    @EJB
-    private AlertEJB alertEJB;
-    
-    @ManagedProperty("#{param.hostname}")
-    private String hostname;
-    @ManagedProperty("#{param.service}")
-    private String service;
-    @ManagedProperty("#{param.servicegroup}")
-    private String serviceGroup;
-    @ManagedProperty("#{param.kthfsinstance}")
-    private String kthfsInstance;
-    
-    private List<Alert> selectedAlerts;
+   @EJB
+   private AlertEJB alertEJB;
+   @ManagedProperty("#{param.hostname}")
+   private String hostname;
+   @ManagedProperty("#{param.service}")
+   private String service;
+   @ManagedProperty("#{param.servicegroup}")
+   private String serviceGroup;
+   @ManagedProperty("#{param.kthfsinstance}")
+   private String kthfsInstance;
+   private Alert[] selectedAlerts;
 
+   public AlertController() {
+   }
 
-    public AlertController() {
+   public String getService() {
+      return service;
+   }
 
+   public void setService(String service) {
+      this.service = service;
+   }
 
-    }
-    public String getService() {
-        return service;
-    }
+   public String getServiceGroup() {
+      return serviceGroup;
+   }
 
-    public void setService(String service) {
-        this.service = service;
-    }
+   public void setServiceGroup(String serviceGroup) {
+      this.serviceGroup = serviceGroup;
+   }
 
-    public String getServiceGroup() {
-        return serviceGroup;
-    }
+   public String getHostname() {
+      return hostname;
+   }
 
-    public void setServiceGroup(String serviceGroup) {
-        this.serviceGroup = serviceGroup;
-    }
+   public void setHostname(String hostname) {
+      this.hostname = hostname;
+   }
 
-    public String getHostname() {
-        return hostname;
-    }
+   public void setKthfsInstance(String kthfsInstance) {
+      this.kthfsInstance = kthfsInstance;
+   }
 
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
+   public String getKthfsInstance() {
+      return kthfsInstance;
+   }
 
-    public void setKthfsInstance(String kthfsInstance) {
-        this.kthfsInstance = kthfsInstance;
-    }
+   public List<Alert> getAlerts() {
+      List<Alert> alert = alertEJB.findAll();
+      return alert;
+   }
 
-    public String getKthfsInstance() {
-        return kthfsInstance;
-    }
+   public Alert[] getSelectedAlerts() {
+      return selectedAlerts;
+   }
 
+   public void setSelectedAlerts(Alert[] alerts) {
+      selectedAlerts = alerts;
+   }
 
-    public List<Alert> getAlerts() {
-        List<Alert> alert = alertEJB.findAll();
-        return alert;
-    }
-    
-    public List<Alert> getSelectedAlerts() {
-       return selectedAlerts;
-    }
-    
-    public void setSelectedAlerts(List<Alert> alerts) {
-       selectedAlerts = alerts;
-       
-    }
-            
-
-
-
+   public void deleteSelectedAlerts() {
+      for (Alert alert : selectedAlerts) {
+         alertEJB.removeAlert(alert);
+      }
+      informAlertsDeleted(selectedAlerts.length + " alert(s) deleted." );
+   }
+   
+   public void deleteAllAlerts() {
+      alertEJB.removeAllAlerts();
+      informAlertsDeleted("All alerts deleted.");
+   }   
+   
+   private void informAlertsDeleted(String msg) {
+      FacesContext context = FacesContext.getCurrentInstance();
+      context.addMessage(null, new FacesMessage("Successful", msg));            
+   }
 }

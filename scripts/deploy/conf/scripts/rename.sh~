@@ -1,0 +1,13 @@
+#!/bin/bash
+
+username=$1
+
+workspace=$2
+
+
+perl -pi -e 's/reader-cloud/'$3'/g' /home/$username/$workspace/conf/hdfs_configs/hdfs-site.xml
+perl -pi -e 's/writer-cloud/'$3'/g' /home/$username/$workspace/conf/hdfs_configs/hdfs-site.xml
+perl -pi -e 's/reader-cloud/'$3'/g' /home/$username/$workspace/conf/hdfs_configs/core-site.xml
+perl -pi -e 's/writer-cloud/'$3'/g' /home/$username/$workspace/conf/hdfs_configs/core-site.xml
+
+exit 0

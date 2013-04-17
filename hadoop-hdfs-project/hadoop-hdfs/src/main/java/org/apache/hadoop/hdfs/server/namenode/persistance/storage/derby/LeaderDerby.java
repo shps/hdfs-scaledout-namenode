@@ -25,7 +25,7 @@ public class LeaderDerby extends LeaderDataAccess {
     private DerbyConnector connector = DerbyConnector.INSTANCE;
 
     @Override
-    public int countAllById() throws StorageException {
+    public int countAll() throws StorageException {
         try {
             Connection conn = connector.obtainSession();
             String query = String.format("select count(*) from %s", TABLE_NAME);

@@ -109,14 +109,7 @@ public class MySQLController implements Serializable {
          } else {
             msg = new FacesMessage(FacesMessage.SEVERITY_INFO, "Failure", "Restore failed. Try again.");
          }
-         try {
-            Thread.sleep(3000);
-         } catch (InterruptedException ex) {
-            Logger.getLogger(MySQLController.class.getName()).log(Level.SEVERE, null, ex);
-         }
-
          FacesContext.getCurrentInstance().addMessage(null, msg);
-
       }
 
    }

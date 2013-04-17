@@ -13,7 +13,8 @@ import se.kth.kthfsdashboard.util.Formatter;
 @Entity
 @Table(name = "Alerts")
 @NamedQueries({
-   @NamedQuery(name = "Alerts.findAll", query = "SELECT a FROM Alert a ORDER BY a.alertTime DESC")
+   @NamedQuery(name = "Alerts.findAll", query = "SELECT a FROM Alert a ORDER BY a.alertTime DESC"),
+   @NamedQuery(name = "Alerts.removeAll", query = "DELETE FROM Alert a")   
 })
 public class Alert implements Serializable {
 
@@ -31,13 +32,13 @@ public class Alert implements Serializable {
    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
    private Date alertTime;
    private long agentTime;
-   @Column(name = "plugin", length = 16)
+   @Column(name = "plugin", length = 32)
    private String plugin;
-   @Column(name = "plugin_instance", length = 16)
+   @Column(name = "plugin_instance", length = 32)
    private String pluginInstance;
-   @Column(name = "type", length = 16)
+   @Column(name = "type", length = 32)
    private String type;
-   @Column(name = "type_instance", length = 16)
+   @Column(name = "type_instance", length = 32)
    private String typeInstance;
 
    @Column(name = "data_source", length = 32)

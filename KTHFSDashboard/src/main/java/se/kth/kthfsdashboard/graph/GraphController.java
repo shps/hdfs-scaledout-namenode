@@ -55,7 +55,7 @@ public class GraphController implements Serializable {
               "serv_nn_w_createfile_all", "serv_nn_w_filesappended", "serv_nn_w_filesrenamed", 
               "serv_nn_w_deletefile_all", "serv_nn_w_addblock", "serv_nn_w_createsymlink", 
               "serv_nn_o_getadditionaldatanode", "serv_nn_o_transactions", "serv_nn_o_transactionsbatchedinsync", 
-              "serv_nn_o_blockreport", "serv_nn_o_syncs", "serv_nn_t_fsimageloadtime",
+              "serv_nn_o_blockreport", "serv_nn_o_syncs",
               "serv_nn_t_safemodetime", "serv_nn_t_transactionsavgtime", "serv_nn_t_syncsavgtime", 
               "serv_nn_t_blockreportavgtime"));
       
@@ -67,7 +67,7 @@ public class GraphController implements Serializable {
               "nn_r_getlisting", "nn_r_getlinktarget", "nn_r_filesingetlisting", "nn_w_createfile_all", 
               "nn_w_filesappended", "nn_w_filesrenamed", "nn_w_deletefile_all", "nn_w_addblock", "nn_w_createsymlink", 
               "nn_o_getadditionaldatanode", "nn_o_transactions", "nn_o_transactionsbatchedinsync", "nn_o_blockreport", 
-              "nn_o_syncs", "nn_t_fsimageloadtime", "nn_t_safemodetime", "nn_t_transactionsavgtime", 
+              "nn_o_syncs", "nn_t_safemodetime", "nn_t_transactionsavgtime", 
               "nn_t_syncsavgtime", "nn_t_blockreportavgtime"));
 
       datanodeInstanceActivitiesGraphs = new ArrayList<String>(Arrays.asList("dd_heartbeats", "dd_avgTimeHeartbeats",
@@ -185,10 +185,7 @@ public class GraphController implements Serializable {
       end = new Date();
    }
 
-   public void useCalendar() {
-      
-      System.err.println("adasd");
-              
+   public void useCalendar() {        
       period = null;
    }
 

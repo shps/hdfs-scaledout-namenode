@@ -379,9 +379,6 @@ public class NameNode
         UserGroupInformation.setConfiguration(conf);
         loginAsNameNodeUser(conf);
 
-        // Setting the configuration for DBConnector
-        StorageFactory.setConfiguration(conf);
-
         NameNode.initMetrics(conf, this.getRole());
         loadNamesystem(conf);
 
@@ -745,6 +742,18 @@ public class NameNode
         LOG.info("Formatting using clusterid: " + clusterId);
 
         // Format storage
+        try
+        {
+        if( !StorageFactory.getConnector().formatStorage() )
+        {
+          return false;
+        }
+        }catch(PersistanceException e)
+        {
+          LOG.error("Format Failed"+e);
+        }
+        
+        
 //    StorageFactory.setConfiguration(conf);
 //    StorageConnector connector = StorageFactory.getConnector();
 //    try {
@@ -909,8 +918,12 @@ public class NameNode
     {
         if (conf == null)
         {
-            conf = new HdfsConfiguration();
+            conf = new HdfsConfiguration();    
         }
+        
+        // Setting the configuration for DBConnector
+        StorageFactory.setConfiguration(conf);
+        
         StartupOption startOpt = parseArguments(argv);
         if (startOpt == null)
         {

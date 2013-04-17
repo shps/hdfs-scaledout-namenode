@@ -63,7 +63,7 @@ public class LeaderClusterj extends LeaderDataAccess
     private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
     @Override
-    public int countAllById() throws StorageException
+    public int countAll() throws StorageException
     {
         return findAll().size();
     }

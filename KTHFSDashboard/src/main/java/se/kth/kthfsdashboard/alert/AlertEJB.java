@@ -28,4 +28,12 @@ public class AlertEJB {
     public void persistAlert(Alert alert) {
         em.persist(alert);
     }
+    
+    public void removeAlert(Alert alert) {
+       em.remove(em.merge(alert));
+    }
+    
+    public void removeAllAlerts() {
+       em.createNamedQuery("Alerts.removeAll").executeUpdate();
+    }    
 }

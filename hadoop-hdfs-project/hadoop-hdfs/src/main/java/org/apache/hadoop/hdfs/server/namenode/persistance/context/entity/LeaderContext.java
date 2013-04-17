@@ -81,14 +81,14 @@ public class LeaderContext extends EntityContext<Leader> {
     Leader.Counter lCounter = (Leader.Counter) counter;
 
     switch (lCounter) {
-      case AllById:
+      case All:
         log("count-all-leaders", CacheHitState.LOSS);
         if (allRead) {
           return allReadLeaders.size();
         } else {
           aboutToAccessStorage();
           //allRead = true; //[S] commented this line. does not make sense
-          return dataAccess.countAllById();
+          return dataAccess.countAll();
         }
       case AllPredecessors:
         log("count-all-predecessor-leaders", CacheHitState.LOSS);

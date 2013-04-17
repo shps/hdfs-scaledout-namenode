@@ -19,7 +19,7 @@ public abstract class LeaderDataAccess extends EntityDataAccess {
   public static final String PARTITION_VAL = "partition_val";
 
 
-  public abstract int countAllById() throws StorageException;
+  public abstract int countAll() throws StorageException;
   
 //  public abstract Leader findById(long id) throws StorageException;
   

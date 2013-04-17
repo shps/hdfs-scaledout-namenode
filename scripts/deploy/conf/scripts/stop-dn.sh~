@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+. ./set-env.sh
+
+HDFS=$HADOOP_COMMON_HOME/sbin/hadoop-daemon.sh
+
+echo "Stopping the DataNode"
+$HDFS stop datanode
+
+exit $?
