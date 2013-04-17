@@ -295,18 +295,18 @@ public class INodeDirectory extends INode {
       node.setPermission(p);
     }
 
-    if (children != null) {
-      int low = Collections.binarySearch(getChildren(), node.name);
-      if (low >= 0) {
-        return null;
-      }
-    } else {
+//    if (children != null) {
+//      int low = Collections.binarySearch(getChildren(), node.name);
+//      if (low >= 0) {
+//        return null;
+//      }
+//    } else {
       INode inode = EntityManager.find(INode.Finder.ByNameAndParentId,
               node.getName(), getId());
       if (inode != null) {
         return null;
       }
-    }
+//    }
 
     node.parent = this;
     node.parentId = this.id;
@@ -322,12 +322,12 @@ public class INodeDirectory extends INode {
       node.setId(DFSUtil.getRandom().nextLong()); //added for simple
     }
 
-    if (children != null) {
-      int low = Collections.binarySearch(getChildren(), node.name);
-      low++;
-      low *= -1;
-      children.add(low, node);
-    }
+//    if (children != null) {
+//      int low = Collections.binarySearch(getChildren(), node.name);
+//      low++;
+//      low *= -1;
+//      children.add(low, node);
+//    }
 
     return node;
   }
