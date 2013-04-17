@@ -210,7 +210,7 @@ public class INodeUtil {
       return;
     }
 
-    readFromLeafToRoot(inode.getParent(), list);
+    readFromLeafToRoot(readById(inode.getParentId()), list);
     INode i = readById(inode.getId());
     list.add(i);
   }
