@@ -93,6 +93,11 @@ public class VirtualizationController implements Serializable {
     private ComputeService service;
     private ComputeServiceContext context;
     private Map<String, Set<? extends NodeMetadata>> nodes = new HashMap();
+    private Map<NodeMetadata, List<String>> first = new HashMap();
+    private Map<NodeMetadata, List<String>> rest = new HashMap();
+    private List<String> ndbs = new LinkedList();
+    private List<String> mgm = new LinkedList();
+    private List<String> mySQLClients = new LinkedList();
 
     /**
      * Creates a new instance of VirtualizationController
@@ -125,7 +130,8 @@ public class VirtualizationController implements Serializable {
 
         createSecurityGroups();
         launchNodesBasicSetup();
-        installRoles();
+        demoOnly();
+        //installRoles();
     }
 
     /*
@@ -154,7 +160,7 @@ public class VirtualizationController implements Serializable {
             keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
         }
         privateIP = computeCredentialsMB.getPrivateIP();
-        publicKey=computeCredentialsMB.getPublicKey();
+        publicKey = computeCredentialsMB.getPublicKey();
 
     }
     /*
@@ -289,6 +295,8 @@ public class VirtualizationController implements Serializable {
                 InstallChefGems.builder()
                 .version("10.20.0").build());
         InstallGit git = new InstallGit();
+        bootstrapBuilder.add(git);
+        bootstrapBuilder.add(exec("apt-get install -q -y python-dev=2.7.3-0ubuntu2"));
         bootstrapBuilder.add(exec("sudo mkdir /etc/chef;"));
         bootstrapBuilder.add(exec("cd /etc/chef;"));
         bootstrapBuilder.add(exec("sudo wget http://lucan.sics.se/kthfs/solo.rb;"));
@@ -297,7 +305,7 @@ public class VirtualizationController implements Serializable {
         bootstrapBuilder.add(exec("git config --global user.email \"jdowling@sics.se\";"));
         bootstrapBuilder.add(exec("git config --global http.sslVerify false;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
-        
+
 
 
         return new StatementList(bootstrapBuilder.build());
@@ -342,6 +350,35 @@ public class VirtualizationController implements Serializable {
             for (NodeGroup group : clusterController.getCluster().getNodes()) {
                 Set<? extends NodeMetadata> ready = service.createNodesInGroup(group.getSecurityGroup(), group.getNumber(), kthfsTemplate.build());
                 nodes.put(group.getSecurityGroup(), ready);
+                //Fetch the nodes info so we can launch first mgm before the rest!
+                Set<String> roles = new HashSet(group.getRoles());
+                if (roles.contains("MySQLCluster*mgm")) {
+                    Iterator<? extends NodeMetadata> iter = ready.iterator();
+                    while (iter.hasNext()) {
+                        //Add private ip to mgm
+                        NodeMetadata node = iter.next();
+                        mgm.addAll(node.getPrivateAddresses());
+                        //need to also check if they have ndb
+                        if (roles.contains("MySQLCluster*ndb")) {
+                            ndbs.addAll(node.getPrivateAddresses());
+                        }
+                        first.put(node, group.getRoles());
+                    }
+                    continue;
+                } else {
+                    Iterator<? extends NodeMetadata> iter = ready.iterator();
+                    while (iter.hasNext()) {
+                        NodeMetadata node = iter.next();
+                        if (roles.contains("MySQLCluster*ndb")) {
+                            ndbs.addAll(node.getPrivateAddresses());
+                        }
+                        if (roles.contains("MySQLCluster*memcached")) {
+                            mySQLClients.addAll(node.getPrivateAddresses());
+                        }
+                        rest.put(node, group.getRoles());
+                    }
+                }
+
             }
         } catch (RunNodesException e) {
             System.out.println("error adding nodes to group "
@@ -352,7 +389,35 @@ public class VirtualizationController implements Serializable {
     }
 
     private void installRoles() {
-        demoOnly();
+        //First we gather all the ips we need //DONE during launch of nodes, need ndbs??
+        Set<String> ndbsIPs = new HashSet(ndbs);
+        Set<String> mgms = new HashSet(mgm);
+        Set<String> clients = new HashSet(mySQLClients);
+        clients.addAll(mgm);
+        //First we launch the mgm nodes
+        Set<NodeMetadata> mgmNodes = first.keySet();
+        Iterator<NodeMetadata> iter;
+        iter = mgmNodes.iterator();
+
+        while (iter.hasNext()) {
+            NodeMetadata node = iter.next();
+            List<String> runlist = createRunList(first.get(node));
+            ImmutableList.Builder<Statement> roleBuilder = createNodeConfiguration(runlist, new LinkedList(ndbsIPs), new LinkedList(mgms), new LinkedList(clients), node);
+            runChefSolo(roleBuilder);
+            service.runScriptOnNode(node.getId(), new StatementList(roleBuilder.build()));
+        }
+
+        //Launch the rest of the nodes
+        Set<NodeMetadata> restOfNodes = rest.keySet();
+        iter = restOfNodes.iterator();
+
+        while (iter.hasNext()) {
+            NodeMetadata node = iter.next();
+            List<String> runlist = createRunList(rest.get(node));
+            ImmutableList.Builder<Statement> roleBuilder = createNodeConfiguration(runlist, new LinkedList(ndbsIPs), new LinkedList(mgms), new LinkedList(clients), node);
+            runChefSolo(roleBuilder);
+            service.runScriptOnNode(node.getId(), new StatementList(roleBuilder.build()));
+        }
     }
 
     /*
@@ -369,6 +434,7 @@ public class VirtualizationController implements Serializable {
         List<Integer> globalPorts = new LinkedList<Integer>(clusterController.getCluster().getAuthorizeSpecificPorts());
 
         //For each basic role, we map the ports in that role into a list which we append to the commonPorts
+        globalPorts.addAll(Ints.asList(commonTCP.get("kthfsagent")));
         for (String commonRole : clusterController.getCluster().getAuthorizePorts()) {
             if (commonTCP.containsKey(commonRole)) {
                 List<Integer> portsRole = Ints.asList(commonTCP.get(commonRole));
@@ -421,6 +487,12 @@ public class VirtualizationController implements Serializable {
                                 groupName, IpProtocol.TCP, port, port, "0.0.0.0/0");
                         openTCP.add(port);
                     }
+                }
+                //NOT GOOOD TO DOOOO, THIS IS FOR TESTING AND DEBUGGING
+                try {
+                    Thread.sleep(9000);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }
@@ -500,40 +572,79 @@ public class VirtualizationController implements Serializable {
     private void demoOnly() {
 
         //Fetch all the addresses we need.
-        List<String> ndbs = new LinkedList();
-        List<String> jumbo = new LinkedList();
+        List<String> ndbsDemo = new LinkedList();
+        List<String> mgmDemo = new LinkedList();
+        List<String> mysqlDemo = new LinkedList();
         if (nodes.containsKey("ndb")) {
             for (NodeMetadata node : nodes.get("ndb")) {
                 List<String> privateIPs = new LinkedList(node.getPrivateAddresses());
-                ndbs.add(privateIPs.get(0));
+                ndbsDemo.add(privateIPs.get(0));
             }
         }
-        if (nodes.containsKey("jumbo")) {
-            for (NodeMetadata node : nodes.get("jumbo")) {
+        if (nodes.containsKey("mgm")) {
+            for (NodeMetadata node : nodes.get("mgm")) {
                 List<String> privateIPs = new LinkedList(node.getPrivateAddresses());
-                jumbo.add(privateIPs.get(0));
+                mgmDemo.add(privateIPs.get(0));
+            }
+        }
+        if (nodes.containsKey("mysql")) {
+            for (NodeMetadata node : nodes.get("mysql")) {
+                List<String> privateIPs = new LinkedList(node.getPrivateAddresses());
+                mysqlDemo.add(privateIPs.get(0));
             }
         }
         //Start the setup of the nodes
+        //First start with the MGM
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
-            Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
-            Iterator<? extends NodeMetadata> iter = elements.iterator();
-            while (iter.hasNext()) {
-                NodeMetadata data = iter.next();
-                ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
-                createNodeConfiguration(roleBuilder, ndbs, jumbo, data, group);
-                runChefSolo(roleBuilder);
-                service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+            if (group.getSecurityGroup().equals("mgm")) {
+                Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
+                Iterator<? extends NodeMetadata> iter = elements.iterator();
+                while (iter.hasNext()) {
+                    NodeMetadata data = iter.next();
+                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, data, group);
+                    runChefSolo(roleBuilder);
+                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                }
+            }
+        }
+        for (NodeGroup group : clusterController.getCluster().getNodes()) {
+            if (group.getSecurityGroup().equals("ndb")) {
+                Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
+                Iterator<? extends NodeMetadata> iter = elements.iterator();
+                while (iter.hasNext()) {
+                    NodeMetadata data = iter.next();
+                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, data, group);
+                    runChefSolo(roleBuilder);
+                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                }
+            }
+        }
+
+        for (NodeGroup group : clusterController.getCluster().getNodes()) {
+            if (group.getSecurityGroup().equals("mysql")) {
+                Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
+                Iterator<? extends NodeMetadata> iter = elements.iterator();
+                while (iter.hasNext()) {
+                    NodeMetadata data = iter.next();
+                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, data, group);
+                    runChefSolo(roleBuilder);
+                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                }
             }
         }
     }
 
-    private void createNodeConfiguration(ImmutableList.Builder<Statement> statements, List<String> ndbs, List<String> jumbo, NodeMetadata data, NodeGroup group) {
+    //For Demo only 
+    private void createNodeConfiguration(ImmutableList.Builder<Statement> statements,
+            List<String> ndbs, List<String> mgm, List<String> mysql, NodeMetadata data, NodeGroup group) {
 
         List<String> runlist = createRunList(group);
         StringBuilder json = new StringBuilder();
         json.append("{");
-        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(jumbo.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[");
+        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(mgm.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[");
         for (int i = 0; i < ndbs.size(); i++) {
             if (i == ndbs.size() - 1) {
                 json.append("\"").append(ndbs.get(i)).append("\"]},");
@@ -541,16 +652,24 @@ public class VirtualizationController implements Serializable {
                 json.append("\"").append(ndbs.get(i)).append("\",");
             }
         }
-
-        json.append("\"ndbapi\":{\"addrs\":[\"").append(jumbo.get(0)).append("\"]},");
+        List<String> ndapi = new LinkedList(mgm);
+        ndapi.addAll(mysql);
+        json.append("\"ndbapi\":{\"addrs\":[");
+        for (int i = 0; i < ndapi.size(); i++) {
+            if (i == ndapi.size() - 1) {
+                json.append("\"").append(ndapi.get(i)).append("\"]},");
+            } else {
+                json.append("\"").append(ndapi.get(i)).append("\",");
+            }
+        }
 
         List<String> ips = new LinkedList(data.getPrivateAddresses());
-        json.append("\"private_ip\":\"").append(ips.get(0)).append("\",");
+        json.append("\"ip\":\"").append(ips.get(0)).append("\",");
         json.append("\"data_memory\":\"120\",");
         json.append("\"num_ndb_slots_per_client\":\"2\"},");
         json.append("\"memcached\":{\"mem_size\":\"128\"},");
         json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\"},");
-
+        json.append("\"kthfs\":{\"ip\":\"").append(privateIP).append("\"},");
         json.append("\"run_list\":[");
         for (int i = 0; i < runlist.size(); i++) {
             if (i == runlist.size() - 1) {
@@ -564,16 +683,69 @@ public class VirtualizationController implements Serializable {
 
     }
 
+    private ImmutableList.Builder<Statement> createNodeConfiguration(List<String> runlist, List<String> ndbs, List<String> mgms, List<String> clients, NodeMetadata data) {
+
+        ImmutableList.Builder<Statement> statements = ImmutableList.builder();
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [");
+
+        for (int i = 0; i < mgms.size(); i++) {
+            if (i == mgms.size() - 1) {
+                json.append("\"").append(mgms.get(i)).append("\"]},");
+            } else {
+                json.append("\"").append(mgm.get(i)).append("\",");
+            }
+        }
+        json.append("\"ndbd\":{\"addrs\":[");
+        for (int i = 0; i < ndbs.size(); i++) {
+            if (i == ndbs.size() - 1) {
+                json.append("\"").append(ndbs.get(i)).append("\"]},");
+            } else {
+                json.append("\"").append(ndbs.get(i)).append("\",");
+            }
+        }
+
+        json.append("\"ndbapi\":{\"addrs\":[");
+        for (int i = 0; i < clients.size(); i++) {
+            if (i == clients.size() - 1) {
+                json.append("\"").append(clients.get(i)).append("\"]},");
+            } else {
+                json.append("\"").append(clients.get(i)).append("\",");
+            }
+        }
+        List<String> ips = new LinkedList(data.getPrivateAddresses());
+        json.append("\"ip\":\"").append(ips.get(0)).append("\",");
+        json.append("\"data_memory\":\"120\",");
+        json.append("\"num_ndb_slots_per_client\":\"2\"},");
+        json.append("\"memcached\":{\"mem_size\":\"128\"},");
+        json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\"},");
+        json.append("\"kthfs\":{\"ip\":\"").append(privateIP).append("\"},");
+
+        json.append("\"run_list\":[");
+        for (int i = 0; i < runlist.size(); i++) {
+            if (i == runlist.size() - 1) {
+                json.append("\"").append(runlist.get(i)).append("\"]");
+            } else {
+                json.append("\"").append(runlist.get(i)).append("\",");
+            }
+        }
+        json.append("}");
+        statements.add(createOrOverwriteFile("/etc/chef/chef.json", ImmutableSet.of(json.toString())));
+        return statements;
+    }
+
     private List<String> createRunList(NodeGroup group) {
         RunListBuilder builder = new RunListBuilder();
-        //builder.addRecipe("kthfsagent");
-        //builder.addRecipe("collectd::client");
+        builder.addRecipe("kthfsagent");
+
         for (String role : group.getRoles()) {
             if (role.equals("MySQLCluster*ndb")) {
 
                 builder.addRecipe("ndb::ndbd");
 
                 builder.addRecipe("ndb::ndbd-kthfs");
+                builder.addRecipe("collectd::client-generic");
 
 
 
@@ -583,6 +755,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mysqld");
 
                 builder.addRecipe("ndb::mysqld-kthfs");
+                builder.addRecipe("collectd::client-mysql");
 
             }
             if (role.equals("MySQLCluster*mgm")) {
@@ -590,6 +763,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mgmd");
 
                 builder.addRecipe("ndb::mgmd-kthfs");
+                builder.addRecipe("collectd::client-generic");
 
             }
             if (role.equals("MySQLCluster*memcached")) {
@@ -597,6 +771,54 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::memcached");
 
                 builder.addRecipe("ndb::memcached-kthfs");
+            }
+
+
+
+        }
+
+        return builder.build();
+
+
+    }
+
+    private List<String> createRunList(List<String> roles) {
+        RunListBuilder builder = new RunListBuilder();
+        builder.addRecipe("kthfsagent");
+
+        for (String role : roles) {
+            if (role.equals("MySQLCluster*ndb")) {
+
+                builder.addRecipe("ndb::ndbd");
+
+                builder.addRecipe("ndb::ndbd-kthfs");
+                builder.addRecipe("collectd::client-generic");
+
+
+
+            }
+            if (role.equals("MySQLCluster*mysqld")) {
+
+                builder.addRecipe("ndb::mysqld");
+
+                builder.addRecipe("ndb::mysqld-kthfs");
+                builder.addRecipe("collectd::client-mysql");
+
+            }
+            if (role.equals("MySQLCluster*mgm")) {
+
+                builder.addRecipe("ndb::mgmd");
+
+                builder.addRecipe("ndb::mgmd-kthfs");
+                builder.addRecipe("collectd::client-generic");
+
+            }
+            if (role.equals("MySQLCluster*memcached")) {
+
+                builder.addRecipe("ndb::memcached");
+
+                builder.addRecipe("ndb::memcached-kthfs");
+
             }
 
 
