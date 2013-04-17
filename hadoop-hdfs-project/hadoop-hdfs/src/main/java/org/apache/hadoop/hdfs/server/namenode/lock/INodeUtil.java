@@ -165,7 +165,7 @@ public class INodeUtil {
     return bInfo.getInodeId();
   }
 
-  public static LinkedList<INode> findPathINodesByBlock(long inodeId) throws PersistanceException {
+  public static LinkedList<INode> findPathINodesById(long inodeId) throws PersistanceException {
     LinkedList<INode> pathInodes = new LinkedList<INode>();
     if (inodeId != INode.NON_EXISTING_ID) {
       INode inode = readById(inodeId);

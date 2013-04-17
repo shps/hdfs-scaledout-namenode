@@ -3207,7 +3207,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       @Override
       public void setUp() throws PersistanceException {
         inodeId = INodeUtil.findINodeIdByBlock(lastblock.getBlockId());
-        resolvedInodes = INodeUtil.findPathINodesByBlock(inodeId);
+        resolvedInodes = INodeUtil.findPathINodesById(inodeId);
       }
     };
     String src = (String) commitBlockSyncHanlder.handleWithWriteLock(this);
@@ -5043,7 +5043,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       public void setUp() throws PersistanceException {
         UnderReplicatedBlock urblk = (UnderReplicatedBlock) getParams()[0];
         inodeId = INodeUtil.findINodeIdByBlock(urblk.getBlockId());
-        resolvedInodes = INodeUtil.findPathINodesByBlock(inodeId);
+        resolvedInodes = INodeUtil.findPathINodesById(inodeId);
       }
     };
 
