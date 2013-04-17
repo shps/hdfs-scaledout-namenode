@@ -40,7 +40,7 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     newReplicas.put(replica, replica);
     log("added-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
-              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
+      "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 
   @Override
@@ -66,10 +66,14 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
   public void remove(IndexedReplica replica) throws PersistanceException {
     modifiedReplicas.remove(replica);
     blockReplicas.get(replica.getBlockId()).remove(replica);
-    removedReplicas.put(replica, replica);
+    if (newReplicas.containsKey(replica)) {
+      newReplicas.remove(replica);
+    } else {
+      removedReplicas.put(replica, replica);
+    }
     log("removed-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
-              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
+      "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 
   @Override
@@ -114,6 +118,6 @@ public class ReplicaContext extends EntityContext<IndexedReplica> {
     modifiedReplicas.put(replica, replica);
     log("updated-replica", CacheHitState.NA,
             new String[]{"bid", Long.toString(replica.getBlockId()),
-              "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
+      "sid", replica.getStorageId(), "index", Integer.toString(replica.getIndex())});
   }
 }

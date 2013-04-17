@@ -152,7 +152,6 @@ public class TestBlocksWithNotEnoughRacks {
    * triggered by setting the replication factor.
    */
   @Test
-  @Ignore //FIXME[H]: This test sometimes passes and sometimes fail.
   public void testUnderReplicatedUsesNewRacks() throws Exception {
     Configuration conf = getConf();
     short REPLICATION_FACTOR = 3;
