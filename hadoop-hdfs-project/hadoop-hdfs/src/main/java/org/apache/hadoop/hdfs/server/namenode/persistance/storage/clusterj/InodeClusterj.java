@@ -155,6 +155,11 @@ public class InodeClusterj extends InodeDataAccess {
   public void prepare(Collection<INode> removed, Collection<INode> newEntries, Collection<INode> modified) throws StorageException {
     Session session = connector.obtainSession();
     try {
+      for (INode inode : removed) {
+        InodeDTO persistable = session.newInstance(InodeDTO.class, inode.getId());
+        session.deletePersistent(persistable);
+      }
+      session.flush();
       for (INode inode : newEntries) {
         InodeDTO persistable = session.newInstance(InodeDTO.class);
         createPersistable(inode, persistable);
@@ -165,11 +170,6 @@ public class InodeClusterj extends InodeDataAccess {
         InodeDTO persistable = session.newInstance(InodeDTO.class);
         createPersistable(inode, persistable);
         session.savePersistent(persistable);
-      }
-
-      for (INode inode : removed) {
-        InodeDTO persistable = session.newInstance(InodeDTO.class, inode.getId());
-        session.deletePersistent(persistable);
       }
     } catch (Exception e) {
       throw new StorageException(e);

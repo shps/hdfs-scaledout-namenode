@@ -1208,6 +1208,7 @@ public class FSDirectory implements Closeable {
         }
         // set the parent's modification time
         inodes[pos - 1].setModificationTime(mtime);
+        EntityManager.update(inodes[pos - 1]);
 
         int filesRemoved = 1;
         if (targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota) {
