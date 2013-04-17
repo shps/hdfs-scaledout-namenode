@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+
+<!-- In: conf/core-site.xml -->
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/home/kthfs/demo/tmp/</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+<property>
+  <name>fs.default.name</name>
+  <value>hdfs://reader-cloud:29211</value>
+  <description></description>
+</property>
+
+<property>
+  <name>dfs.namenodes.rpc.address</name>
+  <value>hdfs://cloud1.sics.se:29211,hdfs://cloud2.sics.se:29211</value>
+  <description></description>
+</property>
+
+<property>
+  <name>ipc.client.connect.max.retries</name>
+  <value>0</value>
+  <description></description>
+</property>
+
+
+</configuration>

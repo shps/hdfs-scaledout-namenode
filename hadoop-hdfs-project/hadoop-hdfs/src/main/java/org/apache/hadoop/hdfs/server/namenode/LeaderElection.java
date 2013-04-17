@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
@@ -86,11 +87,20 @@ public class LeaderElection extends Thread {
     leaderId = getLeader();
 
     // If this node is the leader, remove all previous leaders
+    // this block runs when a node turns into a leader node
+    // delete all row with id less than the leader id
+    // set role to leader
     if (leaderId == nn.getId() && !nn.isLeader() && leaderId != LEADER_INITIALIZATION_ID) {
       LOG.info(hostname+") New leader elected. Namenode id: " + nn.getId() + ", rpcAddress: " + nn.getServiceRpcAddress() + ", Total Active namenodes in system: " + selectAll().size());
       // remove all previous leaders from [LEADER] table
       removePrevoiouslyElectedLeaders(leaderId);
       nn.setRole(NamenodeRole.LEADER);
+    }
+    
+    // if leader then remove dead namenodes from the leader table
+    if(nn.getRole() == NamenodeRole.LEADER)
+    {
+      removeDeadNameNodes();
     }
     // TODO [S] do something if i am no longer the leader. 
   }
@@ -170,7 +180,7 @@ public class LeaderElection extends Thread {
   }
 
   /* The function that returns the list of actively running NNs */
-  //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  //--------------------------------------------------------------------------------------------------------------
   SortedMap<Long, InetSocketAddress> selectAll() throws IOException, PersistanceException {
     return getActiveNamenodes();
   }
@@ -233,7 +243,11 @@ public class LeaderElection extends Thread {
   }
 
   private long getLeaderRowCount() throws IOException, PersistanceException {
-    return EntityManager.count(Leader.Counter.AllById);
+    return EntityManager.count(Leader.Counter.All);
+  }
+  
+  private List<Leader> getAllNameNodes() throws IOException, PersistanceException {
+    return (List<Leader>)EntityManager.findList(Leader.Finder.All);
   }
 
   private List<Leader> getActiveNamenodesInternal(long counter, long totalNamenodes) throws PersistanceException {
@@ -277,8 +291,37 @@ public class LeaderElection extends Thread {
     // deadlock.
     Collections.sort(prevLeaders);
     for (Leader l : prevLeaders) {
-      EntityManager.remove(l);
+      removeLeaderRow(l);
     }
+  }
+  
+  private void removeDeadNameNodes() throws PersistanceException, IOException {
+    long maxCounter = getMaxNamenodeCounter();
+    long totalNamenodes = getLeaderRowCount();
+    if (totalNamenodes == 0) {
+      // no rows, nothing to delete
+      return;
+    }
+
+    List<Leader> activeNameNodes = getActiveNamenodesInternal(maxCounter, totalNamenodes);
+    List<Leader> allNameNodes = getAllNameNodes();
+
+    deleteInactiveNameNodes(allNameNodes, activeNameNodes);
+
+  }
+
+  private void deleteInactiveNameNodes(List<Leader> allNameNodes, List<Leader> activeNameNodes)
+          throws PersistanceException {
+    for (Leader leader : allNameNodes) {
+      if (!activeNameNodes.contains(leader)) {
+        removeLeaderRow(leader);
+      }
+    }
+
+  }
+
+  private void removeLeaderRow(Leader leader) throws PersistanceException {
+    EntityManager.remove(leader);
   }
 
   private List<Leader> getPreceedingNamenodesInternal(long id) throws PersistanceException {

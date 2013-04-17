@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. ./set-env.sh
+
+HDFS=$HADOOP_COMMON_HOME/sbin/hadoop-daemon.sh
+
+#rm -rf $rootDir/tmp
+
+echo "Stopping the NameNode"
+$HDFS stop namenode
+
+exit $?

@@ -1323,6 +1323,7 @@ public class DataNode extends Configured
             ActiveNamenodeList nnlistCmd = getActiveNamenodes();
             LOG.debug("List of namenodes: "+nnlistCmd);
             leaderAddr = nnlistCmd.getNamenodes().get(nnlistCmd.getNamenodes().firstKey());
+            
             refreshNamenodes(nnlistCmd.getNamenodes().values());
 
             //
