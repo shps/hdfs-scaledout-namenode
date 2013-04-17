@@ -175,11 +175,18 @@ public class AgentResource {
 
          alert.setDataSource(json.getString("DataSource"));
          alert.setCurrentValue(json.getString("CurrentValue"));
-         alert.setWarningMin(json.getString("WarningMin"));
-         alert.setWarningMax(json.getString("WarningMax"));
-         alert.setFailureMin(json.getString("FailureMin"));
-         alert.setFailureMax(json.getString("FailureMax"));
-
+         if (json.has("WarningMin")) {
+            alert.setWarningMin(json.getString("WarningMin"));
+         }
+         if (json.has("WarningMax")) {
+            alert.setWarningMax(json.getString("WarningMax"));
+         }
+         if (json.has("FailureMin")) {         
+            alert.setFailureMin(json.getString("FailureMin"));
+         }
+         if (json.has("FailureMax")) {          
+            alert.setFailureMax(json.getString("FailureMax"));
+         }
          alertEJB.persistAlert(alert);
 
       } catch (Exception ex) {
