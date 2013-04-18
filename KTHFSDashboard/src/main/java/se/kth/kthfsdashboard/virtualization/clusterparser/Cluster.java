@@ -23,11 +23,11 @@ public class Cluster implements Serializable{
     private List<String> authorizePorts;
     private List<Integer> authorizeSpecificPorts;
     private String environment;
-    @OneToOne (cascade= CascadeType.ALL, mappedBy="cluster")
+    @OneToOne (cascade= CascadeType.ALL)
     private Provider provider;
-    @OneToMany (cascade= CascadeType.ALL,mappedBy="cluster")
+    @OneToMany (cascade= CascadeType.ALL)
     private List<NodeGroup> nodes;
-    @OneToMany (cascade= CascadeType.ALL,mappedBy="cluster")
+    @OneToMany (cascade= CascadeType.ALL)
     private List<ChefAttributes> chefAttributes;
 
     public List<String> getGlobalServices() {
