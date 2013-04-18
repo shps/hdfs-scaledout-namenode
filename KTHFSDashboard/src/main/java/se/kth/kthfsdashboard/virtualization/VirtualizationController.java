@@ -668,8 +668,9 @@ public class VirtualizationController implements Serializable {
         json.append("\"data_memory\":\"120\",");
         json.append("\"num_ndb_slots_per_client\":\"2\"},");
         json.append("\"memcached\":{\"mem_size\":\"128\"},");
-        json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\"},");
-        json.append("\"kthfs\":{\"ip\":\"").append(privateIP).append("\"},");
+        json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\",");
+        json.append("\"clients\":[\"mysql\"]},");
+        json.append("\"kthfs\":{\"server_ip\":\"").append(privateIP).append("\"},");
         json.append("\"run_list\":[");
         for (int i = 0; i < runlist.size(); i++) {
             if (i == runlist.size() - 1) {
@@ -745,7 +746,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::ndbd");
 
                 builder.addRecipe("ndb::ndbd-kthfs");
-                builder.addRecipe("collectd::client-generic");
+                builder.addRecipe("collectd::attr-driven");
 
 
 
@@ -755,7 +756,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mysqld");
 
                 builder.addRecipe("ndb::mysqld-kthfs");
-                builder.addRecipe("collectd::client-mysql");
+                builder.addRecipe("collectd::attr-driven");
 
             }
             if (role.equals("MySQLCluster*mgm")) {
@@ -763,7 +764,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mgmd");
 
                 builder.addRecipe("ndb::mgmd-kthfs");
-                builder.addRecipe("collectd::client-generic");
+                builder.addRecipe("collectd::attr-driven");
 
             }
             if (role.equals("MySQLCluster*memcached")) {
@@ -792,7 +793,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::ndbd");
 
                 builder.addRecipe("ndb::ndbd-kthfs");
-                builder.addRecipe("collectd::client-generic");
+                builder.addRecipe("collectd::attr-driven");
 
 
 
@@ -802,7 +803,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mysqld");
 
                 builder.addRecipe("ndb::mysqld-kthfs");
-                builder.addRecipe("collectd::client-mysql");
+                builder.addRecipe("collectd::attr-driven");
 
             }
             if (role.equals("MySQLCluster*mgm")) {
@@ -810,7 +811,7 @@ public class VirtualizationController implements Serializable {
                 builder.addRecipe("ndb::mgmd");
 
                 builder.addRecipe("ndb::mgmd-kthfs");
-                builder.addRecipe("collectd::client-generic");
+                builder.addRecipe("collectd::attr-driven");
 
             }
             if (role.equals("MySQLCluster*memcached")) {

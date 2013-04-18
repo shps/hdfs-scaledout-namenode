@@ -2,7 +2,7 @@
 ## Based on ironfan examples
 --- 
 !!se.kth.kthfsdashboard.virtualization.clusterparser.Cluster
-  name: test
+  name: big
   environment: dev
   globalServices: 
     [ssh, chefclient]

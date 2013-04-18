@@ -1,23 +1,33 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package se.kth.kthfsdashboard.virtualization.clusterparser;
 
+import java.io.Serializable;
 import java.util.List;
+import javax.persistence.*;
 
 /**
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
-public class Cluster {
+@Entity
+@Table(name= "Clusters")
+@NamedQueries({
+   @NamedQuery(name = "Clusters.findAll", query = "SELECT c FROM Cluster c")   
+})
+public class Cluster implements Serializable{
+    @Id
+    @GeneratedValue(strategy= GenerationType.AUTO)
+    private Long id;
     private String name;
     private List<String> globalServices;
     private List<String> authorizePorts;
     private List<Integer> authorizeSpecificPorts;
     private String environment;
+    @OneToOne (cascade= CascadeType.ALL, mappedBy="cluster")
     private Provider provider;
+    @OneToMany (cascade= CascadeType.ALL,mappedBy="cluster")
     private List<NodeGroup> nodes;
+    @OneToMany (cascade= CascadeType.ALL,mappedBy="cluster")
     private List<ChefAttributes> chefAttributes;
 
     public List<String> getGlobalServices() {

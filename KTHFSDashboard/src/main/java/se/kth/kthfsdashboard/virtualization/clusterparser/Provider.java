@@ -4,19 +4,35 @@
  */
 package se.kth.kthfsdashboard.virtualization.clusterparser;
 
+import java.io.Serializable;
 import java.util.List;
+import javax.persistence.*;
 
 /**
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
-public class Provider {
+@Entity
+@Table(name = "Providers")
+public class Provider implements Serializable{
+    @Id
+    @GeneratedValue(strategy= GenerationType.AUTO)
+    private Long id;
     private String name;
     private String instanceType;
     private String loginUser;
     private String image;
     private String region;
 
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    
     public String getLoginUser() {
         return loginUser;
     }
