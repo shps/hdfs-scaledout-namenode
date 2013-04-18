@@ -2392,7 +2392,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 //addCorrupt(TransactionLockManager.LockType.WRITE).
                 //addReplicaUc(TransactionLockManager.LockType.WRITE).
                 //addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
-                acquireForRename();
+                acquireForRename(true); // The deprecated rename, allows to move a dir to an existing dir.
       }
     };
     return (Boolean) renameToHandler.handleWithWriteLock(this);

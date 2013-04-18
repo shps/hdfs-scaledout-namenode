@@ -397,10 +397,34 @@ public class TransactionLockManager {
   }
 
   public void acquireForRename() throws PersistanceException, UnresolvedPathException {
+    acquireForRename(false);
+  }
+
+  public void acquireForRename(boolean allowExistingDir) throws PersistanceException, UnresolvedPathException {
+    // TODO[H]: Sort before taking locks.
     // acuires lock in order
+    String src = inodeParam[0];
+    String dst = inodeParam[1];
     if (inodeLock != null && inodeParam != null && inodeParam.length > 0) {
-      INode[] inodeResult1 = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam[0]);
-      INode[] inodeResult2 = acquireInodeLocks(inodeResolveType, inodeLock, inodeParam[1]);
+      INode[] inodeResult1 = acquireInodeLocks(inodeResolveType, inodeLock, src);
+      INode[] inodeResult2 = acquireInodeLocks(inodeResolveType, inodeLock, dst);
+      if (allowExistingDir) // In deprecated rename, it allows to move a dir to an existing destination.
+      {
+        LinkedList<INode> dstINodes = TransactionLockAcquirer.acquireInodeLockByPath(inodeLock, dst, resolveLink); // reads from snapshot.
+        byte[][] dstComponents = INode.getPathComponents(dst);
+        byte[][] srcComponents = INode.getPathComponents(src);
+        if (dstINodes.size() == dstComponents.length - 1 && dstINodes.getLast().isDirectory()) {
+          //the dst exist and is a directory.
+          INode existingInode = TransactionLockAcquirer.acquireINodeLockByNameAndParentId(
+                  inodeLock,
+                  DFSUtil.bytes2String(srcComponents[srcComponents.length - 1]),
+                  dstINodes.getLast().getId());
+//        inodeResult = new INode[inodeResult1.length + inodeResult2.length + 1];
+//        if (existingInode != null & !existingInode.isDirectory()) {
+//          inodeResult[inodeResult.length - 1] = existingInode;
+//        }
+        }
+      }
       inodeResult = new INode[inodeResult1.length + inodeResult2.length];
       System.arraycopy(inodeResult1, 0, inodeResult, 0, inodeResult1.length);
       System.arraycopy(inodeResult2, 0, inodeResult, inodeResult1.length, inodeResult2.length);

@@ -179,13 +179,7 @@ public class InodeContext extends EntityContext<INode> {
   public void update(INode inode) throws PersistanceException {
 
     if (removedInodes.containsKey(inode.getId())) {
-      // TODO [H]: What is this inside InodeContext?! Move this out.
-      if (NDC.peek().contains(RequestHandler.OperationType.RENAME_TO.toString())) {
-        removedInodes.remove(inode.getId());
-        logError("Check for removed  inode passed for persistance SKIPPED. This check should only be skipped for RENAME Operation' ");
-      } else {
         throw new TransactionContextException("Removed  inode passed to be persisted. NDC peek " + NDC.peek());
-      }
     }
 
     inodesIdIndex.put(inode.getId(), inode);

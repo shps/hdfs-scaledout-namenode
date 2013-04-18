@@ -140,6 +140,15 @@ public class TransactionLockAcquirer {
     return EntityManager.find(INode.Finder.ByPKey, id);
   }
 
+  public static INode acquireINodeLockByNameAndParentId(
+          INodeLockType lock,
+          String name,
+          long parentId)
+          throws PersistanceException {
+    lockINode(lock);
+    return EntityManager.find(INode.Finder.ByNameAndParentId, name, parentId);
+  }
+
   private static void lockINode(INodeLockType lock) {
     switch (lock) {
       case WRITE:
