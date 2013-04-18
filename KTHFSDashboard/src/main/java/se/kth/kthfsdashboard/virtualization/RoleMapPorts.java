@@ -49,15 +49,15 @@ public class RoleMapPorts {
         switch (type) {
             case TCP:
 
-                roleMappings.put("kthfs*namenode", namenodeTCP);
-                roleMappings.put("kthfs*datanode", datanodeTCP);
+                roleMappings.put("KTHFS*namenode", namenodeTCP);
+                roleMappings.put("KTHFS*datanode", datanodeTCP);
                 roleMappings.put("MySQLCluster*mgm", mgmTCP);
                 roleMappings.put("MySQLCluster*ndb", ndbdTCP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldTCP);
                 break;
             case UDP:
-                roleMappings.put("kthfs*namenode", namenodeUDP);
-                roleMappings.put("kthfs*datanode", datanodeUDP);
+                roleMappings.put("KTHFS*namenode", namenodeUDP);
+                roleMappings.put("KTHFS*datanode", datanodeUDP);
                 roleMappings.put("MySQLCluster*mgm", mgmUDP);
                 roleMappings.put("MySQLCluster*ndb", ndbdUDP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldUDP);
