@@ -15,13 +15,13 @@
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-<!--        <glassfish.hostname>localhost</glassfish.hostname>
-        <glassfish.admin></glassfish.admin>
-        <glassfish.passwd></glassfish.passwd>-->
-            
-        <glassfish.hostname>lucan.sics.se</glassfish.hostname>
+        <glassfish.hostname>193.10.64.126</glassfish.hostname>
         <glassfish.admin>admin</glassfish.admin>
-        <glassfish.passwd>dight12</glassfish.passwd>  
+        <glassfish.passwd>admin</glassfish.passwd>
+            
+<!--        <glassfish.hostname>lucan.sics.se</glassfish.hostname>
+        <glassfish.admin>admin</glassfish.admin>
+        <glassfish.passwd>dight12</glassfish.passwd>  -->
            
         <netbeans.hint.deploy.server>gfv3ee6</netbeans.hint.deploy.server>
     </properties>

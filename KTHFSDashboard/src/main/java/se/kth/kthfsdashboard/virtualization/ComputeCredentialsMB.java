@@ -16,22 +16,31 @@ import javax.faces.context.FacesContext;
  */
 @ManagedBean
 @SessionScoped
-public class ComputeCredentialsMB implements Serializable{
+public class ComputeCredentialsMB implements Serializable {
 
-    private boolean awsec2=false;
+    private boolean awsec2 = false;
     private String awsec2Id;
     private String awsec2Key;
-    private boolean openstack=false;
+    private boolean openstack = false;
     private String openstackId;
     private String openstackKey;
     private String openstackKeystone;
-    private boolean rackspace=false;
+    private boolean rackspace = false;
     private String rackspaceId;
     private String rackspaceKey;
-   private String privateIP;
+    private String privateIP;
+    private String publicKey;
 
     public String getPrivateIP() {
         return privateIP;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
     }
 
     public void setPrivateIP(String privateIP) {
@@ -123,12 +132,9 @@ public class ComputeCredentialsMB implements Serializable{
     public void setOpenstackKeystone(String openstackKeystone) {
         this.openstackKeystone = openstackKeystone;
     }
-    
-    
 
-    public void addMessage(){
+    public void addMessage() {
         FacesMessage msg = new FacesMessage("Saved");
         FacesContext.getCurrentInstance().addMessage("success", msg);
     }
-    
 }

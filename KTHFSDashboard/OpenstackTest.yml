@@ -11,7 +11,7 @@
     [3306, 4343, 3321]
   provider:
     name: openstack-nova
-    instanceType: 4
+    instanceType: 3
     loginUser: ubuntu
     image: RegionSICS/281956fa-198e-4da9-9404-cd5c958318df
     region: RegionSICS
@@ -23,12 +23,18 @@
      [MySQLCluster*ndb]
     authorizePorts:
      [MySQLCluster*ndb]
-  - securityGroup: jumbo
+  - securityGroup: mgm
     number: 1
     roles:
-     [MySQLCluster*mgm,MySQLCluster*mysqld]
+     [MySQLCluster*mgm]
     authorizePorts:
-     [MySQLCluster*mgm,MySQLCluster*mysqld]
+     [MySQLCluster*mgm]
+  - securityGroup: mysql
+    number: 1
+    roles:
+     [MySQLCluster*mysqld]
+    authorizePorts:
+     [MySQLCluster*mysqld]
   ##Override chef attributes for roles:
   chefAttributes:
 
