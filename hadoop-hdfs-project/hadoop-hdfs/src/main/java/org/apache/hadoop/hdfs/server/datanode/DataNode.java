@@ -335,7 +335,7 @@ public class DataNode extends Configured
       synchronized (refreshNamenodesLock) {
         synchronized (this) {
           for (InetSocketAddress nnaddr : nameNodeThreads.keySet()) {
-            if (!(addresses.contains(nnaddr))) {
+            if (!(addresses.contains(nnaddr))) {;
               toShutdown.add(nameNodeThreads.get(nnaddr));
             }
           }
