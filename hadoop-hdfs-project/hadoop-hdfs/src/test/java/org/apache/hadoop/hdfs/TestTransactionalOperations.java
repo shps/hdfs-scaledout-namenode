@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.SortedSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.logging.Level;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
@@ -584,8 +586,9 @@ public class TestTransactionalOperations {
         // BLOCK_RECEIVED_AND_DELETED
         long bid = locatedBlocks.getLocatedBlocks().get(0).getBlock().getBlockId();
         EntityManager.begin();
+        long inodeId = INodeUtil.findINodeIdByBlock(bid);
         tla = new TransactionLockManager();
-        tla.addINode(TransactionLockManager.INodeLockType.READ).
+        tla.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE, bid).
                 addReplica(TransactionLockManager.LockType.WRITE).
                 addExcess(TransactionLockManager.LockType.WRITE).
@@ -594,7 +597,7 @@ public class TestTransactionalOperations {
                 addPendingBlock(TransactionLockManager.LockType.WRITE).
                 addReplicaUc(TransactionLockManager.LockType.WRITE).
                 addInvalidatedBlock(TransactionLockManager.LockType.READ).
-                acquireByBlock();
+                acquireByBlock(inodeId);
         EntityManager.commit();
 
         // HANDLE_HEARTBEAT
@@ -608,6 +611,7 @@ public class TestTransactionalOperations {
 
         // LEASE_MANAGER
         EntityManager.begin();
+        SortedSet<String> leasePaths = INodeUtil.findPathsByLeaseHolder(dfs.getDefaultDFSClient().clientName);
         TransactionLockManager tlm = new TransactionLockManager();
         tlm.addINode(TransactionLockManager.INodeLockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
@@ -617,7 +621,7 @@ public class TestTransactionalOperations {
                 addCorrupt(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.READ).
-                acquireByLease();
+                acquireByLease(leasePaths);
         EntityManager.commit();
       } catch (PersistanceException ex) {
         Logger.getLogger(TestTransactionalOperations.class.getName()).log(Level.SEVERE, null, ex);

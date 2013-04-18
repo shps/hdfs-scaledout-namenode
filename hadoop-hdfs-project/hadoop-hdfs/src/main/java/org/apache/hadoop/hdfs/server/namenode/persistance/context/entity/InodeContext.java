@@ -35,15 +35,19 @@ public class InodeContext extends EntityContext<INode> {
   @Override
   public void add(INode inode) throws PersistanceException {
     if (removedInodes.containsKey(inode.getId())) {
-      throw new TransactionContextException("Removed  inode passed to be persisted");
+      log("added-removed-inode", CacheHitState.NA,
+              new String[]{"id", Long.toString(inode.getId()), "name", inode.getName(),
+        "pid", Long.toString(inode.getParentId())});
+      removedInodes.remove(inode.getId());
+      update(inode);
+    } else {
+      inodesIdIndex.put(inode.getId(), inode);
+      inodesNameParentIndex.put(inode.nameParentKey(), inode);
+      newInodes.put(inode.getId(), inode);
+      log("added-inode", CacheHitState.NA,
+              new String[]{"id", Long.toString(inode.getId()), "name", inode.getName(),
+        "pid", Long.toString(inode.getParentId())});
     }
-
-    inodesIdIndex.put(inode.getId(), inode);
-    inodesNameParentIndex.put(inode.nameParentKey(), inode);
-    newInodes.put(inode.getId(), inode);
-    log("added-inode", CacheHitState.NA,
-            new String[]{"id", Long.toString(inode.getId()), "name", inode.getName(),
-              "pid", Long.toString(inode.getParentId())});
   }
 
   @Override
@@ -76,16 +80,16 @@ public class InodeContext extends EntityContext<INode> {
         } else if (inodesIdIndex.containsKey(inodeId)) {
           log("find-inode-by-pk", CacheHitState.HIT, new String[]{"id", Long.toString(inodeId)});
           result = inodesIdIndex.get(inodeId);
-        } else if(isRemoved(inodeId))
-        {
-            return result;
-        }
-        else {
+        } else if (isRemoved(inodeId)) {
+          return result;
+        } else {
           log("find-inode-by-pk", CacheHitState.LOSS, new String[]{"id", Long.toString(inodeId)});
           aboutToAccessStorage();
           result = dataAccess.findInodeById(inodeId);
           inodesIdIndex.put(inodeId, result);
-          inodesNameParentIndex.put(result.nameParentKey(), result);
+          if (result != null) {
+            inodesNameParentIndex.put(result.nameParentKey(), result);
+          }
         }
         break;
       case ByNameAndParentId:
@@ -96,16 +100,14 @@ public class InodeContext extends EntityContext<INode> {
           log("find-inode-by-name-parentid", CacheHitState.HIT,
                   new String[]{"name", name, "pid", Long.toString(parentId)});
           result = inodesNameParentIndex.get(key);
-        } else if (newInodes.containsKey(parentId)){
+        } else if (newInodes.containsKey(parentId)) {
           log("find-inode-by-name-new-parentid", CacheHitState.HIT,
                   new String[]{"name", name, "pid", Long.toString(parentId)});
           result = null;
-        } else if(isRemoved(parentId, name))
-        {
-            return result; // return null; the node was remove. 
-        }
-        else {
-          aboutToAccessStorage(getClass().getSimpleName()+" findInodeByNameAndParentId. name "+name+" parent_id "+parentId);
+        } else if (isRemoved(parentId, name)) {
+          return result; // return null; the node was remove. 
+        } else {
+          aboutToAccessStorage(getClass().getSimpleName() + " findInodeByNameAndParentId. name " + name + " parent_id " + parentId);
           result = dataAccess.findInodeByNameAndParentId(name, parentId);
           if (result != null) {
             if (removedInodes.containsKey(result.getId())) {
@@ -176,17 +178,8 @@ public class InodeContext extends EntityContext<INode> {
   @Override
   public void update(INode inode) throws PersistanceException {
 
-    if (removedInodes.containsKey(inode.getId())) 
-    {
-      if(NDC.peek().contains(RequestHandler.OperationType.RENAME_TO.toString()) )
-      {
-        removedInodes.remove(inode.getId());  
-        logError("Check for removed  inode passed for persistance SKIPPED. This check should only be skipped for RENAME Operation' ");
-      }
-      else
-      {
-        throw new TransactionContextException("Removed  inode passed to be persisted. NDC peek "+NDC.peek());
-      }
+    if (removedInodes.containsKey(inode.getId())) {
+        throw new TransactionContextException("Removed  inode passed to be persisted. NDC peek " + NDC.peek());
     }
 
     inodesIdIndex.put(inode.getId(), inode);
@@ -213,8 +206,8 @@ public class InodeContext extends EntityContext<INode> {
       }
 
       String key = inode.nameParentKey();
-      if (inodesParentIndex.containsKey(key)) {
-        if (inodesParentIndex.get(key) == null) {
+      if (inodesNameParentIndex.containsKey(key)) {
+        if (inodesNameParentIndex.get(key) == null) {
           inodesNameParentIndex.put(key, inode);
         }
 
@@ -225,31 +218,25 @@ public class InodeContext extends EntityContext<INode> {
 
     return finalList;
   }
-  
-  private boolean isRemoved(final long parent_id, final String name)
-  {
-      for(INode inode : removedInodes.values())
-      {
-          if(inode.getParentId() == parent_id && 
-                  inode.getName().equals(name))
-          {
-              return true;
-          }
+
+  private boolean isRemoved(final long parent_id, final String name) {
+    for (INode inode : removedInodes.values()) {
+      if (inode.getParentId() == parent_id
+              && inode.getName().equals(name)) {
+        return true;
       }
-      
-      return false;
+    }
+
+    return false;
   }
-  
-  private boolean isRemoved(final long id)
-  {
-      for(INode inode : removedInodes.values())
-      {
-          if(inode.getId() == id)
-          {
-              return true;
-          }
+
+  private boolean isRemoved(final long id) {
+    for (INode inode : removedInodes.values()) {
+      if (inode.getId() == id) {
+        return true;
       }
-      
-      return false;
+    }
+
+    return false;
   }
 }

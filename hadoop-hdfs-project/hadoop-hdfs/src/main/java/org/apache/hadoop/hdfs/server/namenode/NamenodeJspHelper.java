@@ -48,10 +48,12 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
@@ -96,9 +98,25 @@ class NamenodeJspHelper {
     }
   }
 
-  static String getInodeLimitText(FSNamesystem fsn)  throws PersistanceException,
+  static String getInodeLimitText(final FSNamesystem fsn)  throws PersistanceException,
           IOException{
-    long inodes = fsn.dir.totalInodes();
+      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ,
+                new String[]{"/"});
+        tlm.acquire();
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return fsn.dir.totalInodes();
+      }
+    };
+    long inodes = (Long) totalInodesHandler.handle();
     long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
 
@@ -749,12 +767,18 @@ class NamenodeJspHelper {
               return blockManager.getINode(block);
             }
 
+            long inodeId;
             @Override
             public void acquireLock() throws PersistanceException, IOException {
               TransactionLockManager lm = new TransactionLockManager();
               lm.addINode(TransactionLockManager.INodeLockType.READ).
                       addBlock(TransactionLockManager.LockType.READ, block.getBlockId());
-              lm.acquireByBlock();
+              lm.acquireByBlock(inodeId);
+            }
+      
+            @Override
+            public void setUp() throws StorageException {
+              inodeId = INodeUtil.findINodeIdByBlock(block.getBlockId());
             }
           }.handle();
         } catch (IOException e) {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,10 +29,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 public class TestUnderReplicatedBlocks extends TestCase {
 
@@ -59,6 +63,7 @@ public class TestUnderReplicatedBlocks extends TestCase {
           bm.removeNode(b.getLocalBlock(), dn);
           return null;
         }
+        long inodeId;
 
         @Override
         public void acquireLock() throws PersistanceException, IOException {
@@ -66,7 +71,12 @@ public class TestUnderReplicatedBlocks extends TestCase {
           lm.addINode(TransactionLockManager.INodeLockType.WRITE).
                   addBlock(TransactionLockManager.LockType.WRITE, b.getBlockId()).
                   addReplica(TransactionLockManager.LockType.WRITE).
-                  acquireByBlock();
+                  acquireByBlock(inodeId);
+        }
+
+        @Override
+        public void setUp() throws StorageException {
+          inodeId = INodeUtil.findINodeIdByBlock(b.getBlockId());
         }
       }.handle();
       // increment this file's replication factor

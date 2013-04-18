@@ -72,6 +72,8 @@ import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -313,13 +315,26 @@ public class DFSTestUtil {
    * Keep accessing the given file until the namenode reports that the
    * given block in the file contains the given number of corrupt replicas.
    */
-  public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
-      Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException, PersistanceException {
+  public static void waitCorruptReplicas(FileSystem fs, final FSNamesystem ns,
+      Path file, final ExtendedBlock b, int corruptRepls)
+      throws IOException, TimeoutException {
     int count = 0;
     final int ATTEMPTS = 50;
-    
-    int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+    TransactionalRequestHandler corruptReplicasHandler = new TransactionalRequestHandler(RequestHandler.OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addBlock(TransactionLockManager.LockType.READ, b.getBlockId()).
+                addCorrupt(TransactionLockManager.LockType.READ).
+                acquire();
+      }
+      
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+      }
+    };
+    int repls = (Integer) corruptReplicasHandler.handle();
     while (repls != corruptRepls && count < ATTEMPTS) {
       try {
         // Client will try to read the file and would probably report corrupted blocks to the NN if there are any
@@ -329,7 +344,7 @@ public class DFSTestUtil {
         // Swallow exceptions
       }
       LOG.info("Waiting for "+corruptRepls+" corrupt replicas");
-      repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+      repls = (Integer) corruptReplicasHandler.handle();
       count++;
     }
     if (count == ATTEMPTS) {

@@ -18,6 +18,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
@@ -31,7 +33,10 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 
 /**
  * This class tests that a file system adheres to the limit of maximum number of
@@ -39,142 +44,158 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
  */
 public class TestFileLimit extends TestCase {
 
-    static final Log LOG = LogFactory.getLog(TestFileLimit.class);
-    static final long seed = 0xDEADBEEFL;
-    static final int blockSize = 8192;
-    boolean simulatedStorage = false;
+  static final Log LOG = LogFactory.getLog(TestFileLimit.class);
+  static final long seed = 0xDEADBEEFL;
+  static final int blockSize = 8192;
+  boolean simulatedStorage = false;
 
-    // creates a zero file.
-    private void createFile(FileSystem fileSys, Path name)
-            throws IOException {
-        FSDataOutputStream stm = fileSys.create(name, true,
-                fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                (short) 1, (long) blockSize);
-        byte[] buffer = new byte[1024];
-        Random rand = new Random(seed);
-        rand.nextBytes(buffer);
-        stm.write(buffer);
-        stm.close();
-    }
+  // creates a zero file.
+  private void createFile(FileSystem fileSys, Path name)
+          throws IOException {
+    FSDataOutputStream stm = fileSys.create(name, true,
+            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+            (short) 1, (long) blockSize);
+    byte[] buffer = new byte[1024];
+    Random rand = new Random(seed);
+    rand.nextBytes(buffer);
+    stm.write(buffer);
+    stm.close();
+  }
 
-    private void waitForLimit(FSNamesystem namesys, long num) 
-            throws PersistanceException , IOException{
-        // wait for number of blocks to decrease
-        while (true) {
-            long total = namesys.getBlocksTotal() + namesys.dir.totalInodes();
-            LOG.info("Comparing current nodes " + total
-                    + " to become " + num);
-            if (total == num) {
-                break;
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-            }
+  private void waitForLimit(final FSNamesystem namesys, long num) {
+    TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager tlm = new TransactionLockManager();
+        tlm.addINode(
+                TransactionLockManager.INodeResolveType.ONLY_PATH,
+                TransactionLockManager.INodeLockType.READ_COMMITED,
+                new String[]{"/"});
+        tlm.acquire();
+      }
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        return namesys.dir.totalInodes();
+      }
+    };
+    // wait for number of blocks to decrease
+    while (true) {
+      long totalInodes;
+      try {
+        totalInodes = (Long) totalInodesHandler.handle();
+        long total = namesys.getBlocksTotal() + totalInodes;
+        LOG.info("Comparing current nodes " + total
+                + " to become " + num);
+        if (total == num) {
+          break;
         }
-    }
-
-    /**
-     * Test that file data becomes available before file is closed.
-     */
-    public void testFileLimit() throws IOException {
-        Configuration conf = new HdfsConfiguration();
-        int maxObjects = 5;
-        conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, maxObjects);
-        conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
-        conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-        int currentNodes = 0;
-
-        if (simulatedStorage) {
-            conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-        }
-        MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-        FileSystem fs = cluster.getFileSystem();
-        FSNamesystem namesys = cluster.getNamesystem();
         try {
-
-            //
-            // check that / exists
-            //
-            Path path = new Path("/");
-            assertTrue("/ should be a directory",
-                    fs.getFileStatus(path).isDirectory());
-            currentNodes = 1;          // root inode
-
-            // verify that we can create the specified number of files. We leave
-            // one for the "/". Each file takes an inode and a block.
-            //
-            for (int i = 0; i < maxObjects / 2; i++) {
-                Path file = new Path("/filestatus" + i);
-                createFile(fs, file);
-                LOG.info("Created file " + file);
-                currentNodes += 2;      // two more objects for this creation.
-            }
-
-            // verify that creating another file fails
-            boolean hitException = false;
-            try {
-                Path file = new Path("/filestatus");
-                createFile(fs, file);
-                LOG.info("Created file " + file);
-            } catch (IOException e) {
-                hitException = true;
-            }
-            assertTrue("Was able to exceed file limit", hitException);
-
-            // delete one file
-            Path file0 = new Path("/filestatus0");
-            fs.delete(file0, true);
-            LOG.info("Deleted file " + file0);
-            currentNodes -= 2;
-
-            try {
-                // wait for number of blocks to decrease
-                waitForLimit(namesys, currentNodes);
-
-                // now, we shud be able to create a new file
-                createFile(fs, file0);
-                LOG.info("Created file " + file0 + " again.");
-                currentNodes += 2;
-
-                // delete the file again
-                file0 = new Path("/filestatus0");
-                fs.delete(file0, true);
-                LOG.info("Deleted file " + file0 + " again.");
-                currentNodes -= 2;
-
-                // wait for number of blocks to decrease
-                waitForLimit(namesys, currentNodes);
-
-                // create two directories in place of the file that we deleted
-                Path dir = new Path("/dir0/dir1");
-                fs.mkdirs(dir);
-                LOG.info("Created directories " + dir);
-                currentNodes += 2;
-                waitForLimit(namesys, currentNodes);
-
-                // verify that creating another directory fails
-                hitException = false;
-                try {
-                    fs.mkdirs(new Path("dir.fail"));
-                    LOG.info("Created directory should not have succeeded.");
-                } catch (IOException e) {
-                    hitException = true;
-                }
-                assertTrue("Was able to exceed dir limit", hitException);
-            } catch (PersistanceException e) {
-                fail("Persistnace Error "+e);
-            }
-
-        } finally {
-            fs.close();
-            cluster.shutdown();
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
         }
+      } catch (IOException ex) {
+        Logger.getLogger(TestFileLimit.class.getName()).log(Level.SEVERE, null, ex);
+        assert false;
+      }
+    }
+  }
+
+  /**
+   * Test that file data becomes available before file is closed.
+   */
+  public void testFileLimit() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    int maxObjects = 5;
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, maxObjects);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    int currentNodes = 0;
+
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    FSNamesystem namesys = cluster.getNamesystem();
+    //
+    // check that / exists
+    //
+    Path path = new Path("/");
+    assertTrue("/ should be a directory",
+            fs.getFileStatus(path).isDirectory());
+    currentNodes = 1;          // root inode
+
+    // verify that we can create the specified number of files. We leave
+    // one for the "/". Each file takes an inode and a block.
+    //
+    for (int i = 0; i < maxObjects / 2; i++) {
+      Path file = new Path("/filestatus" + i);
+      createFile(fs, file);
+      LOG.info("Created file " + file);
+      currentNodes += 2;      // two more objects for this creation.
     }
 
-    public void testFileLimitSimulated() throws IOException {
-        simulatedStorage = true;
-        testFileLimit();
-        simulatedStorage = false;
+    // verify that creating another file fails
+    boolean hitException = false;
+    try {
+      Path file = new Path("/filestatus");
+      createFile(fs, file);
+      LOG.info("Created file " + file);
+    } catch (IOException e) {
+      hitException = true;
     }
+    assertTrue("Was able to exceed file limit", hitException);
+
+    // delete one file
+    Path file0 = new Path("/filestatus0");
+    fs.delete(file0, true);
+    LOG.info("Deleted file " + file0);
+    currentNodes -= 2;
+
+    try {
+      // wait for number of blocks to decrease
+      waitForLimit(namesys, currentNodes);
+
+      // now, we shud be able to create a new file
+      createFile(fs, file0);
+      LOG.info("Created file " + file0 + " again.");
+      currentNodes += 2;
+
+      // delete the file again
+      file0 = new Path("/filestatus0");
+      fs.delete(file0, true);
+      LOG.info("Deleted file " + file0 + " again.");
+      currentNodes -= 2;
+
+      // wait for number of blocks to decrease
+      waitForLimit(namesys, currentNodes);
+
+      // create two directories in place of the file that we deleted
+      Path dir = new Path("/dir0/dir1");
+      fs.mkdirs(dir);
+      LOG.info("Created directories " + dir);
+      currentNodes += 2;
+      waitForLimit(namesys, currentNodes);
+
+      // verify that creating another directory fails
+      hitException = false;
+      try {
+        fs.mkdirs(new Path("dir.fail"));
+        LOG.info("Created directory should not have succeeded.");
+      } catch (IOException e) {
+        hitException = true;
+      }
+      assertTrue("Was able to exceed dir limit", hitException);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
+  public void testFileLimitSimulated() throws IOException {
+    simulatedStorage = true;
+    testFileLimit();
+    simulatedStorage = false;
+  }
 }

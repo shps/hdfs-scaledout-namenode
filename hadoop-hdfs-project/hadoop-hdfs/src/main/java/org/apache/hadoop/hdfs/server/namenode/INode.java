@@ -83,6 +83,8 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     protected long accessTime;
     protected long id; // Added for KTHFS
     protected long parentid; // Added for KTHFS
+    // FIXME [H]: min value can be chosen as the inode id. Change this.
+    public static final long NON_EXISTING_ID = Long.MIN_VALUE;
 
     /**
      * Simple wrapper for two counters : nsCount (namespace consumed) and

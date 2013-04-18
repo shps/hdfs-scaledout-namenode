@@ -57,13 +57,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
-import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.util.ByteArray;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * ***********************************************
@@ -274,7 +269,8 @@ public class FSDirectory implements Closeable {
             String clientName,
             String clientMachine,
             DatanodeID clientNode,
-            long generationStamp)
+            long generationStamp,
+            INodeFile existingInode)
             throws FileAlreadyExistsException, QuotaExceededException,
             UnresolvedLinkException, PersistanceException, IOException{
         waitForReady();
@@ -286,13 +282,21 @@ public class FSDirectory implements Closeable {
             return null;
         }
 
-        INodeFile newNode = new INodeFile(true,
+        boolean reuseId = existingInode != null;
+        INodeFile newNode;
+        if (existingInode != null)
+        {
+          newNode = existingInode;
+          newNode.convertToUnderConstruction(clientName, clientMachine, clientNode);
+        } 
+        else
+          newNode = new INodeFile(true,
                 permissions, replication,
                 preferredBlockSize, modTime, clientName,
                 clientMachine, clientNode);
         writeLock();
         try {
-            newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false);
+            newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE, false, reuseId);
         } finally {
             writeUnlock();
         }
@@ -1204,6 +1208,7 @@ public class FSDirectory implements Closeable {
         }
         // set the parent's modification time
         inodes[pos - 1].setModificationTime(mtime);
+        EntityManager.update(inodes[pos - 1]);
 
         int filesRemoved = 1;
         if (targetNode instanceof INodeDirectory || targetNode instanceof INodeDirectoryWithQuota) {
@@ -1669,6 +1674,17 @@ public class FSDirectory implements Closeable {
             long childDiskspace, boolean inheritPermission)
             throws QuotaExceededException, UnresolvedLinkException, 
             PersistanceException, IOException {
+      return addNode(src, child, childDiskspace, inheritPermission, false);
+    }
+    /**
+     * Add a node child to the namespace. The full path name of the node is src.
+     * childDiskspace should be -1, if unknown. QuotaExceededException is thrown
+     * if it violates quota limit
+     */
+    private <T extends INode> T addNode(String src, T child,
+            long childDiskspace, boolean inheritPermission, boolean reuseId)
+            throws QuotaExceededException, UnresolvedLinkException, 
+            PersistanceException, IOException {
 
         byte[][] components = INode.getPathComponents(src);
         byte[] path = components[components.length - 1];
@@ -1679,7 +1695,7 @@ public class FSDirectory implements Closeable {
         try {
             getRootDir().getExistingPathINodes(components, inodes, false);
             return addChild(inodes, inodes.length - 1, child, childDiskspace,
-                    inheritPermission);
+                    inheritPermission, reuseId);
         } finally {
             writeUnlock();
         }
@@ -1840,11 +1856,11 @@ public class FSDirectory implements Closeable {
             updateCount(pathComponents, pos, -counts.getNsCount(),
                     -childDiskspace, true);
         } else {
-            if (reuseID) {
-                EntityManager.update(addedNode); //for move or rename
-            } else {
+//            if (reuseID) {
+//                EntityManager.update(addedNode); //for move or rename
+//            } else {
                 EntityManager.add(addedNode);
-            }
+//            }
             // [H] The following updates modification time
             if (quotaEnabled) {
                 EntityManager.update(pathComponents[pos - 1]);
@@ -1852,6 +1868,12 @@ public class FSDirectory implements Closeable {
         }
 
         return addedNode;
+    }
+    
+    private <T extends INode> T addChild(INode[] pathComponents, int pos,
+            T child, long childDiskspace, boolean inheritPermission, boolean reuseId)
+            throws QuotaExceededException, PersistanceException {
+      return addChild(pathComponents, pos, child, childDiskspace, inheritPermission, true, reuseId);
     }
 
     private <T extends INode> T addChild(INode[] pathComponents, int pos,
@@ -2083,14 +2105,14 @@ public class FSDirectory implements Closeable {
         }
     }
 
-    long totalInodes() throws PersistanceException, IOException {
-        readLock();
-        try {
-            return getRootDir().getNsCount();
-        } finally {
-            readUnlock();
-        }
+  long totalInodes() throws PersistanceException, IOException {
+    readLock();
+    try {
+          return getRootDir().getNsCount();
+    } finally {
+      readUnlock();
     }
+  }
 
     /**
      * Sets the access time on the file. Logs it in the transaction log.
