@@ -1,6 +1,0 @@
-#!/bin/bash
-
-./stop-memcache
-sleep 2
-./start-memcache
-sleep 1
