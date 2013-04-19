@@ -6,13 +6,13 @@ set -e
 
 ./build.sh
 
-mkdir -p staging
+mkdir -p staging/hadoop
 dir1=hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-0.24.0-SNAPSHOT/
 dir2=hadoop-common-project/hadoop-common/target/hadoop-common-0.24.0-SNAPSHOT/
 
 
-cp -r $dir1/* staging
-cp -r $dir2/* staging
+cp -r $dir1/* staging/hadoop
+cp -r $dir2/* staging/hadoop
 
 echo ""
 echo "Copying binaries to snurran.sics.se"
