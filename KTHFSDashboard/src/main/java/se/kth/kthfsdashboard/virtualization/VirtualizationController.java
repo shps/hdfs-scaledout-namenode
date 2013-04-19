@@ -489,7 +489,7 @@ public class VirtualizationController implements Serializable {
                 //This is a delay we must use for EC2. There is a limit on REST requests and if we dont limit the
                 //bursts of the requests it will fail
                 try {
-                    Thread.sleep(9000);
+                    Thread.sleep(15000);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
