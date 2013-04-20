@@ -715,6 +715,7 @@ public class VirtualizationController implements Serializable {
         //Open json bracket
         json.append("{");
         //First generate the ndb fragment
+        // JIM: Note there can be multiple mgm servers, not just one.
         json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(mgm.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[");
         for (int i = 0; i < ndbs.size(); i++) {
             if (i == ndbs.size() - 1) {
@@ -750,8 +751,10 @@ public class VirtualizationController implements Serializable {
         json.append("\"clients\":[");
         //Depending of the security group name of the demo we specify which collectd config to use
         if (group.getSecurityGroup().equals("mysql")
-                || group.getSecurityGroup().equals("mgm")
-                || group.getSecurityGroup().equals("ndb")) {
+                // JIM: We can just have an empty clients list for mgm and ndb nodes    
+//                || group.getSecurityGroup().equals("mgm")
+//                || group.getSecurityGroup().equals("ndb")
+                ) {
             json.append("\"mysql\"");
         }
         if (group.getSecurityGroup().equals("datanodes")) {
@@ -801,60 +804,50 @@ public class VirtualizationController implements Serializable {
         RunListBuilder builder = new RunListBuilder();
         builder.addRecipe("kthfsagent");
 
+        boolean collectdAdded = false;
         //Look at the roles, if it matches add the recipes for that role
         for (String role : group.getRoles()) {
             if (role.equals("MySQLCluster*ndb")) {
 
                 builder.addRecipe("ndb::ndbd");
-
                 builder.addRecipe("ndb::ndbd-kthfs");
-                builder.addRecipe("collectd::attr-driven");
-
-
-
+                collectdAdded = true;
             }
             if (role.equals("MySQLCluster*mysqld")) {
 
                 builder.addRecipe("ndb::mysqld");
-
                 builder.addRecipe("ndb::mysqld-kthfs");
-                builder.addRecipe("collectd::attr-driven");
-
+                collectdAdded = true;
             }
             if (role.equals("MySQLCluster*mgm")) {
 
                 builder.addRecipe("ndb::mgmd");
 
                 builder.addRecipe("ndb::mgmd-kthfs");
-                builder.addRecipe("collectd::attr-driven");
-
+                collectdAdded = true;
             }
             if (role.equals("MySQLCluster*memcached")) {
-
                 builder.addRecipe("ndb::memcached");
-
                 builder.addRecipe("ndb::memcached-kthfs");
             }
 
             //This are for the Hadoop nodes
             if (role.equals("KTHFS*namenode")) {
-                builder.addRecipe("authbind");
                 builder.addRecipe("java");
-                builder.addRecipe("openssh");
-                builder.addRecipe("openssl");
                 builder.addRecipe("kthfs::namenode");
-                builder.addRecipe("collectd::attr-driven");
+                collectdAdded = true;
             }
             if (role.equals("KTHFS*datanode")) {
-                builder.addRecipe("authbind");
                 builder.addRecipe("java");
-                builder.addRecipe("openssh");
-                builder.addRecipe("openssl");
                 builder.addRecipe("kthfs::datanode");
+                collectdAdded = true;
+            }
+            if (collectdAdded) {
                 builder.addRecipe("collectd::attr-driven");
             }
-
-
+            // We always need to restart the kthfsagent after we have
+            // updated its list of services
+            builder.addRecipe("kthfsagent::restart");
 
         }
 

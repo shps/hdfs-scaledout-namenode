@@ -20,6 +20,8 @@ import org.primefaces.model.UploadedFile;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
 import se.kth.kthfsdashboard.util.CollectdTools;
 
+// TODO: Loads of hard-coded crap here.
+
 public class MySQLAccess implements Serializable {
 
    final static String DASH_USERNAME = "kthfs";
@@ -34,6 +36,9 @@ public class MySQLAccess implements Serializable {
       try {
          
          Class.forName("com.mysql.jdbc.Driver");
+
+         // TODO - Externalize cloud11 into configuration data. Possibly stored 
+         // in the local MySQL DB.
          connect = DriverManager.getConnection("jdbc:mysql://cloud11.sics.se/ndbinfo?"
                  + "user=kthfs&password=kthfs");
 
