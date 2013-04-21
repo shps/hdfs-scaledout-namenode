@@ -80,6 +80,8 @@ import se.kth.kthfsdashboard.virtualization.clusterparser.NodeGroup;
 public class VirtualizationController implements Serializable {
 
     private static final URI RUBYGEMS_URI = URI.create("http://production.cf.rubygems.org/rubygems/rubygems-1.8.10.tgz");
+    @ManagedProperty(value = "#{messageController}")
+    private MessageController messages;
     @ManagedProperty(value = "#{computeCredentialsMB}")
     private ComputeCredentialsMB computeCredentialsMB;
     @ManagedProperty(value = "#{clusterController}")
@@ -122,16 +124,28 @@ public class VirtualizationController implements Serializable {
         this.clusterController = clusterController;
     }
 
+    public MessageController getMessages() {
+        return messages;
+    }
+
+    public void setMessages(MessageController messages) {
+        this.messages = messages;
+    }
+
+    
     /*
      * Command to launch the instance
      */
     public void launchCluster() {
         setCredentials();
+        messages.addMessage("Setting up credentials and initializing virtualization context...");
         service = initContexts();
 
         createSecurityGroups();
         launchNodesBasicSetup();
         demoOnly();
+        messages.addSuccessMessage("Cluster launched");
+        messages.clearMessages();
         //installRoles();
     }
 
@@ -217,7 +231,7 @@ public class VirtualizationController implements Serializable {
 
         //From minecraft example, how to include your own event handlers
         context.utils().eventBus().register(ScriptLogger.INSTANCE);
-
+        messages.addMessage("Virtualization context initialized, start opening security groups");
         return context.getComputeService();
 
     }
@@ -322,7 +336,7 @@ public class VirtualizationController implements Serializable {
      */
     private void runChefSolo(ImmutableList.Builder<Statement> statements) {
         statements.add(exec("sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json"));
-        statements.add(exec("sudo service kthfsagent restart"));
+        //statements.add(exec("sudo service kthfsagent restart"));
     }
 
     /*
@@ -363,9 +377,12 @@ public class VirtualizationController implements Serializable {
             TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
             selectProviderTemplateOptions(provider, kthfsTemplate);
             for (NodeGroup group : clusterController.getCluster().getNodes()) {
+                messages.addMessage("Creating " + group.getNumber() + "nodes in Security Group " + group.getSecurityGroup());
                 Set<? extends NodeMetadata> ready = service.createNodesInGroup(group.getSecurityGroup(), group.getNumber(), kthfsTemplate.build());
                 //For the demo, we keep track of the returned set of node Metadata launched and which group 
                 //was
+                messages.addMessage("Nodes created in Security Group " + group.getSecurityGroup() + " with "
+                        + "basic setup");
                 nodes.put(group.getSecurityGroup(), ready);
 
                 //Ignore for now, this is for future does not affect for the demo
@@ -447,6 +464,7 @@ public class VirtualizationController implements Serializable {
                 System.out.printf("%d: creating security group: %s%n", System.currentTimeMillis(),
                         group.getSecurityGroup());
                 //create security group
+                messages.addMessage("Creating Security Group: " + group.getSecurityGroup());
                 try {
                     client.getSecurityGroupServices().createSecurityGroupInRegion(
                             region, groupName, group.getSecurityGroup());
@@ -517,6 +535,7 @@ public class VirtualizationController implements Serializable {
                             group.getSecurityGroup());
                     //create security group
                     if (!client.list().anyMatch(nameEquals(groupName))) {
+                        messages.addMessage("Creating security group: " + group.getSecurityGroup());
                         SecurityGroup created = client.createWithDescription(groupName, group.getSecurityGroup());
                         //get the ports
                         for (String authPort : group.getAuthorizePorts()) {
@@ -571,7 +590,7 @@ public class VirtualizationController implements Serializable {
      * This is the code for the demo
      */
     private void demoOnly() {
-
+        messages.addMessage("Starting specific configuration of the nodes...");
         //Fetch all the addresses we need.
         List<String> ndbsDemo = new LinkedList();
         List<String> mgmDemo = new LinkedList();
@@ -620,9 +639,10 @@ public class VirtualizationController implements Serializable {
 
 
         //All follow the same idea, we go over the security groups and fetch
-
+        messages.addMessage("Starting the MySQL Cluster....");
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
             if (group.getSecurityGroup().equals("mgm")) {
+                messages.addMessage("Starting setup of mgm Node..");
                 //The nodes for that group from our hashmap store
                 Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
@@ -632,10 +652,12 @@ public class VirtualizationController implements Serializable {
                     //Prepare the script
                     ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
                     //We build the json chef file
+                    messages.addMessage("Generating JSON chef file for node...");
                     createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     runChefSolo(roleBuilder);
                     //We connect to the specific node using its metadata id and give him the json and the chef command to run
+                    messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
                     service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
                 }
             }
@@ -644,13 +666,16 @@ public class VirtualizationController implements Serializable {
         //All follow the same description
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
             if (group.getSecurityGroup().equals("ndb")) {
+                messages.addMessage("Starting setup of ndb Node...");
                 Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
                     ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    messages.addMessage("Generating JSON chef file for node...");
                     createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     runChefSolo(roleBuilder);
+                    messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
                     service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
                 }
             }
@@ -658,40 +683,50 @@ public class VirtualizationController implements Serializable {
 
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
             if (group.getSecurityGroup().equals("mysql")) {
+                messages.addMessage("Starting setup of MySQLd Node..");
                 Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
                     ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    messages.addMessage("Generating JSON chef file for node...");
                     createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     runChefSolo(roleBuilder);
+                    messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
                     service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
                 }
             }
         }
 
+        messages.addMessage("Starting Hadoop nodes...");
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
             if (group.getSecurityGroup().equals("namenodes")) {
+                messages.addMessage("Starting setup of Namenode");
                 Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
                     ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    messages.addMessage("Generating JSON chef file for node...");
                     createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     runChefSolo(roleBuilder);
+                    messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
                     service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
                 }
             }
         }
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
             if (group.getSecurityGroup().equals("datanodes")) {
+                messages.addMessage("Starting setup of Datanode");
                 Set<? extends NodeMetadata> elements = nodes.get(group.getSecurityGroup());
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
                     ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    messages.addMessage("Generating JSON chef file for node...");
                     createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     runChefSolo(roleBuilder);
+                    messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
                     service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
                 }
             }
@@ -716,7 +751,19 @@ public class VirtualizationController implements Serializable {
         json.append("{");
         //First generate the ndb fragment
         // JIM: Note there can be multiple mgm servers, not just one.
-        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [\"").append(mgm.get(0)).append("\"]}," + "\"ndbd\":{\"addrs\":[");
+        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [");
+
+        //Iterate mgm servers and add them.
+
+        for (int i = 0; i < mgm.size(); i++) {
+            if (i == mgm.size() - 1) {
+                json.append("\"").append(mgm.get(i)).append("\"]},");
+            } else {
+                json.append("\"").append(mgm.get(i)).append("\",");
+            }
+        }
+        //Iterate ndbds addresses
+        json.append("\"ndbd\":{\"addrs\":[");
         for (int i = 0; i < ndbs.size(); i++) {
             if (i == ndbs.size() - 1) {
                 json.append("\"").append(ndbs.get(i)).append("\"]},");
@@ -750,10 +797,9 @@ public class VirtualizationController implements Serializable {
         json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\",");
         json.append("\"clients\":[");
         //Depending of the security group name of the demo we specify which collectd config to use
-        if (group.getSecurityGroup().equals("mysql")
-                // JIM: We can just have an empty clients list for mgm and ndb nodes    
-//                || group.getSecurityGroup().equals("mgm")
-//                || group.getSecurityGroup().equals("ndb")
+        if (group.getSecurityGroup().equals("mysql") // JIM: We can just have an empty clients list for mgm and ndb nodes    
+                //                || group.getSecurityGroup().equals("mgm")
+                //                || group.getSecurityGroup().equals("ndb")
                 ) {
             json.append("\"mysql\"");
         }

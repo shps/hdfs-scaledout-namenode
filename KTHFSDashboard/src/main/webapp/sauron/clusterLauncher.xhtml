@@ -92,14 +92,54 @@
                                     </p:tab>
                                 </p:accordionPanel>
                                 <br/>
-                                <p:commandButton id="startCluster" value="startCluster" action="#{virtualizationController.launchCluster()}"/>
+                                <p:commandButton id="startCluster" value="startCluster" 
+                                                 action="#{virtualizationController.launchCluster()}"
+                                                 update="success"
+                                                 onclick="pollCreate.start();"
+                                                 oncomplete="pollCreate.stop();"/>
+                                
+                                
+                                <p:growl id="success" showDetail="true" sticky="true" />
+
+                                <p:blockUI block=":centerStatus" trigger=":launchForm:startCluster">
+                                    <h:panelGrid id="blockContent" columns="2" >
+                                        <div class="windows8" >
+                                            <div class="wBall" id="wBall_1">
+                                                <div class="wInnerBall">
+                                                </div>
+                                            </div>
+                                            <div class="wBall" id="wBall_2">
+                                                <div class="wInnerBall">
+                                                </div>
+                                            </div>
+                                            <div class="wBall" id="wBall_3">
+                                                <div class="wInnerBall">
+                                                </div>
+                                            </div>
+                                            <div class="wBall" id="wBall_4">
+                                                <div class="wInnerBall">
+                                                </div>
+                                            </div>
+                                            <div class="wBall" id="wBall_5">
+                                                <div class="wInnerBall">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <h:outputLabel id="statusCreate" value="#{virtualizationController.messages.showMessage()}" 
+                                                       style="white-space:nowrap;" >
+                                        </h:outputLabel>
+                                        <p:poll widgetVar="pollCreate" interval="2" autoStart="false" update="statusCreate" async="true" partialSubmit="true" process="@this"/>
+                                    </h:panelGrid>
+                                </p:blockUI>
                             </h:form>
 
                         </p:layoutUnit>
-                        <p:layoutUnit position="center" header="Launch Status:">
+                        <p:layoutUnit id="centerStatus" position="center" header="Launch Status:">
                             <ui:include src="/sauron/template/clusterTreeTable.xhtml"/>
                         </p:layoutUnit>
+                        
                     </p:layout>
+                    
                 </div>
             </div>
         </ui:define>
