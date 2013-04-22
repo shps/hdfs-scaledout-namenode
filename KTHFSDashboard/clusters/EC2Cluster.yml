@@ -36,18 +36,7 @@
      [MySQLCluster*mysqld]
     authorizePorts:
      [MySQLCluster*mysqld]
-  - securityGroup: namenodes
-    number: 2
-    roles:
-     [KTHFS*namenode]
-    authorizePorts:
-     [KTHFS*namenode]
-  - securityGroup: datanodes
-    number: 2
-    roles:
-     [KTHFS*datanode]
-    authorizePorts:
-     [KTHFS*datanode]   
+  
   ##Override chef attributes for roles:
   chefAttributes:
 

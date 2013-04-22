@@ -328,8 +328,12 @@ public class VirtualizationController implements Serializable {
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
-
-
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        
         return new StatementList(bootstrapBuilder.build());
     }
 
@@ -759,20 +763,22 @@ public class VirtualizationController implements Serializable {
 
         for (int i = 0; i < mgm.size(); i++) {
             if (i == mgm.size() - 1) {
-                json.append("\"").append(mgm.get(i)).append("\"]},");
+                json.append("\"").append(mgm.get(i)).append("\"");
             } else {
                 json.append("\"").append(mgm.get(i)).append("\",");
             }
         }
+        json.append("]},");
         //Iterate ndbds addresses
         json.append("\"ndbd\":{\"addrs\":[");
         for (int i = 0; i < ndbs.size(); i++) {
             if (i == ndbs.size() - 1) {
-                json.append("\"").append(ndbs.get(i)).append("\"]},");
+                json.append("\"").append(ndbs.get(i)).append("\"");
             } else {
                 json.append("\"").append(ndbs.get(i)).append("\",");
             }
         }
+        json.append("]},");
         //Get the mgms ips and add to the end the ips of the mysqlds
         List<String> ndapi = new LinkedList(mgm);
         ndapi.addAll(mysql);
@@ -780,12 +786,12 @@ public class VirtualizationController implements Serializable {
         json.append("\"ndbapi\":{\"addrs\":[");
         for (int i = 0; i < ndapi.size(); i++) {
             if (i == ndapi.size() - 1) {
-                json.append("\"").append(ndapi.get(i)).append("\"]},");
+                json.append("\"").append(ndapi.get(i)).append("\"");
             } else {
                 json.append("\"").append(ndapi.get(i)).append("\",");
             }
         }
-
+        json.append("]},");
         //Get the nodes private ip
         List<String> ips = new LinkedList(data.getPrivateAddresses());
         //add the ip in the json
@@ -819,13 +825,15 @@ public class VirtualizationController implements Serializable {
         json.append("\"ndb_connectstring\":\"").append(mgm.get(0)).append("\",");
         //namenodes ips
         json.append("\"namenode\":{\"addrs\":[");
+
         for (int i = 0; i < namenodes.size(); i++) {
             if (i == namenodes.size() - 1) {
-                json.append("\"").append(namenodes.get(i)).append("\"]},");
+                json.append("\"").append(namenodes.get(i)).append("\"");
             } else {
                 json.append("\"").append(namenodes.get(i)).append("\",");
             }
         }
+        json.append("]},");
         //My own ip
         json.append("\"ip\":\"").append(ips.get(0)).append("\"");
         json.append("},");
@@ -833,13 +841,13 @@ public class VirtualizationController implements Serializable {
         json.append("\"run_list\":[");
         for (int i = 0; i < runlist.size(); i++) {
             if (i == runlist.size() - 1) {
-                json.append("\"").append(runlist.get(i)).append("\"]");
+                json.append("\"").append(runlist.get(i)).append("\"");
             } else {
                 json.append("\"").append(runlist.get(i)).append("\",");
             }
         }
         //close the json
-        json.append("}");
+        json.append("]}");
         //Create the file in this directory in the node
         statements.add(createOrOverwriteFile("/etc/chef/chef.json", ImmutableSet.of(json.toString())));
 
