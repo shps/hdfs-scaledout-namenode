@@ -23,8 +23,8 @@ public class CommandController {
     private String service;
     @ManagedProperty("#{param.servicegroup}")
     private String serviceGroup;
-    @ManagedProperty("#{param.kthfsinstance}")
-    private String kthfsInstance;
+    @ManagedProperty("#{param.cluster}")
+    private String cluster;
 
     
 //    private HashMap<String, InstanceInfo> commands = new HashMap<String, InstanceInfo>();
@@ -57,23 +57,32 @@ public class CommandController {
         this.hostname = hostname;
     }
 
-    public void setKthfsInstance(String kthfsInstance) {
-        this.kthfsInstance = kthfsInstance;
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
     }
 
-    public String getKthfsInstance() {
-        return kthfsInstance;
+    public String getCluster() {
+        return cluster;
     }
 
 
     public List<Command> getRecentCommandsByInstance() {
-        List<Command> commands = commandEJB.findRecentByInstance(kthfsInstance);
+        List<Command> commands = commandEJB.findRecentByInstance(cluster);
         return commands;
     }
 
     public List<Command> getRunningCommandsByInstance() {
-        List<Command> commands = commandEJB.findRunningByInstance(kthfsInstance);
+        List<Command> commands = commandEJB.findRunningByInstance(cluster);
         return commands;
     }
 
+    public List<Command> getRecentCommandsByInstanceGroup() {
+        List<Command> commands = commandEJB.findRecentByInstanceGroup(cluster, serviceGroup);
+        return commands;
+    }
+
+    public List<Command> getRunningCommandsByInstanceGroup() {
+        List<Command> commands = commandEJB.findRunningByInstanceGroup(cluster, serviceGroup);
+        return commands;
+    }    
 }

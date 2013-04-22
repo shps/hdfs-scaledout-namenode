@@ -34,14 +34,14 @@ public class WebCommunication {
 //   private static int LOG_LINES = 50;
    private static String NOT_AVAILABLE = "Not available.";
    private String hostname;
-   private String kthfsInstance;
+   private String cluster;
    private String service;
    
    private static final Logger logger = Logger.getLogger(WebCommunication.class.getName());
 
-   public WebCommunication(String hostname, String kthfsInstance, String service) {
+   public WebCommunication(String hostname, String cluster, String service) {
       this.hostname = hostname;
-      this.kthfsInstance = kthfsInstance;
+      this.cluster = cluster;
       this.service = service;
    }
 
@@ -56,7 +56,7 @@ public class WebCommunication {
    private String getLog(String logType, int lines) {
       
       String log = NOT_AVAILABLE;
-      String path = "/log/" + kthfsInstance + "/" + service + "/" + logType + "/" + lines;
+      String path = "/log/" + cluster + "/" + service + "/" + logType + "/" + lines;
       String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
@@ -73,7 +73,7 @@ public class WebCommunication {
    public String getConfig() {
 
       String conf = NOT_AVAILABLE;
-      String path = "/config/" + kthfsInstance + "/" + service;
+      String path = "/config/" + cluster + "/" + service;
       String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
@@ -88,7 +88,7 @@ public class WebCommunication {
 
    public ClientResponse doCommand(String command) throws Exception {
 
-      String path = "/do/" + kthfsInstance + "/" + service + "/" + command;
+      String path = "/do/" + cluster + "/" + service + "/" + command;
       String url = baseUrl(hostname) + path;
       return getWebResource(url);
    }

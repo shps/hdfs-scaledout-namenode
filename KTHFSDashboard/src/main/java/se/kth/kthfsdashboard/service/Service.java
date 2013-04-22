@@ -14,6 +14,7 @@ import javax.persistence.*;
 @NamedQueries({
    @NamedQuery(name = "findDistinctInstances", query = "SELECT DISTINCT s.instance FROM Service s"),
    @NamedQuery(name = "findServiceClass", query = "SELECT DISTINCT s.serviceClass FROM Service s WHERE s.instance = :instance"),   
+   @NamedQuery(name = "Service.findServiceGroups", query = "SELECT DISTINCT s.serviceGroup FROM Service s WHERE s.instance = :instance"),
    
    @NamedQuery(name = "findAllServices", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service"),
    @NamedQuery(name = "findAllSubservices", query = "SELECT s FROM Service s WHERE NOT s.serviceGroup = s.service"),
@@ -21,15 +22,24 @@ import javax.persistence.*;
    @NamedQuery(name = "findService", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
    @NamedQuery(name = "findServiceBy-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname"),
    @NamedQuery(name = "findServiceBy-Instance", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.instance = :instance"),
+   @NamedQuery(name = "Service.findServiceBy-Instance", query = "SELECT s FROM Service s WHERE s.instance = :instance"),
+   @NamedQuery(name = "Service.findDistinctServiceGroupBy-Instance", query = "SELECT DISTINCT s.serviceGroup FROM Service s WHERE s.instance = :instance"),   
    @NamedQuery(name = "findServiceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE s.serviceGroup = s.service AND s.serviceGroup = :serviceGroup AND s.instance = :instance"),
    
-   @NamedQuery(name = "findSubserviceBy-Instance", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance"),
-   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup"),
-   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
+//   @NamedQuery(name = "findSubserviceBy-Instance", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance"),
+//   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup"),
+//   @NamedQuery(name = "findSubserviceBy-Instance-ServiceGroup-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.serviceGroup = :serviceGroup AND s.service = :service"),
    
    @NamedQuery(name = "findServiceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
    @NamedQuery(name = "findServiceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
    @NamedQuery(name = "findServiceBy-Instance-Service-Hostname", query = "SELECT s FROM Service s WHERE s.hostname = :hostname AND s.instance = :instance AND s.service = :service"),
+
+   @NamedQuery(name = "Service.findBy-Instance-Group", query = "SELECT s FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group"),
+   @NamedQuery(name = "Service.findBy-Instance-Group-Service", query = "SELECT s FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service"),
+   @NamedQuery(name = "Service.findBy-Instance-Group-Service-Status", query = "SELECT s FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service AND s.status = :status"),
+   
+   @NamedQuery(name = "Service.findHostnameBy-Instance-Group-Service", query = "SELECT s.hostname FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service"),
+
    
    @NamedQuery(name = "findSubserviceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
    @NamedQuery(name = "findSubserviceBy-Instance-Service-Status", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service AND s.status = :status"),
@@ -52,7 +62,7 @@ public class Service implements Serializable {
    }
 
    public enum ServiceClass {
-      KTHFS, YARN
+      KTHFS, YARN, MySQLCluster
    }   
    
    @Id

@@ -3,7 +3,6 @@ package se.kth.kthfsdashboard.service;
 import java.util.List;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
-import javax.persistence.Parameter;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
@@ -38,54 +37,87 @@ public class ServiceEJB {
               .setParameter("instance", instance);
       return query.getResultList().get(0);
    }
+   
+   public List<String> findServiceGroups(String instance) {
+      TypedQuery<String> query = em.createNamedQuery("Service.findServiceGroups", String.class)
+              .setParameter("instance", instance);
+      return query.getResultList();
+   }   
 
    public List<Service> findAllInstances() {
       TypedQuery<Service> query = em.createNamedQuery("findAllServices", Service.class);
       return query.getResultList();
    }
 
-   public List<Service> findByInstanceServiceStatus(String kthfsInstance, String service, Service.Status status) {
-      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", kthfsInstance).setParameter("service", service).setParameter("status", status);
+   public List<Service> findByInstanceServiceStatus(String cluster, String service, Service.Status status) {
+      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", cluster).setParameter("service", service).setParameter("status", status);
+      return query.getResultList();
+   }
+   
+   public List<Service> findByInstanceGroupServiceStatus(String cluster, String group, String service, Service.Status status) {
+      TypedQuery<Service> query = em.createNamedQuery("Service.findBy-Instance-Group-Service-Status", Service.class).setParameter("instance", cluster).setParameter("group", group).setParameter("service", service).setParameter("status", status);
+      return query.getResultList();
+   }   
+   
+
+   public List<Service> findByInstanceService(String cluster, String service) {
+      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service", Service.class).setParameter("instance", cluster).setParameter("service", service);
+      return query.getResultList();
+   }
+   
+   public List<Service> findByInstanceGroupService(String cluster, String group, String service) {
+      TypedQuery<Service> query = em.createNamedQuery("Service.findBy-Instance-Group-Service", Service.class).setParameter("instance", cluster).setParameter("group", group).setParameter("service", service);
+      return query.getResultList();
+   }   
+
+   public List<String> findHostnameByInstanceGroupService(String cluster, String group, String service) {
+      TypedQuery<String> query = em.createNamedQuery("Service.findHostnameBy-Instance-Group-Service", String.class).setParameter("instance", cluster).setParameter("group", group).setParameter("service", service);
+      return query.getResultList();
+   }   
+   
+   
+   public List<Service> findByInstance(String cluster) {
+      TypedQuery<Service> query = em.createNamedQuery("Service.findServiceBy-Instance", Service.class).setParameter("instance", cluster);
       return query.getResultList();
    }
 
-   public List<Service> findByInstanceService(String kthfsInstance, String service) {
-      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service", Service.class).setParameter("instance", kthfsInstance).setParameter("service", service);
+   public List<Service> findByInstanceGroup(String cluster, String group) {
+      TypedQuery<Service> query = em.createNamedQuery("Service.findBy-Instance-Group", Service.class).setParameter("instance", cluster).setParameter("group", group);
+      return query.getResultList();
+   }
+      
+   public List<String> findDistinctServiceGroupByInstance(String cluster) {
+      TypedQuery<String> query = em.createNamedQuery("Service.findDistinctServiceGroupBy-Instance", String.class).setParameter("instance", cluster);
+      return query.getResultList();
+   }   
+
+//   public List<Service> findSubserviceByInstance(String cluster) {
+//      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance", Service.class).setParameter("instance", cluster);
+//      return query.getResultList();
+//   }
+
+   public List<Service> findInstances(String cluster, String host, String service) {
+      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Hostname", Service.class).setParameter("hostname", host).setParameter("service", service).setParameter("instance", cluster);
       return query.getResultList();
    }
 
-   public List<Service> findByInstance(String kthfsInstance) {
-      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance", Service.class).setParameter("instance", kthfsInstance);
+   public List<Service> findServiceByInstanceServiceGroup(String cluster, String serviceGroup) {
+      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-ServiceGroup", Service.class).setParameter("serviceGroup", serviceGroup).setParameter("instance", cluster);
       return query.getResultList();
    }
 
-   public List<Service> findSubserviceByInstance(String kthfsInstance) {
-      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance", Service.class).setParameter("instance", kthfsInstance);
-      return query.getResultList();
-   }
+//   public List<Service> findByInstanceServiceGroup(String cluster, String serviceGroup) {
+//      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup", Service.class).setParameter("instance", cluster).setParameter("serviceGroup", serviceGroup);
+//      return query.getResultList();
+//   }
+//
+//   public List<Service> findByInstanceServiceGroup(String cluster, String serviceGroup, String service) {
+//      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup-Service", Service.class).setParameter("instance", cluster).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
+//      return query.getResultList();
+//   }
 
-   public List<Service> findInstances(String kthfsInstance, String host, String service) {
-      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-Service-Hostname", Service.class).setParameter("hostname", host).setParameter("service", service).setParameter("instance", kthfsInstance);
-      return query.getResultList();
-   }
-
-   public List<Service> findServiceByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
-      TypedQuery<Service> query = em.createNamedQuery("findServiceBy-Instance-ServiceGroup", Service.class).setParameter("serviceGroup", serviceGroup).setParameter("instance", kthfsInstance);
-      return query.getResultList();
-   }
-
-   public List<Service> findByInstanceServiceGroup(String kthfsInstance, String serviceGroup) {
-      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup);
-      return query.getResultList();
-   }
-
-   public List<Service> findByInstanceServiceGroup(String kthfsInstance, String serviceGroup, String service) {
-      TypedQuery<Service> query = em.createNamedQuery("findSubserviceBy-Instance-ServiceGroup-Service", Service.class).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
-      return query.getResultList();
-   }
-
-   public Service findServices(String hostname, String kthfsInstance, String serviceGroup, String service) {
-      TypedQuery<Service> query = em.createNamedQuery("findService", Service.class).setParameter("hostname", hostname).setParameter("instance", kthfsInstance).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
+   public Service findService(String hostname, String cluster, String serviceGroup, String service) {
+      TypedQuery<Service> query = em.createNamedQuery("findService", Service.class).setParameter("hostname", hostname).setParameter("instance", cluster).setParameter("serviceGroup", serviceGroup).setParameter("service", service);
       return query.getSingleResult();
    }
 
@@ -112,34 +144,40 @@ public class ServiceEJB {
       em.remove(s);
    }
 
-   public int getStartedServicesCount(String instance, String service, boolean subService) {
+   public int getServicesStatusCount(String instance, String group, String service, Service.Status status) {
       TypedQuery<Service> query;
-
-      if (subService) {
-         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
-      } else {
-         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
-      }
+      query = em.createNamedQuery("Service.findBy-Instance-Group-Service-Status", Service.class).setParameter("instance", instance).setParameter("group", group).setParameter("service", service).setParameter("status", status);
       return query.getResultList().size();
-   }
-
-   public int getStoppedServicesCount(String instance, String service, boolean subService) {
-      TypedQuery<Service> query;
-      if (subService) {
-         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
-      } else {
-         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
-      }
-      return query.getResultList().size();
-   }
-
-   public int getFailedServicesCount(String instance, String service, boolean subService) {
-      TypedQuery<Service> query;
-      if (subService) {
-         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
-      } else {
-         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
-      }
-      return query.getResultList().size();
-   }
+   } 
+      
+//   public int getStartedServicesCount(String instance, String service, boolean subService) {
+//      TypedQuery<Service> query;
+//
+//      if (subService) {
+//         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
+//      } else {
+//         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Started);
+//      }
+//      return query.getResultList().size();
+//   }
+//
+//   public int getStoppedServicesCount(String instance, String service, boolean subService) {
+//      TypedQuery<Service> query;
+//      if (subService) {
+//         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
+//      } else {
+//         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Stopped);
+//      }
+//      return query.getResultList().size();
+//   }
+//
+//   public int getFailedServicesCount(String instance, String service, boolean subService) {
+//      TypedQuery<Service> query;
+//      if (subService) {
+//         query = em.createNamedQuery("findSubserviceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
+//      } else {
+//         query = em.createNamedQuery("findServiceBy-Instance-Service-Status", Service.class).setParameter("instance", instance).setParameter("service", service).setParameter("status", Service.Status.Failed);
+//      }
+//      return query.getResultList().size();
+//   }
 }
