@@ -42,6 +42,24 @@ public class CommandEJB {
                 .setParameter("status", Command.commandStatus.Running);
         return query.getResultList();
     }
+    
+    public List<Command> findRecentByInstanceGroup(String instance, String group) {
+
+        TypedQuery<Command> query = 
+                em.createNamedQuery("Commands.findRecentByInstance-Group", Command.class)
+                .setParameter("instance", instance).setParameter("group", group)                
+                .setParameter("status", Command.commandStatus.Running);
+        return query.getResultList();
+    }
+
+    public List<Command> findRunningByInstanceGroup(String instance, String group) {
+
+        TypedQuery<Command> query = 
+                em.createNamedQuery("Commands.findRunningByInstance-Group", Command.class)
+                .setParameter("instance", instance).setParameter("group", group)
+                .setParameter("status", Command.commandStatus.Running);
+        return query.getResultList();
+    }    
 
     public void persistCommand(Command command) {
         em.persist(command);

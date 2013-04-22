@@ -26,8 +26,8 @@ public class ServiceInstanceController implements Serializable {
    private String service;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
-   @ManagedProperty("#{param.kthfsinstance}")
-   private String kthfsInstance;
+   @ManagedProperty("#{param.cluster}")
+   private String cluster;
    @ManagedProperty("#{param.status}")
    private String status;
    @EJB
@@ -53,7 +53,7 @@ public class ServiceInstanceController implements Serializable {
       statusStates[1] = Service.Status.Stopped.toString();
       statusStates[2] = Service.Status.Failed.toString();
 
-      hdfsRoles = new String[]{"namenode", "datanode", "mysqlcluster"};
+      hdfsRoles = new String[]{"namenode", "datanode"};
       mysqlClusterRoles = new String[]{"ndb", "mgmserver", "mysqld"};
       yarnRoles = new String[]{"resourcemanager", "nodemanager"};
       healthStates = new String[]{"Good", "Bad"};
@@ -92,12 +92,12 @@ public class ServiceInstanceController implements Serializable {
       this.hostname = hostname;
    }
 
-   public void setKthfsInstance(String kthfsInstance) {
-      this.kthfsInstance = kthfsInstance;
+   public void setCluster(String cluster) {
+      this.cluster = cluster;
    }
 
-   public String getKthfsInstance() {
-      return kthfsInstance;
+   public String getCluster() {
+      return cluster;
    }
 
    public String getStatus() {
@@ -116,45 +116,35 @@ public class ServiceInstanceController implements Serializable {
       this.filteredInstances = filteredInstances;
    }
 
-   public List<InstanceInfo> getSubserviceInstances() {
-      List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
-      List<Service> services;
-
-      if (kthfsInstance != null && serviceGroup != null && service != null && !service.equals(serviceGroup)) {
-         services = serviceEJB.findByInstanceServiceGroup(kthfsInstance, serviceGroup, service);
-         cookie.write("instance", kthfsInstance);
-         cookie.write("servicegroup", serviceGroup);
-      } else if (kthfsInstance != null && serviceGroup != null) {
-         services = serviceEJB.findByInstanceServiceGroup(kthfsInstance, serviceGroup);
-         cookie.write("instance", kthfsInstance);
-         cookie.write("servicegroup", serviceGroup);
-      } else {
-         services = serviceEJB.findByInstanceServiceGroup(cookie.read("instance"), cookie.read("servicegroup"));
-      }
-      for (Service s : services) {
-         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
-      }
-      return instances;
-   }
-
    public List<InstanceInfo> getInstances() {
       List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
       List<Service> services;
 
-      if (kthfsInstance != null && service != null && status != null) {
-         services = serviceEJB.findByInstanceServiceStatus(kthfsInstance, service, Service.getServiceStatus(status));
-         cookie.write("instance", kthfsInstance);
-      } else if (kthfsInstance != null && service != null) {
-         services = serviceEJB.findByInstanceService(kthfsInstance, service);
-         cookie.write("instance", kthfsInstance);
-      } else if (kthfsInstance != null) {
-         services = serviceEJB.findByInstance(kthfsInstance);
-         cookie.write("instance", kthfsInstance);
+      if (cluster != null && service != null && serviceGroup != null && status != null) {
+         services = serviceEJB.findByInstanceGroupServiceStatus(cluster, serviceGroup, service, Service.getServiceStatus(status));
+         cookie.write("instance", cluster);
+         cookie.write("group", serviceGroup);
+
+      } else if (cluster != null && serviceGroup != null && service != null) {
+         services = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, service);
+         cookie.write("instance", cluster);
+         cookie.write("group", serviceGroup);
+
+      } else if (cluster != null && serviceGroup != null) {
+         services = serviceEJB.findByInstanceGroup(cluster, serviceGroup);
+         cookie.write("instance", cluster);
+         cookie.write("group", serviceGroup);
+
+      } else if (cluster != null) {
+         services = serviceEJB.findByInstance(cluster);
+         cookie.write("instance", cluster);
+         cookie.write("group", serviceGroup);
+
       } else {
-         services = serviceEJB.findByInstance(cookie.read("instance"));
+         services = serviceEJB.findByInstanceGroup(cookie.read("instance"), cookie.read("group"));
       }
-      for (Service s : services) {
-         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
+      for (Service s : services) {                
+         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "-", s.getStatus(), s.getHealth().toString()));
       }
       return instances;
    }
@@ -175,21 +165,13 @@ public class ServiceInstanceController implements Serializable {
    }
 
    public SelectItem[] getRoleOptions() {
-      
-      Service.ServiceClass serviceClass = serviceEJB.findServiceClass(kthfsInstance);
-      if (serviceClass.equals(Service.ServiceClass.KTHFS)) {
+
+      if (serviceGroup.equals(Service.ServiceClass.KTHFS.toString())) {
          return hdfsRoleOptions;
-      } else if (serviceClass.equals(Service.ServiceClass.YARN)) {
-         return yarnRoleOptions;
-      } else {
-         return new SelectItem[]{};
-      }
-   }
-
-   public SelectItem[] getSubServiceRoleOptions() {
-
-      if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
+      } else if (serviceGroup.equals(Service.ServiceClass.MySQLCluster.toString())) {
          return mysqlclusterRoleOptions;
+      } else if (serviceGroup.equals(Service.ServiceClass.YARN.toString())) {
+         return yarnRoleOptions;
       } else {
          return new SelectItem[]{};
       }
@@ -199,30 +181,20 @@ public class ServiceInstanceController implements Serializable {
       return healthOptions;
    }
 
-   public boolean getShowSubservices() {
-
-      System.err.println(">>>>" + service);
-      
-      if (service != null && service.equalsIgnoreCase("mysqlcluster")) {
-         return true;
-      }
-      return false;
-   }
-
    public boolean getShowLogs() {
 
-        if (service != null &&  service.equalsIgnoreCase("mysqlcluster")) {
-            return false;
-        }
+      if (service != null && service.equalsIgnoreCase("mysqlcluster")) {
+         return false;
+      }
       return true;
    }
 
    public boolean getShowConfiguration() {
       
-      if (service == null) {
+      if (serviceGroup == null) {
          return false;
       }
-      if (service.contains("mysqlcluster")) {
+      if (serviceGroup.toLowerCase().contains("mysqlcluster")) {
          return true;
       }
       return false;

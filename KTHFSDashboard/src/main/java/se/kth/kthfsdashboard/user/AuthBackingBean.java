@@ -82,9 +82,9 @@ public class AuthBackingBean {
         log.info("Logging IN Authenticated user: " + principal.getName());
 
         if (request.isUserInRole("ADMIN")) {
-            return "/sauron/services.xml";
+            return "/sauron/clusters.xml";
         } else {
-            return "/sauron/services.xml";
+            return "/sauron/clusters.xml";
         }
     }
 

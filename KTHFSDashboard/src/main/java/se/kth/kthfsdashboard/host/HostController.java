@@ -1,6 +1,5 @@
 package se.kth.kthfsdashboard.host;
 
-import se.kth.kthfsdashboard.command.ProgressBean;
 import com.sun.jersey.api.client.ClientResponse;
 import java.io.Serializable;
 import java.security.NoSuchAlgorithmException;
@@ -16,12 +15,10 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.SessionScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.ws.rs.core.Response.Status.Family;
 import org.codehaus.jettison.json.JSONObject;
-import org.primefaces.context.RequestContext;
 import se.kth.kthfsdashboard.command.Command;
 import se.kth.kthfsdashboard.command.CommandEJB;
 import se.kth.kthfsdashboard.log.Log;
@@ -49,8 +46,8 @@ public class HostController implements Serializable {
    private ServiceEJB serviceEJB;
    @EJB
    private CommandEJB commandEJB;
-   @ManagedProperty("#{param.kthfsinstance}")
-   private String kthfsInstance;
+   @ManagedProperty("#{param.cluster}")
+   private String cluster;
    @ManagedProperty("#{param.hostname}")
    private String hostname;
    @ManagedProperty("#{param.command}")
@@ -59,9 +56,6 @@ public class HostController implements Serializable {
    private String serviceGroup;
    @ManagedProperty("#{param.service}")
    private String service;
-   
-   @ManagedProperty(value="#{progress}")
-   private ProgressBean progress;   
    
    private Host host;
    private boolean currentHostAvailable;
@@ -76,11 +70,8 @@ public class HostController implements Serializable {
    private HashMap<String, List<String>> commandsMap;
 
    public HostController() {
-
       commandsMap = new HashMap<String, List<String>>();
       commandsMap.put("all", Arrays.asList("install", "uninstall"));
-
-//        System.out.println("OK");
    }
 
    public String gotoHost() {
@@ -132,12 +123,12 @@ public class HostController implements Serializable {
       return hostname;
    }
 
-   public void setKthfsInstance(String kthfsInstance) {
-      this.kthfsInstance = kthfsInstance;
+   public void setCluster(String cluster) {
+      this.cluster = cluster;
    }
 
-   public String getKhfsInstance() {
-      return kthfsInstance;
+   public String getCluster() {
+      return cluster;
    }
 
    public List<Host> getHosts() {
@@ -254,13 +245,13 @@ public class HostController implements Serializable {
    public void doCommand(ActionEvent actionEvent) throws NoSuchAlgorithmException, Exception {
 
       //  TODO: If the web application server craches, status will remain 'Running'.
-      Command c = new Command(command, hostname, serviceGroup, service, kthfsInstance);
+      Command c = new Command(command, hostname, serviceGroup, service, cluster);
       commandEJB.persistCommand(c);
       FacesMessage message;
 
       //Todo: does not work with hostname. Only works with IP address.
       Host h = hostEJB.findHostByName(hostname);      
-      WebCommunication webComm = new WebCommunication(h.getIp(), kthfsInstance, service);
+      WebCommunication webComm = new WebCommunication(h.getIp(), cluster, service);
       
       try {
          ClientResponse response = webComm.doCommand(command);
@@ -268,8 +259,7 @@ public class HostController implements Serializable {
          if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
             c.succeeded();
             String messageText = "";
-//            Service s = new Service(hostname, kthfsInstance, serviceGroup, service);
-            Service s = serviceEJB.findServices(hostname, kthfsInstance, serviceGroup, service);
+            Service s = serviceEJB.findService(hostname, cluster, serviceGroup, service);
             
             if (command.equalsIgnoreCase("init")) {
 //               Todo:
@@ -301,35 +291,5 @@ public class HostController implements Serializable {
       commandEJB.updateCommand(c);
       FacesContext.getCurrentInstance().addMessage(null, message);
    }
-
-   
-   
-   
-   
-   public void doCommandTest(ActionEvent actionEvent) {
-
-
-      RequestContext context = RequestContext.getCurrentInstance();
-      context.execute("dlgstartstop.show()");
-
-      context.execute("prog.start()");
-
-      progress = new ProgressBean();
-      progress.setProgress(50);
-
-      System.err.println("####################");       
-      
-//      context.execute("prog.stop()");
-   
-   }   
-
-   public ProgressBean getProgress() {
-      return progress;
-   }
-
-   public void setProgress(ProgressBean progress) {
-      this.progress = progress;
-   }
-
 
 }

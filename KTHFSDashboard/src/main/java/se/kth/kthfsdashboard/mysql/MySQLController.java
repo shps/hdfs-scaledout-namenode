@@ -5,14 +5,18 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
+import javax.faces.bean.RequestScoped;
 import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.StreamedContent;
 import org.primefaces.model.UploadedFile;
+import se.kth.kthfsdashboard.service.ServiceEJB;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
 
 /**
@@ -20,14 +24,36 @@ import se.kth.kthfsdashboard.struct.NodesTableItem;
  * @author Hamidreza Afzali <afzali@kth.se>
  */
 @ManagedBean
-@ViewScoped
+@RequestScoped
 public class MySQLController implements Serializable {
 
+   @EJB
+   ServiceEJB serviceEJB;
+   @ManagedProperty("#{param.servicegroup}")
+   private String serviceGroup;
+   @ManagedProperty("#{param.cluster}")
+   private String cluster;
    private boolean flag;
    private List<NodesTableItem> info;
    MySQLAccess mysql = new MySQLAccess();
 
    public MySQLController() {
+   }
+
+   public String getServiceGroup() {
+      return serviceGroup;
+   }
+
+   public void setServiceGroup(String serviceGroup) {
+      this.serviceGroup = serviceGroup;
+   }
+
+   public void setCluster(String cluster) {
+      this.cluster = cluster;
+   }
+
+   public String getCluster() {
+      return cluster;
    }
 
    public List<NodesTableItem> getInfo() throws Exception {
@@ -85,7 +111,11 @@ public class MySQLController implements Serializable {
    private List<NodesTableItem> loadItems() {
       MySQLAccess dao = new MySQLAccess();
       try {
-         return dao.readDataBase();
+         // Finds hostname of mysqld
+         // Role=mysqld , Service=MySQLCluster, Cluster=cluster
+         final String SERVICE = "mysqld";
+         String host = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, SERVICE).get(0).getHostname();
+         return dao.readDataBase(host);
       } catch (Exception e) {
          return null;
       }

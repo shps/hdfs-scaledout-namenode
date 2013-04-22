@@ -16,16 +16,6 @@
             #{settingsController.name} - Service Commands
         </ui:define>
 
-        <ui:define name="css">
-
-        </ui:define>
-
-        <ui:define name="scripts">
-
-
-        </ui:define>
-
-
         <ui:define name="content">
 
             <!--Navigation Bar - Begin -->
@@ -33,13 +23,13 @@
                 <p:panelGrid>  
                     <p:row>  
                         <p:column>
-                            <p:commandLink action="services" ajax="false">  
-                                <h:outputText value="Services" />
+                            <p:commandLink action="clusters" ajax="false">  
+                                <h:outputText value="Clusters" />
                             </p:commandLink> 
                             <h:outputText value=" &raquo; "/>
-                            <p:commandLink action="#{serviceController.gotoServiceStatus()}" ajax="false">  
-                                <h:outputText value="#{serviceController.kthfsInstance}" />
-                                <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>    
+                            <p:commandLink action="#{serviceController.gotoClusterStatus}" ajax="false">  
+                                <h:outputText value="#{serviceController.cluster}" />
+                                <f:param name="cluster" value="#{serviceController.cluster}"/>    
                             </p:commandLink> 
                             <h:outputText value=" &raquo;"/>
                         </p:column>
@@ -52,19 +42,16 @@
             <h:form>  
                 <p:toolbar styleClass="SecondToolbarGood">  
                     <p:toolbarGroup align="left">  
-                        <p:commandLink  action="#{serviceController.gotoServiceStatus()}" ajax="false">
-                            <h:outputText value="#{serviceController.kthfsInstance}"/>
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                         
+                        <p:commandLink  action="#{serviceController.gotoClusterStatus}" ajax="false">
+                            <h:outputText value="#{serviceController.cluster}"/>
+                            <f:param name="cluster" value="#{serviceController.cluster}"/>                         
                         </p:commandLink>
 
-                        <p:commandButton value="Status" icon="ui-icon-home" action="#{serviceController.gotoServiceStatus()}" ajax="false">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                        <p:commandButton value="Status" icon="ui-icon-home" action="#{serviceController.gotoClusterStatus}" ajax="false">
+                            <f:param name="cluster" value="#{serviceController.cluster}"/>                            
                         </p:commandButton>  
-                        <p:commandButton value="Instances" icon="ui-icon-note" action="#{serviceController.gotoServiceInstances()}">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>   
-                        </p:commandButton>  
-                        <p:commandButton styleClass="Selected" value="Commands" icon="ui-icon-circle-triangle-e" action="#{serviceController.gotoServiceCommands()}">
-                            <f:param name="kthfsinstance" value="#{serviceController.kthfsInstance}"/>                            
+                        <p:commandButton styleClass="Selected" value="Commands" icon="ui-icon-circle-triangle-e" action="#{serviceController.gotoClusterCommands}">
+                            <f:param name="cluster" value="#{serviceController.cluster}"/>                            
                         </p:commandButton>  
                     </p:toolbarGroup>  
 

@@ -61,6 +61,11 @@
             <redirect/>
         </navigation-case>
         <navigation-case>
+            <from-outcome>clusters</from-outcome>
+            <to-view-id>/sauron/clusters.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>
+        <navigation-case>
             <from-outcome>setupCredentials</from-outcome>
             <to-view-id>/sauron/setup.xhtml</to-view-id>
             <redirect/>

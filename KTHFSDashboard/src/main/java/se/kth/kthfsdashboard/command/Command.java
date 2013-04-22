@@ -14,7 +14,9 @@ import se.kth.kthfsdashboard.util.Formatter;
 @NamedQueries({
    @NamedQuery(name = "Commands.findAll", query = "SELECT c FROM Command c"),
    @NamedQuery(name = "Commands.findRecentByInstance", query = "SELECT c FROM Command c WHERE c.instance = :instance AND (NOT c.status = :status)  ORDER BY c.startTime DESC"),
-   @NamedQuery(name = "Commands.findRunningByInstance", query = "SELECT c FROM Command c WHERE c.instance = :instance AND c.status = :status  ORDER BY c.startTime DESC")
+   @NamedQuery(name = "Commands.findRunningByInstance", query = "SELECT c FROM Command c WHERE c.instance = :instance AND c.status = :status  ORDER BY c.startTime DESC"),
+   @NamedQuery(name = "Commands.findRecentByInstance-Group", query = "SELECT c FROM Command c WHERE c.instance = :instance AND c.serviceGroup = :group AND (NOT c.status = :status)  ORDER BY c.startTime DESC"),
+   @NamedQuery(name = "Commands.findRunningByInstance-Group", query = "SELECT c FROM Command c WHERE c.instance = :instance AND c.serviceGroup = :group AND c.status = :status  ORDER BY c.startTime DESC")   
 })
 public class Command implements Serializable {
 

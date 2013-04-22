@@ -26,8 +26,8 @@ public class AlertController implements Serializable{
    private String service;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
-   @ManagedProperty("#{param.kthfsinstance}")
-   private String kthfsInstance;
+   @ManagedProperty("#{param.cluster}")
+   private String cluster;
    private Alert[] selectedAlerts;
 
    public AlertController() {
@@ -57,12 +57,12 @@ public class AlertController implements Serializable{
       this.hostname = hostname;
    }
 
-   public void setKthfsInstance(String kthfsInstance) {
-      this.kthfsInstance = kthfsInstance;
+   public void setCluster(String cluster) {
+      this.cluster = cluster;
    }
 
-   public String getKthfsInstance() {
-      return kthfsInstance;
+   public String getCluster() {
+      return cluster;
    }
 
    public List<Alert> getAlerts() {

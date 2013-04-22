@@ -1,25 +1,23 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package se.kth.kthfsdashboard.struct;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  *
  * @author Hamidreza Afzali <afzali@kth.se>
  */
-public class KthfsInstanceInfo {
+public class ClusterInfo {
 
    private String name;
    private String status;
    private String health;
    private String type;
    private Map roleCounts;
+   private List<String> services;
 
-   public KthfsInstanceInfo(String name, String type, String status, String health) {
+   public ClusterInfo(String name, String type, String status, String health) {
       roleCounts = new HashMap<String, Integer>();
       this.name = name;
       this.type = type;
@@ -50,5 +48,13 @@ public class KthfsInstanceInfo {
 
    public void putToRoleCounts(String service, Integer count) {
       this.roleCounts.put(service, count);
+   }
+
+   public List<String> getServices() {
+      return services;
+   }
+
+   public void setServices(List<String> services) {
+      this.services = services;
    }
 }
