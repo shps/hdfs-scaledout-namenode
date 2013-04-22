@@ -302,7 +302,12 @@ public class GraphController implements Serializable {
       // Finds hostname of mysqld
       // Role=mysqld , Service=MySQLCluster, Clusters=cluster
       final String MYSQLD_SERVICE = "mysqld";
-      String host = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, MYSQLD_SERVICE).get(0).getHostname();
+
+      List<Service> services = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, MYSQLD_SERVICE);
+      String host = "";
+      if (services.size() > 0) {
+         host = services.get(0).getHostname();
+      }
       String url = "../rest/collectd/graph?";
       HashMap<String, String> params = new HashMap<String, String>();
       params.put("chart_type", chartType);
