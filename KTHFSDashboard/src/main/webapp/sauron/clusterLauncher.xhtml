@@ -36,7 +36,7 @@
 
                 <div id="launchLayout">
                     <p:layout  id="launch" fullPage="false">
-                        <p:layoutUnit position="west" size="350" header="Cluster Details" resizable="true" closable="false" collapsible="true" >
+                        <p:layoutUnit id="launcher" position="west" size="350" header="Cluster Details" resizable="true" closable="false" collapsible="true" >
                             <h:form id="launchForm">
                                 <p:accordionPanel dynamic="true" cache="true">
                                     <p:tab title="General Cluster Details:">
@@ -96,6 +96,7 @@
                                                  action="#{virtualizationController.launchCluster()}"
                                                  update="success"
                                                  onclick="pollCreate.start();"
+                                                 onerror="pollCreate.stop();"
                                                  oncomplete="pollCreate.stop();"/>
                                 
                                 
@@ -126,8 +127,8 @@
                                             </div>
                                         </div>
                                         <h:outputLabel id="statusCreate" value="#{virtualizationController.messages.showMessage()}" 
-                                                       style="white-space:nowrap;" >
-                                        </h:outputLabel>
+                                                       />
+                                        
                                         <p:poll widgetVar="pollCreate" interval="2" autoStart="false" update="statusCreate" async="true" partialSubmit="true" process="@this"/>
                                     </h:panelGrid>
                                 </p:blockUI>
