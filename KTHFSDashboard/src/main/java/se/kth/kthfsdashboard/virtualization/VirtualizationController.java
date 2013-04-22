@@ -132,7 +132,6 @@ public class VirtualizationController implements Serializable {
         this.messages = messages;
     }
 
-    
     /*
      * Command to launch the instance
      */
@@ -324,8 +323,11 @@ public class VirtualizationController implements Serializable {
         bootstrapBuilder.add(exec("git config --global user.name \"Jim Dowling\";"));
         bootstrapBuilder.add(exec("git config --global user.email \"jdowling@sics.se\";"));
         bootstrapBuilder.add(exec("git config --global http.sslVerify false;"));
+        bootstrapBuilder.add(exec("git config --global http.postBuffer 524288000;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
-
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
+        bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
 
 
         return new StatementList(bootstrapBuilder.build());
@@ -377,7 +379,7 @@ public class VirtualizationController implements Serializable {
             TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
             selectProviderTemplateOptions(provider, kthfsTemplate);
             for (NodeGroup group : clusterController.getCluster().getNodes()) {
-                messages.addMessage("Creating " + group.getNumber() + "nodes in Security Group " + group.getSecurityGroup());
+                messages.addMessage("Creating " + group.getNumber() + "  nodes in Security Group " + group.getSecurityGroup());
                 Set<? extends NodeMetadata> ready = service.createNodesInGroup(group.getSecurityGroup(), group.getNumber(), kthfsTemplate.build());
                 //For the demo, we keep track of the returned set of node Metadata launched and which group 
                 //was
@@ -889,7 +891,7 @@ public class VirtualizationController implements Serializable {
                 collectdAdded = true;
             }
             if (collectdAdded) {
-                builder.addRecipe("collectd::attr-driven");
+                builder.addRecipe("collect::attr-driven");
             }
             // We always need to restart the kthfsagent after we have
             // updated its list of services
