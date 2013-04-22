@@ -46,6 +46,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DB_DATABASE_KEY = "dfs.dbconnector.database";
   public static final String DFS_DB_DATABASE_DEFAULT = System.getenv("KTHFS_DATABASE");
   public static final String DFS_DB_NUM_SESSION_FACTORIES = "dfs.dbconnector.num-session-factories";
+  public static final String DFS_STORAGE_MYSQL_PROTOCOL_KEY = "dfs.storage.mysql.protocol";
+  public static final String DFS_STORAGE_MYSQL_USER_KEY = "dfs.storage.mysql.user";
+  public static final String DFS_STORAGE_MYSQL_PASSWORD_KEY = "dfs.storage.mysql.password";
   public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   public static final long    DFS_BLOCK_SIZE_DEFAULT = 64*1024*1024;
   public static final String  DFS_REPLICATION_KEY = "dfs.replication";

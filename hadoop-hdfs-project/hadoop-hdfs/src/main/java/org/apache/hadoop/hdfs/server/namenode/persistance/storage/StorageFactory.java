@@ -11,6 +11,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.*;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.MysqlServerConnector;
 
 /**
  *
@@ -78,6 +79,7 @@ public class StorageFactory {
       // TODO[Hooman]: Add derby data access for block generation stamp.
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
+      MysqlServerConnector.INSTANCE.setConfiguration(conf);
       defaultStorage.setConfiguration(conf);
       blockInfoDataAccess = new BlockInfoClusterj();
       corruptReplicaDataAccess = new CorruptReplicaClusterj();

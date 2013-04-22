@@ -9,6 +9,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionCon
 import org.apache.hadoop.hdfs.server.namenode.persistance.context.TransactionContextException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 import org.apache.log4j.Logger;
 
 /**
@@ -67,8 +68,9 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
           return blocks.size() - nullCount;
         } else {
           log("Count-all-blocks", CacheHitState.LOSS);
-          aboutToAccessStorage();
-          return dataAccess.countAll();
+//          aboutToAccessStorage();
+//          return dataAccess.countAll();
+          return CountHelper.countAllBlockInfo();
         }
     }
     throw new RuntimeException(UNSUPPORTED_COUNTER);
