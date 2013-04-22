@@ -11,7 +11,9 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnect
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
- *
+ * This class presents a singleton connector to Mysql Server.
+ * It creates connections to Mysql Server and loads the driver.
+ * 
  * @author hooman
  */
 public enum MysqlServerConnector implements StorageConnector<Connection> {
@@ -74,8 +76,6 @@ public enum MysqlServerConnector implements StorageConnector<Connection> {
       } catch (SQLException ex) {
         throw new StorageException(ex);
       }
-    } else {
-      throw new StorageException("Connection is already closed.");
     }
   }
 
