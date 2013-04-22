@@ -903,6 +903,7 @@ public class VirtualizationController implements Serializable {
             }
             // We always need to restart the kthfsagent after we have
             // updated its list of services
+            builder.addRecipe("java::openjdk");
             builder.addRecipe("kthfsagent::restart");
 
         }
