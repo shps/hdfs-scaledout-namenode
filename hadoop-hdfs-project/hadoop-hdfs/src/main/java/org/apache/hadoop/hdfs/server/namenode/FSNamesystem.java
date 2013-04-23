@@ -4304,7 +4304,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric
   public long getBlocksTotal() {
     try {
-      // TODO - JIM Why not do this in a transaction?
       return getBlocksTotalNoTx(OperationType.GET_BLOCKS_TOTAL);
     } catch (IOException ex) {
       // TODO - JIM Why catch the exception: If cluster error

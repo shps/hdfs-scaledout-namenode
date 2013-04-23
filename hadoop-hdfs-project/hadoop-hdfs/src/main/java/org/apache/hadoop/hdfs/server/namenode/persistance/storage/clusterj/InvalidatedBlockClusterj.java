@@ -13,6 +13,7 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.InvalidatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InvalidateBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
@@ -49,7 +50,7 @@ public class InvalidatedBlockClusterj extends InvalidateBlockDataAccess {
 
   @Override
   public int countAll() throws StorageException {
-    return findAllInvalidatedBlocks().size();
+    return CountHelper.countAll(TABLE_NAME);
   }
 
   @Override
