@@ -14,12 +14,27 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.UnderReplicatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
  * @author kamal hakimzadeh <kamal@sics.se>
  */
 public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess {
+
+  @Override
+  public int countByLevel(int level) throws StorageException {
+    return CountHelper.countWithCriterion(
+            TABLE_NAME,
+            String.format("level=%d", level));
+  }
+
+  @Override
+  public int countLessThanALevel(int level) throws StorageException {
+    return CountHelper.countWithCriterion(
+            TABLE_NAME,
+            String.format("level<%d", level));
+  }
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface UnderReplicatedBlocksDTO {
@@ -89,12 +104,11 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
     return blocks;
   }
 
-  
-  public int countAll() {
-      // TODO - use MySQL Server to get block count
-      return 0; 
+  @Override
+  public int countAll() throws StorageException {
+    return CountHelper.countAll(TABLE_NAME);
   }
-  
+
   @Override
   public List<UnderReplicatedBlock> findAll() throws StorageException {
     try {

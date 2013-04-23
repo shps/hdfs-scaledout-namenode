@@ -69,8 +69,7 @@ public class BlockInfoContext extends EntityContext<BlockInfo> {
         } else {
           log("Count-all-blocks", CacheHitState.LOSS);
 //          aboutToAccessStorage();
-//          return dataAccess.countAll();
-          return CountHelper.countAllBlockInfo();
+          return dataAccess.countAll();
         }
     }
     throw new RuntimeException(UNSUPPORTED_COUNTER);

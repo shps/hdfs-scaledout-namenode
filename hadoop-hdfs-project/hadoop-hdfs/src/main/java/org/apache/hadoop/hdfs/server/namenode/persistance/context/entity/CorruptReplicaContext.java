@@ -63,7 +63,6 @@ public class CorruptReplicaContext extends EntityContext<CorruptReplica> {
           return corruptReplicas.size() - nullCount;
         } else {
           log("count-all-corrupts", CacheHitState.LOSS);
-          aboutToAccessStorage();
           return dataAccess.countAll() + newCorruptReplicas.size() - removedCorruptReplicas.size();
         }
     }

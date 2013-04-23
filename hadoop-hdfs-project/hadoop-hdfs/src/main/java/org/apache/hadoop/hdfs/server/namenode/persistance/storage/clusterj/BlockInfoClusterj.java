@@ -17,7 +17,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.MysqlServerConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
@@ -79,8 +79,7 @@ public class BlockInfoClusterj extends BlockInfoDataAccess {
 
   @Override
   public int countAll() throws StorageException {
-      // TODO - Change to use MySQL Server
-    return findAllBlocks().size();
+    return CountHelper.countAll(TABLE_NAME);
   }
 
   @Override

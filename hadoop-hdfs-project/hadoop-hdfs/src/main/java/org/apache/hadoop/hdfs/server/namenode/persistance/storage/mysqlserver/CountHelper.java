@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.BlockInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 /**
@@ -19,28 +18,49 @@ public class CountHelper {
 
   /**
    * Counts the number of rows in block infos table.
-   * 
+   *
    * This creates and closes connection in every request.
    *
    * @return Total number of rows in block infos table.
    * @throws StorageException
    */
-  public static int countAllBlockInfo() throws StorageException {
+  public static int countAll(String tableName) throws StorageException {
+    // TODO[H]: Is it good to create and close connections in every call?
+    String query = String.format(COUNT_QUERY, tableName);
+    return count(query);
+  }
+
+  private static int count(String query) throws StorageException {
     try {
-      // TODO[H]: Is it good to create and close connections in every call?
       Connection conn = connector.obtainSession();
-      String query = String.format(COUNT_QUERY, BlockInfoDataAccess.TABLE_NAME);
       PreparedStatement s = conn.prepareStatement(query);
       ResultSet result = s.executeQuery();
       if (result.next()) {
         return result.getInt(1);
       } else {
-        throw new StorageException(String.format("Count result set is empty. Query: %s", query));
+        throw new StorageException(
+                String.format("Count result set is empty. Query: %s", query));
       }
     } catch (SQLException ex) {
       throw new StorageException(ex);
     } finally {
       connector.closeSession();
     }
+  }
+
+  /**
+   * Counts the number of rows in a table specified by the table name where
+   * satisfies the given criterion. The criterion should be a valid SLQ
+   * statement.
+   *
+   * @param tableName
+   * @param criterion E.g. criterion="id > 100".
+   * @return
+   */
+  public static int countWithCriterion(String tableName, String criterion) throws StorageException {
+    StringBuilder queryBuilder = new StringBuilder(String.format(COUNT_QUERY, tableName)).
+            append(" where ").
+            append(criterion);
+    return count(queryBuilder.toString());
   }
 }
