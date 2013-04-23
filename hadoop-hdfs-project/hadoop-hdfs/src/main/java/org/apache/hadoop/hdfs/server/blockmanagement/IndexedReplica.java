@@ -1,7 +1,5 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.server.namenode.FinderType;
-
 /**
  * This class holds the information of one replica of a block in one datanode.
  *

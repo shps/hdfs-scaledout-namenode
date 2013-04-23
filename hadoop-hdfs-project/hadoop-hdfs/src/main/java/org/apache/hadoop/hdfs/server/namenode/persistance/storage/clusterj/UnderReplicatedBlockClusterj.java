@@ -26,14 +26,14 @@ public class UnderReplicatedBlockClusterj extends UnderReplicatedBlockDataAccess
   public int countByLevel(int level) throws StorageException {
     return CountHelper.countWithCriterion(
             TABLE_NAME,
-            String.format("level=%d", level));
+            String.format("%s=%d", LEVEL, level));
   }
 
   @Override
   public int countLessThanALevel(int level) throws StorageException {
     return CountHelper.countWithCriterion(
             TABLE_NAME,
-            String.format("level<%d", level));
+            String.format("%s<%d", LEVEL, level));
   }
 
   @PersistenceCapable(table = TABLE_NAME)

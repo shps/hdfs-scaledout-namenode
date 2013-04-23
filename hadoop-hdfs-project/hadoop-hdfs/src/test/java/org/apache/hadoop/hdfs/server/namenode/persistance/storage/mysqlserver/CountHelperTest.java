@@ -43,7 +43,7 @@ public class CountHelperTest {
    */
   @Test
   public void testCountAllBlockInfo() throws Exception {
-    assert CountHelper.countAll(BlockInfoDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(BlockInfoDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     session.savePersistent(session.newInstance(BlockInfoDTO.class, 1L));
@@ -59,7 +59,7 @@ public class CountHelperTest {
    */
   @Test
   public void testCountAllLeases() throws Exception {
-    assert CountHelper.countAll(LeaseDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(LeaseDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     session.savePersistent(session.newInstance(LeaseDTO.class, "a"));
@@ -75,7 +75,7 @@ public class CountHelperTest {
    */
   @Test
   public void testCountAllCorruptReplicas() throws Exception {
-    assert CountHelper.countAll(CorruptReplicaDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(CorruptReplicaDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     session.savePersistent(session.newInstance(CorruptReplicaDTO.class, new Object[]{0L, "0"}));
@@ -91,7 +91,7 @@ public class CountHelperTest {
    */
   @Test
   public void testCountAllExcessReplicas() throws Exception {
-    assert CountHelper.countAll(ExcessReplicaDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(ExcessReplicaDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     session.savePersistent(session.newInstance(ExcessReplicaDTO.class, new Object[]{0L, "0"}));
@@ -101,13 +101,13 @@ public class CountHelperTest {
 
     assert CountHelper.countAll(ExcessReplicaDataAccess.TABLE_NAME) == 3; // There must be 3 rows.
   }
-  
+
   /**
    * Test of countAllUnderReplicatedBlocks method, of class CountHelper.
    */
   @Test
   public void testCountAllUnderReplicatedBlocks() throws Exception {
-    assert CountHelper.countAll(UnderReplicatedBlockDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(UnderReplicatedBlockDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     session.savePersistent(session.newInstance(UnderReplicatedBlocksDTO.class, 0L));
@@ -117,13 +117,13 @@ public class CountHelperTest {
 
     assert CountHelper.countAll(UnderReplicatedBlockDataAccess.TABLE_NAME) == 3; // There must be 3 rows.
   }
-  
+
   /**
    * Test of countWithCriterion, of class CountHelper.
    */
   @Test
   public void testCountAllUnderReplicatedBlocksByLevel() throws Exception {
-    assert CountHelper.countAll(UnderReplicatedBlockDataAccess.TABLE_NAME) == 0; // block infos tables must be empty.
+    assert CountHelper.countAll(UnderReplicatedBlockDataAccess.TABLE_NAME) == 0; // the table must be empty.
 
     Session session = connector.obtainSession();
     UnderReplicatedBlocksDTO ur1 = session.newInstance(UnderReplicatedBlocksDTO.class, 0L);
@@ -137,7 +137,7 @@ public class CountHelperTest {
     session.savePersistent(ur3);
     session.flush();
 
-    assert CountHelper.countWithCriterion(UnderReplicatedBlockDataAccess.TABLE_NAME,"level=2") == 2; // There must be 3 rows.
-    assert CountHelper.countWithCriterion(UnderReplicatedBlockDataAccess.TABLE_NAME,"level<3") == 3; // There must be 3 rows.
+    assert CountHelper.countWithCriterion(UnderReplicatedBlockDataAccess.TABLE_NAME, "level=2") == 2; // There must be 3 rows.
+    assert CountHelper.countWithCriterion(UnderReplicatedBlockDataAccess.TABLE_NAME, "level<3") == 3; // There must be 3 rows.
   }
 }
