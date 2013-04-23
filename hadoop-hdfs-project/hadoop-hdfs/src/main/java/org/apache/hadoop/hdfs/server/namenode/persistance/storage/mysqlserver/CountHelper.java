@@ -17,11 +17,12 @@ public class CountHelper {
   private static MysqlServerConnector connector = MysqlServerConnector.INSTANCE;
 
   /**
-   * Counts the number of rows in block infos table.
+   * Counts the number of rows in a given table.
    *
    * This creates and closes connection in every request.
    *
-   * @return Total number of rows in block infos table.
+   * @param tableName
+   * @return Total number of rows a given table.
    * @throws StorageException
    */
   public static int countAll(String tableName) throws StorageException {
