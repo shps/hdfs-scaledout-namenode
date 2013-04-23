@@ -1094,19 +1094,15 @@ public class BlockManager {
         corruptReplicaBlocksCount = countCorruptReplica(opType);
     }
 
-    private int countCorruptReplica(OperationType opType) throws IOException {
-        return (Integer) new LightWeightRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                CorruptReplicaDataAccess da = (CorruptReplicaDataAccess) StorageFactory.getDataAccess(CorruptReplicaDataAccess.class);
-                Collection result = da.findAll();
-                if (result != null) {
-                    return result.size();
-                }
-                return 0;
-            }
-        }.handle();
-    }
+  private int countCorruptReplica(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        CorruptReplicaDataAccess da = (CorruptReplicaDataAccess) StorageFactory.getDataAccess(CorruptReplicaDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
+  }
 
     /**
      * Return number of under-replicated but not missing blocks
