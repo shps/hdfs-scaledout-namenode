@@ -17,6 +17,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.mysql.clusterj.ClusterJException;
+import com.mysql.clusterj.Query;
+import com.mysql.clusterj.Session;
+import com.mysql.clusterj.query.QueryBuilder;
+import com.mysql.clusterj.query.QueryDomainType;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.Closeable;
@@ -58,6 +62,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.InodeClusterj;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 /**
@@ -2104,11 +2111,32 @@ public class FSDirectory implements Closeable {
             writeUnlock();
         }
     }
+    
+  private int getTotalInodes() throws StorageException {
+    try {
+      Session session = (Session) StorageFactory.getConnector().obtainSession();
+      QueryBuilder qb = session.getQueryBuilder();
+      QueryDomainType<InodeClusterj.InodeDTO> dobj = qb.createQueryDefinition(InodeClusterj.InodeDTO.class);
+      Query<InodeClusterj.InodeDTO> query = session.createQuery(dobj);
+      List<InodeClusterj.InodeDTO> result = query.getResultList();
+      if (result != null) {
+        return result.size();
+      } else {
+        return 0;
+      }
+    } catch (Exception e) {
+      throw new StorageException(e);
+    }
+  }
 
   long totalInodes() throws PersistanceException, IOException {
     readLock();
     try {
-          return getRootDir().getNsCount();
+      // FIXME[H]: A quick fix to solve the number of files problem. This can be replaced with,
+      // countAll in the implementation with Mysql Server. Indeed, after solving the quota problem
+      // and updating the path, we can use root for getting the number of files.
+//          return getRootDir().getNsCount();
+      return getTotalInodes();
     } finally {
       readUnlock();
     }
