@@ -50,6 +50,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.INodeLockType;
+import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.INodeResolveType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
@@ -100,13 +102,13 @@ class NamenodeJspHelper {
 
   static String getInodeLimitText(final FSNamesystem fsn)  throws PersistanceException,
           IOException{
-      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
+      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TOTAL_FILES) {
       @Override
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager tlm = new TransactionLockManager();
         tlm.addINode(
-                TransactionLockManager.INodeResolveType.ONLY_PATH,
-                TransactionLockManager.INodeLockType.READ,
+                INodeResolveType.ONLY_PATH,
+                INodeLockType.READ_COMMITED,
                 new String[]{"/"});
         tlm.acquire();
       }
