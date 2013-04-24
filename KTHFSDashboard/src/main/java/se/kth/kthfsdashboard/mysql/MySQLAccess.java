@@ -18,7 +18,8 @@ import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 import org.primefaces.model.UploadedFile;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
-import se.kth.kthfsdashboard.util.CollectdTools;
+
+// TODO: Loads of hard-coded crap here.
 
 public class MySQLAccess implements Serializable {
 
@@ -29,13 +30,16 @@ public class MySQLAccess implements Serializable {
    private Statement statement = null;
    private ResultSet resultSet = null;
 
-   public List<NodesTableItem> readDataBase() throws InterruptedException {
+   public List<NodesTableItem> readDataBase(String host) throws InterruptedException {
       List<NodesTableItem> resultList = new ArrayList<NodesTableItem>();
       try {
          
          Class.forName("com.mysql.jdbc.Driver");
-         connect = DriverManager.getConnection("jdbc:mysql://cloud11.sics.se/ndbinfo?"
-                 + "user=kthfs&password=kthfs");
+
+         // TODO - Externalize cloud11 into configuration data. Possibly stored 
+         // in the local MySQL DB.
+         connect = DriverManager.getConnection("jdbc:mysql://" + host + "/ndbinfo?"
+                 + "user=" + DASH_USERNAME + "&password=" + DASH_PASSWORD);
 
          statement = connect.createStatement();
          resultSet = statement.executeQuery("select * from nodes");
@@ -86,7 +90,7 @@ public class MySQLAccess implements Serializable {
          StreamedContent backupContent = new DefaultStreamedContent(inputStream, "application/sql", "dashboard.sql");
          return backupContent;
       } catch (Exception ex) {
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);
+         Logger.getLogger(MySQLAccess.class.getName()).log(Level.SEVERE, null, ex);
          return null;
       }
    }
@@ -114,7 +118,7 @@ public class MySQLAccess implements Serializable {
          }
          return false;         
       } catch (Exception ex) {
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);         
+         Logger.getLogger(MySQLAccess.class.getName()).log(Level.SEVERE, null, ex);         
          return false;
       }
    }

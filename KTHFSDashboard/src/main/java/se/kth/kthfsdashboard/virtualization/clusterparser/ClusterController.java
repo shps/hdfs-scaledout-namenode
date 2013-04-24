@@ -6,6 +6,7 @@ package se.kth.kthfsdashboard.virtualization.clusterparser;
 
 import java.io.IOException;
 import java.io.Serializable;
+import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.RequestScoped;
@@ -25,6 +26,8 @@ import org.yaml.snakeyaml.Yaml;
 @SessionScoped
 public class ClusterController implements Serializable {
 
+    //@EJB
+   // private ClusterEJB clusterEJB;
     private Cluster cluster;
     private boolean disableStart = true;
     private UploadedFile file;
@@ -94,6 +97,7 @@ public class ClusterController implements Serializable {
             if (document != null && document instanceof Cluster) {
                 disableStart = false;
                 cluster = (Cluster) document;
+               // clusterEJB.persistCluster(cluster);
             } else {
                 disableStart = true;
                 cluster = null;
@@ -107,6 +111,7 @@ public class ClusterController implements Serializable {
     }
 
     private void generateTreeTable() {
+        //System.out.println(clusterEJB.findAll());
         root = new DefaultTreeNode("root", null);
 
 
@@ -117,10 +122,10 @@ public class ClusterController implements Serializable {
         int mysql = 0;
 
         for (NodeGroup group : cluster.getNodes()) {
-            if (group.getRoles().contains("kthfs*namenode")) {
+            if (group.getRoles().contains("KTHFS*namenode")) {
                 namenode += group.getNumber();
             }
-            if (group.getRoles().contains("kthfs*datanode")) {
+            if (group.getRoles().contains("KTHFS*datanode")) {
                 datanode += group.getNumber();
             }
             if (group.getRoles().contains("MySQLCluster*mgm")) {

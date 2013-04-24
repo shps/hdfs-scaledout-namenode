@@ -25,15 +25,15 @@
          <p:toolbar styleClass="MainToolbar">  
             <p:toolbarGroup align="left">  
 
-               <p:commandLink value="#{settingsController.name}" action="services"/>
+               <p:commandLink value="#{settingsController.name}" action="clusters"/>
 
-               <p:menuButton value="Services">
-                  <p:menuitem value="All Services" action="services"/>
+               <p:menuButton value="Clusters">
+                  <p:menuitem value="All Clusters" action="clusters"/>
                   <p:separator />  
 
-                  <c:forEach var="kthfsInstance" items="#{serviceController.kthfsInstances}">                          
-                     <p:menuitem value="#{kthfsInstance.name}" action='#{serviceController.doGotoService()}'>
-                        <f:param name="kthfsinstance" value="#{kthfsInstance.name}" />
+                  <c:forEach var="cluster" items="#{serviceController.clusters}">                          
+                     <p:menuitem value="#{cluster.name}" action='#{serviceController.doGotoClusterStatus()}'>
+                        <f:param name="cluster" value="#{cluster.name}" />
                      </p:menuitem>
                   </c:forEach>
                </p:menuButton>
@@ -42,7 +42,7 @@
 
                <p:commandButton value="Alerts" action="alerts"/>
 
-               <p:commandButton value="Add Cluster" action="addcluster"/>
+               <p:commandButton value="Manage Cluster" action="addcluster"/>
 
             </p:toolbarGroup>  
 

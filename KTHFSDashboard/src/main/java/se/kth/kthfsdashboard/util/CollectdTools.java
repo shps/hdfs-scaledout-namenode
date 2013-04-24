@@ -15,8 +15,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.EJB;
 import net.stamfest.rrd.CommandResult;
 import net.stamfest.rrd.RRDp;
+import se.kth.kthfsdashboard.service.ServiceEJB;
 
 /**
  *
@@ -26,10 +28,11 @@ public class CollectdTools {
 
    private static final String COLLECTD_PATH = "/var/lib/collectd/rrd/";
    private static final String RRD_EXT = ".rrd";
-//    private static final String COLLECTD_LINK = "jarmon/data/";
    private static final String COLLECTD_LINK = COLLECTD_PATH;
-   //    public static final String COLLECTD_LIB = "/var/lib/collectd/rrd/";
+   static final Logger logger = Logger.getLogger(CollectdTools.class.getName());
    Parser parser = new Parser();
+   @EJB
+   ServiceEJB serviceEJB;
 
    enum ChartType {
 
@@ -94,7 +97,7 @@ public class CollectdTools {
          load[1] = format.parse(loads[1]).doubleValue();
          load[2] = format.parse(loads[2]).doubleValue();
       } catch (ParseException ex) {
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);
+         logger.log(Level.SEVERE, null, ex);
       }
       return load;
    }
@@ -108,7 +111,7 @@ public class CollectdTools {
       String res1 = readLastRrdValue(hostname, "memory", "", "memory", type);
       String result;
       if (res1.lastIndexOf(":") < 1) { // ERROR
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, "RRD: " + res1);
+         logger.log(Level.SEVERE, null, "RRD: " + res1);
          return -1l;
       } else {
          result = res1.split(":")[1].trim().toUpperCase();
@@ -117,9 +120,7 @@ public class CollectdTools {
       try {
          return parser.parseLong(result);
       } catch (ParseException ex) {
-
-         System.err.println(ex + "- result='" + result + "'");
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);
+         logger.log(Level.SEVERE, null, ex);
       }
       return null;
    }
@@ -142,7 +143,7 @@ public class CollectdTools {
             return result.output.split("\\r?\\n")[2];
          }
       } catch (Exception ex) {
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);
+         logger.log(Level.SEVERE, null, ex);
          return "ERROR";
       }
    }
@@ -169,14 +170,11 @@ public class CollectdTools {
       dd_avgTimeReadBlock, dd_avgTimeWriteBlock, dd_avgTimeCopyBlock, dd_avgTimeReplaceBlock,
       dd_opsBlockChecksum, dd_opsBlockReports, dd_avgTimeBlockChecksum, dd_avgTimeBlockReports,
       dd_blockVerificationFailures, dd_volumeFailures,
-      
       mysql_freeDataMemory, mysql_totalDataMemory, mysql_freeIndexMemory, mysql_totalIndexMemory,
-      mysql_simpleReads, mysql_Reads, mysql_Writes, mysql_rangeScans, mysql_tableScans
-      
-      ;
+      mysql_simpleReads, mysql_Reads, mysql_Writes, mysql_rangeScans, mysql_tableScans;
    }
 
-   public InputStream getGraphStream(String chartType, String hostname, String plugin, String pluginInstance, String type, String typeInstance, String ds, int start, int end) throws IOException {
+   public InputStream getGraphStream(String chartType, String hostname, String plugin, String pluginInstance, String type, String typeInstance, String ds, int start, int end, int n) throws IOException {
 
       String RED = "CB4B4B";
       String BLUE = "AFD8F8";
@@ -199,7 +197,11 @@ public class CollectdTools {
       RrdtoolCommand cmd = new RrdtoolCommand(hostname, plugin, pluginInstance, start, end);
       cmd.setGraphSize(width, height);
 
-      List<String> namenodes = new ArrayList<String>(Arrays.asList("cloud1.sics.se", "cloud2.sics.se"));
+      List<String> namenodes = new ArrayList<String>();
+      if (chartType.startsWith("serv_nn_")) {
+ 
+         namenodes = new ArrayList<String>(Arrays.asList(hostname.split(",")));
+      }
 
       switch (GraphType.valueOf(chartType)) {
 // - Hosts ---------------------------------------------------------------------         
@@ -248,7 +250,7 @@ public class CollectdTools {
             cmd.setTitle("Namenode Capacity");
             cmd.setVerticalLabel("GB");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("memory-CapacityTotalGB", "", "value", "Total", BLUE, "%5.2lf %S");
             cmd.drawLine("memory-CapacityRemainingGB", "", "value", "Remaining", GREEN, "%5.2lf %S");
             cmd.drawLine("memory-CapacityUsedGB", "", "value", "Used", RED, "%5.2lf %S");
@@ -258,7 +260,7 @@ public class CollectdTools {
             cmd.setTitle("Files");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("gauge-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
             break;
 
@@ -266,7 +268,7 @@ public class CollectdTools {
             cmd.setTitle("Total Load");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("gauge-TotalLoad", "", "value", "Total Load", RED, "%5.2lf %S");
             break;
 
@@ -274,7 +276,7 @@ public class CollectdTools {
             cmd.setTitle("Heartbeats");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("counter-ExpiredHeartbeats", "", "value", "Expired Heartbeats", RED, "%5.2lf %S");
             break;
 
@@ -282,7 +284,7 @@ public class CollectdTools {
             cmd.setTitle("Block Replication");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("counter-UnderReplicatedBlocks", "", "value", "Under-Replicated", GREEN, "%5.2lf %S");
             cmd.drawLine("counter-PendingReplicationBlocks", "", "value", "Pending", BLUE, "%5.2lf %S");
             cmd.drawLine("counter-ScheduledReplicationBlocks", "", "value", "Scheduled", YELLOW, "%5.2lf %S");
@@ -292,7 +294,7 @@ public class CollectdTools {
             cmd.setTitle("Blocks");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("counter-BlockCapacity", "", "value", "Blocks Total", GREEN, "%5.2lf %S");
             cmd.drawLine("counter-BlocksTotal", "", "value", "Block Capacity", BLUE, "%5.2lf %S");
             break;
@@ -301,7 +303,7 @@ public class CollectdTools {
             cmd.setTitle("Special Blocks");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("counter-CorruptBlocks", "", "value", "Corrupt", RED, "%5.2lf %S");
             cmd.drawLine("counter-ExcessBlocks", "", "value", "Excess", BLUE, "%5.2lf %S");
             cmd.drawLine("counter-MissingBlocks", "", "value", "Missing", YELLOW, "%5.2lf %S");
@@ -312,7 +314,7 @@ public class CollectdTools {
             cmd.setTitle("Number of Data Nodes");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystemState", "");
-            cmd.setHostname("cloud1.sics.se");
+            cmd.setHostname(namenodes.get(0));
             cmd.drawLine("gauge-NumDeadDataNodes", "", "value", "Dead", RED, "%5.2lf %S");
             cmd.drawLine("gauge-NumLiveDataNodes", "", "value", "Live", GREEN, "%5.2lf %S");
             break;
@@ -504,7 +506,7 @@ public class CollectdTools {
             cmd.setTitle("Files");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-FSNamesystem", "");
-            cmd.drawLine("counter-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
+            cmd.drawLine("gauge-FilesTotal", "", "value", "Total Files", GREEN, "%5.2lf %S");
             break;
 
          case nn_load:
@@ -743,15 +745,15 @@ public class CollectdTools {
             cmd.setTitle("Heartbeats Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-HeartbeatsAvgTime", "", "value", "Heartbeats Average Time", GREEN, "%5.2lf %S");            
+            cmd.drawLine("gauge-HeartbeatsAvgTime", "", "value", "Heartbeats Average Time", GREEN, "%5.2lf %S");
             break;
-            
+
          case dd_bytes:
             cmd.setTitle("Bytes Read/Written");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BytesRead", "", "value", "Read", BLUE, "%5.2lf %S"); 
-            cmd.drawLine("gauge-BytesWritten", "", "value", "Written", GREEN, "%5.2lf %S");             
+            cmd.drawLine("gauge-BytesRead", "", "value", "Read", BLUE, "%5.2lf %S");
+            cmd.drawLine("gauge-BytesWritten", "", "value", "Written", GREEN, "%5.2lf %S");
             break;
 
          case dd_opsReads:
@@ -759,223 +761,223 @@ public class CollectdTools {
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
             cmd.drawLine("gauge-ReadsFromLocalClient", "", "value", "Local Client", BLUE, "%5.2lf %S");
-            cmd.drawLine("gauge-ReadsFromRemoteClient", "", "value", "Remote Client", GREEN, "%5.2lf %S");            
-            break;            
-            
+            cmd.drawLine("gauge-ReadsFromRemoteClient", "", "value", "Remote Client", GREEN, "%5.2lf %S");
+            break;
+
          case dd_opsWrites:
             cmd.setTitle("Write Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
             cmd.drawLine("gauge-WritesFromLocalClient", "", "value", "Local Client", BLUE, "%5.2lf %S");
-            cmd.drawLine("gauge-WritesFromRemoteClient", "", "value", "Remote Client", GREEN, "%5.2lf %S");            
-            break;   
-            
+            cmd.drawLine("gauge-WritesFromRemoteClient", "", "value", "Remote Client", GREEN, "%5.2lf %S");
+            break;
+
          case dd_blocksRead:
             cmd.setTitle("Blocks Read");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlocksRead", "", "value", "Blocks Read", GREEN, "%5.2lf %S");            
-            break;            
+            cmd.drawLine("gauge-BlocksRead", "", "value", "Blocks Read", GREEN, "%5.2lf %S");
+            break;
 
          case dd_blocksWritten:
             cmd.setTitle("Blocks Written");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlocksWritten", "", "value", "Blocks Written", GREEN, "%5.2lf %S");            
-            break; 
+            cmd.drawLine("gauge-BlocksWritten", "", "value", "Blocks Written", GREEN, "%5.2lf %S");
+            break;
 
          case dd_blocksRemoved:
             cmd.setTitle("Blocks Removed");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlocksRemoved", "", "value", "Blocks Removed", GREEN, "%5.2lf %S");            
-            break; 
+            cmd.drawLine("gauge-BlocksRemoved", "", "value", "Blocks Removed", GREEN, "%5.2lf %S");
+            break;
 
          case dd_blocksReplicated:
             cmd.setTitle("Blocks Replicated");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlocksReplicated", "", "value", "Blocks Replicated", GREEN, "%5.2lf %S");            
-            break; 
-                        
+            cmd.drawLine("gauge-BlocksReplicated", "", "value", "Blocks Replicated", GREEN, "%5.2lf %S");
+            break;
+
          case dd_blocksVerified:
             cmd.setTitle("Blocks Verified");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlocksVerified", "", "value", "Blocks Verified", GREEN, "%5.2lf %S");            
-            break;        
+            cmd.drawLine("gauge-BlocksVerified", "", "value", "Blocks Verified", GREEN, "%5.2lf %S");
+            break;
 
          case dd_opsReadBlock:
             cmd.setTitle("Read Block Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-ReadBlockOpNumOps", "", "value", "Read Block Operations", GREEN, "%5.2lf %S");            
-            break;   
+            cmd.drawLine("gauge-ReadBlockOpNumOps", "", "value", "Read Block Operations", GREEN, "%5.2lf %S");
+            break;
 
          case dd_opsWriteBlock:
             cmd.setTitle("Write Block Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-WriteBlockOpNumOps", "", "value", "Write Block Operations", GREEN, "%5.2lf %S");            
-            break;  
-            
+            cmd.drawLine("gauge-WriteBlockOpNumOps", "", "value", "Write Block Operations", GREEN, "%5.2lf %S");
+            break;
+
          case dd_opsCopyBlock:
             cmd.setTitle("Copy Block Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("counter-CopyBlockOpNumOps", "", "value", "Copy Block Operations", GREEN, "%5.2lf %S");            
-            break;              
-               
+            cmd.drawLine("counter-CopyBlockOpNumOps", "", "value", "Copy Block Operations", GREEN, "%5.2lf %S");
+            break;
+
          case dd_opsReplaceBlock:
             cmd.setTitle("Replace Block Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-ReplaceBlockOpNumOps", "", "value", "Replace Block Operations", GREEN, "%5.2lf %S");            
-            break;              
+            cmd.drawLine("gauge-ReplaceBlockOpNumOps", "", "value", "Replace Block Operations", GREEN, "%5.2lf %S");
+            break;
 
          case dd_avgTimeReadBlock:
             cmd.setTitle("Read Block Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-ReadBlockOpAvgTime", "", "value", "Read Block Average Time", GREEN, "%5.2lf %S");            
-            break;   
+            cmd.drawLine("gauge-ReadBlockOpAvgTime", "", "value", "Read Block Average Time", GREEN, "%5.2lf %S");
+            break;
 
          case dd_avgTimeWriteBlock:
             cmd.setTitle("Write Block Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-WriteBlockOpAvgTime", "", "value", "Write Block Average Time", GREEN, "%5.2lf %S");            
-            break;              
-            
+            cmd.drawLine("gauge-WriteBlockOpAvgTime", "", "value", "Write Block Average Time", GREEN, "%5.2lf %S");
+            break;
+
          case dd_avgTimeCopyBlock:
             cmd.setTitle("Copy Block Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-CopyBlockOpAvgTime", "", "value", "Copy Block Average Time", GREEN, "%5.2lf %S");            
-            break;                
-            
+            cmd.drawLine("gauge-CopyBlockOpAvgTime", "", "value", "Copy Block Average Time", GREEN, "%5.2lf %S");
+            break;
+
          case dd_avgTimeReplaceBlock:
             cmd.setTitle("Replace Block Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-ReplaceBlockOpAvgTime", "", "value", "Replace Block Average Time", GREEN, "%5.2lf %S");            
-            break;                 
-            
+            cmd.drawLine("gauge-ReplaceBlockOpAvgTime", "", "value", "Replace Block Average Time", GREEN, "%5.2lf %S");
+            break;
+
          case dd_opsBlockChecksum:
             cmd.setTitle("Block Checksum Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlockChecksumOpNumOps", "", "value", "Block Checksum Operations", GREEN, "%5.2lf %S");            
-            break;   
+            cmd.drawLine("gauge-BlockChecksumOpNumOps", "", "value", "Block Checksum Operations", GREEN, "%5.2lf %S");
+            break;
 
          case dd_opsBlockReports:
             cmd.setTitle("Block Report Operations");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlockReportsNumOps", "", "value", "Block Report Operations", GREEN, "%5.2lf %S");            
-            break;              
+            cmd.drawLine("gauge-BlockReportsNumOps", "", "value", "Block Report Operations", GREEN, "%5.2lf %S");
+            break;
 
          case dd_avgTimeBlockChecksum:
             cmd.setTitle("Block Checksum Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlockChecksumOpAvgTime", "", "value", "Block Checksum Average Time", GREEN, "%5.2lf %S");            
+            cmd.drawLine("gauge-BlockChecksumOpAvgTime", "", "value", "Block Checksum Average Time", GREEN, "%5.2lf %S");
             break;
 
          case dd_avgTimeBlockReports:
             cmd.setTitle("Block Report Average Time");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlockReportsAvgTime", "", "value", "Block Report Average Time", GREEN, "%5.2lf %S");            
-            break;            
+            cmd.drawLine("gauge-BlockReportsAvgTime", "", "value", "Block Report Average Time", GREEN, "%5.2lf %S");
+            break;
 
          case dd_blockVerificationFailures:
             cmd.setTitle("Block Verification Failures");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-BlockVerificationFailures", "", "value", "Block Verification Failures", GREEN, "%5.2lf %S");            
-            break; 
+            cmd.drawLine("gauge-BlockVerificationFailures", "", "value", "Block Verification Failures", GREEN, "%5.2lf %S");
+            break;
 
          case dd_volumeFailures:
             cmd.setTitle("Volume Failures");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("GenericJMX-DataNodeActivity", "");
-            cmd.drawLine("gauge-VolumeFailures", "", "value", "Volume Failures", GREEN, "%5.2lf %S");            
-            break;             
+            cmd.drawLine("gauge-VolumeFailures", "", "value", "Volume Failures", GREEN, "%5.2lf %S");
+            break;
 
 //- Mysqlcluster ---------------------------------------------------------------
-            
+
          case mysql_freeDataMemory:
             cmd.setTitle("Free Data Memory");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            for (int i=1; i<= 4; i++) {
-               cmd.drawLine("gauge-free_data_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            for (int i = 1; i <= n; i++) {
+               cmd.drawLine("gauge-free_data_memory-" + i, "", "value", "Node " + i, col.get(i - 1), "%5.2lf %S");
             }
-            break;             
-            
+            break;
+
          case mysql_totalDataMemory:
             cmd.setTitle("Total Data Memory");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            for (int i=1; i<= 4; i++) {
-               cmd.drawLine("gauge-total_data_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            for (int i = 1; i <= n; i++) {
+               cmd.drawLine("gauge-total_data_memory-" + i, "", "value", "Node " + i, col.get(i - 1), "%5.2lf %S");
             }
-            break;             
-            
+            break;
+
          case mysql_freeIndexMemory:
             cmd.setTitle("Free Index Memory");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            for (int i=1; i<= 4; i++) {
-               cmd.drawLine("gauge-free_index_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            for (int i = 1; i <= n; i++) {
+               cmd.drawLine("gauge-free_index_memory-" + i, "", "value", "Node " + i, col.get(i - 1), "%5.2lf %S");
             }
-            break;             
-            
+            break;
+
          case mysql_totalIndexMemory:
             cmd.setTitle("Total Index Memory");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            for (int i=1; i<= 4; i++) {
-               cmd.drawLine("gauge-total_index_memory-" + i, "", "value", "Node " + i, col.get(i-1), "%5.2lf %S");            
+            for (int i = 1; i <= n; i++) {
+               cmd.drawLine("gauge-total_index_memory-" + i, "", "value", "Node " + i, col.get(i - 1), "%5.2lf %S");
             }
-            break; 
-            
+            break;
+
          case mysql_simpleReads:
             cmd.setTitle("Simple Reads");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-counters_sum-SIMPLE_READS", "", "value", "Simple Reads", GREEN, "%5.2lf %S");            
-            break;               
+            cmd.drawLine("gauge-counters_sum-SIMPLE_READS", "", "value", "Simple Reads", GREEN, "%5.2lf %S");
+            break;
 
          case mysql_Reads:
             cmd.setTitle("Reads");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-counters_sum-READS", "", "value", "Reads", GREEN, "%5.2lf %S");            
-            break; 
+            cmd.drawLine("gauge-counters_sum-READS", "", "value", "Reads", GREEN, "%5.2lf %S");
+            break;
 
          case mysql_Writes:
             cmd.setTitle("Writes");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-counters_sum-WRITES", "", "value", "Writes", GREEN, "%5.2lf %S");            
-            break; 
-            
+            cmd.drawLine("gauge-counters_sum-WRITES", "", "value", "Writes", GREEN, "%5.2lf %S");
+            break;
+
          case mysql_rangeScans:
             cmd.setTitle("Range Scans");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-counters_sum-RANGE_SCANS", "", "value", "Range Scans", GREEN, "%5.2lf %S");            
-            break;             
-            
+            cmd.drawLine("gauge-counters_sum-RANGE_SCANS", "", "value", "Range Scans", GREEN, "%5.2lf %S");
+            break;
+
          case mysql_tableScans:
             cmd.setTitle("Table Scans");
             cmd.setVerticalLabel(" ");
             cmd.setPlugin("dbi-ndbinfo", "");
-            cmd.drawLine("gauge-counters_sum-TABLE_SCANS", "", "value", "Table Scans", GREEN, "%5.2lf %S");            
-            break;                
-            
+            cmd.drawLine("gauge-counters_sum-TABLE_SCANS", "", "value", "Table Scans", GREEN, "%5.2lf %S");
+            break;
+
          default:
             cmd.setTitle(plugin);
             cmd.setVerticalLabel(plugin);
@@ -992,7 +994,7 @@ public class CollectdTools {
       try {
          process.waitFor();
       } catch (InterruptedException ex) {
-         Logger.getLogger(CollectdTools.class.getName()).log(Level.SEVERE, null, ex);
+         logger.log(Level.SEVERE, null, ex);
          return null;
       }
       return process.getInputStream();

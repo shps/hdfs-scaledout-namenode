@@ -4,12 +4,9 @@
  */
 package se.kth.kthfsdashboard.virtualization;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
-import org.omg.CORBA.INTERNAL;
 
 /**
  *
@@ -28,7 +25,7 @@ public class RoleMapPorts {
         roleMappings = new HashMap();
         //TCP rolemappings for KTHFS
         int[] namenodeTCP = {6000, 6001, 60190, 60113};
-        int[] datanodeTCP = {6002, 6003, 6004, 6007, 34244, 60186, 60231, 60676};
+        int[] datanodeTCP = {6002, 6003, 6004, 6007, 40102, 34244, 60186, 60231, 60676};
         int[] mgmTCP = {3306, 4848, 8080,1186};
         int[] ndbdTCP = {1186, 10000, 11211};
         int[] mysqldTCP = {3306,1186};
@@ -49,15 +46,15 @@ public class RoleMapPorts {
         switch (type) {
             case TCP:
 
-                roleMappings.put("kthfs*namenode", namenodeTCP);
-                roleMappings.put("kthfs*datanode", datanodeTCP);
+                roleMappings.put("KTHFS*namenode", namenodeTCP);
+                roleMappings.put("KTHFS*datanode", datanodeTCP);
                 roleMappings.put("MySQLCluster*mgm", mgmTCP);
                 roleMappings.put("MySQLCluster*ndb", ndbdTCP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldTCP);
                 break;
             case UDP:
-                roleMappings.put("kthfs*namenode", namenodeUDP);
-                roleMappings.put("kthfs*datanode", datanodeUDP);
+                roleMappings.put("KTHFS*namenode", namenodeUDP);
+                roleMappings.put("KTHFS*datanode", datanodeUDP);
                 roleMappings.put("MySQLCluster*mgm", mgmUDP);
                 roleMappings.put("MySQLCluster*ndb", ndbdUDP);
                 roleMappings.put("MySQLCluster*mysqld", mysqldUDP);

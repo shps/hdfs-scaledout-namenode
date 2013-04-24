@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.security.RolesAllowed;
@@ -23,8 +24,7 @@ import se.kth.kthfsdashboard.util.CollectdTools;
 @Stateless
 @RolesAllowed({"AGENT", "ADMIN"})
 public class CollectdResource {
-   
-   
+
    final static Logger logger = Logger.getLogger(CollectdResource.class.getName());
 
    @GET
@@ -46,18 +46,23 @@ public class CollectdResource {
            @QueryParam("plugin_instance") String pluginInstance,
            @QueryParam("type") String type,
            @QueryParam("type_instance") String typeInstance,
-           @QueryParam("ds") String ds) throws InterruptedException, IOException {
+           @QueryParam("ds") String ds,
+           @QueryParam("n") int n) throws InterruptedException, IOException {
 
       CollectdTools collectdTools = new CollectdTools();
       try {
+
+         
+
+
          ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-         InputStream inputStream = collectdTools.getGraphStream(chartType, hostname, plugin, pluginInstance, type, typeInstance, ds, start, end);
+         InputStream inputStream = collectdTools.getGraphStream(chartType, hostname, plugin, pluginInstance, type, typeInstance, ds, start, end, n);
          BufferedImage image = ImageIO.read(inputStream);
          ImageIO.write(image, "png", byteArrayOutputStream);
          byte[] imageData = byteArrayOutputStream.toByteArray();
          return Response.ok(new ByteArrayInputStream(imageData)).build();
       } catch (Exception e) {
-         logger.log(Level.SEVERE, "Null Image!");
+         logger.log(Level.SEVERE, "Image == null");
          return Response.status(Response.Status.NOT_FOUND).build();
       }
    }

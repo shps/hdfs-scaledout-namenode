@@ -948,8 +948,7 @@ public class NameNode
                 System.exit(aborted ? 1 : 0);
                 return null; // avoid warning
             default:
-                // FIXME[Hooman]: Metrics throws exceptions.
-//        DefaultMetricsSystem.initialize("NameNode");
+                DefaultMetricsSystem.initialize("NameNode");
                 return new NameNode(conf, NamenodeRole.SECONDARY);
         }
     }
