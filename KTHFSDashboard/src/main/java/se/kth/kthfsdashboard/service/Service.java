@@ -38,7 +38,7 @@ import javax.persistence.*;
    @NamedQuery(name = "Service.findBy-Instance-Group-Service", query = "SELECT s FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service"),
    @NamedQuery(name = "Service.findBy-Instance-Group-Service-Status", query = "SELECT s FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service AND s.status = :status"),
    
-   @NamedQuery(name = "Service.findHostnameBy-Instance-Group-Service", query = "SELECT s.hostname FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service"),
+   @NamedQuery(name = "Service.findHostnameBy-Instance-Group-Service", query = "SELECT s.hostname FROM Service s WHERE s.instance = :instance AND s.serviceGroup = :group AND s.service = :service ORDER BY s.hostname"),
 
    
    @NamedQuery(name = "findSubserviceBy-Instance-Service", query = "SELECT s FROM Service s WHERE (NOT s.serviceGroup = s.service) AND s.instance = :instance AND s.service = :service"),
