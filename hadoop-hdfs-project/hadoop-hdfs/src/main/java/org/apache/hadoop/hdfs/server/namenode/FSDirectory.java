@@ -57,7 +57,11 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 /**
@@ -2105,10 +2109,17 @@ public class FSDirectory implements Closeable {
         }
     }
 
-  long totalInodes() throws PersistanceException, IOException {
+  int totalInodes() throws IOException {
     readLock();
     try {
-          return getRootDir().getNsCount();
+      LightWeightRequestHandler totalInodesHandler = new LightWeightRequestHandler(RequestHandler.OperationType.TOTAL_FILES) {
+        @Override
+        public Object performTask() throws PersistanceException, IOException {
+          InodeDataAccess da = (InodeDataAccess) StorageFactory.getDataAccess(InodeDataAccess.class);
+          return da.countAll();
+        }
+      };
+      return (Integer) totalInodesHandler.handle();
     } finally {
       readUnlock();
     }

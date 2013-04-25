@@ -100,23 +100,7 @@ class NamenodeJspHelper {
 
   static String getInodeLimitText(final FSNamesystem fsn)  throws PersistanceException,
           IOException{
-      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tlm = new TransactionLockManager();
-        tlm.addINode(
-                TransactionLockManager.INodeResolveType.ONLY_PATH,
-                TransactionLockManager.INodeLockType.READ,
-                new String[]{"/"});
-        tlm.acquire();
-      }
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return fsn.dir.totalInodes();
-      }
-    };
-    long inodes = (Long) totalInodesHandler.handle();
+    long inodes = fsn.dir.totalInodes();
     long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
 

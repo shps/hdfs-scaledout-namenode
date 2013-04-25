@@ -682,23 +682,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void metaSave(final String filename) throws IOException {
 
-    TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tlm = new TransactionLockManager();
-        tlm.addINode(
-                INodeResolveType.ONLY_PATH,
-                INodeLockType.READ_COMMITED,
-                new String[]{"/"});
-        tlm.acquire();
-      }
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return dir.totalInodes();
-      }
-    };
-    final long totalInodes = (Long) totalInodesHandler.handle();
+    final long totalInodes = dir.totalInodes();
             checkSuperuserPrivilege();
     File file = new File(System.getProperty("hadoop.log.dir"), filename);
     final PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
@@ -4550,23 +4534,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public long getFilesTotal() throws PersistanceException, IOException {
     readLock();
     try {
-      TransactionalRequestHandler filesTotalRequestHandler = new TransactionalRequestHandler(OperationType.TOTAL_FILES) {
-        @Override
-        public void acquireLock() throws PersistanceException, IOException {
-          TransactionLockManager tlm = new TransactionLockManager();
-          tlm.addINode(
-                  INodeResolveType.ONLY_PATH,
-                  INodeLockType.READ_COMMITED,
-                  new String[]{"/"})
-                  .acquire();
-        }
-
-        @Override
-        public Object performTask() throws PersistanceException, IOException {
-          return dir.totalInodes();
-        }
-      };
-      return (Long) filesTotalRequestHandler.handle();
+      return dir.totalInodes();
     } finally {
       readUnlock();
     }
