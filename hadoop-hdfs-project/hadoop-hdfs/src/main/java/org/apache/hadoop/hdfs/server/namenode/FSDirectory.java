@@ -2112,6 +2112,7 @@ public class FSDirectory implements Closeable {
   int totalInodes() throws IOException {
     readLock();
     try {
+      // TODO[Hooman]: after fixing quota, we can use root.getNscount instead of this.
       LightWeightRequestHandler totalInodesHandler = new LightWeightRequestHandler(RequestHandler.OperationType.TOTAL_FILES) {
         @Override
         public Object performTask() throws PersistanceException, IOException {
