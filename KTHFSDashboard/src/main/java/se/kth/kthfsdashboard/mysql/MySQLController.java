@@ -115,7 +115,7 @@ public class MySQLController implements Serializable {
          // Role=mysqld , Service=MySQLCluster, Cluster=cluster
          final String SERVICE = "mysqld";
          String host = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, SERVICE).get(0).getHostname();
-         return dao.readDataBase(host);
+         return dao.readNodesFromNdbinfo(host);
       } catch (Exception e) {
          return null;
       }

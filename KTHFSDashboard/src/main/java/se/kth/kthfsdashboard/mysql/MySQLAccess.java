@@ -23,6 +23,8 @@ import se.kth.kthfsdashboard.struct.NodesTableItem;
 
 public class MySQLAccess implements Serializable {
 
+   final static String CLUSTER_USERNAME = "root";
+   final static String CLUSTER_PASSWORD = "";   
    final static String DASH_USERNAME = "kthfs";
    final static String DASH_PASSWORD = "kthfs";
    final static String DASH_DATABASE = "kthfs";
@@ -30,16 +32,13 @@ public class MySQLAccess implements Serializable {
    private Statement statement = null;
    private ResultSet resultSet = null;
 
-   public List<NodesTableItem> readDataBase(String host) throws InterruptedException {
+   public List<NodesTableItem> readNodesFromNdbinfo(String host) throws InterruptedException {
       List<NodesTableItem> resultList = new ArrayList<NodesTableItem>();
       try {
          
          Class.forName("com.mysql.jdbc.Driver");
-
-         // TODO - Externalize cloud11 into configuration data. Possibly stored 
-         // in the local MySQL DB.
          connect = DriverManager.getConnection("jdbc:mysql://" + host + "/ndbinfo?"
-                 + "user=" + DASH_USERNAME + "&password=" + DASH_PASSWORD);
+                 + "user=" + CLUSTER_USERNAME + "&password=" + CLUSTER_PASSWORD);
 
          statement = connect.createStatement();
          resultSet = statement.executeQuery("select * from nodes");
@@ -53,7 +52,7 @@ public class MySQLAccess implements Serializable {
             resultList.add(new NodesTableItem(nodeId, status, uptime, startPhase, configGeneration));
          }
       } catch (Exception e) {
-         resultList.add(new NodesTableItem(null, "Error" + e.getMessage(), null, null, null));
+         resultList.add(new NodesTableItem(null, "Error: " + e.getMessage(), null, null, null));
       } finally {
          close();
       }
