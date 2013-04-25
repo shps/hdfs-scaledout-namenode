@@ -10,7 +10,6 @@ import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import org.primefaces.event.FileUploadEvent;
@@ -35,6 +34,7 @@ public class MySQLController implements Serializable {
    private String cluster;
    private boolean flag;
    private List<NodesTableItem> info;
+   private UploadedFile file;
    MySQLAccess mysql = new MySQLAccess();
 
    public MySQLController() {
@@ -68,6 +68,14 @@ public class MySQLController implements Serializable {
 
    public void setFlag(boolean flag) {
       this.flag = flag;
+   }
+
+   public UploadedFile getFile() {
+      return file;
+   }
+
+   public void setFile(UploadedFile file) {
+      this.file = file;
    }
 
    public void load(ActionEvent event) {
@@ -119,15 +127,6 @@ public class MySQLController implements Serializable {
       } catch (Exception e) {
          return null;
       }
-   }
-   private UploadedFile file;
-
-   public UploadedFile getFile() {
-      return file;
-   }
-
-   public void setFile(UploadedFile file) {
-      this.file = file;
    }
 
    public void upload() {

@@ -1,9 +1,5 @@
 package se.kth.kthfsdashboard.mysql;
 
-/**
- *
- * @author Hamidreza Afzali <afzali@kth.se>
- */
 import java.io.InputStream;
 import java.io.Serializable;
 import java.sql.Connection;
@@ -19,12 +15,14 @@ import org.primefaces.model.StreamedContent;
 import org.primefaces.model.UploadedFile;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
 
-// TODO: Loads of hard-coded crap here.
-
+/**
+ *
+ * @author Hamidreza Afzali <afzali@kth.se>
+ */
 public class MySQLAccess implements Serializable {
 
    final static String CLUSTER_USERNAME = "root";
-   final static String CLUSTER_PASSWORD = "";   
+   final static String CLUSTER_PASSWORD = "";
    final static String DASH_USERNAME = "kthfs";
    final static String DASH_PASSWORD = "kthfs";
    final static String DASH_DATABASE = "kthfs";
@@ -35,7 +33,6 @@ public class MySQLAccess implements Serializable {
    public List<NodesTableItem> readNodesFromNdbinfo(String host) throws InterruptedException {
       List<NodesTableItem> resultList = new ArrayList<NodesTableItem>();
       try {
-         
          Class.forName("com.mysql.jdbc.Driver");
          connect = DriverManager.getConnection("jdbc:mysql://" + host + "/ndbinfo?"
                  + "user=" + CLUSTER_USERNAME + "&password=" + CLUSTER_PASSWORD);
@@ -115,9 +112,9 @@ public class MySQLAccess implements Serializable {
          if (process.exitValue() == 0) {
             return true;
          }
-         return false;         
+         return false;
       } catch (Exception ex) {
-         Logger.getLogger(MySQLAccess.class.getName()).log(Level.SEVERE, null, ex);         
+         Logger.getLogger(MySQLAccess.class.getName()).log(Level.SEVERE, null, ex);
          return false;
       }
    }
