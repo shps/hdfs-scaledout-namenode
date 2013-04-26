@@ -73,9 +73,9 @@ public class FSEditLogLoader {
   throws IOException {
     long startTime = now();
     int numEdits = loadFSEdits(edits, true, expectedStartingTxId);
-    FSImage.LOG.info("Edits file " + edits.getName() 
-        + " of size " + edits.length() + " edits # " + numEdits 
-        + " loaded in " + (now()-startTime)/1000 + " seconds.");
+//    FSImage.LOG.info("Edits file " + edits.getName() 
+//        + " of size " + edits.length() + " edits # " + numEdits 
+//        + " loaded in " + (now()-startTime)/1000 + " seconds.");
     return numEdits;
   }
 
@@ -393,15 +393,15 @@ public class FSEditLogLoader {
         }
       }
       String errorMessage = sb.toString();
-      FSImage.LOG.error(errorMessage);
+//      FSImage.LOG.error(errorMessage);
       throw new IOException(errorMessage, t);
     } finally {
       fsDir.writeUnlock();
       fsNamesys.writeUnlock();
     }
-    if (FSImage.LOG.isDebugEnabled()) {
-      dumpOpCounts(opCounts);
-    }
+//    if (FSImage.LOG.isDebugEnabled()) {
+//      dumpOpCounts(opCounts);
+//    }
     return numEdits;
   }
 
@@ -411,7 +411,7 @@ public class FSEditLogLoader {
     StringBuilder sb = new StringBuilder();
     sb.append("Summary of operations loaded from edit log:\n  ");
     Joiner.on("\n  ").withKeyValueSeparator("=").appendTo(sb, opCounts);
-    FSImage.LOG.debug(sb.toString());
+//    FSImage.LOG.debug(sb.toString());
   }
 
   private void incrOpCount(FSEditLogOpCodes opCode,
@@ -473,8 +473,8 @@ public class FSEditLogLoader {
             || op.txid == lastTxId + 1) {
           lastTxId = op.txid;
         } else {
-          FSImage.LOG.error("Out of order txid found. Found " + op.txid 
-                            + ", expected " + (lastTxId + 1));
+//          FSImage.LOG.error("Out of order txid found. Found " + op.txid 
+//                            + ", expected " + (lastTxId + 1));
           break;
         }
         numValid++;
@@ -482,8 +482,8 @@ public class FSEditLogLoader {
     } catch (Throwable t) {
       // Catch Throwable and not just IOE, since bad edits may generate
       // NumberFormatExceptions, AssertionErrors, OutOfMemoryErrors, etc.
-      FSImage.LOG.debug("Caught exception after reading " + numValid +
-          " ops from " + in + " while determining its valid length.", t);
+//      FSImage.LOG.debug("Caught exception after reading " + numValid +
+//          " ops from " + in + " while determining its valid length.", t);
     }
     return new EditLogValidation(lastPos, firstTxId, lastTxId);
   }

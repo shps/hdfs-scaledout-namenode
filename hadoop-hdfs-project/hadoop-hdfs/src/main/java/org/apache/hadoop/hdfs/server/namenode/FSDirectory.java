@@ -39,9 +39,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -76,7 +74,8 @@ import org.apache.hadoop.hdfs.util.ByteArray;
 public class FSDirectory implements Closeable {
 
     
-    FSImage fsImage;
+//    FSImage fsImage;
+    private FSNamesystem fsNamesystem;
     private volatile boolean ready = false;
     public static final long UNKNOWN_DISK_SPACE = -1; //[S] name it public to access from FSnamesystem
     private final int maxComponentLength;
@@ -136,20 +135,21 @@ public class FSDirectory implements Closeable {
      */
     private final NameCache<ByteArray> nameCache;
 
-    /**
-     * Access an existing dfs name directory.
-     */
-    FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-        this(new FSImage(conf), ns, conf);
-    }
+//    /**
+//     * Access an existing dfs name directory.
+//     */
+//    FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
+//        this(new FSImage(conf), ns, conf);
+//    }
 
-    FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
+    FSDirectory(FSNamesystem ns, Configuration conf) {
         this.dirLock = new ReentrantReadWriteLock(true); // fair
         this.cond = dirLock.writeLock().newCondition();
-        fsImage.setFSNamesystem(ns);
+        this.fsNamesystem = ns;
+//        fsImage.setFSNamesystem(ns);
         supergroup = ns.getSupergroup();
         
-        this.fsImage = fsImage;
+//        this.fsImage = fsImage;
         int configuredLimit = conf.getInt(
                 DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
         this.lsLimit = configuredLimit > 0
@@ -176,7 +176,8 @@ public class FSDirectory implements Closeable {
     }
 
     private FSNamesystem getFSNamesystem() {
-        return fsImage.getFSNamesystem();
+//        return fsImage.getFSNamesystem();
+      return this.fsNamesystem;
     }
 
     private BlockManager getBlockManager() {
@@ -193,22 +194,22 @@ public class FSDirectory implements Closeable {
             throws IOException {
         // format before starting up if requested
         if (startOpt == StartupOption.FORMAT) {
-            fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
+//            fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
             startOpt = StartupOption.REGULAR;
         }
-        boolean success = false;
-        try {
-            if (fsImage.recoverTransitionRead(startOpt)) {
-                fsImage.saveNamespace();
-            }
-            fsImage.openEditLog();
-
-            success = true;
-        } finally {
-            if (!success) {
-                fsImage.close();
-            }
-        }
+//        boolean success = false;
+//        try {
+//            if (fsImage.recoverTransitionRead(startOpt)) {
+//                fsImage.saveNamespace();
+//            }
+//            fsImage.openEditLog();
+//
+//            success = true;
+//        } finally {
+//            if (!success) {
+//                fsImage.close();
+//            }
+//        }
         writeLock();
         try {
             setReady(true);
@@ -236,7 +237,7 @@ public class FSDirectory implements Closeable {
      * Shutdown the filestore
      */
     public void close() throws IOException {
-        fsImage.close();
+//        fsImage.close();
     }
 
     /**

@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.Operati
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -65,7 +64,7 @@ public class TestFsLimits {
   private static class TestFSDirectory extends FSDirectory {
 
     public TestFSDirectory() throws IOException {
-      super(new FSImage(conf), getMockNamesystem(), conf);
+      super(getMockNamesystem(), conf);
       setReady(fsIsReady);
     }
 

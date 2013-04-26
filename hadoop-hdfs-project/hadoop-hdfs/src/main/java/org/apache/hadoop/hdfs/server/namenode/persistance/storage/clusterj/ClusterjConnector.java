@@ -1,25 +1,23 @@
 package org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj;
 
 import com.mysql.clusterj.ClusterJException;
-import java.util.Properties;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-
 import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.Constants;
 import com.mysql.clusterj.LockMode;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
 import com.mysql.clusterj.Transaction;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
+import java.util.Properties;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_CONNECTOR_STRING_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_DATABASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DB_NUM_SESSION_FACTORIES;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 
 public enum ClusterjConnector implements StorageConnector<Session> {
 
@@ -121,6 +119,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
       session.deletePersistentAll(UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO.class);
       session.deletePersistentAll(LeaderClusterj.LeaderDTO.class);
       session.deletePersistentAll(BlockTokenKeyClusterj.BlockKeyDTO.class);
+      session.deletePersistentAll(StorageInfoClusterj.StorageInfoDTO.class);
       session.deletePersistentAll(GenerationStampClusterj.GenerationStampDTO.class);
       GenerationStampClusterj.GenerationStampDTO gs = session.newInstance(GenerationStampClusterj.GenerationStampDTO.class);
       gs.setId(GenerationStampClusterj.COUNTER_ID);

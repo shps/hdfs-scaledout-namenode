@@ -133,6 +133,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
@@ -146,6 +147,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.StorageInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
@@ -256,7 +258,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // Block pool ID used by this namenode
   //private String blockPoolId = "h4ck3d-810ck-p001";
   // [J] Who initialized the blockPoolId?
-  private String blockPoolId;
+  private String blockPoolId = ExtendedBlock.DEFAULT_BLOCK_POOL_ID; // TODO[H]: Remove Blckpool id. It was set in FSImage previously.
   LeaseManager leaseManager = new LeaseManager(this);
   Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
@@ -299,7 +301,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   FSNamesystem(Configuration conf, NameNode nameNode) throws IOException {
     try {
       this.nameNode = nameNode;
-      initialize(conf, null);
+      initialize(conf);
     } catch (IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -314,7 +316,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Initialize FSNamesystem.
    */
-  private void initialize(Configuration conf, FSImage fsImage)
+  private void initialize(Configuration conf)
           throws IOException {
 //TODO:kamal resource monitor
 //      resourceRecheckInterval = conf.getLong(
@@ -340,18 +342,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
 //      }
     }
-    if (fsImage == null) {
-      this.dir = new FSDirectory(this, conf);
-      StartupOption startOpt = NameNode.getStartupOption(conf);
-      this.dir.loadFSImage(startOpt);
-      long timeTakenToLoadFSImage = now() - systemStart;
-      LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
-      NameNode.getNameNodeMetrics().setFsImageLoadTime(
-              (int) timeTakenToLoadFSImage);
-    } else {
-      this.dir = new FSDirectory(fsImage, this, conf);
-
-    }
+//    if (fsImage == null) {
+    this.dir = new FSDirectory(this, conf);
+    StartupOption startOpt = NameNode.getStartupOption(conf);
+    this.dir.loadFSImage(startOpt);
+    long timeTakenToLoadFSImage = now() - systemStart;
+    LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
+    NameNode.getNameNodeMetrics().setFsImageLoadTime(
+            (int) timeTakenToLoadFSImage);
+//    } else {
+//      this.dir = new FSDirectory(fsImage, this, conf);
+//
+//    }
 
     TransactionalRequestHandler initHandler = new TransactionalRequestHandler(OperationType.INITIALIZE) {
       @Override
@@ -562,11 +564,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * dirs is a list of directories where the filesystem directory state is
    * stored
    */
-  FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
+  FSNamesystem(Configuration conf) throws IOException {
     this.fsLock = new ReentrantReadWriteLock(true);
     this.blockManager = new BlockManager(this, conf);
     setConfigurationParameters(conf);
-    this.dir = new FSDirectory(fsImage, this, conf);
+    this.dir = new FSDirectory(this, conf);
     dtSecretManager = createDelegationTokenSecretManager(conf);
   }
 
@@ -615,15 +617,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return defaultPermission;
   }
 
-  NamespaceInfo getNamespaceInfo() {
+  NamespaceInfo getNamespaceInfo() throws IOException {
     readLock();
     try {
-      // Hack time
+      StorageInfo storageInfo = (StorageInfo) getStorageInfoHandler.handle();
       return new NamespaceInfo(
-              // TODO NamespaceId should be taken from NDB
-              dir.fsImage.getStorage().getNamespaceID(),
-              getClusterId(), getBlockPoolId(),
-              dir.fsImage.getStorage().getCTime(),
+              storageInfo.getNamespaceID(),
+              storageInfo.getClusterID(), getBlockPoolId(),
+              storageInfo.getCTime(),
               upgradeManager.getUpgradeVersion());
     } finally {
       readUnlock();
@@ -1839,9 +1840,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return new ExtendedBlock(blockPoolId, blk);
   }
 
-  void setBlockPoolId(String bpid) {
-    blockPoolId = bpid;
-  }
+//  void setBlockPoolId(String bpid) {
+//    blockPoolId = bpid;
+//  }
 
   /**
    * The client would like to obtain an additional block for the indicated
@@ -3331,14 +3332,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  LightWeightRequestHandler getStorageInfoHandler = new LightWeightRequestHandler(OperationType.GET_STORAGE_INFO) {
+    @Override
+    public Object performTask() throws PersistanceException, IOException {
+      StorageInfoDataAccess da = (StorageInfoDataAccess) StorageFactory.getDataAccess(StorageInfoDataAccess.class);
+      return da.findByPk(StorageInfo.DEFAULT_ROW_ID);
+    }
+  };
   /**
    * Get registrationID for datanodes based on the namespaceID.
    *
    * @see #registerDatanode(DatanodeRegistration)
    * @return registration ID
    */
-  String getRegistrationID() {
-    return Storage.getRegistrationID(dir.fsImage.getStorage());
+  String getRegistrationID() throws IOException {
+//    return Storage.getRegistrationID(dir.fsImage.getStorage());
+    StorageInfo storageInfo = (StorageInfo) getStorageInfoHandler.handle();
+    return Storage.getRegistrationID(storageInfo);
   }
 
   /**
@@ -3427,9 +3437,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //      }
 //    }
 //  }
-  FSImage getFSImage() {
-    return dir.fsImage;
-  }
+//  FSImage getFSImage() {
+//    return dir.fsImage;
+//  }
 
   //FSEditLog getEditLog() {
 //    return getFSImage().getEditLog();
@@ -3561,26 +3571,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if
    */
   void saveNamespace() throws AccessControlException, IOException {
-    TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler(OperationType.SAVE_NAMESPACE) {
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        checkSuperuserPrivilege();
-        if (!isInSafeMode()) {
-          throw new IOException("Safe mode should be turned ON "
-                  + "in order to create namespace image.");
-        }
-        // TODO JIM - save this data to NDB
-        getFSImage().saveNamespace();
-        LOG.info("New namespace image has been created.");
-        return null;
-      }
-
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        // TODO HOOMAN safemode 
-      }
-    };
-    saveNamespaceHandler.handleWithReadLock(this);
+//    TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler(OperationType.SAVE_NAMESPACE) {
+//      @Override
+//      public Object performTask() throws PersistanceException, IOException {
+//        checkSuperuserPrivilege();
+//        if (!isInSafeMode()) {
+//          throw new IOException("Safe mode should be turned ON "
+//                  + "in order to create namespace image.");
+//        }
+//        // TODO JIM - save this data to NDB
+//        getFSImage().saveNamespace();
+//        LOG.info("New namespace image has been created.");
+//        return null;
+//      }
+//
+//      @Override
+//      public void acquireLock() throws PersistanceException, IOException {
+//        // TODO HOOMAN safemode 
+//      }
+//    };
+//    saveNamespaceHandler.handleWithReadLock(this);
   }
 
   /**
@@ -3589,32 +3599,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *
    * @throws AccessControlException if superuser privilege is violated.
    */
-  boolean restoreFailedStorage(String arg) throws AccessControlException {
-    writeLock();
-    try {
-      checkSuperuserPrivilege();
-
-      // if it is disabled - enable it and vice versa.
-      if (arg.equals("check")) {
-        return getFSImage().getStorage().getRestoreFailedStorage();
-      }
-
-      boolean val = arg.equals("true");  // false if not
-      getFSImage().getStorage().setRestoreFailedStorage(val);
-
-      return val;
-    } finally {
-      writeUnlock();
-    }
-  }
+//  boolean restoreFailedStorage(String arg) throws AccessControlException {
+//    writeLock();
+//    try {
+//      checkSuperuserPrivilege();
+//
+//      // if it is disabled - enable it and vice versa.
+//      if (arg.equals("check")) {
+//        return getFSImage().getStorage().getRestoreFailedStorage();
+//      }
+//
+//      boolean val = arg.equals("true");  // false if not
+//      getFSImage().getStorage().setRestoreFailedStorage(val);
+//
+//      return val;
+//    } finally {
+//      writeUnlock();
+//    }
+//  }
 
   Date getStartTime() {
     return new Date(systemStart);
   }
 
   void finalizeUpgrade() throws IOException {
-    checkSuperuserPrivilege();
-    getFSImage().finalizeUpgrade();
+//    checkSuperuserPrivilege();
+//    getFSImage().finalizeUpgrade();
 
 
 
@@ -5321,7 +5331,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // NameNodeMXBean
   public boolean isUpgradeFinalized() {
-    return this.getFSImage().isUpgradeFinalized();
+//    return this.getFSImage().isUpgradeFinalized();
+    /** FIXME[H]: this is only dependent to FSImage. But we are removing FSImage.
+     HDFS upgrades require to store all metadata into the disk beforehand. But we 
+     don't have it in KTHFS.**/
+    return true;
   }
 
   @Override // NameNodeMXBean
@@ -5438,13 +5452,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override  // NameNodeMXBean
   public String getClusterId() {
-    return dir.fsImage.getStorage().getClusterID();
+    try {
+      //    return dir.fsImage.getStorage().getClusterID();
+      StorageInfo storageInfo = (StorageInfo) getStorageInfoHandler.handle();
+      return storageInfo.getClusterID();
+    } catch (IOException ex) {
+      LOG.error(ex);
+    }
+
+    return null;
   }
 
   @Override  // NameNodeMXBean
   public String getBlockPoolId() {
     //return blockPoolId; //[thesis]
-    return "h4ck3d-810ck-p001";
+    return ExtendedBlock.DEFAULT_BLOCK_POOL_ID;
   }
 
   /**

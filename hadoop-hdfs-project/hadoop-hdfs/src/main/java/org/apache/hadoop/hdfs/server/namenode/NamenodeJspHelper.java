@@ -26,7 +26,6 @@ import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.ServletContext;
@@ -45,8 +44,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
@@ -220,34 +217,35 @@ class NamenodeJspHelper {
 
     void generateConfReport(JspWriter out, NameNode nn,
             HttpServletRequest request) throws IOException {
-      FSNamesystem fsn = nn.getNamesystem();
-      FSImage fsImage = fsn.getFSImage();
-      List<Storage.StorageDirectory> removedStorageDirs = fsImage.getStorage().getRemovedStorageDirs();
-
-      // FS Image storage configuration
-      out.print("<h3> " + nn.getRole() + " Storage: </h3>");
-      out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
-              + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
-
-      StorageDirectory st = null;
-      for (Iterator<StorageDirectory> it = fsImage.getStorage().dirIterator(); it.hasNext();) {
-        st = it.next();
-        String dir = "" + st.getRoot();
-        String type = "" + st.getStorageDirType();
-        out.print("<tr><td>" + dir + "</td><td>" + type
-                + "</td><td>Active</td></tr>");
-      }
-
-      long storageDirsSize = removedStorageDirs.size();
-      for (int i = 0; i < storageDirsSize; i++) {
-        st = removedStorageDirs.get(i);
-        String dir = "" + st.getRoot();
-        String type = "" + st.getStorageDirType();
-        out.print("<tr><td>" + dir + "</td><td>" + type
-                + "</td><td><font color=red>Failed</font></td></tr>");
-      }
-
-      out.print("</table></div><br>\n");
+      /**TODO[H]: We are not storing fsimage on the disk anymore so we shouldn't need this. **/
+//      FSNamesystem fsn = nn.getNamesystem();
+//      FSImage fsImage = fsn.getFSImage();
+//      List<Storage.StorageDirectory> removedStorageDirs = fsImage.getStorage().getRemovedStorageDirs();
+//
+//      // FS Image storage configuration
+//      out.print("<h3> " + nn.getRole() + " Storage: </h3>");
+//      out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
+//              + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
+//
+//      StorageDirectory st = null;
+//      for (Iterator<StorageDirectory> it = fsImage.getStorage().dirIterator(); it.hasNext();) {
+//        st = it.next();
+//        String dir = "" + st.getRoot();
+//        String type = "" + st.getStorageDirType();
+//        out.print("<tr><td>" + dir + "</td><td>" + type
+//                + "</td><td>Active</td></tr>");
+//      }
+//
+//      long storageDirsSize = removedStorageDirs.size();
+//      for (int i = 0; i < storageDirsSize; i++) {
+//        st = removedStorageDirs.get(i);
+//        String dir = "" + st.getRoot();
+//        String type = "" + st.getStorageDirType();
+//        out.print("<tr><td>" + dir + "</td><td>" + type
+//                + "</td><td><font color=red>Failed</font></td></tr>");
+//      }
+//
+//      out.print("</table></div><br>\n");
     }
 
     void generateHealthReport(JspWriter out, NameNode nn,

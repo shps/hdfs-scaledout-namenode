@@ -34,6 +34,7 @@ public class StorageFactory {
   private static LeaderDataAccess leaderDataAccess;
   private static BlockTokenKeyDataAccess blockTokenKeyDataAccess;
   private static GenerationStampDataAccess generationStampDataAccess;
+  private static StorageInfoDataAccess storageInfoDataAccess;
   private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
 
   private static void initDataAccessMap() {
@@ -51,6 +52,7 @@ public class StorageFactory {
     dataAccessMap.put(leaderDataAccess.getClass().getSuperclass(), leaderDataAccess);
     dataAccessMap.put(blockTokenKeyDataAccess.getClass().getSuperclass(), blockTokenKeyDataAccess);
     dataAccessMap.put(generationStampDataAccess.getClass().getSuperclass(), generationStampDataAccess);
+    dataAccessMap.put(storageInfoDataAccess.getClass().getSuperclass(), storageInfoDataAccess);
   }
 
   public static StorageConnector getConnector() {
@@ -95,6 +97,7 @@ public class StorageFactory {
       leaderDataAccess = new LeaderClusterj();
       generationStampDataAccess = new GenerationStampClusterj();
       blockTokenKeyDataAccess = new BlockTokenKeyClusterj();
+      storageInfoDataAccess = new StorageInfoClusterj();
     }
 
     initDataAccessMap();

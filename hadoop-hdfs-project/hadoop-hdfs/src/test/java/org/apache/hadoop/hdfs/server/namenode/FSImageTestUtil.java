@@ -48,6 +48,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.StorageInfoDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doReturn;
@@ -408,8 +414,26 @@ public abstract class FSImageTestUtil {
     }
   }
   
-  /** get the fsImage*/
-  public static FSImage getFSImage(NameNode node) {
-    return node.getFSImage();
+//  /** get the fsImage*/
+//  public static FSImage getFSImage(NameNode node) {
+//    return node.getFSImage();
+//  }
+  
+  /**
+   * In KTHFS, StorageInfo is not accessible from FSImage anymore. So we can use this
+   * method to get it from the database.
+   * @return an instance of StorageInfo.
+   * @throws IOException 
+   */
+  public static StorageInfo getStorageInfo() throws IOException {
+    LightWeightRequestHandler getStorageInfoHandler = new LightWeightRequestHandler(OperationType.TEST) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        StorageInfoDataAccess da = (StorageInfoDataAccess) StorageFactory.getDataAccess(StorageInfoDataAccess.class);
+        return da.findByPk(StorageInfo.DEFAULT_ROW_ID);
+      }
+    };
+
+    return (StorageInfo) getStorageInfoHandler.handle();
   }
 }

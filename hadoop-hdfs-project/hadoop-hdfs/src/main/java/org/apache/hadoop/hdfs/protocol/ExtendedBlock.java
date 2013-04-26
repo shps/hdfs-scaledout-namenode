@@ -35,6 +35,7 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ExtendedBlock implements Writable {
+  public static final String DEFAULT_BLOCK_POOL_ID = "Remove-me!"; // TODO[H]: The block pool id is for federation. This should be removed.
   private String poolId;
   private Block block;
 
@@ -60,13 +61,15 @@ public class ExtendedBlock implements Writable {
   }
   
   public ExtendedBlock(String poolId, Block b) {
-    this.poolId = poolId;
+//    this.poolId = poolId;
+    this.poolId = DEFAULT_BLOCK_POOL_ID;
     this.block = b;
   }
 
   public ExtendedBlock(final String poolId, final long blkid, final long len,
       final long genstamp) {
-    this.poolId = poolId;
+//    this.poolId = poolId;
+    this.poolId = DEFAULT_BLOCK_POOL_ID;
     block = new Block(blkid, len, genstamp);
   }
 
@@ -76,7 +79,9 @@ public class ExtendedBlock implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.poolId = DeprecatedUTF8.readString(in);
+//    this.poolId = DeprecatedUTF8.readString(in);
+    DeprecatedUTF8.readString(in);
+    this.poolId = DEFAULT_BLOCK_POOL_ID;
     block.readHelper(in);
   }
 
@@ -88,7 +93,8 @@ public class ExtendedBlock implements Writable {
 
   // Read only the identifier part of the block
   public void readId(DataInput in) throws IOException {
-    this.poolId = DeprecatedUTF8.readString(in);
+    //    this.poolId = DeprecatedUTF8.readString(in);
+    DeprecatedUTF8.readString(in);
     block.readId(in);
   }
   

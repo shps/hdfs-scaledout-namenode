@@ -40,14 +40,16 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageConnector;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.StorageInfoDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -350,14 +352,21 @@ public class NameNode
         return nodeRegistration;
     }
 
-    NamenodeRegistration setRegistration()
-    {
-        nodeRegistration = new NamenodeRegistration(
-                getHostPortString(rpcServer.getRpcAddress()),
-                getHostPortString(getHttpAddress()),
-                getFSImage().getStorage(), getRole());
-        return nodeRegistration;
-    }
+  NamenodeRegistration setRegistration() throws IOException {
+    LightWeightRequestHandler getStorageInfoHandler = new LightWeightRequestHandler(OperationType.GET_STORAGE_INFO) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        StorageInfoDataAccess da = (StorageInfoDataAccess) StorageFactory.getDataAccess(StorageInfoDataAccess.class);
+        return da.findByPk(StorageInfo.DEFAULT_ROW_ID);
+      }
+    };
+    nodeRegistration = new NamenodeRegistration(
+            getHostPortString(rpcServer.getRpcAddress()),
+            getHostPortString(getHttpAddress()),
+            (StorageInfo) getStorageInfoHandler.handle(),
+            getRole());
+    return nodeRegistration;
+  }
 
     /**
      * Login as the configured user for the NameNode.
@@ -640,13 +649,13 @@ public class NameNode
         return namesystem.isInSafeMode();
     }
 
-    /**
-     * get FSImage
-     */
-    FSImage getFSImage()
-    {
-        return namesystem.dir.fsImage;
-    }
+//    /**
+//     * get FSImage
+//     */
+//    FSImage getFSImage()
+//    {
+//        return namesystem.dir.fsImage;
+//    }
 
     /**
      * Returns the address on which the NameNodes is listening to.
@@ -680,71 +689,61 @@ public class NameNode
         return httpServer.getHttpAddress();
     }
 
-    /**
-     * Verify that configured directories exist, then Interactively confirm that
-     * formatting is desired for each existing directory and format them.
-     *
-     * @param conf
-     * @param isConfirmationNeeded
-     * @return true if formatting was aborted, false otherwise
-     * @throws IOException
-     */
-    private static boolean format(Configuration conf,
-                                  boolean isConfirmationNeeded)
-            throws IOException
-    {
-        if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY,
-                DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT))
-        {
-            throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
-                    + " is set to false for this filesystem, so it "
-                    + "cannot be formatted. You will need to set "
-                    + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY + " parameter "
-                    + "to true in order to format this filesystem");
+  /**
+   * Verify that configured directories exist, then Interactively confirm that
+   * formatting is desired for each existing directory and format them.
+   *
+   * @param conf
+   * @param isConfirmationNeeded
+   * @return true if formatting was aborted, false otherwise
+   * @throws IOException
+   */
+  private static boolean format(Configuration conf,
+          boolean isConfirmationNeeded)
+          throws IOException {
+    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY,
+            DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+              + " is set to false for this filesystem, so it "
+              + "cannot be formatted. You will need to set "
+              + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY + " parameter "
+              + "to true in order to format this filesystem");
+    }
+
+    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    Collection<URI> editDirsToFormat =
+            FSNamesystem.getNamespaceEditsDirs(conf);
+    for (Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
+      File curDir = new File(it.next().getPath());
+      // Its alright for a dir not to exist, or to exist (properly accessible)
+      // and be completely empty.
+      if (!curDir.exists()
+              || (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0)) {
+        continue;
+      }
+      if (isConfirmationNeeded) {
+        if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
+          System.err.println("Format aborted in " + curDir);
+          return true;
         }
+      }
 
-        Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-        Collection<URI> editDirsToFormat =
-                FSNamesystem.getNamespaceEditsDirs(conf);
-        for (Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();)
-        {
-            File curDir = new File(it.next().getPath());
-            // Its alright for a dir not to exist, or to exist (properly accessible)
-            // and be completely empty.
-            if (!curDir.exists()
-                    || (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
-            {
-                continue;
-            }
-            if (isConfirmationNeeded)
-            {
-                if (!confirmPrompt("Re-format filesystem in " + curDir + " ?"))
-                {
-                    System.err.println("Format aborted in " + curDir);
-                    return true;
-                }
-            }
+      // clear cache
+      if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED) {
+        MemcacheForINode cache = MemcacheForINode.getInstance();
+        cache.setConfiguration(conf);
+        cache.clear();
+      }
+    }
 
-            // clear cache
-            if (DFSConfigKeys.DFS_INODE_CACHE_ENABLED)
-            {
-                MemcacheForINode cache = MemcacheForINode.getInstance();
-                cache.setConfiguration(conf);
-                cache.clear();
-            }
-        }
+    // if clusterID is not provided - see if you can find the current one
+    String clusterId = StartupOption.FORMAT.getClusterId();
+    if (clusterId == null || clusterId.equals("")) {
+      clusterId = NNStorage.newClusterID();
+    }
+    LOG.info("Formatting using clusterid: " + clusterId);
 
-        // if clusterID is not provided - see if you can find the current one
-        String clusterId = StartupOption.FORMAT.getClusterId();
-        if (clusterId == null || clusterId.equals(""))
-        {
-            //Get the clusterId from config
-            // TODO - JIM Store this in NDB or get from NDB
-            clusterId = NNStorage.newClusterID();
-        }
-        LOG.info("Formatting using clusterid: " + clusterId);
-
-        // Format storage
+    // Format storage
 //    StorageFactory.setConfiguration(conf);
 //    StorageConnector connector = StorageFactory.getConnector();
 //    try {
@@ -753,16 +752,17 @@ public class NameNode
 //      LOG.error(ex.getMessage(), ex);
 //    }
 
-        FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
-        FSNamesystem nsys = new FSNamesystem(fsImage, conf);
-        nsys.dir.fsImage.format(clusterId);
-        return false;
-    }
+//        FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
+//        FSNamesystem nsys = new FSNamesystem(fsImage, conf);
+//        nsys.dir.fsImage.format(clusterId);
+    NNStorage.formatStorageInfo(clusterId);
+    return false;
+  }
 
     private static boolean finalize(Configuration conf,
                                     boolean isConfirmationNeeded) throws IOException
     {
-        FSNamesystem nsys = new FSNamesystem(new FSImage(conf), conf);
+//        FSNamesystem nsys = new FSNamesystem(conf);
         System.err.print(
                 "\"finalize\" will remove the previous state of the files system.\n"
                 + "Recent upgrade will become permanent.\n"
@@ -775,7 +775,7 @@ public class NameNode
                 return true;
             }
         }
-        nsys.dir.fsImage.finalizeUpgrade();
+//        nsys.dir.fsImage.finalizeUpgrade();
         return false;
     }
 

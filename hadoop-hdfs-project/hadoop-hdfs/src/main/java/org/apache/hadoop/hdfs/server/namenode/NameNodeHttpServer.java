@@ -124,7 +124,8 @@ public class NameNodeHttpServer {
           httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
           httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
               nn.getNameNodeAddress());
-          httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
+          // TODO[H]: We cannot provide FSImage anymore.
+//          httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           setupServlets(httpServer);
           httpServer.start();
@@ -169,8 +170,8 @@ public class NameNodeHttpServer {
         CancelDelegationTokenServlet.class, true);
     httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
         true);
-    httpServer.addInternalServlet("getimage", "/getimage",
-        GetImageServlet.class, true);
+//    httpServer.addInternalServlet("getimage", "/getimage",
+//        GetImageServlet.class, true);
     httpServer.addInternalServlet("listPaths", "/listPaths/*",
         ListPathsServlet.class, false);
     httpServer.addInternalServlet("data", "/data/*",
@@ -181,9 +182,9 @@ public class NameNodeHttpServer {
         ContentSummaryServlet.class, false);
   }
 
-  public static FSImage getFsImageFromContext(ServletContext context) {
-    return (FSImage)context.getAttribute(FSIMAGE_ATTRIBUTE_KEY);
-  }
+//  public static FSImage getFsImageFromContext(ServletContext context) {
+//    return (FSImage)context.getAttribute(FSIMAGE_ATTRIBUTE_KEY);
+//  }
 
   public static NameNode getNameNodeFromContext(ServletContext context) {
     return (NameNode)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
