@@ -602,7 +602,6 @@
             <exclude>**/Test*$*.java</exclude>
 <!--hold start-->
 <!--hold end-->
-            <exclude>**/TestCorruptFilesJsp.java</exclude>
             <exclude>**/TestFsLimits.java</exclude>
             <exclude>**/TestDfsOverAvroRpc.java</exclude>
             <exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
