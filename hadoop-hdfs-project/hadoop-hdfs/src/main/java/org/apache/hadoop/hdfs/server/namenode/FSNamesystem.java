@@ -2041,7 +2041,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         tla.addINode(TransactionLockManager.INodeResolveType.ONLY_PATH,
                 TransactionLockManager.INodeLockType.READ,
                 new String[]{src}).
-                addLease(TransactionLockManager.LockType.READ).
+                addLease(TransactionLockManager.LockType.READ, clientName).
                 acquire();
       }
     };
@@ -2105,6 +2105,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           PersistanceException, IOException {
     assert hasReadOrWriteLock();
     INodeFile file = dir.getFileINode(src);
+
     checkLease(src, holder, file);
     return file;
   }
