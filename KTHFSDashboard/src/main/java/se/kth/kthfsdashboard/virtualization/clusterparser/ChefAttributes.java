@@ -9,6 +9,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 
 
 /**
@@ -22,6 +24,35 @@ public class ChefAttributes implements Serializable{
     private Long id;
     private String servicerole;
     private String chefJson;
+    @ManyToOne
+    @JoinColumn(name="CLUSTER_ID")
+    private Cluster cluster;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getServicerole() {
+        return servicerole;
+    }
+
+    public void setServicerole(String servicerole) {
+        this.servicerole = servicerole;
+    }
+
+    public Cluster getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(Cluster cluster) {
+        this.cluster = cluster;
+    }
+    
+    
 
     public String getRole() {
         return servicerole;

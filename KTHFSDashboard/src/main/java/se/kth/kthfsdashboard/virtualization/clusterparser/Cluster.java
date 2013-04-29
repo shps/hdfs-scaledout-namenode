@@ -17,17 +17,19 @@ import javax.persistence.*;
 public class Cluster implements Serializable{
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
+    @Column(name="CLUSTER_ID")
     private Long id;
+    @Column(name="CLUSTER_NAME")
     private String name;
     private List<String> globalServices;
     private List<String> authorizePorts;
     private List<Integer> authorizeSpecificPorts;
     private String environment;
-    @OneToOne (cascade= CascadeType.ALL)
+    @Embedded 
     private Provider provider;
-    @OneToMany (cascade= CascadeType.ALL)
+    @OneToMany (cascade=CascadeType.PERSIST, mappedBy="cluster")
     private List<NodeGroup> nodes;
-    @OneToMany (cascade= CascadeType.ALL)
+    @OneToMany (cascade= CascadeType.PERSIST, mappedBy="cluster")
     private List<ChefAttributes> chefAttributes;
 
     public List<String> getGlobalServices() {

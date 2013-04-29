@@ -26,8 +26,8 @@ import org.yaml.snakeyaml.Yaml;
 @SessionScoped
 public class ClusterController implements Serializable {
 
-    //@EJB
-   // private ClusterEJB clusterEJB;
+    @EJB
+    private ClusterFacade clusterEJB;
     private Cluster cluster;
     private boolean disableStart = true;
     private UploadedFile file;
@@ -97,7 +97,7 @@ public class ClusterController implements Serializable {
             if (document != null && document instanceof Cluster) {
                 disableStart = false;
                 cluster = (Cluster) document;
-               // clusterEJB.persistCluster(cluster);
+                clusterEJB.persistCluster(cluster);
             } else {
                 disableStart = true;
                 cluster = null;

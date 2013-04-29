@@ -11,6 +11,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 /**
@@ -26,6 +28,27 @@ public class NodeGroup implements Serializable{
     private int number;
     private List<String> roles;
     private List<String> authorizePorts;
+    @ManyToOne
+    @JoinColumn(name="CLUSTER_ID")
+    private Cluster cluster;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Cluster getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(Cluster cluster) {
+        this.cluster = cluster;
+    }
+    
+    
 
     public String getSecurityGroup() {
         return securityGroup;

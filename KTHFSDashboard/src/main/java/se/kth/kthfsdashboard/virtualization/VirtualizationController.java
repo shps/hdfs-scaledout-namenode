@@ -12,7 +12,6 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
 import com.google.inject.Module;
 import java.io.Serializable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,7 +27,6 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.SessionScoped;
 import static org.jclouds.Constants.PROPERTY_CONNECTION_TIMEOUT;
 import org.jclouds.ContextBuilder;
-import org.jclouds.aws.AWSResponseException;
 import static org.jclouds.aws.ec2.reference.AWSEC2Constants.PROPERTY_EC2_AMI_QUERY;
 import static org.jclouds.aws.ec2.reference.AWSEC2Constants.PROPERTY_EC2_CC_AMI_QUERY;
 import org.jclouds.chef.util.RunListBuilder;
@@ -68,6 +66,7 @@ import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.kthfsdashboard.virtualization.JHDFSScriptBuilder.Builder;
 import se.kth.kthfsdashboard.virtualization.clusterparser.ClusterController;
 import se.kth.kthfsdashboard.virtualization.clusterparser.NodeGroup;
 
@@ -79,7 +78,6 @@ import se.kth.kthfsdashboard.virtualization.clusterparser.NodeGroup;
 @SessionScoped
 public class VirtualizationController implements Serializable {
 
-    private static final URI RUBYGEMS_URI = URI.create("http://production.cf.rubygems.org/rubygems/rubygems-1.8.10.tgz");
     @ManagedProperty(value = "#{messageController}")
     private MessageController messages;
     @ManagedProperty(value = "#{computeCredentialsMB}")
@@ -297,6 +295,7 @@ public class VirtualizationController implements Serializable {
     /*
      * Bootscrap Script for the nodes to launch the KTHFS Dashboard and install Chef Solo
      */
+    @Deprecated
     private StatementList initBootstrapScript() {
 
         ImmutableList.Builder<Statement> bootstrapBuilder = ImmutableList.builder();
@@ -336,13 +335,14 @@ public class VirtualizationController implements Serializable {
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
         bootstrapBuilder.add(exec("sudo git clone https://ghetto.sics.se/jdowling/kthfs-pantry.git /tmp/chef-solo/;"));
-        
+
         return new StatementList(bootstrapBuilder.build());
     }
 
     /*
      * Script to run Chef Solo and later restart the agents
      */
+    @Deprecated
     private void runChefSolo(ImmutableList.Builder<Statement> statements) {
         statements.add(exec("sudo chef-solo -c /etc/chef/solo.rb -j /etc/chef/chef.json"));
         //statements.add(exec("sudo service kthfsagent restart"));
@@ -354,9 +354,9 @@ public class VirtualizationController implements Serializable {
      * For openstack we override the need to generate a key pair and the user used by the image to login
      * EC2 jclouds detects the login by default
      */
-    private void selectProviderTemplateOptions(String provider, TemplateBuilder kthfsTemplate) {
+    private void selectProviderTemplateOptions(String provider, TemplateBuilder kthfsTemplate, JHDFSScriptBuilder script) {
         Provider check = Provider.fromString(provider);
-        StatementList bootstrap = initBootstrapScript();
+        StatementList bootstrap = new StatementList(script);
         switch (check) {
             case AWS_EC2:
                 kthfsTemplate.options(EC2TemplateOptions.Builder
@@ -384,7 +384,13 @@ public class VirtualizationController implements Serializable {
     private void launchNodesBasicSetup() {
         try {
             TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
-            selectProviderTemplateOptions(provider, kthfsTemplate);
+            //Use better Our scriptbuilder abstraction
+            JHDFSScriptBuilder initScript = JHDFSScriptBuilder.builder()
+                    .scriptType(JHDFSScriptBuilder.Type.INIT)
+                    .publicKey(key)
+                    .build();
+
+            selectProviderTemplateOptions(provider, kthfsTemplate, initScript);
             for (NodeGroup group : clusterController.getCluster().getNodes()) {
                 messages.addMessage("Creating " + group.getNumber() + "  nodes in Security Group " + group.getSecurityGroup());
                 Set<? extends NodeMetadata> ready = service.createNodesInGroup(group.getSecurityGroup(), group.getNumber(), kthfsTemplate.build());
@@ -646,7 +652,7 @@ public class VirtualizationController implements Serializable {
         //First start with the MGM
         //Shit code follows, done fast not proud of it, repeated as hell
 
-
+        Builder jhdfsBuilder = JHDFSScriptBuilder.builder();
         //All follow the same idea, we go over the security groups and fetch
         messages.addMessage("Starting the MySQL Cluster....");
         for (NodeGroup group : clusterController.getCluster().getNodes()) {
@@ -658,16 +664,29 @@ public class VirtualizationController implements Serializable {
                 //Iterate over
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
+                    List<String> ips = new LinkedList<String>(data.getPrivateAddresses());
+                    
+                    
                     //Prepare the script
-                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    //ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
                     //We build the json chef file
                     messages.addMessage("Generating JSON chef file for node...");
-                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
+                    //createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
                     //Append at the end of the script the need to launch the chef command and run the restart command
-                    runChefSolo(roleBuilder);
-                    //We connect to the specific node using its metadata id and give him the json and the chef command to run
+                    //runChefSolo(roleBuilder);
+                    StatementList nodeConfig = new StatementList(
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            .ndbs(ndbsDemo)
+                            .mgms(mgmDemo)
+                            .mysql(mysqlDemo)
+                            .namenodes(namenodesDemo)
+                            .roles(group.getRoles())
+                            .nodeIP(ips.get(0))
+                            .build());
+                            
+                            //We connect to the specific node using its metadata id and give him the json and the chef command to run
                     messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
-                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                    service.runScriptOnNode(data.getId(), nodeConfig);
                 }
             }
         }
@@ -680,12 +699,29 @@ public class VirtualizationController implements Serializable {
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
-                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    List<String> ips = new LinkedList<String>(data.getPrivateAddresses());
+                    
+                    
+                    //Prepare the script
+                    //ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    //We build the json chef file
                     messages.addMessage("Generating JSON chef file for node...");
-                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
-                    runChefSolo(roleBuilder);
+                    //createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
+                    //Append at the end of the script the need to launch the chef command and run the restart command
+                    //runChefSolo(roleBuilder);
+                     StatementList nodeConfig = new StatementList(
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            .ndbs(ndbsDemo)
+                            .mgms(mgmDemo)
+                            .mysql(mysqlDemo)
+                            .namenodes(namenodesDemo)
+                            .roles(group.getRoles())
+                            .nodeIP(ips.get(0))
+                            .build());
+                            
+                            //We connect to the specific node using its metadata id and give him the json and the chef command to run
                     messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
-                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                    service.runScriptOnNode(data.getId(), nodeConfig);
                 }
             }
         }
@@ -697,12 +733,29 @@ public class VirtualizationController implements Serializable {
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
-                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    List<String> ips = new LinkedList<String>(data.getPrivateAddresses());
+                    
+                    
+                    //Prepare the script
+                    //ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    //We build the json chef file
                     messages.addMessage("Generating JSON chef file for node...");
-                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
-                    runChefSolo(roleBuilder);
+                    //createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
+                    //Append at the end of the script the need to launch the chef command and run the restart command
+                    //runChefSolo(roleBuilder);
+                     StatementList nodeConfig = new StatementList(
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            .ndbs(ndbsDemo)
+                            .mgms(mgmDemo)
+                            .mysql(mysqlDemo)
+                            .namenodes(namenodesDemo)
+                            .roles(group.getRoles())
+                            .nodeIP(ips.get(0))
+                            .build());
+                            
+                            //We connect to the specific node using its metadata id and give him the json and the chef command to run
                     messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
-                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                    service.runScriptOnNode(data.getId(), nodeConfig);
                 }
             }
         }
@@ -715,12 +768,29 @@ public class VirtualizationController implements Serializable {
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
-                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    List<String> ips = new LinkedList<String>(data.getPrivateAddresses());
+                    
+                    
+                    //Prepare the script
+                    //ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    //We build the json chef file
                     messages.addMessage("Generating JSON chef file for node...");
-                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
-                    runChefSolo(roleBuilder);
+                    //createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
+                    //Append at the end of the script the need to launch the chef command and run the restart command
+                    //runChefSolo(roleBuilder);
+                     StatementList nodeConfig = new StatementList(
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            .ndbs(ndbsDemo)
+                            .mgms(mgmDemo)
+                            .mysql(mysqlDemo)
+                            .namenodes(namenodesDemo)
+                            .roles(group.getRoles())
+                            .nodeIP(ips.get(0))
+                            .build());
+                            
+                            //We connect to the specific node using its metadata id and give him the json and the chef command to run
                     messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
-                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                    service.runScriptOnNode(data.getId(), nodeConfig);
                 }
             }
         }
@@ -731,12 +801,29 @@ public class VirtualizationController implements Serializable {
                 Iterator<? extends NodeMetadata> iter = elements.iterator();
                 while (iter.hasNext()) {
                     NodeMetadata data = iter.next();
-                    ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    List<String> ips = new LinkedList<String>(data.getPrivateAddresses());
+                    
+                    
+                    //Prepare the script
+                    //ImmutableList.Builder<Statement> roleBuilder = ImmutableList.builder();
+                    //We build the json chef file
                     messages.addMessage("Generating JSON chef file for node...");
-                    createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
-                    runChefSolo(roleBuilder);
+                    //createNodeConfiguration(roleBuilder, ndbsDemo, mgmDemo, mysqlDemo, namenodesDemo, data, group);
+                    //Append at the end of the script the need to launch the chef command and run the restart command
+                    //runChefSolo(roleBuilder);
+                    StatementList nodeConfig = new StatementList(
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            .ndbs(ndbsDemo)
+                            .mgms(mgmDemo)
+                            .mysql(mysqlDemo)
+                            .namenodes(namenodesDemo)
+                            .roles(group.getRoles())
+                            .nodeIP(ips.get(0))
+                            .build());
+                            
+                            //We connect to the specific node using its metadata id and give him the json and the chef command to run
                     messages.addMessage("Connecting by SSH to node, launch chef solo and run recipes...");
-                    service.runScriptOnNode(data.getId(), new StatementList(roleBuilder.build()));
+                    service.runScriptOnNode(data.getId(), nodeConfig);
                 }
             }
         }
@@ -749,8 +836,10 @@ public class VirtualizationController implements Serializable {
      * Also we need to know the security group to generate the runlist of recipes for that group based on 
      * the roles and the node metadata to get its ips.
      */
+    @Deprecated
     private void createNodeConfiguration(ImmutableList.Builder<Statement> statements,
-            List<String> ndbs, List<String> mgm, List<String> mysql, List<String> namenodes, NodeMetadata data, NodeGroup group) {
+            List<String> ndbs, List<String> mgm, List<String> mysql, List<String> namenodes,
+            NodeMetadata data, NodeGroup group) {
 
         //First we generate the recipe runlist based on the roles defined in the security group of the cluster
         List<String> runlist = createRunList(group);
@@ -859,6 +948,7 @@ public class VirtualizationController implements Serializable {
     /*
      * We select the recipes by inspecting the roles defined in the security group in the cluster file
      */
+    @Deprecated
     private List<String> createRunList(NodeGroup group) {
         RunListBuilder builder = new RunListBuilder();
         builder.addRecipe("kthfsagent");

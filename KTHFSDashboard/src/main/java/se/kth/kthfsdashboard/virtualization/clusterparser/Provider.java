@@ -12,26 +12,15 @@ import javax.persistence.*;
  *
  * @author Alberto Lorente Leal <albll@kth.se>
  */
-@Entity
-@Table(name = "Providers")
+@Embeddable
+@Access(AccessType.FIELD)
 public class Provider implements Serializable{
-    @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
-    private Long id;
+    @Column(name="PROVIDER_NAME")
     private String name;
     private String instanceType;
     private String loginUser;
     private String image;
     private String region;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     
     public String getLoginUser() {
         return loginUser;

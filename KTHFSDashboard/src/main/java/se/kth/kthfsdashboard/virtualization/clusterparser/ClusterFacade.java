@@ -6,6 +6,7 @@ import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
+import se.kth.kthfsdashboard.user.AbstractFacade;
 
 
 /**
@@ -13,13 +14,19 @@ import javax.persistence.TypedQuery;
  * @author Alberto Lorente Leal <albll@kth.se>
  */
 @Stateless
-public class ClusterEJB {
+public class ClusterFacade extends AbstractFacade<Cluster> {
     
     @PersistenceContext(unitName="kthfsPU")
     private EntityManager em;
     
-    public ClusterEJB(){
+    public ClusterFacade(){
+        super(Cluster.class);
         
+    }
+    
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
     }
     
     public void persistCluster(Cluster cluster){
@@ -30,7 +37,7 @@ public class ClusterEJB {
         em.remove(em.merge(cluster));
     }
     
-    
+    @Override
      public List<Cluster> findAll() {
 
         TypedQuery<Cluster> query = em.createNamedQuery("Clusters.findAll", Cluster.class);
