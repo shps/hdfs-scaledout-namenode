@@ -140,20 +140,20 @@
 
          <p:accordionPanel id="panels" activeIndex="2">         
 
-            <p:tab title ="Recent Logs" rendered="#{serviceInstanceController.showLogs}">
-               <h:form id="logsform">
-                  <p:commandLink styleClass="AccordionPanelLink" value="Refresh Logs" update="logs"
+            <p:tab title ="Recent Log">
+               <h:form id="logform">
+                  <p:commandLink styleClass="AccordionPanelLink" value="Refresh Log" update="log"
                                  onstart="dlgAction.show()" oncomplete="dlgAction.hide()">
                      <f:param name="cluster" value="#{serviceController.cluster}"/>    
                      <f:param name="service" value="#{serviceController.service}"/>  
                      <f:param name="hostname" value="#{serviceController.hostname}"/>
                   </p:commandLink>
-                  <p:panelGrid id="logs" styleClass="LogOutput">
+                  <p:panelGrid id="log" styleClass="LogOutput">
                      <p:row>
                         <p:column  styleClass="LogOutput column">
                            Stdout<br/>
                            <div>
-                              <h:outputText escape="false" value="#{serviceController.showStdoutLog(20)}"/>                       
+                              <h:outputText escape="false" value="#{serviceController.getRoleLog(20)}"/>
                            </div>
                         </p:column>
                      </p:row>

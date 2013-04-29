@@ -15,7 +15,7 @@
       </ui:define>
 
       <ui:define name="content">
-         
+
          <!--Navigation Bar - Begin -->
          <h:form styleClass="styleNav">
             <p:panelGrid>  
@@ -135,8 +135,38 @@
             </div>
          </p:panel>
 
+         <p:spacer width="1" height="40" />
+
+         <p:dialog modal="true" widgetVar="dlgAction" header="Action in progress..." draggable="false" closable="false" resizable="false">  
+            <p:graphicImage library="images" name="ajaxloadingbar.gif" />  
+         </p:dialog>
+
+         <p:accordionPanel id="panels" activeIndex="2">         
+
+            <p:tab title ="Recent Agent Log">
+               <h:form id="logform">
+                  <p:commandLink styleClass="AccordionPanelLink" value="Refresh Log" update="log"
+                                 onstart="dlgAction.show()" oncomplete="dlgAction.hide()">  
+                     <f:param name="service" value="#{serviceController.service}"/> 
+                     <f:param name="hostname" value="#{serviceController.hostname}"/>
+                  </p:commandLink>
+                  <p:panelGrid id="log" styleClass="LogOutput">
+                     <p:row>
+                        <p:column  styleClass="LogOutput column">
+                           Stdout<br/>
+                           <div>
+                              <h:outputText escape="false" value="#{serviceController.getAgentLog(20)}"/>                       
+                           </div>
+                        </p:column>
+                     </p:row>
+                  </p:panelGrid>
+               </h:form>
+            </p:tab>           
+         </p:accordionPanel>         
+
+
          <p:spacer width="1" height="20" />
-         
+
          <h:form id="formdate" style="text-align: center">  
             <h:panelGrid columns="10"> 
                <p:selectOneButton id ="periods" value="#{graphController.period}">  
