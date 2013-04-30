@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.BeforeClass;
 
 /**
  * This class tests commands from DFSShell.
@@ -60,7 +61,7 @@ public class TestDFSShell extends TestCase {
   
   static final String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
+    .toString().replace(' ', '+') + "/testDfsShell";
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {
     DataOutputStream out = fs.create(f);
@@ -132,6 +133,22 @@ public class TestDFSShell extends TestCase {
       try {dfs.close();} catch (Exception e) {}
       cluster.shutdown();
     }
+  }
+  
+  /**
+   *
+   * @throws IOException
+   */
+  @BeforeClass
+  @Override
+  public void setUp() throws IOException
+  {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, DFSConfigKeys.FS_DEFAULT_NAME_DEFAULT);
+    //test chmod on local fs
+    FileSystem fs = FileSystem.getLocal(conf);
+    fs.delete(new Path(TEST_ROOT_DIR), true);
+    fs.mkdirs(new Path(TEST_ROOT_DIR));
   }
   
   public void testRecrusiveRm() throws IOException {
@@ -306,6 +323,7 @@ public class TestDFSShell extends TestCase {
   /** check command error outputs and exit statuses. */
   public void testErrOutPut() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODES_RPC_ADDRESS_KEY, "hdfs://localhost:12001");
     MiniDFSCluster cluster = null;
     PrintStream bak = null;
     try {
@@ -319,7 +337,7 @@ public class TestDFSShell extends TestCase {
       String[] argv = new String[2];
       argv[0] = "-cat";
       argv[1] = root.toUri().getPath();
-      int ret = ToolRunner.run(new FsShell(), argv);
+      int ret = ToolRunner.run(conf, new FsShell(), argv);
       assertEquals(" -cat returned 1 ", 1, ret);
       String returned = out.toString();
       assertTrue("cat does not print exceptions ",
@@ -450,7 +468,7 @@ public class TestDFSShell extends TestCase {
     Configuration dstConf = new HdfsConfiguration();
     MiniDFSCluster srcCluster =  null;
     MiniDFSCluster dstCluster = null;
-    String bak = System.getProperty("test.build.data", "/tmp");
+    String bak = System.getProperty("test.build.data", TEST_ROOT_DIR);
     File furi = null;
     try{
       srcCluster = new MiniDFSCluster.Builder(srcConf).numDataNodes(2).build();
@@ -506,9 +524,9 @@ public class TestDFSShell extends TestCase {
       //check chown
 //      dstFs.delete(new Path("/furi"), true);
       dstFs.delete(new Path("/hadoopdir"), true);
-      String file = "/tmp/chownTest";
+      String file = TEST_ROOT_DIR + "/chownTest";
       Path path = new Path(file);
-      Path parent = new Path("/tmp");
+      Path parent = new Path(TEST_ROOT_DIR);
       Path root = new Path("/");
       TestDFSShell.writeFile(dstFs, path);
       runCmd(shell, "-chgrp", "-R", "herbivores", dstFs.getUri().toString() +"/*");
@@ -518,7 +536,7 @@ public class TestDFSShell extends TestCase {
       //check if default hdfs:/// works 
       argv[0] = "-cat";
       argv[1] = "hdfs:///furi";
-      ret = ToolRunner.run(shell, argv);
+      ret = ToolRunner.run(srcConf, shell, argv);
       assertEquals(" default works for cat", 0, ret);
       argv[0] = "-ls";
       argv[1] = "hdfs:///";
@@ -864,7 +882,7 @@ public class TestDFSShell extends TestCase {
   
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, DFSConfigKeys.FS_DEFAULT_NAME_DEFAULT);
     //test chmod on local fs
     FileSystem fs = FileSystem.getLocal(conf);
     testChmod(conf, fs, 
@@ -875,7 +893,7 @@ public class TestDFSShell extends TestCase {
     //test chmod on DFS
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fs = cluster.getFileSystem();
-    testChmod(conf, fs, "/tmp/chmodTest");
+    testChmod(conf, fs, TEST_ROOT_DIR + "/chmodTest");
     
     // test chown and chgrp on DFS:
     
@@ -887,9 +905,9 @@ public class TestDFSShell extends TestCase {
      * anything. "-R" option is already tested by chmod test above.
      */
     
-    String file = "/tmp/chownTest";
+    String file = TEST_ROOT_DIR + "/chownTest";
     Path path = new Path(file);
-    Path parent = new Path("/tmp");
+    Path parent = new Path(TEST_ROOT_DIR);
     Path root = new Path("/");
     TestDFSShell.writeFile(fs, path);
     
@@ -1381,7 +1399,8 @@ public class TestDFSShell extends TestCase {
 
       // Tests for put
       String[] argv = new String[] { "-put", "-f", localfilepath, testdir };
-      int res = ToolRunner.run(shell, argv);
+      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, DFSConfigKeys.FS_DEFAULT_NAME_DEFAULT);
+      int res = ToolRunner.run(conf, shell, argv);
       int SUCCESS = 0;
       int ERROR = 1;
       assertEquals("put -f is not working", SUCCESS, res);

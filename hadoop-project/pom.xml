@@ -619,11 +619,9 @@
             <exclude>**/TestClientReportBadBlock.java</exclude>
             <exclude>**/TestQuota.java</exclude>
             <exclude>**/TestMetaSave.java</exclude>
-            <exclude>**/TestDFSShell.java</exclude> 
             <exclude>**/TestNNThroughputBenchmark.java</exclude>
             <exclude>**/TestDFSUpgradeFromImage.java</exclude>
             <exclude>**/TestHDFSCLI.java</exclude>
-            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             <exclude>**/TestDFSStorageStateRecovery.java</exclude>
             <exclude>**/TestHDFSTrash.java</exclude>
             
