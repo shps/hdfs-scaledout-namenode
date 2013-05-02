@@ -44,20 +44,14 @@ public class WebCommunication {
       this.cluster = cluster;
       this.service = service;
    }
+   
+   public WebCommunication(String hostname) {
+      this.hostname = hostname;
+   }   
 
-   public String getStdOut(int lines) {
-      return getLog("stdout", lines);
-   }
-
-   public String getStdErr(int lines) {
-      return getLog("stderr", lines);
-   }
-
-   private String getLog(String logType, int lines) {
+   private String fetchLog(String url) {
       
       String log = NOT_AVAILABLE;
-      String path = "/log/" + cluster + "/" + service + "/" + logType + "/" + lines;
-      String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
          if (response.getClientResponseStatus().getFamily() == Response.Status.Family.SUCCESSFUL) {
@@ -69,7 +63,21 @@ public class WebCommunication {
       }
       return log;
    }
-
+   
+   public String getRoleLog(int lines) {
+      
+      String path = "/log/" + cluster + "/" + service + "/" + lines;
+      String url = baseUrl(hostname) + path;
+      return fetchLog(url);
+   }   
+   
+   public String getAgentLog(int lines) {
+      
+      String path = "/agentlog/" + lines;
+      String url = baseUrl(hostname) + path;
+      return fetchLog(url);
+   }   
+   
    public String getConfig() {
 
       String conf = NOT_AVAILABLE;

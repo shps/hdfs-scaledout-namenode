@@ -334,16 +334,16 @@ public class ServiceController {
       return true;
    }
 
-   public String showStdoutLog(int lines) {
+   public String getRoleLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname, cluster, service);
-      return webComm.getStdOut(lines);
-   }
-
-   public String showStderrLog(int lines) {
-      WebCommunication webComm = new WebCommunication(hostname, cluster, service);
-      return webComm.getStdErr(lines);
+      return webComm.getRoleLog(lines);
    }
    
+   public String getAgentLog(int lines) {
+      WebCommunication webComm = new WebCommunication(hostname);
+      return webComm.getAgentLog(lines);
+   }   
+      
    public String getMySQLClusterConfig() throws Exception {
       
       // Finds hostname of mgmserver

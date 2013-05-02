@@ -181,14 +181,6 @@ public class ServiceInstanceController implements Serializable {
       return healthOptions;
    }
 
-   public boolean getShowLogs() {
-
-      if (service != null && service.equalsIgnoreCase("mysqlcluster")) {
-         return false;
-      }
-      return true;
-   }
-
    public boolean getShowConfiguration() {
       
       if (serviceGroup == null) {
