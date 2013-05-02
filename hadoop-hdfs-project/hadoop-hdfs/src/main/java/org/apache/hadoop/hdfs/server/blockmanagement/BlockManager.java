@@ -1650,7 +1650,7 @@ public class BlockManager {
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
-                addBlock(LockType.WRITE).
+                addBlock(LockType.WRITE, p.getBlockId()).
                 addReplica(LockType.READ).
                 addExcess(LockType.READ).
                 addCorrupt(LockType.READ).
