@@ -397,6 +397,7 @@ public class LeaseManager {
                 addCorrupt(TransactionLockManager.LockType.READ).
                 addExcess(TransactionLockManager.LockType.READ).
                 addReplicaUc(TransactionLockManager.LockType.READ).
+                addUnderReplicatedBlock(LockType.READ).
                 addGenerationStamp(LockType.WRITE).
                 acquireByLease(leasePaths);
       }
