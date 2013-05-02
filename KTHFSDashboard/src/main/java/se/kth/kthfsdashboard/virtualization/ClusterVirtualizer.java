@@ -28,6 +28,7 @@ import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_PORT_O
 import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.TemplateBuilder;
+import org.jclouds.compute.options.RunScriptOptions;
 import org.jclouds.ec2.EC2Client;
 import org.jclouds.ec2.compute.options.EC2TemplateOptions;
 import org.jclouds.ec2.domain.IpProtocol;
@@ -60,11 +61,14 @@ public final class ClusterVirtualizer {
     private String privateIP;
     private MessageController messages;
     private Map<String, Set<? extends NodeMetadata>> nodes = new HashMap();
-    private Map<NodeMetadata, List<String>> first = new HashMap();
-    private Map<NodeMetadata, List<String>> rest = new HashMap();
-    private List<String> ndbs = new LinkedList();
-    private List<String> mgm = new LinkedList();
-    private List<String> mySQLClients = new LinkedList();
+    private Map<NodeMetadata, List<String>> mgms = new HashMap();
+    private Map<NodeMetadata, List<String>> ndbs= new HashMap();
+    private Map<NodeMetadata, List<String>> mysqlds = new HashMap();
+    private Map<NodeMetadata, List<String>> namenodes= new HashMap();
+    private List<String> ndbsIP = new LinkedList();
+    private List<String> mgmIP = new LinkedList();
+    private List<String> mySQLClientsIP = new LinkedList();
+    private List<String> namenodesIP = new LinkedList();
 
     /*
      * Constructor of a ClusterVirtualizer
@@ -256,7 +260,7 @@ public final class ClusterVirtualizer {
             TemplateBuilder kthfsTemplate = templateKTHFS(cluster, service.templateBuilder());
             //Use better Our scriptbuilder abstraction
             JHDFSScriptBuilder initScript = JHDFSScriptBuilder.builder()
-                    .scriptType(JHDFSScriptBuilder.Type.INIT)
+                    .scriptType(JHDFSScriptBuilder.ScriptType.INIT)
                     .publicKey(publicKey)
                     .build();
 
@@ -270,7 +274,7 @@ public final class ClusterVirtualizer {
                         + "basic setup");
                 nodes.put(group.getSecurityGroup(), ready);
 
-                //Ignore for now, this is for future does not affect for the demo
+               
                 //Fetch the nodes info so we can launch first mgm before the rest!
                 Set<String> roles = new HashSet(group.getRoles());
                 if (roles.contains("MySQLCluster*mgm")) {
@@ -278,25 +282,52 @@ public final class ClusterVirtualizer {
                     while (iter.hasNext()) {
                         //Add private ip to mgm
                         NodeMetadata node = iter.next();
-                        mgm.addAll(node.getPrivateAddresses());
+                        mgmIP.addAll(node.getPrivateAddresses());
                         //need to also check if they have ndb
-                        if (roles.contains("MySQLCluster*ndb")) {
-                            ndbs.addAll(node.getPrivateAddresses());
-                        }
-                        first.put(node, group.getRoles());
+//                        if (roles.contains("MySQLCluster*ndb")) {
+//                            ndbs.addAll(node.getPrivateAddresses());
+//                        }
+                        mgms.put(node, group.getRoles());
                     }
                     continue;
-                } else {
+                } 
+                else if(roles.contains("MySQLCluster*ndb")){
                     Iterator<? extends NodeMetadata> iter = ready.iterator();
                     while (iter.hasNext()) {
                         NodeMetadata node = iter.next();
-                        if (roles.contains("MySQLCluster*ndb")) {
-                            ndbs.addAll(node.getPrivateAddresses());
-                        }
-                        if (roles.contains("MySQLCluster*memcached")) {
-                            mySQLClients.addAll(node.getPrivateAddresses());
-                        }
-                        rest.put(node, group.getRoles());
+//                        if (roles.contains("MySQLCluster*ndb")) {
+                            ndbsIP.addAll(node.getPrivateAddresses());
+//                        }
+//                        if (roles.contains("MySQLCluster*memcached")) {
+//                            mySQLClientsIP.addAll(node.getPrivateAddresses());
+//                        }
+                        ndbs.put(node, group.getRoles());
+                    }
+                }
+                else if(roles.contains("MySQLCluster*mysqld")){
+                    Iterator<? extends NodeMetadata> iter = ready.iterator();
+                    while (iter.hasNext()) {
+                        NodeMetadata node = iter.next();
+//                        if (roles.contains("MySQLCluster*ndb")) {
+                            mySQLClientsIP.addAll(node.getPrivateAddresses());
+//                        }
+//                        if (roles.contains("MySQLCluster*memcached")) {
+//                            mySQLClientsIP.addAll(node.getPrivateAddresses());
+//                        }
+                        mysqlds.put(node, group.getRoles());
+                    }
+                }
+                else if(roles.contains("KTHFS*namenode")){
+                    Iterator<? extends NodeMetadata> iter = ready.iterator();
+                    while (iter.hasNext()) {
+                        NodeMetadata node = iter.next();
+//                        if (roles.contains("MySQLCluster*ndb")) {
+                            namenodesIP.addAll(node.getPrivateAddresses());
+//                        }
+//                        if (roles.contains("MySQLCluster*memcached")) {
+//                            mySQLClientsIP.addAll(node.getPrivateAddresses());
+//                        }
+                        namenodes.put(node, group.getRoles());
                     }
                 }
 
@@ -312,9 +343,41 @@ public final class ClusterVirtualizer {
         }
     }
 
+    
+    /*
+     * Method to setup the nodes in the correct order for our platform in the first run
+     */
+    
+    public void deployingConfigurations(){
+        //First phase mgm configuration
+        JHDFSScriptBuilder.Builder scriptBuilder = JHDFSScriptBuilder.builder()
+                .mgms(mgmIP)
+                .mysql(mySQLClientsIP)
+                .namenodes(namenodesIP)
+                .ndbs(ndbsIP)
+                .privateIP(privateIP)
+                .publicKey(publicKey)
+                .scriptType(JHDFSScriptBuilder.ScriptType.JHDFS);
+        
+        Set<NodeMetadata> mgmNodes = mgms.keySet();
+        //Asynchronous node launch
+        Iterator<NodeMetadata> iter = mgmNodes.iterator();
+        while(iter.hasNext()){
+            NodeMetadata node= iter.next();
+            List<String> ips = new LinkedList(node.getPrivateAddresses());
+            //Listenable Future
+            service.submitScriptOnNode(node.getId(), scriptBuilder.build(ips.get(0), mgms.get(node)), 
+                    RunScriptOptions.NONE);
+        }
+        
+        //Rest of the phases TODO
+    }
+    
     /*
      * This is the code for the demo
+     * To be removed in a near future.
      */
+    @Deprecated
     public void demoOnly(Cluster cluster) {
         messages.addMessage("Starting specific configuration of the nodes...");
         //Fetch all the addresses we need.
@@ -386,7 +449,7 @@ public final class ClusterVirtualizer {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -422,7 +485,7 @@ public final class ClusterVirtualizer {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -455,7 +518,7 @@ public final class ClusterVirtualizer {
                     //Append at the end of the script the need to launch the chef command and run the restart command
 
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -491,7 +554,7 @@ public final class ClusterVirtualizer {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -525,7 +588,7 @@ public final class ClusterVirtualizer {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)

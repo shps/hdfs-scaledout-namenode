@@ -30,7 +30,7 @@ import org.jclouds.scriptbuilder.statements.ssh.AuthorizeRSAPublicKeys;
  */
 public class JHDFSScriptBuilder implements Statement {
 
-    public static enum Type {
+    public static enum ScriptType {
 
         INIT, JHDFS
     }
@@ -41,7 +41,7 @@ public class JHDFSScriptBuilder implements Statement {
 
     public static class Builder {
 
-        private Type scriptType;
+        private ScriptType scriptType;
         private List<String> ndbs;
         private List<String> mgms;
         private List<String> mysql;
@@ -54,7 +54,7 @@ public class JHDFSScriptBuilder implements Statement {
         /*
          * Define the type of script we are going to prepare
          */
-        public Builder scriptType(Type type) {
+        public Builder scriptType(ScriptType type) {
             this.scriptType = type;
             return this;
         }
@@ -137,12 +137,12 @@ public class JHDFSScriptBuilder implements Statement {
          * Same as default but in this case we include the ip during the build.
          */
 
-        public JHDFSScriptBuilder build(String ip) {
+        public JHDFSScriptBuilder build(String ip, List<String> roles) {
             return new JHDFSScriptBuilder(scriptType, ndbs, mgms, mysql, namenodes, roles, ip, key,privateIP);
         }
     }
     
-    private Type scriptType;
+    private ScriptType scriptType;
     private List<String> ndbs;
     private List<String> mgms;
     private List<String> mysql;
@@ -152,7 +152,7 @@ public class JHDFSScriptBuilder implements Statement {
     private String ip;
     private String privateIP;
 
-    protected JHDFSScriptBuilder(Type scriptType, List<String> ndbs, List<String> mgms,
+    protected JHDFSScriptBuilder(ScriptType scriptType, List<String> ndbs, List<String> mgms,
             List<String> mysql, List<String> namenodes, List<String> roles, String ip, String key, 
             String privateIP) {
         this.scriptType = scriptType;

@@ -162,13 +162,16 @@ public class VirtualizationController implements Serializable {
     public void launchCluster() {
         setCredentials();
         messages.addMessage("Setting up credentials and initializing virtualization context...");
-        //service = initContexts();
-        virtualizer = new ClusterVirtualizer(this);
-        virtualizer.createSecurityGroups(clusterController.getCluster());
-        if(virtualizer.launchNodesBasicSetup(clusterController.getCluster())){
-            messages.addMessage("All nodes installed with basic software");
-        }
-        virtualizer.demoOnly(clusterController.getCluster());
+        service = initContexts();
+//        virtualizer = new ClusterVirtualizer(this);
+//        virtualizer.createSecurityGroups(clusterController.getCluster());
+//        if(virtualizer.launchNodesBasicSetup(clusterController.getCluster())){
+//            messages.addMessage("All nodes installed with basic software");
+//        }
+//        virtualizer.demoOnly(clusterController.getCluster());
+        createSecurityGroups();
+        launchNodesBasicSetup();
+        demoOnly();
         messages.addSuccessMessage("Cluster launched");
         messages.clearMessages();
         //installRoles();
@@ -422,7 +425,7 @@ public class VirtualizationController implements Serializable {
             TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
             //Use better Our scriptbuilder abstraction
             JHDFSScriptBuilder initScript = JHDFSScriptBuilder.builder()
-                    .scriptType(JHDFSScriptBuilder.Type.INIT)
+                    .scriptType(JHDFSScriptBuilder.ScriptType.INIT)
                     .publicKey(key)
                     .build();
 
@@ -714,7 +717,7 @@ public class VirtualizationController implements Serializable {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -749,7 +752,7 @@ public class VirtualizationController implements Serializable {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                      StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -783,7 +786,7 @@ public class VirtualizationController implements Serializable {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                      StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -818,7 +821,7 @@ public class VirtualizationController implements Serializable {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                      StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -851,7 +854,7 @@ public class VirtualizationController implements Serializable {
                     //Append at the end of the script the need to launch the chef command and run the restart command
                     //runChefSolo(roleBuilder);
                     StatementList nodeConfig = new StatementList(
-                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.Type.JHDFS)
+                            jhdfsBuilder.scriptType(JHDFSScriptBuilder.ScriptType.JHDFS)
                             .ndbs(ndbsDemo)
                             .mgms(mgmDemo)
                             .mysql(mysqlDemo)
@@ -1045,138 +1048,6 @@ public class VirtualizationController implements Serializable {
 
     }
 
-    /*
-     * This is still in alpha!!!
-     */
-//    private void installRoles() {
-//        //First we gather all the ips we need //DONE during launch of nodes, need ndbs??
-//        Set<String> ndbsIPs = new HashSet(ndbs);
-//        Set<String> mgms = new HashSet(mgm);
-//        Set<String> clients = new HashSet(mySQLClients);
-//        clients.addAll(mgm);
-//        //First we launch the mgm nodes
-//        Set<NodeMetadata> mgmNodes = first.keySet();
-//        Iterator<NodeMetadata> iter;
-//        iter = mgmNodes.iterator();
-//
-//        while (iter.hasNext()) {
-//            NodeMetadata node = iter.next();
-//            List<String> runlist = createRunList(first.get(node));
-//            ImmutableList.Builder<Statement> roleBuilder = createNodeConfiguration(runlist, new LinkedList(ndbsIPs), new LinkedList(mgms), new LinkedList(clients), node);
-//            runChefSolo(roleBuilder);
-//            service.runScriptOnNode(node.getId(), new StatementList(roleBuilder.build()));
-//        }
-//
-//        //Launch the rest of the nodes
-//        Set<NodeMetadata> restOfNodes = rest.keySet();
-//        iter = restOfNodes.iterator();
-//
-//        while (iter.hasNext()) {
-//            NodeMetadata node = iter.next();
-//            List<String> runlist = createRunList(rest.get(node));
-//            ImmutableList.Builder<Statement> roleBuilder = createNodeConfiguration(runlist, new LinkedList(ndbsIPs), new LinkedList(mgms), new LinkedList(clients), node);
-//            runChefSolo(roleBuilder);
-//            service.runScriptOnNode(node.getId(), new StatementList(roleBuilder.build()));
-//        }
-//    }
-//    private ImmutableList.Builder<Statement> createNodeConfiguration(List<String> runlist, List<String> ndbs, List<String> mgms, List<String> clients, NodeMetadata data) {
-//
-//        ImmutableList.Builder<Statement> statements = ImmutableList.builder();
-//        StringBuilder json = new StringBuilder();
-//        json.append("{");
-//        json.append("\"ndb\":{  \"mgm_server\":{\"addrs\": [");
-//
-//        for (int i = 0; i < mgms.size(); i++) {
-//            if (i == mgms.size() - 1) {
-//                json.append("\"").append(mgms.get(i)).append("\"]},");
-//            } else {
-//                json.append("\"").append(mgm.get(i)).append("\",");
-//            }
-//        }
-//        json.append("\"ndbd\":{\"addrs\":[");
-//        for (int i = 0; i < ndbs.size(); i++) {
-//            if (i == ndbs.size() - 1) {
-//                json.append("\"").append(ndbs.get(i)).append("\"]},");
-//            } else {
-//                json.append("\"").append(ndbs.get(i)).append("\",");
-//            }
-//        }
-//
-//        json.append("\"ndbapi\":{\"addrs\":[");
-//        for (int i = 0; i < clients.size(); i++) {
-//            if (i == clients.size() - 1) {
-//                json.append("\"").append(clients.get(i)).append("\"]},");
-//            } else {
-//                json.append("\"").append(clients.get(i)).append("\",");
-//            }
-//        }
-//        List<String> ips = new LinkedList(data.getPrivateAddresses());
-//        json.append("\"ip\":\"").append(ips.get(0)).append("\",");
-//        json.append("\"data_memory\":\"120\",");
-//        json.append("\"num_ndb_slots_per_client\":\"2\"},");
-//        json.append("\"memcached\":{\"mem_size\":\"128\"},");
-//        json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\"},");
-//        json.append("\"kthfs\":{\"ip\":\"").append(privateIP).append("\"},");
-//
-//        json.append("\"run_list\":[");
-//        for (int i = 0; i < runlist.size(); i++) {
-//            if (i == runlist.size() - 1) {
-//                json.append("\"").append(runlist.get(i)).append("\"]");
-//            } else {
-//                json.append("\"").append(runlist.get(i)).append("\",");
-//            }
-//        }
-//        json.append("}");
-//        statements.add(createOrOverwriteFile("/etc/chef/chef.json", ImmutableSet.of(json.toString())));
-//        return statements;
-//    }
-//not demo!!
-//    private List<String> createRunList(List<String> roles) {
-//        RunListBuilder builder = new RunListBuilder();
-//        builder.addRecipe("kthfsagent");
-//
-//        for (String role : roles) {
-//            if (role.equals("MySQLCluster*ndb")) {
-//
-//                builder.addRecipe("ndb::ndbd");
-//
-//                builder.addRecipe("ndb::ndbd-kthfs");
-//                builder.addRecipe("collectd::attr-driven");
-//
-//
-//
-//            }
-//            if (role.equals("MySQLCluster*mysqld")) {
-//
-//                builder.addRecipe("ndb::mysqld");
-//
-//                builder.addRecipe("ndb::mysqld-kthfs");
-//                builder.addRecipe("collectd::attr-driven");
-//
-//            }
-//            if (role.equals("MySQLCluster*mgm")) {
-//
-//                builder.addRecipe("ndb::mgmd");
-//
-//                builder.addRecipe("ndb::mgmd-kthfs");
-//                builder.addRecipe("collectd::attr-driven");
-//
-//            }
-//            if (role.equals("MySQLCluster*memcached")) {
-//
-//                builder.addRecipe("ndb::memcached");
-//
-//                builder.addRecipe("ndb::memcached-kthfs");
-//
-//            }
-//
-//
-//
-//        }
-//        return builder.build();
-//
-//
-//    }
     static enum ScriptLogger {
 
         INSTANCE;
