@@ -2460,10 +2460,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 addLease(TransactionLockManager.LockType.WRITE).
                 addLeasePath(TransactionLockManager.LockType.WRITE).
                 addBlock(TransactionLockManager.LockType.WRITE).
-                //addReplica(TransactionLockManager.LockType.WRITE).
-                //addCorrupt(TransactionLockManager.LockType.WRITE).
-                //addReplicaUc(TransactionLockManager.LockType.WRITE).
-                //addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
+                addReplica(TransactionLockManager.LockType.WRITE).
+                addCorrupt(TransactionLockManager.LockType.WRITE).
+                addReplicaUc(TransactionLockManager.LockType.WRITE).
+                addUnderReplicatedBlock(TransactionLockManager.LockType.WRITE).
                 acquireForRename();
       }
     };
