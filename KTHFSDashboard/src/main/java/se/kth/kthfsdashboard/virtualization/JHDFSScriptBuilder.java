@@ -49,6 +49,7 @@ public class JHDFSScriptBuilder implements Statement {
         private List<String> roles;
         private String nodeIP;
         private String key;
+        private String privateIP;
 
         /*
          * Define the type of script we are going to prepare
@@ -105,7 +106,7 @@ public class JHDFSScriptBuilder implements Statement {
 
         /*
          * JHDFS Script
-         * IP of the node who is receiving the configuration
+         * IP of the node
          */
         public Builder nodeIP(String ip) {
             this.nodeIP = ip;
@@ -120,19 +121,24 @@ public class JHDFSScriptBuilder implements Statement {
             this.key = key;
             return this;
         }
+        
+        public Builder privateIP(String ip){
+            this.privateIP= ip;
+            return this;
+        }
         /*
          * Default script build, use when defined all the other building options
          */
 
         public JHDFSScriptBuilder build() {
-            return new JHDFSScriptBuilder(scriptType, ndbs, mgms, mysql, namenodes, roles, nodeIP, key);
+            return new JHDFSScriptBuilder(scriptType, ndbs, mgms, mysql, namenodes, roles, nodeIP, key, privateIP);
         }
         /*
          * Same as default but in this case we include the ip during the build.
          */
 
         public JHDFSScriptBuilder build(String ip) {
-            return new JHDFSScriptBuilder(scriptType, ndbs, mgms, mysql, namenodes, roles, ip, key);
+            return new JHDFSScriptBuilder(scriptType, ndbs, mgms, mysql, namenodes, roles, ip, key,privateIP);
         }
     }
     
@@ -144,9 +150,11 @@ public class JHDFSScriptBuilder implements Statement {
     private List<String> roles;
     private String key;
     private String ip;
+    private String privateIP;
 
     protected JHDFSScriptBuilder(Type scriptType, List<String> ndbs, List<String> mgms,
-            List<String> mysql, List<String> namenodes, List<String> roles, String ip, String key) {
+            List<String> mysql, List<String> namenodes, List<String> roles, String ip, String key, 
+            String privateIP) {
         this.scriptType = scriptType;
         this.ndbs = ndbs;
         this.mgms = mgms;
@@ -155,6 +163,7 @@ public class JHDFSScriptBuilder implements Statement {
         this.roles = roles;
         this.ip = ip;
         this.key = key;
+        this.privateIP= privateIP;
     }
 
     @Override
@@ -281,7 +290,7 @@ public class JHDFSScriptBuilder implements Statement {
         json.append("\"memcached\":{\"mem_size\":\"128\"},");
         //***
         //Generate collectd fragment
-        json.append("\"collectd\":{\"server\":\"").append(ip).append("\",");
+        json.append("\"collectd\":{\"server\":\"").append(privateIP).append("\",");
         json.append("\"clients\":[");
         //Depending of the security group name of the demo we specify which collectd config to use
         Set<String> roleSet = new HashSet<String>(roles);
@@ -300,7 +309,7 @@ public class JHDFSScriptBuilder implements Statement {
         json.append("]},");
         //Generate kthfs fragment
         //server ip of the dashboard
-        json.append("\"kthfs\":{\"server_ip\":\"").append(ip).append("\",");
+        json.append("\"kthfs\":{\"server_ip\":\"").append(privateIP).append("\",");
         //mgm ip
         //TODO ADD SUPPORT FOR MULTIPLE MGMS
         json.append("\"ndb_connectstring\":\"").append(mgms.get(0)).append("\",");

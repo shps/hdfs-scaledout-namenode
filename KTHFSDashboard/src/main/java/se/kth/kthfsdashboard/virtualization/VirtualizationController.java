@@ -84,6 +84,7 @@ public class VirtualizationController implements Serializable {
     private ComputeCredentialsMB computeCredentialsMB;
     @ManagedProperty(value = "#{clusterController}")
     private ClusterController clusterController;
+    private ClusterVirtualizer virtualizer;
     private String provider;
     private String id;
     private String key;
@@ -130,17 +131,44 @@ public class VirtualizationController implements Serializable {
         this.messages = messages;
     }
 
+    public String getProvider() {
+        return provider;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public String getPrivateIP() {
+        return privateIP;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public String getKeystoneEndpoint() {
+        return keystoneEndpoint;
+    }
+    
+
     /*
      * Command to launch the instance
      */
     public void launchCluster() {
         setCredentials();
         messages.addMessage("Setting up credentials and initializing virtualization context...");
-        service = initContexts();
-
-        createSecurityGroups();
-        launchNodesBasicSetup();
-        demoOnly();
+        //service = initContexts();
+        virtualizer = new ClusterVirtualizer(this);
+        virtualizer.createSecurityGroups(clusterController.getCluster());
+        if(virtualizer.launchNodesBasicSetup(clusterController.getCluster())){
+            messages.addMessage("All nodes installed with basic software");
+        }
+        virtualizer.demoOnly(clusterController.getCluster());
         messages.addSuccessMessage("Cluster launched");
         messages.clearMessages();
         //installRoles();
@@ -171,6 +199,7 @@ public class VirtualizationController implements Serializable {
             key = computeCredentialsMB.getOpenstackKey();
             keystoneEndpoint = computeCredentialsMB.getOpenstackKeystone();
         }
+        
         //Setup the private IP for the nodes to know where is the dashboard
         //Add public key for managing nodes using ssh.
         privateIP = computeCredentialsMB.getPrivateIP();
@@ -180,7 +209,9 @@ public class VirtualizationController implements Serializable {
 
     /*
      * Define the computing cloud service you are going to use
+     * Marked to deprecated, moved to another class
      */
+    @Deprecated
     private ComputeService initContexts() {
         Provider check = Provider.fromString(provider);
         //We define the properties of our service
@@ -239,7 +270,10 @@ public class VirtualizationController implements Serializable {
      * Does the same for Openstack and Rackspace but we dont setup anything for now
      * 
      * Includes time using the ports when launching the VM instance executing the script
+     * 
+     * Moved to another representation
      */
+    @Deprecated
     private Properties serviceProperties(Provider provider) {
         Properties properties = new Properties();
         long scriptTimeout = TimeUnit.MILLISECONDS.convert(50, TimeUnit.MINUTES);
@@ -265,6 +299,7 @@ public class VirtualizationController implements Serializable {
     /*
      * Template of the VM we want to launch using EC2, or Openstack
      */
+    @Deprecated
     private TemplateBuilder templateKTHFS(String provider, TemplateBuilder template) {
         Provider check = Provider.fromString(provider);
 
@@ -381,6 +416,7 @@ public class VirtualizationController implements Serializable {
      * It launches in parallel all the number of nodes specified in the group of the cluster file using the 
      * compute service abstraction from jclouds
      */
+    @Deprecated
     private void launchNodesBasicSetup() {
         try {
             TemplateBuilder kthfsTemplate = templateKTHFS(provider, service.templateBuilder());
@@ -443,6 +479,7 @@ public class VirtualizationController implements Serializable {
      * Private Method which creates the securitygroups for the cluster 
      * through the rest client implementations in jclouds.
      */
+    @Deprecated
     private void createSecurityGroups() {
         //Data structures which contains all the mappings of the ports that the roles need to be opened
         RoleMapPorts commonTCP = new RoleMapPorts(RoleMapPorts.PortType.COMMON);
@@ -603,7 +640,9 @@ public class VirtualizationController implements Serializable {
 
     /*
      * This is the code for the demo
+     *
      */
+    @Deprecated
     private void demoOnly() {
         messages.addMessage("Starting specific configuration of the nodes...");
         //Fetch all the addresses we need.
