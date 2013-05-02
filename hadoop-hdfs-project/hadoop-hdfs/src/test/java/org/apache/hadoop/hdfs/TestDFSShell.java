@@ -508,13 +508,12 @@ public class TestDFSShell extends TestCase {
       ret = ToolRunner.run(shell, argv);
       assertEquals(" put is working ", 0, ret);
       //check cp 
-      //FIXME: I need both "copy" and multiple simaltanous indepedent MiniDFSClusters 
-//      argv[0] = "-cp";
-//      argv[1] = dstFs.getUri().toString() + "/furi";
-//      argv[2] = srcFs.getUri().toString() + "/furi";
-//      ret = ToolRunner.run(shell, argv);
-//      assertEquals(" cp is working ", 0, ret);
-//      assertTrue(srcFs.exists(new Path("/furi")));
+      argv[0] = "-cp";
+      argv[1] = dstFs.getUri().toString() + "/furi";
+      argv[2] = srcFs.getUri().toString() + "/furi";
+      ret = ToolRunner.run(shell, argv);
+      assertEquals(" cp is working ", 0, ret);
+      assertTrue(srcFs.exists(new Path("/furi")));
       //check cat 
       argv = new String[2];
       argv[0] = "-cat";
@@ -522,7 +521,7 @@ public class TestDFSShell extends TestCase {
       ret = ToolRunner.run(shell, argv);
       assertEquals(" cat is working ", 0, ret);
       //check chown
-//      dstFs.delete(new Path("/furi"), true);
+      dstFs.delete(new Path("/furi"), true);
       dstFs.delete(new Path("/hadoopdir"), true);
       String file = TEST_ROOT_DIR + "/chownTest";
       Path path = new Path(file);
