@@ -624,6 +624,7 @@
             <exclude>**/TestHDFSCLI.java</exclude>
             <exclude>**/TestDFSStorageStateRecovery.java</exclude>
             <exclude>**/TestHDFSTrash.java</exclude>
+	    <excude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             
             <exclude>**/TestBalancer.java</exclude> <!-- Needs the getBlocks RPC in NN -->
             <exclude>**/TestBalancerWithMultipleNameNodes.java</exclude> <!-- Needs the getBlocks RPC in NN -->
