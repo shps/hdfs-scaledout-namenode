@@ -29,6 +29,7 @@ public enum ClusterjConnector implements StorageConnector<Session> {
 
   @Override
   public void setConfiguration(Configuration conf) {
+    // TODO [H]: This could raise exception. Throw it as a storage exception tot he higher layer
     if (sessionFactory != null) {
       LOG.warn("SessionFactory is already initialized");
       return;
