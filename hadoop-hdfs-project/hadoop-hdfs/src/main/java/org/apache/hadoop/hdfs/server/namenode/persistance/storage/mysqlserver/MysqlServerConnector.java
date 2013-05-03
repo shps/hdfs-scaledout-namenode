@@ -41,6 +41,7 @@ public enum MysqlServerConnector implements StorageConnector<Connection> {
 
   private void loadDriver() {
     try {
+      // TODO: [H] throw StorageException, do not catch them here.
       Class.forName(DRIVER).newInstance();
       log.info("Loaded Mysql driver.");
     } catch (ClassNotFoundException cnfe) {
