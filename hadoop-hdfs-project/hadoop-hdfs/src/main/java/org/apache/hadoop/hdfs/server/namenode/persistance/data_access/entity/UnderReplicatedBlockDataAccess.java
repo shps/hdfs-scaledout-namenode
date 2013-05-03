@@ -28,5 +28,9 @@ public abstract class UnderReplicatedBlockDataAccess extends EntityDataAccess {
   public abstract void removeAll() throws StorageException;
 
   public abstract int countAll() throws StorageException;
+  
+  public abstract int countByLevel(int level) throws StorageException;
+  
+  public abstract int countLessThanALevel(int level) throws StorageException;
 
 }

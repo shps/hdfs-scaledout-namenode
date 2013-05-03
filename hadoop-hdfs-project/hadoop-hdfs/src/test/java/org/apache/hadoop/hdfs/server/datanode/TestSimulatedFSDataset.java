@@ -28,8 +28,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
-import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -38,7 +36,7 @@ import org.apache.hadoop.util.DataChecksum;
  */
 public class TestSimulatedFSDataset extends TestCase {
   Configuration conf = null;
-  static final String bpid = "BP-TEST";
+  static final String bpid = ExtendedBlock.DEFAULT_BLOCK_POOL_ID;
   static final int NUMBLOCKS = 20;
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
 

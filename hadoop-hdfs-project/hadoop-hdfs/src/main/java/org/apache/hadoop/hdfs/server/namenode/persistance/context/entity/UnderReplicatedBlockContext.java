@@ -53,50 +53,22 @@ public class UnderReplicatedBlockContext extends EntityContext<UnderReplicatedBl
     allUrBlocksRead = false;
   }
 
-
   @Override
   public int count(CounterType counter, Object... params) throws PersistanceException {
     UnderReplicatedBlock.Counter urCounter = (UnderReplicatedBlock.Counter) counter;
 
     switch (urCounter) {
       case All:
-        log("count-all-urblocks");
-        // TODO - use a cache here...
-        
-        return findList(UnderReplicatedBlock.Finder.All).size();
-//        return findList(UnderReplicatedBlock.Finder.All).size();
+        log("count-all-urblocks", CacheHitState.LOSS);
+        return dataAccess.countAll();
       case ByLevel:
         Integer level = (Integer) params[0];
-        if (allUrBlocksRead) {
-          log("count-urblocks-by-level", CacheHitState.HIT, new String[]{Integer.toString(level)});
-        } else {
-          log("count-urblocks-by-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
-          aboutToAccessStorage();
-          syncUnderReplicatedBlockInstances(dataAccess.findByLevel(level)).size();
-        }
-        if (levelToReplicas.containsKey(level)) {
-          return levelToReplicas.get(level).size();
-        } else {
-          return 0;
-        }
+        log("count-urblocks-by-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
+        return dataAccess.countByLevel(level);
       case LessThanLevel:
         level = (Integer) params[0];
-        if (allUrBlocksRead) {
-          log("count-urblocks-less-than-level", CacheHitState.HIT, new String[]{Integer.toString(level)});
-        } else {
-          log("count-urblocks-less-than-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
-          aboutToAccessStorage();
-          syncUnderReplicatedBlockInstances(dataAccess.findAllLessThanLevel(level)).size();
-        }
-        int count = 0;
-        Iterator<Entry<Integer, HashSet<UnderReplicatedBlock>>> iterator = levelToReplicas.entrySet().iterator();
-        while (iterator.hasNext()) {
-          Entry<Integer, HashSet<UnderReplicatedBlock>> next = iterator.next();
-          if (next.getKey() < level) {
-            count += next.getValue().size();
-          }
-        }
-        return count;
+        log("count-urblocks-less-than-level", CacheHitState.LOSS, new String[]{Integer.toString(level)});
+        return dataAccess.countLessThanALevel(level);
     }
 
     throw new RuntimeException(UNSUPPORTED_COUNTER);

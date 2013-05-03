@@ -17,6 +17,7 @@ import org.apache.hadoop.hdfs.server.namenode.Lease;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.LeaseDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
@@ -47,7 +48,7 @@ public class LeaseClusterj extends LeaseDataAccess {
 
   @Override
   public int countAll() throws StorageException {
-    return findAll().size();
+    return CountHelper.countAll(TABLE_NAME);
   }
 
   @Override

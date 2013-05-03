@@ -278,4 +278,9 @@ public class InodeDerby extends InodeDataAccess {
     }
     return inodes;
   }
+
+  @Override
+  public int countAll() throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+  }
 }

@@ -146,10 +146,18 @@ public class UnderReplicatedBlockDerby extends UnderReplicatedBlockDataAccess {
     return blocks;
   }
 
-    @Override
-    public int countAll() throws StorageException
-    {
-       // TODO - use MySQL Server to get block count
-      return 0; 
-    }
+  @Override
+  public int countAll() throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public int countByLevel(int level) throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public int countLessThanALevel(int level) throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

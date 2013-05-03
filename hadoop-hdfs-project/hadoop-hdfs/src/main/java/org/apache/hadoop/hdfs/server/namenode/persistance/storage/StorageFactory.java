@@ -11,6 +11,7 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.context.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.derby.*;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.MysqlServerConnector;
 
 /**
  *
@@ -33,6 +34,7 @@ public class StorageFactory {
   private static LeaderDataAccess leaderDataAccess;
   private static BlockTokenKeyDataAccess blockTokenKeyDataAccess;
   private static GenerationStampDataAccess generationStampDataAccess;
+  private static StorageInfoDataAccess storageInfoDataAccess;
   private static Map<Class, EntityDataAccess> dataAccessMap = new HashMap<Class, EntityDataAccess>();
 
   private static void initDataAccessMap() {
@@ -50,6 +52,7 @@ public class StorageFactory {
     dataAccessMap.put(leaderDataAccess.getClass().getSuperclass(), leaderDataAccess);
     dataAccessMap.put(blockTokenKeyDataAccess.getClass().getSuperclass(), blockTokenKeyDataAccess);
     dataAccessMap.put(generationStampDataAccess.getClass().getSuperclass(), generationStampDataAccess);
+    dataAccessMap.put(storageInfoDataAccess.getClass().getSuperclass(), storageInfoDataAccess);
   }
 
   public static StorageConnector getConnector() {
@@ -78,6 +81,7 @@ public class StorageFactory {
       // TODO[Hooman]: Add derby data access for block generation stamp.
     } else if (storageType.equals("clusterj")) {
       defaultStorage = ClusterjConnector.INSTANCE;
+      MysqlServerConnector.INSTANCE.setConfiguration(conf);
       defaultStorage.setConfiguration(conf);
       blockInfoDataAccess = new BlockInfoClusterj();
       corruptReplicaDataAccess = new CorruptReplicaClusterj();
@@ -93,6 +97,7 @@ public class StorageFactory {
       leaderDataAccess = new LeaderClusterj();
       generationStampDataAccess = new GenerationStampClusterj();
       blockTokenKeyDataAccess = new BlockTokenKeyClusterj();
+      storageInfoDataAccess = new StorageInfoClusterj();
     }
 
     initDataAccessMap();

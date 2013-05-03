@@ -14,6 +14,7 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.CorruptReplicaDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
@@ -39,16 +40,8 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
   private ClusterjConnector connector = ClusterjConnector.INSTANCE;
 
   @Override
-  public int countAll() throws StorageException{
-    try {
-      Session session = connector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-      QueryDomainType<CorruptReplicaDTO> dobj = qb.createQueryDefinition(CorruptReplicaDTO.class);
-      Query<CorruptReplicaDTO> query = session.createQuery(dobj);
-      return createCorruptReplicaList(query.getResultList()).size();
-    } catch (Exception e) {
-      throw new StorageException(e);
-    }
+  public int countAll() throws StorageException {
+    return CountHelper.countAll(TABLE_NAME);
   }
 
   @Override
@@ -133,5 +126,4 @@ public class CorruptReplicaClusterj extends CorruptReplicaDataAccess {
     corruptReplicaTable.setBlockId(corruptReplica.getBlockId());
     corruptReplicaTable.setStorageId(corruptReplica.getStorageId());
   }
-
 }

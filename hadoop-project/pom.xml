@@ -602,7 +602,6 @@
             <exclude>**/Test*$*.java</exclude>
 <!--hold start-->
 <!--hold end-->
-            <exclude>**/TestCorruptFilesJsp.java</exclude>
             <exclude>**/TestFsLimits.java</exclude>
             <exclude>**/TestDfsOverAvroRpc.java</exclude>
             <exclude>**/TestListCorruptFileBlocks.java</exclude> <!-- Either it stucks in a loop or very time consuming one-->
@@ -620,13 +619,12 @@
             <exclude>**/TestClientReportBadBlock.java</exclude>
             <exclude>**/TestQuota.java</exclude>
             <exclude>**/TestMetaSave.java</exclude>
-            <exclude>**/TestDFSShell.java</exclude> 
             <exclude>**/TestNNThroughputBenchmark.java</exclude>
             <exclude>**/TestDFSUpgradeFromImage.java</exclude>
             <exclude>**/TestHDFSCLI.java</exclude>
-            <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             <exclude>**/TestDFSStorageStateRecovery.java</exclude>
             <exclude>**/TestHDFSTrash.java</exclude>
+	    <exclude>**/TestDataNodeVolumeFailureReporting.java</exclude>
             
             <exclude>**/TestBalancer.java</exclude> <!-- Needs the getBlocks RPC in NN -->
             <exclude>**/TestBalancerWithMultipleNameNodes.java</exclude> <!-- Needs the getBlocks RPC in NN -->
