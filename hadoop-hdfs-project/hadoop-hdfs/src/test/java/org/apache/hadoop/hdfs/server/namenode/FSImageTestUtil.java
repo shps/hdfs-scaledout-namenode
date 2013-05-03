@@ -414,10 +414,6 @@ public abstract class FSImageTestUtil {
     }
   }
   
-//  /** get the fsImage*/
-//  public static FSImage getFSImage(NameNode node) {
-//    return node.getFSImage();
-//  }
   
   /**
    * In KTHFS, StorageInfo is not accessible from FSImage anymore. So we can use this

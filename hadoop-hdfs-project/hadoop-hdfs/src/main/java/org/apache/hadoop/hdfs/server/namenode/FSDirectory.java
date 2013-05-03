@@ -74,7 +74,6 @@ import org.apache.hadoop.hdfs.util.ByteArray;
 public class FSDirectory implements Closeable {
 
     
-//    FSImage fsImage;
     private FSNamesystem fsNamesystem;
     private volatile boolean ready = false;
     public static final long UNKNOWN_DISK_SPACE = -1; //[S] name it public to access from FSnamesystem
@@ -134,22 +133,12 @@ public class FSDirectory implements Closeable {
      * objects and reduce heap usage.
      */
     private final NameCache<ByteArray> nameCache;
-
-//    /**
-//     * Access an existing dfs name directory.
-//     */
-//    FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-//        this(new FSImage(conf), ns, conf);
-//    }
-
     FSDirectory(FSNamesystem ns, Configuration conf) {
         this.dirLock = new ReentrantReadWriteLock(true); // fair
         this.cond = dirLock.writeLock().newCondition();
         this.fsNamesystem = ns;
-//        fsImage.setFSNamesystem(ns);
         supergroup = ns.getSupergroup();
         
-//        this.fsImage = fsImage;
         int configuredLimit = conf.getInt(
                 DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
         this.lsLimit = configuredLimit > 0
@@ -176,7 +165,6 @@ public class FSDirectory implements Closeable {
     }
 
     private FSNamesystem getFSNamesystem() {
-//        return fsImage.getFSNamesystem();
       return this.fsNamesystem;
     }
 
@@ -194,22 +182,8 @@ public class FSDirectory implements Closeable {
             throws IOException {
         // format before starting up if requested
         if (startOpt == StartupOption.FORMAT) {
-//            fsImage.format(fsImage.getStorage().determineClusterId());// reuse current id
             startOpt = StartupOption.REGULAR;
         }
-//        boolean success = false;
-//        try {
-//            if (fsImage.recoverTransitionRead(startOpt)) {
-//                fsImage.saveNamespace();
-//            }
-//            fsImage.openEditLog();
-//
-//            success = true;
-//        } finally {
-//            if (!success) {
-//                fsImage.close();
-//            }
-//        }
         writeLock();
         try {
             setReady(true);
@@ -237,7 +211,6 @@ public class FSDirectory implements Closeable {
      * Shutdown the filestore
      */
     public void close() throws IOException {
-//        fsImage.close();
     }
 
     /**
@@ -312,7 +285,6 @@ public class FSDirectory implements Closeable {
             return null;
         }
         // add create file record to log, record new generation stamp
-        //fsImage.getEditLog().logOpenFile(path, newNode);
 
         if (NameNode.stateChangeLog.isDebugEnabled()) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
@@ -454,7 +426,6 @@ public class FSDirectory implements Closeable {
 
         writeLock();
         try {
-            //fsImage.getEditLog().logOpenFile(path, file);
             if (NameNode.stateChangeLog.isDebugEnabled()) {
                 NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
                         + path + " with " + file.getBlocks().size()
@@ -478,7 +449,6 @@ public class FSDirectory implements Closeable {
             // file is closed
             file.setModificationTimeForce(now);
             EntityManager.update(file);
-            //fsImage.getEditLog().logCloseFile(path, file);
             if (NameNode.stateChangeLog.isDebugEnabled()) {
                 NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
                         + path + " with " + file.getBlocks().size()
@@ -502,7 +472,6 @@ public class FSDirectory implements Closeable {
             // modify file-> block and blocksMap
             getBlockManager().removeBlockFromMap(block);
             // write modified block locations to log
-            //fsImage.getEditLog().logOpenFile(path, fileNode);
             if (NameNode.stateChangeLog.isDebugEnabled()) {
                 NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
                         + path + " with " + block
@@ -541,7 +510,6 @@ public class FSDirectory implements Closeable {
         } finally {
             writeUnlock();
         }
-        //fsImage.getEditLog().logRename(src, dst, now);
         return true;
     }
 
@@ -566,7 +534,6 @@ public class FSDirectory implements Closeable {
         } finally {
             writeUnlock();
         }
-        //fsImage.getEditLog().logRename(src, dst, now, options);
     }
 
     /**
@@ -896,8 +863,6 @@ public class FSDirectory implements Closeable {
         writeLock();
         try {
             fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
-            //if (fileBlocks != null)  // log replication change
-            //fsImage.getEditLog().logSetReplication(src, replication);
             return fileBlocks;
         } finally {
             writeUnlock();
@@ -981,7 +946,6 @@ public class FSDirectory implements Closeable {
         } finally {
             writeUnlock();
         }
-        //fsImage.getEditLog().logSetPermissions(src, permission);
     }
 
     void unprotectedSetPermission(String src, FsPermission permissions)
@@ -1003,7 +967,6 @@ public class FSDirectory implements Closeable {
         } finally {
             writeUnlock();
         }
-        //fsImage.getEditLog().logSetOwner(src, username, groupname);
     }
 
     void unprotectedSetOwner(String src, String username, String groupname)
@@ -1038,7 +1001,6 @@ public class FSDirectory implements Closeable {
             long timestamp = now();
             unprotectedConcat(target, srcs, timestamp);
             // do the commit
-            //fsImage.getEditLog().logConcat(target, srcs, timestamp);
         } finally {
             writeUnlock();
         }
@@ -1117,7 +1079,6 @@ public class FSDirectory implements Closeable {
         incrDeletedFileCount(filesRemoved);
         // Blocks will be deleted later by the caller of this method
         getFSNamesystem().removePathAndBlocks(src, null);
-        //fsImage.getEditLog().logDelete(src, now);
         return true;
     }
 
@@ -1627,7 +1588,6 @@ public class FSDirectory implements Closeable {
                 if (getFSNamesystem() != null) {
                     NameNode.getNameNodeMetrics().incrFilesCreated();
                 }
-                //fsImage.getEditLog().logMkDir(cur, inodes[i]);
                 if (NameNode.stateChangeLog.isDebugEnabled()) {
                     NameNode.stateChangeLog.debug(
                             "DIR* FSDirectory.mkdirs: created directory " + cur);
@@ -2100,11 +2060,7 @@ public class FSDirectory implements Closeable {
             IOException{
         writeLock();
         try {
-            INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota);
-            if (dir != null) {
-                //fsImage.getEditLog().logSetQuota(src, dir.getNsQuota(), 
-                //                                 dir.getDsQuota());
-            }
+            unprotectedSetQuota(src, nsQuota, dsQuota);
         } finally {
             writeUnlock();
         }
@@ -2133,16 +2089,6 @@ public class FSDirectory implements Closeable {
     void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) throws PersistanceException {
 
         unprotectedSetTimes(src, inode, mtime, atime, force);
-        //boolean status = false;
-        //writeLock();
-        //try {
-        //  status = unprotectedSetTimes(src, inode, mtime, atime, force);
-        //} finally {
-        //  writeUnlock();
-        //}
-        //if (status) {
-        //fsImage.getEditLog().logTimes(src, mtime, atime);
-        //}
     }
 
     //unused
@@ -2301,7 +2247,6 @@ public class FSDirectory implements Closeable {
                     + " to the file system");
             return null;
         }
-        //fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode);
 
         if (NameNode.stateChangeLog.isDebugEnabled()) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.addSymlink: "

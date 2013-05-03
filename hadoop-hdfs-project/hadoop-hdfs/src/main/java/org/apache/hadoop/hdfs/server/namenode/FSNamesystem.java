@@ -342,7 +342,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
 //      }
     }
-//    if (fsImage == null) {
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(startOpt);
@@ -350,10 +349,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
     NameNode.getNameNodeMetrics().setFsImageLoadTime(
             (int) timeTakenToLoadFSImage);
-//    } else {
-//      this.dir = new FSDirectory(fsImage, this, conf);
-//
-//    }
 
     TransactionalRequestHandler initHandler = new TransactionalRequestHandler(OperationType.INITIALIZE) {
       @Override
@@ -3347,7 +3342,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return registration ID
    */
   String getRegistrationID() throws IOException {
-//    return Storage.getRegistrationID(dir.fsImage.getStorage());
     StorageInfo storageInfo = (StorageInfo) getStorageInfoHandler.handle();
     return Storage.getRegistrationID(storageInfo);
   }
@@ -3438,13 +3432,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 //      }
 //    }
 //  }
-//  FSImage getFSImage() {
-//    return dir.fsImage;
-//  }
-
-  //FSEditLog getEditLog() {
-//    return getFSImage().getEditLog();
-//  }    
   private void checkBlock(ExtendedBlock block) throws IOException {
     if (block != null && !this.blockPoolId.equals(block.getBlockPoolId())) {
       throw new IOException("Unexpected BlockPoolId " + block.getBlockPoolId()
@@ -3572,52 +3559,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if
    */
   void saveNamespace() throws AccessControlException, IOException {
-//    TransactionalRequestHandler saveNamespaceHandler = new TransactionalRequestHandler(OperationType.SAVE_NAMESPACE) {
-//      @Override
-//      public Object performTask() throws PersistanceException, IOException {
-//        checkSuperuserPrivilege();
-//        if (!isInSafeMode()) {
-//          throw new IOException("Safe mode should be turned ON "
-//                  + "in order to create namespace image.");
-//        }
-//        // TODO JIM - save this data to NDB
-//        getFSImage().saveNamespace();
-//        LOG.info("New namespace image has been created.");
-//        return null;
-//      }
-//
-//      @Override
-//      public void acquireLock() throws PersistanceException, IOException {
-//        // TODO HOOMAN safemode 
-//      }
-//    };
-//    saveNamespaceHandler.handleWithReadLock(this);
   }
 
-  /**
-   * Enables/Disables/Checks restoring failed storage replicas if the storage
-   * becomes available again. Requires superuser privilege.
-   *
-   * @throws AccessControlException if superuser privilege is violated.
-   */
-//  boolean restoreFailedStorage(String arg) throws AccessControlException {
-//    writeLock();
-//    try {
-//      checkSuperuserPrivilege();
-//
-//      // if it is disabled - enable it and vice versa.
-//      if (arg.equals("check")) {
-//        return getFSImage().getStorage().getRestoreFailedStorage();
-//      }
-//
-//      boolean val = arg.equals("true");  // false if not
-//      getFSImage().getStorage().setRestoreFailedStorage(val);
-//
-//      return val;
-//    } finally {
-//      writeUnlock();
-//    }
-//  }
 
   Date getStartTime() {
     return new Date(systemStart);
@@ -3625,13 +3568,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   void finalizeUpgrade() throws IOException {
 //    checkSuperuserPrivilege();
-//    getFSImage().finalizeUpgrade();
-
-
-
-
-
-
   }
 
   /**
@@ -4367,7 +4303,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Ensure that any concurrent operations have been fully synced
       // before entering safe mode. This ensures that the FSImage
       // is entirely stable on disk as soon as we're in safe mode.
-      //getEditLog().logSyncAll();
       if (!isInSafeMode()) {
         safeMode = new SafeModeInfo(resourcesLow);
         // TODO HOOMAN - use 'cluster' table to update to true.
@@ -4910,42 +4845,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     leaseManager.changeLease(src, dst, overwrite, replaceBy);
   }
 
-  /**
-   * Serializes leases.
-   */
-  void saveFilesUnderConstruction(DataOutputStream out) throws ImproperUsageException, IOException, PersistanceException {
-    // This is run by an inferior thread of saveNamespace, which holds a read
-    // lock on our behalf. If we took the read lock here, we could block
-    // for fairness if a writer is waiting on the lock.
-
-    synchronized (leaseManager) {
-      out.writeInt(leaseManager.countPath()); // write the size
-
-      for (Lease lease : leaseManager.getSortedLeases()) {
-        for (LeasePath lPath : lease.getPaths()) {
-          // verify that path exists in namespace
-          INode node;
-          try {
-            node = dir.getFileINode(lPath.getPath());
-          } catch (UnresolvedLinkException e) {
-            throw new AssertionError("Lease files should reside on this FS");
-          }
-          if (node == null) {
-            throw new IOException("saveLeases found path " + lPath.getPath()
-                    + " but no matching entry in namespace.");
-          }
-          if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + lPath.getPath()
-                    + " but is not under construction.");
-          }
-          INodeFile cons = (INodeFile) node;
-          assert cons.isUnderConstruction();
-          FSImageSerialization.writeINodeUnderConstruction(out, cons, lPath.getPath());
-        }
-      }
-    }
-  }
-
   static class CorruptFileBlockInfo {
 
     String path;
@@ -5332,7 +5231,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override // NameNodeMXBean
   public boolean isUpgradeFinalized() {
-//    return this.getFSImage().isUpgradeFinalized();
     /** FIXME[H]: this is only dependent to FSImage. But we are removing FSImage.
      HDFS upgrades require to store all metadata into the disk beforehand. But we 
      don't have it in KTHFS.**/

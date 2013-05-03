@@ -649,14 +649,6 @@ public class NameNode
         return namesystem.isInSafeMode();
     }
 
-//    /**
-//     * get FSImage
-//     */
-//    FSImage getFSImage()
-//    {
-//        return namesystem.dir.fsImage;
-//    }
-
     /**
      * Returns the address on which the NameNodes is listening to.
      *
@@ -743,18 +735,6 @@ public class NameNode
     }
     LOG.info("Formatting using clusterid: " + clusterId);
 
-    // Format storage
-//    StorageFactory.setConfiguration(conf);
-//    StorageConnector connector = StorageFactory.getConnector();
-//    try {
-//      assert (connector.formatStorage());
-//    } catch (StorageException ex) {
-//      LOG.error(ex.getMessage(), ex);
-//    }
-
-//        FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
-//        FSNamesystem nsys = new FSNamesystem(fsImage, conf);
-//        nsys.dir.fsImage.format(clusterId);
     NNStorage.formatStorageInfo(clusterId);
     return false;
   }
@@ -762,7 +742,6 @@ public class NameNode
     private static boolean finalize(Configuration conf,
                                     boolean isConfirmationNeeded) throws IOException
     {
-//        FSNamesystem nsys = new FSNamesystem(conf);
         System.err.print(
                 "\"finalize\" will remove the previous state of the files system.\n"
                 + "Recent upgrade will become permanent.\n"
@@ -775,7 +754,6 @@ public class NameNode
                 return true;
             }
         }
-//        nsys.dir.fsImage.finalizeUpgrade();
         return false;
     }
 

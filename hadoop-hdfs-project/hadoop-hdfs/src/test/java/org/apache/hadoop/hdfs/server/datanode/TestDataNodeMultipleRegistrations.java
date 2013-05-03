@@ -66,20 +66,9 @@ public class TestDataNodeMultipleRegistrations {
       assertNotNull("cannot create nn2", nn2);
 
       StorageInfo storageInfo = FSImageTestUtil.getStorageInfo();
-      // [H]: No blockpool id cause no federation.
-//      String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
-//      String bpid2 = FSImageTestUtil.getFSImage(nn2).getBlockPoolID();
       String cid1 = storageInfo.getClusterID();
-//      String cid2 = FSImageTestUtil.getFSImage(nn2).getClusterID();
       int lv1 = storageInfo.getLayoutVersion();
-//      int lv2 = FSImageTestUtil.getFSImage(nn2).getLayoutVersion();
       int ns1 = storageInfo.getNamespaceID();
-//      int ns2 = FSImageTestUtil.getFSImage(nn2).getNamespaceID();
-//      assertNotSame("namespace ids should be different", ns1, ns2);
-//      LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
-//          + nn1.getNameNodeAddress());
-//      LOG.info("nn2: lv=" + lv2 + ";cid=" + cid2 + ";bpid=" + bpid2 + ";uri="
-//          + nn2.getNameNodeAddress());
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";uri="
               + nn1.getNameNodeAddress());
 
@@ -113,14 +102,9 @@ public class TestDataNodeMultipleRegistrations {
               nn1.getNameNodeAddress());
       assertEquals("wrong nn address", bpos2.nnAddr,
               nn2.getNameNodeAddress());
-//      assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
-//      assertEquals("wrong bpid", bpos2.getBlockPoolId(), bpid2);
       assertEquals("wrong cid", dn.getClusterId(), cid1);
-//      assertEquals("cid should be same", cid2, cid1);
       assertEquals("namespace should be same",
               bpos1.bpNSInfo.namespaceID, ns1);
-//      assertEquals("namespace should be same",
-//              bpos2.bpNSInfo.namespaceID, ns2);
       assertEquals("namespace should be same",
               bpos2.bpNSInfo.namespaceID, ns1);
     } finally {
@@ -142,13 +126,8 @@ public class TestDataNodeMultipleRegistrations {
       assertNotNull("cannot create nn1", nn1);
 
       StorageInfo storageInfo = FSImageTestUtil.getStorageInfo();
-//      String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
-//      String cid1 = FSImageTestUtil.getFSImage(nn1).getClusterID();
       String cid1 = storageInfo.getClusterID();
-//      int lv1 = FSImageTestUtil.getFSImage(nn1).getLayoutVersion();
       int lv1 = storageInfo.getLayoutVersion();
-//      LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
-//              + nn1.getNameNodeAddress());
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";uri="
               + nn1.getNameNodeAddress());
 
@@ -175,7 +154,6 @@ public class TestDataNodeMultipleRegistrations {
 
       assertEquals("wrong nn address", bpos1.nnAddr,
               nn1.getNameNodeAddress());
-//      assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
       assertEquals("wrong cid", dn.getClusterId(), cid1);
       cluster.shutdown();
 

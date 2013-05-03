@@ -743,8 +743,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     namesystem.getBlockManager().processReport(nodeReg, poolId, blist);
     /**TODO[H]: Status of the upgrade should be stored somewhere other than FSImage?**/
-//    if (nn.getFSImage().isUpgradeFinalized())
-//      return new DatanodeCommand.Finalize(poolId);
     return null;
   }
 
