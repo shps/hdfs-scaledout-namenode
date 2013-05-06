@@ -98,10 +98,10 @@ public class LeaderElection extends Thread {
     }
     
     // if leader then remove dead namenodes from the leader table
-    if(nn.getRole() == NamenodeRole.LEADER)
-    {
-      removeDeadNameNodes();
-    }
+//    if(nn.getRole() == NamenodeRole.LEADER)
+//    {
+//      removeDeadNameNodes();
+//    }
     // TODO [S] do something if i am no longer the leader. 
   }
   private TransactionalRequestHandler leaderElectionHandler = new TransactionalRequestHandler(OperationType.LEADER_ELECTION) {

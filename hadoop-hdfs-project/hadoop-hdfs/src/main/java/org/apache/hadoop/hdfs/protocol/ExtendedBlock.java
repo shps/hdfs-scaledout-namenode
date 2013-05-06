@@ -35,7 +35,7 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ExtendedBlock implements Writable {
-  public static final String DEFAULT_BLOCK_POOL_ID = "Remove-me!"; // TODO[H]: The block pool id is for federation. This should be removed.
+  public static final String DEFAULT_BLOCK_POOL_ID = "dummy"; // TODO[H]: The block pool id is for federation. This should be removed.
   private String poolId;
   private Block block;
 
