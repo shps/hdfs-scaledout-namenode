@@ -102,21 +102,10 @@ class PendingReplicationBlocks {
    */
   int size(OperationType opType) throws IOException {
     return (Integer) new LightWeightRequestHandler(opType) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         PendingBlockDataAccess da = (PendingBlockDataAccess) StorageFactory.getDataAccess(PendingBlockDataAccess.class);
-        Collection<PendingBlockInfo> pendingBlocks = da.findAll(); //TODO[H]: This can be improved.
-        if (pendingBlocks != null) {
-          int count = 0;
-          for (PendingBlockInfo p : pendingBlocks) {
-            if (!isTimedout(p)) {
-              count++;
-            }
-          }
-          return count;
-        }
-        return 0;
+        return da.countValidPendingBlocks(now() - timeout);
       }
     }.handle();
   }
@@ -146,7 +135,6 @@ class PendingReplicationBlocks {
    */
   List<PendingBlockInfo> getTimedOutBlocks(TransactionalRequestHandler.OperationType opType) throws IOException {
     return (List<PendingBlockInfo>) new LightWeightRequestHandler(opType) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         long timeLimit = getTimeLimit();
@@ -160,9 +148,8 @@ class PendingReplicationBlocks {
       }
     }.handle();
   }
-  
-  private static long getTimeLimit()
-  {
+
+  private static long getTimeLimit() {
     return now() - timeout;
   }
 
@@ -173,7 +160,6 @@ class PendingReplicationBlocks {
     }
     return false;
   }
-  
 
   /**
    * Iterate through all items and print them.

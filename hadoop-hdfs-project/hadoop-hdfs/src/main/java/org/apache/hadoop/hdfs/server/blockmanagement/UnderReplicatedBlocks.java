@@ -21,8 +21,6 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockAcquirer;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.LockType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.EntityManager;
 import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
@@ -30,7 +28,6 @@ import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.Operati
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.UnderReplicatedBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
-import org.apache.hadoop.hdfs.server.namenode.persistance.storage.clusterj.UnderReplicatedBlockClusterj.UnderReplicatedBlocksDTO;
 
 /**
  * Keep track of under replication blocks. Blocks have replication priority,
@@ -58,28 +55,22 @@ class UnderReplicatedBlocks {
       @Override
       public Object performTask() throws PersistanceException, IOException {
         UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
-        Collection result = da.findAll();
-        if (result != null) {
-          return result.size();
-        }
-        return 0;
+        return da.countAll();
       }
     }.handle();
-//    return EntityManager.count(UnderReplicatedBlock.Counter.All);
   }
 
   /**
    * Return the number of under replication blocks excluding corrupt blocks
    */
   int getUnderReplicatedBlockCount(TransactionalRequestHandler.OperationType opType) throws IOException {
-    List<UnderReplicatedBlock> urbs = (List<UnderReplicatedBlock>) new LightWeightRequestHandler(opType) {
+    return (Integer) new LightWeightRequestHandler(opType) {
       @Override
       public Object performTask() throws PersistanceException, IOException {
         UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
-        return da.findAllLessThanLevel(QUEUE_WITH_CORRUPT_BLOCKS);
+        return da.countLessThanALevel(QUEUE_WITH_CORRUPT_BLOCKS);
       }
     }.handle();
-    return urbs.size();
   }
 
   /**
@@ -87,14 +78,10 @@ class UnderReplicatedBlocks {
    */
   int getCorruptBlockSize(TransactionalRequestHandler.OperationType opType) throws IOException {
     return (Integer) new LightWeightRequestHandler(opType) {
-
       @Override
       public Object performTask() throws PersistanceException, IOException {
         UnderReplicatedBlockDataAccess da = (UnderReplicatedBlockDataAccess) StorageFactory.getDataAccess(UnderReplicatedBlockDataAccess.class);
-        Collection result = da.findByLevel(QUEUE_WITH_CORRUPT_BLOCKS);
-        if (result != null)
-          return result.size();
-        return 0;
+        return da.countByLevel(QUEUE_WITH_CORRUPT_BLOCKS);
       }
     }.handle();
   }

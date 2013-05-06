@@ -581,9 +581,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public boolean restoreFailedStorage(String arg)
-      throws AccessControlException {
-    //[H] This operation seems useless in KTHFS.
-    return namesystem.restoreFailedStorage(arg);
+          throws AccessControlException {
+    /**
+     * TODO[H]: We have the metadata on the database. What do we need to restore
+     * then? *
+     */
+//    return namesystem.restoreFailedStorage(arg);
+    return true;
   }
 
   @Override // ClientProtocol
@@ -738,8 +742,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     namesystem.getBlockManager().processReport(nodeReg, poolId, blist);
-    if (nn.getFSImage().isUpgradeFinalized())
-      return new DatanodeCommand.Finalize(poolId);
+    /**TODO[H]: Status of the upgrade should be stored somewhere other than FSImage?**/
     return null;
   }
 
@@ -799,9 +802,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
    */
   void verifyRequest(NodeRegistration nodeReg) throws IOException {
     verifyVersion(nodeReg.getVersion());
-    if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
+    String registrationId = namesystem.getRegistrationID();
+    if (!registrationId.equals(nodeReg.getRegistrationID())) {
       LOG.warn("Invalid registrationID - expected: "
-          + namesystem.getRegistrationID() + " received: "
+          + registrationId + " received: "
           + nodeReg.getRegistrationID());
       throw new UnregisteredNodeException(nodeReg);
     }

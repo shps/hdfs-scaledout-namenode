@@ -50,6 +50,13 @@ public abstract class InodeDataAccess extends EntityDataAccess {
   public abstract List<INode> findInodesByIds(List<Long> ids) throws StorageException;
 
   public abstract void prepare(Collection<INode> removed, Collection<INode> newed, Collection<INode> modified) throws StorageException;
+  
+  /**
+   * Counts all the inodes.
+   * @return Numbre of inodes.
+   * @throws StorageException 
+   */
+  public abstract int countAll() throws StorageException;
 
   protected short getReplication(long header) {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);

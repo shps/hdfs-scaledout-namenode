@@ -59,6 +59,13 @@ import org.apache.hadoop.net.DNS;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.persistance.LightWeightRequestHandler;
+import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
+import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.StorageInfoDataAccess;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageFactory;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -512,6 +519,22 @@ public class NNStorage extends Storage implements Closeable {
       format(sd);
     }
   }
+  
+ /**
+   * 
+   */
+  public static void formatStorageInfo(final String clusterId) throws IOException {
+    LightWeightRequestHandler formatHandler = new LightWeightRequestHandler(OperationType.ADD_STORAGE_INFO) {
+
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        StorageInfoDataAccess da = (StorageInfoDataAccess) StorageFactory.getDataAccess(StorageInfoDataAccess.class);
+        da.prepare(new StorageInfo(HdfsConstants.LAYOUT_VERSION, newNamespaceID(), clusterId, 0L));
+        return null;
+      }
+    };
+    formatHandler.handle();
+  }
 
   /**
    * Generate new namespaceID.
@@ -525,14 +548,12 @@ public class NNStorage extends Storage implements Closeable {
    *
    * @return new namespaceID
    */
-  private int newNamespaceID() {
+  private static int newNamespaceID() {
     int newID = 0;
-    while(newID == 0)
-        // FIXME[Hooman]: NamespaceID should be the same for the whole cluster.
-        // Hack is to set a fixed number here. Proper solution is to set a global
-      // namespace id and everyone access it.
-//      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
-      newID = 99999;
+    while (newID == 0) {
+      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);
+    }  // use 31 bits only
+//      newID = 99999;
     return newID;
   }
 
@@ -968,14 +989,13 @@ public class NNStorage extends Storage implements Closeable {
       rand = DFSUtil.getRandom().nextInt(Integer.MAX_VALUE);
     }
      //String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
-    // [J] We need to make the block pool id consistent among all namenodes
-    String bpid = "h4ck3d-810ck-p001";
+    String bpid = ExtendedBlock.DEFAULT_BLOCK_POOL_ID;
     return bpid;
   }
 
   /** Validate and set block pool ID */
   void setBlockPoolID(String bpid) {
-      if(!bpid.equals("h4ck3d-810ck-p001"))
+      if(!bpid.equals(ExtendedBlock.DEFAULT_BLOCK_POOL_ID))
       {
           LOG.error("wrong block pool id is set expecting h4ck3d-810ck-p001 and got "+ bpid);
           throw new IllegalStateException("wrong block pool id is set expecting h4ck3d-810ck-p001 and got "+ bpid);
@@ -1020,53 +1040,5 @@ public class NNStorage extends Storage implements Closeable {
       StorageDirectory sd = it.next();
       inspector.inspectDirectory(sd);
     }
-  }
-
-  /**
-   * Iterate over all of the storage dirs, reading their contents to determine
-   * their layout versions. Returns an FSImageStorageInspector which has
-   * inspected each directory.
-   * 
-   * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
-   * @throws IOException if no valid storage dirs are found
-   */
-  FSImageStorageInspector readAndInspectDirs()
-      throws IOException {
-    int minLayoutVersion = Integer.MAX_VALUE; // the newest
-    int maxLayoutVersion = Integer.MIN_VALUE; // the oldest
-    
-    // First determine what range of layout versions we're going to inspect
-    for (Iterator<StorageDirectory> it = dirIterator();
-         it.hasNext();) {
-      StorageDirectory sd = it.next();
-      if (!sd.getVersionFile().exists()) {
-        FSImage.LOG.warn("Storage directory " + sd + " contains no VERSION file. Skipping...");
-        continue;
-      }
-      readProperties(sd); // sets layoutVersion
-      minLayoutVersion = Math.min(minLayoutVersion, getLayoutVersion());
-      maxLayoutVersion = Math.max(maxLayoutVersion, getLayoutVersion());
-    }
-    
-    if (minLayoutVersion > maxLayoutVersion) {
-      throw new IOException("No storage directories contained VERSION information");
-    }
-    assert minLayoutVersion <= maxLayoutVersion;
-    
-    // If we have any storage directories with the new layout version
-    // (ie edits_<txnid>) then use the new inspector, which will ignore
-    // the old format dirs.
-    FSImageStorageInspector inspector;
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, minLayoutVersion)) {
-      inspector = new FSImageTransactionalStorageInspector();
-      if (!LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, maxLayoutVersion)) {
-        FSImage.LOG.warn("Ignoring one or more storage directories with old layouts");
-      }
-    } else {
-      inspector = new FSImagePreTransactionalStorageInspector();
-    }
-    
-    inspectStorageDirs(inspector);
-    return inspector;
   }
 }

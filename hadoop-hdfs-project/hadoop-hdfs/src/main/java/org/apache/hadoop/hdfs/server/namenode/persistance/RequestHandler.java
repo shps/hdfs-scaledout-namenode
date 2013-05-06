@@ -46,7 +46,11 @@ public abstract class RequestHandler {
     // Block Generationstamp
     GET_GENERATION_STAMP, SET_GENERATION_STAMP,
     //FSNamesystem
-    TOTAL_FILES,
+    TOTAL_FILES,GET_STORAGE_INFO,
+    //ClusterInfos
+    GET_CLUSTER_INFO,
+    // NNStorage
+    ADD_STORAGE_INFO,
     //NamenodeJspHElper
     GET_SAFE_MODE_TEXT,GENERATE_HEALTH_REPORT, GET_INODE, TO_XML_BLOCK_INFO,
     TO_XML_CORRUPT_BLOCK_INFO,

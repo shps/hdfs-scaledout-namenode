@@ -60,7 +60,6 @@ public class ExcessReplicaContext extends EntityContext<ExcessReplica> {
     switch (eCounter) {
       case All:
         log("count-all-excess");
-        aboutToAccessStorage();
         return dataAccess.countAll() + newExReplica.size() - removedExReplica.size() - nullCount;
     }
 

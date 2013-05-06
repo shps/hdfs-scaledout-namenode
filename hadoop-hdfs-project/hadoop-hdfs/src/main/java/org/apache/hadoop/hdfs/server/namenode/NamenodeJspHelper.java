@@ -50,8 +50,6 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.lock.INodeUtil;
 import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.INodeLockType;
-import org.apache.hadoop.hdfs.server.namenode.lock.TransactionLockManager.INodeResolveType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
 import org.apache.hadoop.hdfs.server.namenode.persistance.RequestHandler.OperationType;
 import org.apache.hadoop.hdfs.server.namenode.persistance.TransactionalRequestHandler;
@@ -102,23 +100,7 @@ class NamenodeJspHelper {
 
   static String getInodeLimitText(final FSNamesystem fsn)  throws PersistanceException,
           IOException{
-      TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TOTAL_FILES) {
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tlm = new TransactionLockManager();
-        tlm.addINode(
-                INodeResolveType.ONLY_PATH,
-                INodeLockType.READ_COMMITED,
-                new String[]{"/"});
-        tlm.acquire();
-      }
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return fsn.dir.totalInodes();
-      }
-    };
-    long inodes = (Long) totalInodesHandler.handle();
+    long inodes = fsn.dir.totalInodes();
     long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
 
@@ -238,34 +220,6 @@ class NamenodeJspHelper {
 
     void generateConfReport(JspWriter out, NameNode nn,
             HttpServletRequest request) throws IOException {
-      FSNamesystem fsn = nn.getNamesystem();
-      FSImage fsImage = fsn.getFSImage();
-      List<Storage.StorageDirectory> removedStorageDirs = fsImage.getStorage().getRemovedStorageDirs();
-
-      // FS Image storage configuration
-      out.print("<h3> " + nn.getRole() + " Storage: </h3>");
-      out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
-              + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
-
-      StorageDirectory st = null;
-      for (Iterator<StorageDirectory> it = fsImage.getStorage().dirIterator(); it.hasNext();) {
-        st = it.next();
-        String dir = "" + st.getRoot();
-        String type = "" + st.getStorageDirType();
-        out.print("<tr><td>" + dir + "</td><td>" + type
-                + "</td><td>Active</td></tr>");
-      }
-
-      long storageDirsSize = removedStorageDirs.size();
-      for (int i = 0; i < storageDirsSize; i++) {
-        st = removedStorageDirs.get(i);
-        String dir = "" + st.getRoot();
-        String type = "" + st.getStorageDirType();
-        out.print("<tr><td>" + dir + "</td><td>" + type
-                + "</td><td><font color=red>Failed</font></td></tr>");
-      }
-
-      out.print("</table></div><br>\n");
     }
 
     void generateHealthReport(JspWriter out, NameNode nn,

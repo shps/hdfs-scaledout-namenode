@@ -75,7 +75,6 @@ public class LeaseContext extends EntityContext<Lease> {
           return leases.size() - byHoldernullCount;
         } else {
           log("count-all-leases", CacheHitState.LOSS);
-          aboutToAccessStorage();
           return dataAccess.countAll();
         }
     }

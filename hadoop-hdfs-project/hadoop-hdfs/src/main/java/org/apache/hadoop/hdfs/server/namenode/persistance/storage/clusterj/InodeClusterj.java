@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.InodeDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 
@@ -30,6 +31,11 @@ import org.apache.hadoop.io.DataOutputBuffer;
  * @author Hooman <hooman@sics.se>
  */
 public class InodeClusterj extends InodeDataAccess {
+
+  @Override
+  public int countAll() throws StorageException {
+    return CountHelper.countAll(TABLE_NAME);
+  }
 
   @PersistenceCapable(table = TABLE_NAME)
   @Index(name = "path_lookup_idx")

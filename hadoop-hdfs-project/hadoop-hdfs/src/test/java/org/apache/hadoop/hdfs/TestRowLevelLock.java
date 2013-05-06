@@ -30,7 +30,7 @@ import org.junit.Test;
 public class TestRowLevelLock {
 
   final static Log LOG = LogFactory.getLog(TestRowLevelLock.class);
-  final int size = 10000;
+  final int size = 1000;
   final int numThreads = 100;
   final int opsPerThread = size / numThreads;
   final String[][] files = new String[numThreads][opsPerThread];

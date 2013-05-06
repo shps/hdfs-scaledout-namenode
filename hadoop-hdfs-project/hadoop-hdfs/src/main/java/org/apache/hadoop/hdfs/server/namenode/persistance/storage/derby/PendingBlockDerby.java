@@ -115,4 +115,9 @@ public class PendingBlockDerby extends PendingBlockDataAccess {
 
     return newPBlocks;
   }
+
+  @Override
+  public int countValidPendingBlocks(long timeLimit) throws StorageException {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

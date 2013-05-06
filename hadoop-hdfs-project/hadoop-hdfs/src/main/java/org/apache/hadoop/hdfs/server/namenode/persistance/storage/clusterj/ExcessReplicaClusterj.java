@@ -13,6 +13,7 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessReplica;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.ExcessReplicaDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
@@ -39,17 +40,7 @@ public class ExcessReplicaClusterj extends ExcessReplicaDataAccess {
 
   @Override
   public int countAll() throws StorageException {
-    try {
-      Session session = connector.obtainSession();
-      QueryBuilder qb = session.getQueryBuilder();
-
-      QueryDomainType qdt = qb.createQueryDefinition(ExcessReplicaDTO.class);
-      Query<ExcessReplicaDTO> query = session.createQuery(qdt);
-      List<ExcessReplicaDTO> results = query.getResultList();
-      return results.size();
-    } catch (Exception e) {
-      throw new StorageException(e);
-    }
+    return CountHelper.countAll(TABLE_NAME);
   }
 
   @Override

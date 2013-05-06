@@ -1094,19 +1094,15 @@ public class BlockManager {
         corruptReplicaBlocksCount = countCorruptReplica(opType);
     }
 
-    private int countCorruptReplica(OperationType opType) throws IOException {
-        return (Integer) new LightWeightRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                CorruptReplicaDataAccess da = (CorruptReplicaDataAccess) StorageFactory.getDataAccess(CorruptReplicaDataAccess.class);
-                Collection result = da.findAll();
-                if (result != null) {
-                    return result.size();
-                }
-                return 0;
-            }
-        }.handle();
-    }
+  private int countCorruptReplica(OperationType opType) throws IOException {
+    return (Integer) new LightWeightRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        CorruptReplicaDataAccess da = (CorruptReplicaDataAccess) StorageFactory.getDataAccess(CorruptReplicaDataAccess.class);
+        return da.countAll();
+      }
+    }.handle();
+  }
 
     /**
      * Return number of under-replicated but not missing blocks
@@ -1271,39 +1267,42 @@ public class BlockManager {
         return blocksToReplicate;
     }
 
-    private int findBlock(final List<List<Block>> blocksToReplicate,
-            final UnderReplicatedBlock urb, final int urbSize, OperationType opType) throws IOException {
-        TransactionalRequestHandler findBlock = new TransactionalRequestHandler(opType) {
-            @Override
-            public Object performTask() throws PersistanceException, IOException {
-                Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
-                int priority = urb.getLevel();
-                if (priority < 0 || priority >= blocksToReplicate.size()) {
-                    LOG.warn("Unexpected replication priority: "
-                            + priority + " " + block);
-                } else {
-                    if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
-                    {
-                        neededReplications.remove(new Block(urb.getBlockId()), priority);
-                        return urbSize - 1;
-                    } else {
-                        blocksToReplicate.get(priority).add(block);
-                    }
-                }
-                return urbSize;
-            }
+   private int findBlock(
+          final List<List<Block>> blocksToReplicate,
+          final UnderReplicatedBlock urb,
+          final int urbSize,
+          OperationType opType)
+          throws IOException {
+    TransactionalRequestHandler findBlock = new TransactionalRequestHandler(opType) {
+      @Override
+      public Object performTask() throws PersistanceException, IOException {
+        Block block = EntityManager.find(BlockInfo.Finder.ById, urb.getBlockId());
+        int priority = urb.getLevel();
+        if (priority < 0 || priority >= blocksToReplicate.size()) {
+          LOG.warn("Unexpected replication priority: "
+                  + priority + " " + block);
+        } else {
+          if (block == null) // Block does not exist and should be removed from UnderReplicatedBlocks.
+          {
+            neededReplications.remove(new Block(urb.getBlockId()), priority);
+            return urbSize - 1;
+          } else {
+            blocksToReplicate.get(priority).add(block);
+          }
+        }
+        return urbSize;
+      }
 
-            @Override
-            public void acquireLock() throws PersistanceException, IOException {
-                UnderReplicatedBlock urb = (UnderReplicatedBlock) getParams()[0];
-                TransactionLockManager lm = new TransactionLockManager();
-                lm.addBlock(LockType.WRITE, urb.getBlockId());
-                lm.addUnderReplicatedBlock(LockType.WRITE);
-                lm.acquire();
-            }
-        };
-        return (Integer) findBlock.setParams(urb, urbSize).handle();
-    }
+      @Override
+      public void acquireLock() throws PersistanceException, IOException {
+        TransactionLockManager lm = new TransactionLockManager();
+        lm.addBlock(LockType.WRITE, urb.getBlockId());
+        lm.addUnderReplicatedBlock(LockType.WRITE);
+        lm.acquire();
+      }
+    };
+    return (Integer) findBlock.handle();
+  }
 
     /**
      * Replicate a block
@@ -1651,7 +1650,7 @@ public class BlockManager {
       public void acquireLock() throws PersistanceException, IOException {
         TransactionLockManager lm = new TransactionLockManager();
         lm.addINode(TransactionLockManager.INodeLockType.WRITE).
-                addBlock(LockType.WRITE).
+                addBlock(LockType.WRITE, p.getBlockId()).
                 addReplica(LockType.READ).
                 addExcess(LockType.READ).
                 addCorrupt(LockType.READ).

@@ -34,7 +34,7 @@
   </property>
   <property>
     <name>dfs.dbconnector.database</name>
-    <value>kthfs_old</value>
+    <value>your database name</value>
   </property>
   <property>
     <name>dfs.dbconnector.num-session-factories</name>
@@ -44,5 +44,17 @@
     <name>dfs.storage.derby.protocol</name>
     <value>jdbc:derby://localhost:1527/memory:derbyDB</value>
     <description>"jdbc:derby:memory:derbyDB" for embedded in-memory or "jdbc:derby://localhost:1527/memory:derbyDB" for network server in-memory</description>
+  </property>
+  <property>
+    <name>dfs.storage.mysql.protocol</name>
+    <value>jdbc:mysql://cloud11.sics.se:3306/your database name</value>
+  </property>
+  <property>
+    <name>dfs.storage.mysql.user</name>
+    <value>your user name</value>
+  </property>
+  <property>
+    <name>dfs.storage.mysql.password</name>
+    <value></value>
   </property>
 </configuration>

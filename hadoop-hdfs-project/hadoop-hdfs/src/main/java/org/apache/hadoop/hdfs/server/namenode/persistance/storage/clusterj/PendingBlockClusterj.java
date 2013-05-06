@@ -15,12 +15,18 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.persistance.data_access.entity.PendingBlockDataAccess;
 import org.apache.hadoop.hdfs.server.namenode.persistance.storage.StorageException;
+import org.apache.hadoop.hdfs.server.namenode.persistance.storage.mysqlserver.CountHelper;
 
 /**
  *
  * @author Hooman <hooman@sics.se>
  */
 public class PendingBlockClusterj extends PendingBlockDataAccess {
+
+  @Override
+  public int countValidPendingBlocks(long timeLimit) throws StorageException {
+    return CountHelper.countWithCriterion(TABLE_NAME, String.format("%s>%d", TIME_STAMP, timeLimit));
+  }
 
   @PersistenceCapable(table = TABLE_NAME)
   public interface PendingBlockDTO {

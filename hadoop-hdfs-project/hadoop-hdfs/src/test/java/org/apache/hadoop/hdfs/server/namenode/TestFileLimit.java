@@ -63,27 +63,11 @@ public class TestFileLimit extends TestCase {
   }
 
   private void waitForLimit(final FSNamesystem namesys, long num) {
-    TransactionalRequestHandler totalInodesHandler = new TransactionalRequestHandler(OperationType.TEST) {
-      @Override
-      public void acquireLock() throws PersistanceException, IOException {
-        TransactionLockManager tlm = new TransactionLockManager();
-        tlm.addINode(
-                TransactionLockManager.INodeResolveType.ONLY_PATH,
-                TransactionLockManager.INodeLockType.READ_COMMITED,
-                new String[]{"/"});
-        tlm.acquire();
-      }
-
-      @Override
-      public Object performTask() throws PersistanceException, IOException {
-        return namesys.dir.totalInodes();
-      }
-    };
     // wait for number of blocks to decrease
     while (true) {
       long totalInodes;
       try {
-        totalInodes = (Long) totalInodesHandler.handle();
+        totalInodes = namesys.dir.totalInodes();
         long total = namesys.getBlocksTotal() + totalInodes;
         LOG.info("Comparing current nodes " + total
                 + " to become " + num);

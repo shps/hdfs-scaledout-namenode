@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.persistance.PersistanceException;
@@ -60,8 +61,6 @@ class UpgradeManagerNamenode extends UpgradeManager {
     if(!upgradeState) {
       initializeUpgrade();
       if(!upgradeState) return false;
-      // write new upgrade state into disk
-      namesystem.getFSImage().getStorage().writeAll();
     }
     assert currentUpgrades != null : "currentUpgrades is null";
     this.broadcastCommand = currentUpgrades.first().startUpgrade();
@@ -113,7 +112,6 @@ class UpgradeManagerNamenode extends UpgradeManager {
   public synchronized void completeUpgrade() throws IOException, PersistanceException {
     // set and write new upgrade state into disk
     setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);
-    namesystem.getFSImage().getStorage().writeAll();
     currentUpgrades = null;
     broadcastCommand = null;
     namesystem.leaveSafeMode(false);
@@ -122,13 +120,11 @@ class UpgradeManagerNamenode extends UpgradeManager {
   synchronized UpgradeStatusReport distributedUpgradeProgress
                                   (UpgradeAction action) throws IOException {
     boolean isFinalized = false;
-    if(currentUpgrades == null) { // no upgrades are in progress
-      FSImage fsimage = namesystem.getFSImage();
-      isFinalized = fsimage.isUpgradeFinalized();
-      if(isFinalized) // upgrade is finalized
-        return null;  // nothing to report
-      return new UpgradeStatusReport(fsimage.getStorage().getLayoutVersion(),
-                                     (short)101, isFinalized);
+    if (currentUpgrades == null) { // no upgrades are in progress
+      isFinalized = true; // We do not have FSImage to backup namespace before upgrade anymore.
+      StorageInfo storageInfo = (StorageInfo) namesystem.getStorageInfoHandler.handle();
+      return new UpgradeStatusReport(storageInfo.layoutVersion,
+              (short) 101, isFinalized);
     }
     UpgradeObjectNamenode curUO = (UpgradeObjectNamenode)currentUpgrades.first();
     boolean details = false;
