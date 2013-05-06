@@ -388,7 +388,8 @@ public class NameNode
     {
         UserGroupInformation.setConfiguration(conf);
         loginAsNameNodeUser(conf);
-
+        
+        StorageFactory.setConfiguration(conf);
 
         NameNode.initMetrics(conf, this.getRole());
         loadNamesystem(conf);
@@ -735,16 +736,16 @@ public class NameNode
         LOG.info("Formatting using clusterid: " + clusterId);
 
         // Format storage
-        try
-        {
-        if( !StorageFactory.getConnector().formatStorage() )
-        {
-          return false;
-        }
-        }catch(PersistanceException e)
-        {
-          LOG.error("Format Failed"+e);
-        }
+//        try
+//        {
+//        if( !StorageFactory.getConnector().formatStorage() )
+//        {
+//          return false;
+//        }
+//        }catch(PersistanceException e)
+//        {
+//          LOG.error("Format Failed"+e);
+//        }
         NNStorage.formatStorageInfo(clusterId);
 	
 
