@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:pe="http://primefaces.org/ui/extensions">
+    <h:body>
+        <ui:composition>
+            <div id="providerConfigForm" >
+
+                <br/>
+                <h:panelGroup id="msg1">
+                    <p:messages severity="warn" showDetail="true"/>
+                    <p:growl for="success" showDetail="true" sticky="true" />
+                </h:panelGroup>
+                <h:form id="providerForm" rendered="#{providerMB.showProvider}">                                    
+                    <p:panel id="vmCredentials" header="VM Credentials">
+                        <h:panelGrid columns="2">
+                            <h:outputLabel for="providerName" value="Provider" />
+                            <h:outputText id="providerName" value="#{providerMB.providerName}"/>
+                            
+                            <h:outputLabel for="groupName" value="Security Group Name"/>
+                            <p:watermark for="groupName" value="Security Group">
+                                <h:inputText id="groupName" value="#{providerMB.groupName}" size="30" required="true" disabled="#{cloudProviderController.enableForm}"/>
+                            </p:watermark>
+                            
+                            <h:outputLabel for="dashboardUsername" value="Username"/>
+                            <p:watermark for="dashboardUsername" value="Username for dashboard user">
+                                <h:inputText id="dashboardUsername" value="#{providerMB.dashboardUsername}" size="30" required="true" disabled="#{cloudProviderController.enableForm}"/>
+                            </p:watermark>
+
+                            <h:outputLabel for="dashboardPassword" value="Password" />
+                            <p:watermark for="dashboardPassword" value="Password for dashboard user">
+                                <h:inputSecret id="dashboardPassword" value="#{providerMB.dashboardPassword}" size="30" required="true" disabled="#{cloudProviderController.enableForm}"/>
+                            </p:watermark>
+                            <h:outputLabel for="authorizePublicKey" value="Authorize Public Key"/>
+                            <h:inputTextarea id="authorizePublicKey" value="#{providerMB.publicKey}" cols="30" rows="11" required="true" disabled="#{cloudProviderController.enableForm}"/>
+
+                        </h:panelGrid>
+                    </p:panel>
+
+
+
+                    <p:commandButton id="providerButton" value="Launch Instance" 
+                                     action="#{cloudProviderController.launchInstance()}" 
+                                     update=":instancesTab:msg1"
+                                     onclick="pollCreate.start();"
+                                     oncomplete="pollCreate.stop();" disabled="#{cloudProviderController.enableForm}"/>
+                    <p:blockUI block=":instancesTab" trigger="providerForm:providerButton">
+                        <h:panelGrid id="blockContent" columns="2" >
+                            <div class="windows8" >
+                                <div class="wBall" id="wBall_1">
+                                    <div class="wInnerBall">
+                                    </div>
+                                </div>
+                                <div class="wBall" id="wBall_2">
+                                    <div class="wInnerBall">
+                                    </div>
+                                </div>
+                                <div class="wBall" id="wBall_3">
+                                    <div class="wInnerBall">
+                                    </div>
+                                </div>
+                                <div class="wBall" id="wBall_4">
+                                    <div class="wInnerBall">
+                                    </div>
+                                </div>
+                                <div class="wBall" id="wBall_5">
+                                    <div class="wInnerBall">
+                                    </div>
+                                </div>
+                            </div>
+                            <h:outputLabel id="statusCreate" value="#{cloudProviderController.messages.showMessage()}" 
+                                           style="white-space:nowrap;" >
+                            </h:outputLabel>
+                            <p:poll widgetVar="pollCreate" interval="10" autoStart="false" update="statusCreate" async="true" partialSubmit="true" process="@this"/>
+                        </h:panelGrid>
+                    </p:blockUI>
+                </h:form>
+            </div>
+        </ui:composition>
+    </h:body>
+</html>
+

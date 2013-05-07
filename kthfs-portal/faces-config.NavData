@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scene Scope="Project" version="2">
+    <Scope Scope="Faces Configuration Only">
+        <Node id="sauron/launching.xhtml" x="400" y="150" zoom="true"/>
+        <Node id="sauron/host.xhtml" x="650" y="150" zoom="true"/>
+        <Node id="index.xhtml" x="150" y="150" zoom="true"/>
+        <Node id="sauron/hosts.xhtml" x="150" y="300" zoom="true"/>
+    </Scope>
+    <Scope Scope="Project">
+        <Node id="sauron/launching.xhtml" x="400" y="300" zoom="true"/>
+        <Node id="sauron/host.xhtml" x="650" y="150" zoom="true"/>
+        <Node id="sauron/start.xhtml" x="400" y="450" zoom="true"/>
+        <Node id="index.xhtml" x="400" y="150" zoom="true"/>
+        <Node id="sauron/template/common/commonHeader.xhtml" x="150" y="450" zoom="true"/>
+        <Node id="loginError.xhtml" x="150" y="300" zoom="true"/>
+        <Node id="sauron/layout.xhtml" x="821" y="361" zoom="true"/>
+        <Node id="sauron/hosts.xhtml" x="900" y="150" zoom="true"/>
+        <Node id="sauron/template/providerConfigForm.xhtml" x="150" y="150" zoom="true"/>
+    </Scope>
+    <Scope Scope="All Faces Configurations"/>
+</Scene>

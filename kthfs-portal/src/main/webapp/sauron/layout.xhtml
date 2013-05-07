@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:c="http://java.sun.com/jsp/jstl/core">
+
+    <h:head>
+        <title><ui:insert name="title">BioBankCloud</ui:insert></title>
+        <link type="text/css" rel="stylesheet" href="/project/faces/javax.faces.resource/theme.css?ln=primefaces-redmond" />
+        <link rel="stylesheet" type="text/css" href="#{resource['/css/layout.css']}" />
+
+    </h:head>
+
+
+    <h:body>
+
+        <div id="layout">
+            <div id="header">
+                <!--<ui:include src="/sauron/template/common/commonHeader.xhtml"/>-->
+                <div id="logo" align="right" />
+                <h:form class="stylelayout" id="formToolbar">  
+                    <p:toolbar styleClass="MainToolbar">  
+                        <p:toolbarGroup align="left">  
+                            <!--                            <h:outputLabel value="Selected Provider: "/>-->
+
+                            <p:menu overlay="true" trigger="providerBtn" my="left top" at="bottom left">
+                                <p:menuitem value="Amazon-EC2" action ="#{providerMB.updateName}">
+                                    <f:setPropertyActionListener target="#{providerMB.providerName}" value="Amazon-EC2"/>
+                                </p:menuitem>
+
+                                <p:menuitem value="Openstack" action ="#{providerMB.updateName}">                              
+                                    <f:setPropertyActionListener target="#{providerMB.providerName}" value="OpenStack"/>
+                                </p:menuitem>
+
+                                <p:menuitem value="Rackspace" action ="#{providerMB.updateName}">
+                                    <f:setPropertyActionListener target="#{providerMB.providerName}" value="Rackspace"/>
+                                </p:menuitem>
+                            </p:menu>
+                            <p:commandButton id="providerBtn" value="Select Provider:" type="button"/>
+                            <h:outputLabel id="selectedProvider"
+                                           rendered="#{providerMB.showProvider}"
+                                           value="#{providerMB.providerName} "/>
+                            <h:outputLabel rendered="#{!providerMB.showProvider}"
+                                           value="none"/>
+
+                        </p:toolbarGroup>  
+                        <p:toolbarGroup align="right">
+                            <p:commandButton value="SetupCredentials" action="/sauron/setup.xhtml"/>
+                            <p:commandButton id="userBtn" value=" #{userController.loginName}" type="button" icon="ui-icon-person"/>  
+                            <p:menu overlay="true" trigger="userBtn" my="left top" at="left bottom" >  
+                                <p:menuitem value="Change Password" actionListener='#{userController.changePassword()}' update=":formToolbar:messages" ajax="false" />  
+                                <p:separator/>
+                                <p:menuitem value="Logout" action='#{authBackingBean.logout}' update=":formToolbar:messages" ajax="false"/> 
+                            </p:menu>  
+                        </p:toolbarGroup>  
+                    </p:toolbar> 
+                </h:form>
+            </div>
+            <div id="content" align="center">
+                <br/>
+                <ui:insert name="form">
+                    <p:tabView id="instancesTab" rendered="#{providerMB.showProvider}">
+                        <p:tab id="tab1" title="Create VM Instance">
+
+                            <ui:include src="/sauron/template/providerConfigForm.xhtml"/>
+
+                        </p:tab>
+                        <p:tab id="tab2" title="Destroy VM Instance">
+                            <ui:include src="/sauron/template/destroyInstancesForm.xhtml"/>
+                        </p:tab>
+
+                    </p:tabView>
+                </ui:insert>
+            </div>
+
+            <div id="footer">
+
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+
+    </h:body>
+
+</html>
