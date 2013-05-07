@@ -15,7 +15,7 @@ import javax.faces.event.ActionEvent;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.StreamedContent;
 import org.primefaces.model.UploadedFile;
-import se.kth.kthfsdashboard.service.ServiceEJB;
+import se.kth.kthfsdashboard.role.RoleEJB;
 import se.kth.kthfsdashboard.struct.NodesTableItem;
 
 /**
@@ -27,7 +27,7 @@ import se.kth.kthfsdashboard.struct.NodesTableItem;
 public class MySQLController implements Serializable {
 
    @EJB
-   ServiceEJB serviceEJB;
+   RoleEJB roleEjb;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
    @ManagedProperty("#{param.cluster}")
@@ -121,8 +121,8 @@ public class MySQLController implements Serializable {
       try {
          // Finds hostname of mysqld
          // Role=mysqld , Service=MySQLCluster, Cluster=cluster
-         final String SERVICE = "mysqld";
-         String host = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, SERVICE).get(0).getHostname();
+         final String ROLE = "mysqld";
+         String host = roleEjb.findRoles(cluster, serviceGroup, ROLE).get(0).getHostname();
          return dao.readNodesFromNdbinfo(host);
       } catch (Exception e) {
          return null;

@@ -13,8 +13,10 @@ import javax.ejb.EJB;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
-import se.kth.kthfsdashboard.service.Service;
-import se.kth.kthfsdashboard.service.ServiceEJB;
+import se.kth.kthfsdashboard.role.Role;
+import se.kth.kthfsdashboard.role.Role.RoleType;
+import se.kth.kthfsdashboard.role.RoleEJB;
+import se.kth.kthfsdashboard.service.ServiceType;
 import se.kth.kthfsdashboard.struct.DatePeriod;
 
 /**
@@ -26,14 +28,14 @@ import se.kth.kthfsdashboard.struct.DatePeriod;
 public class GraphController implements Serializable {
 
    @EJB
-   private ServiceEJB serviceEJB;
+   private RoleEJB roleEjb;
    @ManagedProperty("#{param.cluster}")
    private String cluster;
    @ManagedProperty("#{param.hostname}")
    private String hostname;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
-   private String service;
+   private String role;
    private Date start;
    private Date end;
    private String period;
@@ -130,12 +132,12 @@ public class GraphController implements Serializable {
       this.serviceGroup = serviceGroup;
    }
 
-   public String getService() {
-      return service;
+   public String getRole() {
+      return role;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public void setRole(String role) {
+      this.role = role;
    }
 
    public Date getStart() {
@@ -256,12 +258,12 @@ public class GraphController implements Serializable {
       return getGraphUrl(hostname, plugin, type, plugin + "all");
    }
 
-   public String getNamenodeGraphUrl(String service, String chartType) {
+   public String getNamenodeGraphUrl(String role, String chartType) {
       String url = "../rest/collectd/graph?";
       HashMap<String, String> params = new HashMap<String, String>();
 
       if (chartType.startsWith("serv_nn_")) {
-         List<String> namenodes = serviceEJB.findHostnameByInstanceGroupService(cluster, Service.ServiceClass.KTHFS.toString(), "namenode");
+         List<String> namenodes = roleEjb.findHostname(cluster, ServiceType.KTHFS.toString(), RoleType.namenode.toString());
          String namenodesString = "";
          for (String namenode : namenodes) {
             if (!namenodesString.isEmpty()) {
@@ -301,12 +303,12 @@ public class GraphController implements Serializable {
 
       // Finds hostname of mysqld
       // Role=mysqld , Service=MySQLCluster, Clusters=cluster
-      final String MYSQLD_SERVICE = "mysqld";
+      final String MYSQLD_ROLE = "mysqld";
 
-      List<Service> services = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, MYSQLD_SERVICE);
+      List<Role> roles = roleEjb.findRoles(cluster, serviceGroup, MYSQLD_ROLE);
       String host = "";
-      if (services.size() > 0) {
-         host = services.get(0).getHostname();
+      if (roles.size() > 0) {
+         host = roles.get(0).getHostname();
       }
       String url = "../rest/collectd/graph?";
       HashMap<String, String> params = new HashMap<String, String>();
@@ -316,8 +318,8 @@ public class GraphController implements Serializable {
       params.put("hostname", host);
       if (chartType.equals("mysql_freeDataMemory") || chartType.equals("mysql_freeIndexMemory")
               || chartType.equals("mysql_totalDataMemory") || chartType.equals("mysql_totalIndexMemory")) {
-         final String NDB_SERVICE = "ndb";
-         Long n = serviceEJB.findServiceCount(cluster, serviceGroup, NDB_SERVICE);
+         final String NDB_ROLE = "ndb";
+         Long n = roleEjb.count(cluster, serviceGroup, NDB_ROLE);
          params.put("n", n.toString());
       }
       for (Entry<String, String> entry : params.entrySet()) {

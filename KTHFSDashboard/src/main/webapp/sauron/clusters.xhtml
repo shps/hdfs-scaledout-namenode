@@ -65,7 +65,7 @@
                         <p:commandLink action="#{serviceController.gotoServiceInstances}" ajax="false">
                            <h:outputText value="${item.value} ${item.key}"/>
                            <f:param name="cluster" value="#{cluster.name}"/>
-                           <f:param name="service" value="#{item.key}"/>
+                           <f:param name="role" value="#{item.key}"/>
                            <f:param name="servicegroup" value="#{serviceController.findServiceByRole(item.key)}"/>
                         </p:commandLink>
                         <p:spacer width="6" height="0" rendered="#{!status.last}"/>

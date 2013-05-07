@@ -12,33 +12,28 @@ import javax.faces.bean.RequestScoped;
  */
 @ManagedBean
 @RequestScoped
-//@ViewScoped
 public class CommandController {
 
     @EJB
     private CommandEJB commandEJB;
     @ManagedProperty("#{param.hostname}")
     private String hostname;
-    @ManagedProperty("#{param.service}")
-    private String service;
+    @ManagedProperty("#{param.role}")
+    private String role;
     @ManagedProperty("#{param.servicegroup}")
     private String serviceGroup;
     @ManagedProperty("#{param.cluster}")
     private String cluster;
 
-    
-//    private HashMap<String, InstanceInfo> commands = new HashMap<String, InstanceInfo>();
-
     public CommandController() {
-
-
-    }
-    public String getService() {
-        return service;
     }
 
-    public void setService(String service) {
-        this.service = service;
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public String getServiceGroup() {
@@ -67,22 +62,22 @@ public class CommandController {
 
 
     public List<Command> getRecentCommandsByInstance() {
-        List<Command> commands = commandEJB.findRecentByInstance(cluster);
+        List<Command> commands = commandEJB.findRecentByCluster(cluster);
         return commands;
     }
 
     public List<Command> getRunningCommandsByInstance() {
-        List<Command> commands = commandEJB.findRunningByInstance(cluster);
+        List<Command> commands = commandEJB.findRunningByCluster(cluster);
         return commands;
     }
 
     public List<Command> getRecentCommandsByInstanceGroup() {
-        List<Command> commands = commandEJB.findRecentByInstanceGroup(cluster, serviceGroup);
+        List<Command> commands = commandEJB.findRecentByClusterGroup(cluster, serviceGroup);
         return commands;
     }
 
     public List<Command> getRunningCommandsByInstanceGroup() {
-        List<Command> commands = commandEJB.findRunningByInstanceGroup(cluster, serviceGroup);
+        List<Command> commands = commandEJB.findRunningByClusterGroup(cluster, serviceGroup);
         return commands;
     }    
 }

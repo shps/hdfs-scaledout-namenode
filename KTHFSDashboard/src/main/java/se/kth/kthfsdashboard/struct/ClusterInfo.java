@@ -13,14 +13,12 @@ public class ClusterInfo {
    private String name;
    private String status;
    private String health;
-   private String type;
    private Map roleCounts;
    private List<String> services;
 
-   public ClusterInfo(String name, String type, String status, String health) {
+   public ClusterInfo(String name, String status, String health) {
       roleCounts = new HashMap<String, Integer>();
       this.name = name;
-      this.type = type;
       this.status = status;
       this.health = health;
 
@@ -28,10 +26,6 @@ public class ClusterInfo {
 
    public String getName() {
       return name;
-   }
-
-   public String getType() {
-      return type;
    }
 
    public String getStatus() {

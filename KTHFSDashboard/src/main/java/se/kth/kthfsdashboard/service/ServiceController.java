@@ -1,5 +1,7 @@
 package se.kth.kthfsdashboard.service;
 
+import se.kth.kthfsdashboard.role.RoleEJB;
+import se.kth.kthfsdashboard.role.Role;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,9 +16,10 @@ import javax.faces.bean.RequestScoped;
 import javax.faces.context.FacesContext;
 import javax.servlet.http.HttpServletRequest;
 import se.kth.kthfsdashboard.host.HostEJB;
-import se.kth.kthfsdashboard.struct.InstanceFullInfo;
+import se.kth.kthfsdashboard.role.Role.RoleType;
 import se.kth.kthfsdashboard.struct.InstanceInfo;
 import se.kth.kthfsdashboard.struct.ClusterInfo;
+import se.kth.kthfsdashboard.struct.InstanceFullInfo;
 import se.kth.kthfsdashboard.struct.ServiceRoleInfo;
 import se.kth.kthfsdashboard.util.Formatter;
 import se.kth.kthfsdashboard.util.WebCommunication;
@@ -32,11 +35,11 @@ public class ServiceController {
    @EJB
    private HostEJB hostEJB;
    @EJB
-   private ServiceEJB serviceEJB;
+   private RoleEJB roleEjb;
    @ManagedProperty("#{param.hostname}")
    private String hostname;
-   @ManagedProperty("#{param.service}")
-   private String service;
+   @ManagedProperty("#{param.role}")
+   private String role;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
    @ManagedProperty("#{param.cluster}")
@@ -50,45 +53,44 @@ public class ServiceController {
    public static Map<String, List<ServiceRoleInfo>> rolesMap = new HashMap<String, List<ServiceRoleInfo>>();
    public static Map<String, String> servicesRolesMap = new HashMap<String, String>();
 
-   
    public ServiceController() {
 
       List<ServiceRoleInfo> roles;
 
       roles = new ArrayList<ServiceRoleInfo>();
-      roles.add(new ServiceRoleInfo("NameNode", "namenode"));
-      roles.add(new ServiceRoleInfo("DataNode", "datanode"));
-      rolesMap.put(Service.ServiceClass.KTHFS.toString(), roles);
+      roles.add(new ServiceRoleInfo("NameNode", RoleType.namenode.toString()));
+      roles.add(new ServiceRoleInfo("DataNode", RoleType.datanode.toString()));
+      rolesMap.put(ServiceType.KTHFS.toString(), roles);
 
       roles = new ArrayList<ServiceRoleInfo>();
-      roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", "ndb"));
-      roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", "mysqld"));
-      roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", "mgmserver"));
-      rolesMap.put(Service.ServiceClass.MySQLCluster.toString(), roles);
+      roles.add(new ServiceRoleInfo("MySQL Cluster NDBD (ndb)", RoleType.ndb.toString()));
+      roles.add(new ServiceRoleInfo("MySQL Server (mysqld)", RoleType.mysqld.toString()));
+      roles.add(new ServiceRoleInfo("MGM Server (mgmserver)", RoleType.mgmserver.toString()));
+      rolesMap.put(ServiceType.MySQLCluster.toString(), roles);
 
       roles = new ArrayList<ServiceRoleInfo>();
-      roles.add(new ServiceRoleInfo("Resource Manager", "resourcemanager"));
-      roles.add(new ServiceRoleInfo("Node Manager", "nodemanager"));
-      rolesMap.put(Service.ServiceClass.YARN.toString(), roles);
-      
-      servicesRolesMap.put("namenode", Service.ServiceClass.KTHFS.toString());
-      servicesRolesMap.put("datanode", Service.ServiceClass.KTHFS.toString());
-      
-      servicesRolesMap.put("ndb", Service.ServiceClass.MySQLCluster.toString());
-      servicesRolesMap.put("mysqld", Service.ServiceClass.MySQLCluster.toString());      
-      servicesRolesMap.put("mgmserver", Service.ServiceClass.MySQLCluster.toString());      
+      roles.add(new ServiceRoleInfo("Resource Manager", RoleType.resourcemanager.toString()));
+      roles.add(new ServiceRoleInfo("Node Manager", RoleType.nodemanager.toString()));
+      rolesMap.put(ServiceType.YARN.toString(), roles);
 
-      servicesRolesMap.put("resourcemanager", Service.ServiceClass.YARN.toString());
-      servicesRolesMap.put("nodemanager", Service.ServiceClass.YARN.toString());
-      
+      servicesRolesMap.put(RoleType.namenode.toString(), ServiceType.KTHFS.toString());
+      servicesRolesMap.put(RoleType.datanode.toString(), ServiceType.KTHFS.toString());
+
+      servicesRolesMap.put(RoleType.ndb.toString(), ServiceType.MySQLCluster.toString());
+      servicesRolesMap.put(RoleType.mysqld.toString(), ServiceType.MySQLCluster.toString());
+      servicesRolesMap.put(RoleType.mgmserver.toString(), ServiceType.MySQLCluster.toString());
+
+      servicesRolesMap.put(RoleType.resourcemanager.toString(), ServiceType.YARN.toString());
+      servicesRolesMap.put(RoleType.nodemanager.toString(), ServiceType.YARN.toString());
+
    }
 
-   public String getService() {
-      return service;
+   public String getRole() {
+      return role;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public void setRole(String role) {
+      this.role = role;
    }
 
    public String getServiceGroup() {
@@ -125,31 +127,24 @@ public class ServiceController {
 
    public List<ClusterInfo> getClusters() {
 
+      // TODO: Insert correct Info for Service Types, ...
+      
       List<ClusterInfo> allClusters = new ArrayList<ClusterInfo>();
-
-      // TODO: Insert correct Infor for Service Types, ...
-      // service instances
-
-      List<String> instances = serviceEJB.findDistinctInstances();
-      for (String instance : instances) {
-
-
-         ClusterInfo instanceInfo = new ClusterInfo(instance, serviceEJB.findServiceClass(instance).toString(), "-", "-");
-
-         List<Service> services = serviceEJB.findByInstance(instance);
-         for (Service s : services) {
-            if (instanceInfo.getRoleCounts().containsKey(s.getService())) {
-               Integer count = (Integer) instanceInfo.getRoleCounts().get(s.getService());
-               instanceInfo.putToRoleCounts(s.getService(), count + 1);
+      for (String c : roleEjb.findClusters()) {
+         ClusterInfo clusterInfo = new ClusterInfo(c, "-", "-");
+         List<Role> roles = roleEjb.findRoles(c);
+         for (Role r : roles) {
+            if (clusterInfo.getRoleCounts().containsKey(r.getRole())) {
+               Integer count = (Integer) clusterInfo.getRoleCounts().get(r.getRole());
+               clusterInfo.putToRoleCounts(r.getRole(), count + 1);
             } else {
-               instanceInfo.putToRoleCounts(s.getService(), 1);
+               clusterInfo.putToRoleCounts(r.getRole(), 1);
             }
          }
+         List<String> serviceClasses = roleEjb.findServiceGroups(c);
+         clusterInfo.setServices(serviceClasses);
 
-         List<String> serviceGroups = serviceEJB.findDistinctServiceGroupByInstance(instance);
-         instanceInfo.setServices(serviceGroups);
-
-         allClusters.add(instanceInfo);
+         allClusters.add(clusterInfo);
       }
       return allClusters;
    }
@@ -162,32 +157,14 @@ public class ServiceController {
       return request.getAuthType().toString() + " - " + principal.getName();
    }
 
-   public List<InstanceInfo> getInstances() {
-      List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
-      List<Service> services = serviceEJB.findAllInstances();
-      for (Service s : services) {
-         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
-      }
-      return instances;
-   }
-
-   public List<InstanceInfo> getInstance() {
-      List<InstanceInfo> instanceInfoList = new ArrayList<InstanceInfo>();
-      List<Service> services = serviceEJB.findInstances(cluster, hostname, service);
-      for (Service s : services) {
-         instanceInfoList.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "?", s.getStatus(), s.getHealth().toString()));
-      }
-      return instanceInfoList;
-   }
-
    public List<InstanceFullInfo> getInstanceFullInfo() {
       List<InstanceFullInfo> instanceInfoList = new ArrayList<InstanceFullInfo>();
-      List<Service> services = serviceEJB.findInstances(cluster, hostname, service);
-      for (Service s : services) {
+      List<Role> roles = roleEjb.findByHostnameClusterRole(hostname, cluster, role);
+      for (Role r : roles) {
          String ip = hostEJB.findHostByName(hostname).getIp();
-         InstanceFullInfo i = new InstanceFullInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), ip, s.getWebPort(), "?", s.getStatus(), s.getHealth().toString());
-         i.setPid(s.getPid());
-         i.setUptime(Formatter.time(s.getUptime() * 1000));
+         InstanceFullInfo i = new InstanceFullInfo(r.getCluster(), r.getServiceGroup(), r.getRole(), r.getHostname(), ip, r.getWebPort(), "?", r.getStatus(), r.getHealth().toString());
+         i.setPid(r.getPid());
+         i.setUptime(Formatter.time(r.getUptime() * 1000));
          instanceInfoList.add(i);
       }
       return instanceInfoList;
@@ -195,26 +172,26 @@ public class ServiceController {
 
    public String doGotoClusterStatus() {
       return "cluster-status?faces-redirect=true&cluster=" + cluster;
-   }   
+   }
 
    public String gotoServiceInstance() {
       return "services-instances-status?faces-redirect=true&hostname="
-              + hostname + "&cluster=" + cluster + "&service=" + service;
+              + hostname + "&cluster=" + cluster + "&role=" + role;
    }
 
    public String gotoClusterStatus() {
       return "cluster-status?faces-redirect=true&cluster=" + cluster;
-   }   
+   }
 
-   public String gotoClusterCommands() {
+   public String gotoClusterCommandHistory() {
       return "cluster-commands?faces-redirect=true&cluster=" + cluster;
-   }   
-   
+   }
+
    public String gotoServiceStatus() {
       return "service-status?faces-redirect=true&cluster=" + cluster + "&servicegroup=" + serviceGroup;
    }
-   
-   public String gotoServiceInstances() {     
+
+   public String gotoServiceInstances() {
       String url = "service-instances?faces-redirect=true";
       if (hostname != null) {
          url += "&hostname=" + hostname;
@@ -225,66 +202,56 @@ public class ServiceController {
       if (serviceGroup != null) {
          url += "&servicegroup=" + serviceGroup;
       }
-      if (service != null) {
-         url += "&service=" + service;
+      if (role != null) {
+         url += "&role=" + role;
       }
       if (status != null) {
          url += "&status=" + status;
       }
-      return url;      
+      return url;
    }
-   
-   public String gotoServiceCommands() {
+
+   public String gotoServiceCommandHistory() {
       return "service-commands?faces-redirect=true&cluster=" + cluster + "&servicegroup=" + serviceGroup;
-   }   
-   
+   }
+
    public String gotoRole() {
-      return "role?faces-redirect=true&hostname=" + hostname + "&cluster=" + cluster +
-              "&servicegroup=" + serviceGroup + "&service=" + service;
+      return "role?faces-redirect=true&hostname=" + hostname + "&cluster=" + cluster
+              + "&servicegroup=" + serviceGroup + "&role=" + role;
    }
 
    public String getRoleUrl() {
       return "role.xhtml";
-   }   
+   }
 
    public String getHostUrl() {
       return "host.xhtml";
    }
 
-   public List<ServiceRoleInfo> getServiceRoles() {
-
-      List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
-      Service.ServiceClass serviceClass = serviceEJB.findServiceClass(cluster);
-      for (ServiceRoleInfo role : rolesMap.get(serviceClass.toString())) {
-         serviceRoles.add(setStatus(cluster, serviceGroup, role));
-      }
-      return serviceRoles;
-   }
-   
    public List<ServiceRoleInfo> getRoles() {
 
-      List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();     
+      List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
       for (ServiceRoleInfo role : rolesMap.get(serviceGroup)) {
          serviceRoles.add(setStatus(cluster, serviceGroup, role));
       }
       return serviceRoles;
-   }   
-   
+   }
+
    public List<String> getServiceGroups() {
 
       List<String> serviceRoles = new ArrayList<String>();
-      for (String s : serviceEJB.findServiceGroups(cluster)) {         
+      for (String s : roleEjb.findServiceGroups(cluster)) {
          serviceRoles.add(s);
       }
       return serviceRoles;
-   }   
+   }
 
    public List<ServiceRoleInfo> getSuberviceRoles() {
 
       List<ServiceRoleInfo> serviceRoles = new ArrayList<ServiceRoleInfo>();
       if (serviceGroup != null) { // serviceGroup = mysqlcluster
          for (ServiceRoleInfo role : rolesMap.get(serviceGroup)) {
-            serviceRoles.add(setStatus(cluster, serviceGroup ,role));
+            serviceRoles.add(setStatus(cluster, serviceGroup, role));
          }
       }
       return serviceRoles;
@@ -292,9 +259,9 @@ public class ServiceController {
 
    private ServiceRoleInfo setStatus(String cluster, String group, ServiceRoleInfo role) {
       int started, stopped, failed, good, bad;
-      started = serviceEJB.getServicesStatusCount(cluster, group, role.getShortName(), Service.Status.Started);
-      stopped = serviceEJB.getServicesStatusCount(cluster, group, role.getShortName(), Service.Status.Stopped);
-      failed = serviceEJB.getServicesStatusCount(cluster, group, role.getShortName(), Service.Status.Failed);
+      started = roleEjb.countStatus(cluster, group, role.getShortName(), Role.Status.Started);
+      stopped = roleEjb.countStatus(cluster, group, role.getShortName(), Role.Status.Stopped);
+      failed = roleEjb.countStatus(cluster, group, role.getShortName(), Role.Status.Failed);
 //      good = started + stopped;
 //      bad = failed;
       good = started;
@@ -327,7 +294,7 @@ public class ServiceController {
    }
 
    public boolean hasWebUi() {
-      Service s = serviceEJB.findService(hostname, cluster, serviceGroup, service);
+      Role s = roleEjb.find(hostname, cluster, serviceGroup, role);
       if (s.getWebPort() == null || s.getWebPort() == 0) {
          return false;
       }
@@ -335,22 +302,22 @@ public class ServiceController {
    }
 
    public String getRoleLog(int lines) {
-      WebCommunication webComm = new WebCommunication(hostname, cluster, service);
+      WebCommunication webComm = new WebCommunication(hostname, cluster, serviceGroup, role);
       return webComm.getRoleLog(lines);
    }
-   
+
    public String getAgentLog(int lines) {
       WebCommunication webComm = new WebCommunication(hostname);
       return webComm.getAgentLog(lines);
-   }   
-      
+   }
+
    public String getMySQLClusterConfig() throws Exception {
-      
+
       // Finds hostname of mgmserver
       // Role=mgmserver , Service=MySQLCluster, Cluster=cluster
-      final String SERVICE = "mgmserver";
-      String host = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, SERVICE).get(0).getHostname();
-      WebCommunication webComm = new WebCommunication(host, cluster, SERVICE);
+      final String ROLE = "mgmserver";
+      String host = roleEjb.findRoles(cluster, serviceGroup, ROLE).get(0).getHostname();
+      WebCommunication webComm = new WebCommunication(host, cluster, serviceGroup, ROLE);
       return webComm.getConfig();
    }
 
@@ -364,48 +331,48 @@ public class ServiceController {
       }
       if (serviceGroup.equalsIgnoreCase("mysqlcluster")) {
          return true;
-      }      
+      }
       return false;
    }
-   
+
    public boolean showKTHFSGraphs() {
-      if (serviceGroup.equals(Service.ServiceClass.KTHFS.toString())) {
+      if (serviceGroup.equals(ServiceType.KTHFS.toString())) {
          return true;
       }
-      return false;      
+      return false;
    }
-   
+
    public boolean showMySQLClusterGraphs() {
-      if (serviceGroup.equals(Service.ServiceClass.MySQLCluster.toString())) {
+      if (serviceGroup.equals(ServiceType.MySQLCluster.toString())) {
          return true;
       }
-      return false;      
-   }   
+      return false;
+   }
 
    public boolean showNamenodeGraphs() {
-      if (service.equals("namenode")) {
+      if (role.equals("namenode")) {
          return true;
       }
       return false;
    }
-   
+
    public boolean roleHasGraphs() {
-      if (service == null) {
+      if (role == null) {
          return false;
       }
-      if (service.equals("datanode") || service.equals("namenode")) {
+      if (role.equals("datanode") || role.equals("namenode")) {
          return true;
-      }      
-      return false;      
+      }
+      return false;
    }
 
    public boolean showDatanodeGraphs() {
-      if (service.equals("datanode")) {
+      if (role.equals("datanode")) {
          return true;
       }
       return false;
    }
-   
+
    public String findServiceByRole(String role) {
       return servicesRolesMap.get(role);
    }

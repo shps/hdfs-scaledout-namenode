@@ -21,42 +21,42 @@ public class CommandEJB {
 
     public List<Command> findAll() {
 
-        TypedQuery<Command> query = em.createNamedQuery("Commands.findAll", Command.class);
+        TypedQuery<Command> query = em.createNamedQuery("Commands.find", Command.class);
         return query.getResultList();
     }
     
-    public List<Command> findRecentByInstance(String instance) {
+    public List<Command> findRecentByCluster(String cluster) {
 
         TypedQuery<Command> query = 
-                em.createNamedQuery("Commands.findRecentByInstance", Command.class)
-                .setParameter("instance", instance)                
+                em.createNamedQuery("Commands.findRecentByCluster", Command.class)
+                .setParameter("cluster", cluster)                
                 .setParameter("status", Command.commandStatus.Running);;
         return query.getResultList();
     }
 
-    public List<Command> findRunningByInstance(String instance) {
+    public List<Command> findRunningByCluster(String cluster) {
 
         TypedQuery<Command> query = 
-                em.createNamedQuery("Commands.findRunningByInstance", Command.class)
-                .setParameter("instance", instance)
+                em.createNamedQuery("Commands.findRunningByCluster", Command.class)
+                .setParameter("cluster", cluster)
                 .setParameter("status", Command.commandStatus.Running);
         return query.getResultList();
     }
     
-    public List<Command> findRecentByInstanceGroup(String instance, String group) {
+    public List<Command> findRecentByClusterGroup(String cluster, String group) {
 
         TypedQuery<Command> query = 
-                em.createNamedQuery("Commands.findRecentByInstance-Group", Command.class)
-                .setParameter("instance", instance).setParameter("group", group)                
+                em.createNamedQuery("Commands.findRecentByCluster-Group", Command.class)
+                .setParameter("cluster", cluster).setParameter("group", group)                
                 .setParameter("status", Command.commandStatus.Running);
         return query.getResultList();
     }
 
-    public List<Command> findRunningByInstanceGroup(String instance, String group) {
+    public List<Command> findRunningByClusterGroup(String cluster, String group) {
 
         TypedQuery<Command> query = 
-                em.createNamedQuery("Commands.findRunningByInstance-Group", Command.class)
-                .setParameter("instance", instance).setParameter("group", group)
+                em.createNamedQuery("Commands.findRunningByCluster-Group", Command.class)
+                .setParameter("cluster", cluster).setParameter("group", group)
                 .setParameter("status", Command.commandStatus.Running);
         return query.getResultList();
     }    

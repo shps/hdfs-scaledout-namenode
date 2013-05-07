@@ -1,5 +1,7 @@
 package se.kth.kthfsdashboard.service;
 
+import se.kth.kthfsdashboard.role.RoleEJB;
+import se.kth.kthfsdashboard.role.Role;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +11,7 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.RequestScoped;
 import javax.faces.model.SelectItem;
+import se.kth.kthfsdashboard.role.Role.RoleType;
 import se.kth.kthfsdashboard.struct.InstanceInfo;
 import se.kth.kthfsdashboard.util.CookieTools;
 
@@ -22,8 +25,8 @@ public class ServiceInstanceController implements Serializable {
 
    @ManagedProperty("#{param.hostname}")
    private String hostname;
-   @ManagedProperty("#{param.service}")
-   private String service;
+   @ManagedProperty("#{param.role}")
+   private String role;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
    @ManagedProperty("#{param.cluster}")
@@ -31,7 +34,7 @@ public class ServiceInstanceController implements Serializable {
    @ManagedProperty("#{param.status}")
    private String status;
    @EJB
-   private ServiceEJB serviceEJB;
+   private RoleEJB roleEjb;
    List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
    private static Logger log = Logger.getLogger(ServiceInstanceController.class.getName());
    private List<InstanceInfo> filteredInstances;
@@ -49,9 +52,9 @@ public class ServiceInstanceController implements Serializable {
 
    static {
       statusStates = new String[3];
-      statusStates[0] = Service.Status.Started.toString();
-      statusStates[1] = Service.Status.Stopped.toString();
-      statusStates[2] = Service.Status.Failed.toString();
+      statusStates[0] = Role.Status.Started.toString();
+      statusStates[1] = Role.Status.Stopped.toString();
+      statusStates[2] = Role.Status.Failed.toString();
 
       hdfsRoles = new String[]{"namenode", "datanode"};
       mysqlClusterRoles = new String[]{"ndb", "mgmserver", "mysqld"};
@@ -68,12 +71,12 @@ public class ServiceInstanceController implements Serializable {
       healthOptions = createFilterOptions(healthStates);
    }
 
-   public String getService() {
-      return service;
+   public String getRole() {
+      return role;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public void setRole(String role) {
+      this.role = role;
    }
 
    public String getServiceGroup() {
@@ -118,33 +121,33 @@ public class ServiceInstanceController implements Serializable {
 
    public List<InstanceInfo> getInstances() {
       List<InstanceInfo> instances = new ArrayList<InstanceInfo>();
-      List<Service> services;
+      List<Role> roles;
+      
+      if (cluster != null && role != null && serviceGroup != null && status != null) {
+         roles = roleEjb.findRoles(cluster, serviceGroup, role, Role.getServiceStatus(status));
+         cookie.write("cluster", cluster);
+         cookie.write("service", serviceGroup);
 
-      if (cluster != null && service != null && serviceGroup != null && status != null) {
-         services = serviceEJB.findByInstanceGroupServiceStatus(cluster, serviceGroup, service, Service.getServiceStatus(status));
-         cookie.write("instance", cluster);
-         cookie.write("group", serviceGroup);
-
-      } else if (cluster != null && serviceGroup != null && service != null) {
-         services = serviceEJB.findByInstanceGroupService(cluster, serviceGroup, service);
-         cookie.write("instance", cluster);
-         cookie.write("group", serviceGroup);
+      } else if (cluster != null && serviceGroup != null && role != null) {
+         roles = roleEjb.findRoles(cluster, serviceGroup, role);
+         cookie.write("cluster", cluster);
+         cookie.write("service", serviceGroup);
 
       } else if (cluster != null && serviceGroup != null) {
-         services = serviceEJB.findByInstanceGroup(cluster, serviceGroup);
-         cookie.write("instance", cluster);
-         cookie.write("group", serviceGroup);
+         roles = roleEjb.findRoles(cluster, serviceGroup);
+         cookie.write("cluster", cluster);
+         cookie.write("service", serviceGroup);
 
       } else if (cluster != null) {
-         services = serviceEJB.findByInstance(cluster);
-         cookie.write("instance", cluster);
-         cookie.write("group", serviceGroup);
+         roles = roleEjb.findRoles(cluster);
+         cookie.write("cluster", cluster);
+         cookie.write("service", serviceGroup);
 
       } else {
-         services = serviceEJB.findByInstanceGroup(cookie.read("instance"), cookie.read("group"));
+         roles = roleEjb.findRoles(cookie.read("cluster"), cookie.read("service"));
       }
-      for (Service s : services) {                
-         instances.add(new InstanceInfo(s.getInstance(), s.getServiceGroup(), s.getService(), s.getHostname(), "-", s.getStatus(), s.getHealth().toString()));
+      for (Role r : roles) {                
+         instances.add(new InstanceInfo(r.getCluster(), r.getServiceGroup(), r.getRole(), r.getHostname(), "-", r.getStatus(), r.getHealth().toString()));
       }
       return instances;
    }
@@ -166,11 +169,11 @@ public class ServiceInstanceController implements Serializable {
 
    public SelectItem[] getRoleOptions() {
 
-      if (serviceGroup.equals(Service.ServiceClass.KTHFS.toString())) {
+      if (serviceGroup.equals(ServiceType.KTHFS.toString())) {
          return hdfsRoleOptions;
-      } else if (serviceGroup.equals(Service.ServiceClass.MySQLCluster.toString())) {
+      } else if (serviceGroup.equals(ServiceType.MySQLCluster.toString())) {
          return mysqlclusterRoleOptions;
-      } else if (serviceGroup.equals(Service.ServiceClass.YARN.toString())) {
+      } else if (serviceGroup.equals(ServiceType.YARN.toString())) {
          return yarnRoleOptions;
       } else {
          return new SelectItem[]{};
@@ -186,7 +189,7 @@ public class ServiceInstanceController implements Serializable {
       if (serviceGroup == null) {
          return false;
       }
-      if (serviceGroup.toLowerCase().contains("mysqlcluster")) {
+      if (serviceGroup.equalsIgnoreCase(ServiceType.MySQLCluster.toString())) {
          return true;
       }
       return false;

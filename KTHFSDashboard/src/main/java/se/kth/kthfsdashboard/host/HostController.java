@@ -23,8 +23,8 @@ import se.kth.kthfsdashboard.command.Command;
 import se.kth.kthfsdashboard.command.CommandEJB;
 import se.kth.kthfsdashboard.log.Log;
 import se.kth.kthfsdashboard.log.LogEJB;
-import se.kth.kthfsdashboard.service.Service;
-import se.kth.kthfsdashboard.service.ServiceEJB;
+import se.kth.kthfsdashboard.role.Role;
+import se.kth.kthfsdashboard.role.RoleEJB;
 import se.kth.kthfsdashboard.struct.DiskInfo;
 import se.kth.kthfsdashboard.util.CollectdTools;
 import se.kth.kthfsdashboard.util.WebCommunication;
@@ -43,7 +43,7 @@ public class HostController implements Serializable {
    @EJB
    private HostEJB hostEJB;
    @EJB
-   private ServiceEJB serviceEJB;
+   private RoleEJB roleEjb;
    @EJB
    private CommandEJB commandEJB;
    @ManagedProperty("#{param.cluster}")
@@ -54,8 +54,8 @@ public class HostController implements Serializable {
    private String command;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
-   @ManagedProperty("#{param.service}")
-   private String service;
+   @ManagedProperty("#{param.role}")
+   private String role;
    
    private Host host;
    private boolean currentHostAvailable;
@@ -99,12 +99,12 @@ public class HostController implements Serializable {
       return command;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public void setRole(String role) {
+      this.role = role;
    }
 
-   public String getService() {
-      return service;
+   public String getRole() {
+      return role;
    }
 
    public void setHostname(String hostname) {
@@ -245,13 +245,13 @@ public class HostController implements Serializable {
    public void doCommand(ActionEvent actionEvent) throws NoSuchAlgorithmException, Exception {
 
       //  TODO: If the web application server craches, status will remain 'Running'.
-      Command c = new Command(command, hostname, serviceGroup, service, cluster);
+      Command c = new Command(command, hostname, serviceGroup, role, cluster);
       commandEJB.persistCommand(c);
       FacesMessage message;
 
       //Todo: does not work with hostname. Only works with IP address.
       Host h = hostEJB.findHostByName(hostname);      
-      WebCommunication webComm = new WebCommunication(h.getIp(), cluster, service);
+      WebCommunication webComm = new WebCommunication(h.getIp(), cluster, serviceGroup ,role);
       
       try {
          ClientResponse response = webComm.doCommand(command);
@@ -259,7 +259,7 @@ public class HostController implements Serializable {
          if (response.getClientResponseStatus().getFamily() == Family.SUCCESSFUL) {
             c.succeeded();
             String messageText = "";
-            Service s = serviceEJB.findService(hostname, cluster, serviceGroup, service);
+            Role s = roleEjb.find(hostname, cluster, serviceGroup, role);
             
             if (command.equalsIgnoreCase("init")) {
 //               Todo:
@@ -267,13 +267,13 @@ public class HostController implements Serializable {
             } else if (command.equalsIgnoreCase("start")) {
                JSONObject json = new JSONObject(response.getEntity(String.class));
                messageText = json.getString("msg");
-               s.setStatus(Service.Status.Started);
+               s.setStatus(Role.Status.Started);
 
             } else if (command.equalsIgnoreCase("stop")) {
                messageText = command + ": " + response.getEntity(String.class);
-               s.setStatus(Service.Status.Stopped);
+               s.setStatus(Role.Status.Stopped);
             }
-            serviceEJB.storeService(s);
+            roleEjb.store(s);
             message = new FacesMessage(FacesMessage.SEVERITY_INFO, "Success", messageText);
 
          } else {

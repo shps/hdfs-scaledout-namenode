@@ -1,7 +1,7 @@
 package se.kth.kthfsdashboard.struct;
 
 import java.io.Serializable;
-import se.kth.kthfsdashboard.service.Service;
+import se.kth.kthfsdashboard.role.Role;
 
 /**
  *
@@ -14,21 +14,21 @@ public class InstanceFullInfo implements Serializable {
     private String ip;    
     private String instance;
     private String serviceGroup;
-    private String service;
+    private String role;
     private String rack;
-    private Service.Status status;
+    private Role.Status status;
     private String health;
     private int pid;
     private String uptime;
     private Integer webPort;
 
-    public InstanceFullInfo(String instance, String serviceGroup, String service, String host, String ip, Integer webPort, String rack, Service.Status status, String health) {
+    public InstanceFullInfo(String instance, String serviceGroup, String role, String host, String ip, Integer webPort, String rack, Role.Status status, String health) {
 
-        this.name = service + " (" + host + ")";
+        this.name = role + " (" + host + ")";
         this.host = host;
         this.ip = ip;
         this.instance = instance;
-        this.service = service;
+        this.role = role;
         this.serviceGroup = serviceGroup;
         this.rack = rack;
         this.status = status;
@@ -52,7 +52,7 @@ public class InstanceFullInfo implements Serializable {
         return rack;
     }
 
-    public Service.Status getStatus() {
+    public Role.Status getStatus() {
         return status;
     }
 
@@ -60,8 +60,8 @@ public class InstanceFullInfo implements Serializable {
         return health;
     }
     
-    public String getService() {
-        return service;
+    public String getRole() {
+        return role;
     }
 
     public int getPid() {

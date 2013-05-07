@@ -35,14 +35,16 @@ public class WebCommunication {
    private static String NOT_AVAILABLE = "Not available.";
    private String hostname;
    private String cluster;
-   private String service;
+   private String serviceGroup;   
+   private String role;
    
    private static final Logger logger = Logger.getLogger(WebCommunication.class.getName());
 
-   public WebCommunication(String hostname, String cluster, String service) {
+   public WebCommunication(String hostname, String cluster, String serviceGroup, String role) {
       this.hostname = hostname;
       this.cluster = cluster;
-      this.service = service;
+      this.serviceGroup = serviceGroup;
+      this.role = role;
    }
    
    public WebCommunication(String hostname) {
@@ -66,8 +68,11 @@ public class WebCommunication {
    
    public String getRoleLog(int lines) {
       
-      String path = "/log/" + cluster + "/" + service + "/" + lines;
+      String path = "/log/" + cluster + "/" + serviceGroup + "/" + role + "/" + lines;
       String url = baseUrl(hostname) + path;
+      
+      
+      System.err.println(url);
       return fetchLog(url);
    }   
    
@@ -81,7 +86,7 @@ public class WebCommunication {
    public String getConfig() {
 
       String conf = NOT_AVAILABLE;
-      String path = "/config/" + cluster + "/" + service;
+      String path = "/config/" + cluster + "/" + serviceGroup + "/" + role;
       String url = baseUrl(hostname) + path;
       try {
          ClientResponse response = getWebResource(url);
@@ -96,7 +101,7 @@ public class WebCommunication {
 
    public ClientResponse doCommand(String command) throws Exception {
 
-      String path = "/do/" + cluster + "/" + service + "/" + command;
+      String path = "/do/" + cluster + "/" + role + "/" + command;
       String url = baseUrl(hostname) + path;
       return getWebResource(url);
    }

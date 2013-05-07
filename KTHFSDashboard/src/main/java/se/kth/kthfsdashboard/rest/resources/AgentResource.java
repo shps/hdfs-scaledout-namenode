@@ -17,8 +17,8 @@ import se.kth.kthfsdashboard.alert.Alert;
 import se.kth.kthfsdashboard.alert.AlertEJB;
 import se.kth.kthfsdashboard.host.Host;
 import se.kth.kthfsdashboard.host.HostEJB;
-import se.kth.kthfsdashboard.service.Service;
-import se.kth.kthfsdashboard.service.ServiceEJB;
+import se.kth.kthfsdashboard.role.Role;
+import se.kth.kthfsdashboard.role.RoleEJB;
 
 /**
  * :
@@ -33,7 +33,7 @@ public class AgentResource {
    @EJB
    private HostEJB hostEJB;
    @EJB
-   private ServiceEJB serviceEJB;
+   private RoleEJB roleEjb;
    @EJB
    private AlertEJB alertEJB;
    
@@ -121,25 +121,24 @@ public class AgentResource {
          } else {
             hostEJB.storeHost(host, false);
          }
-         JSONArray servicesArray = json.getJSONArray("services");
+         JSONArray roles = json.getJSONArray("services");
 
-         for (int i = 0; i < servicesArray.length(); i++) {
-            JSONObject s = servicesArray.getJSONObject(i);
-            Service service = new Service();
-            service.setHostname(host.getName());
-            service.setInstance(s.getString("instance"));
-            service.setServiceClass(Service.ServiceClass.valueOf(s.getString("service-class")));            
-            service.setServiceGroup(s.getString("service-group"));
-            service.setService(s.getString("service"));
-            service.setWebPort(s.has("web-port") ? s.getInt("web-port"): null);
-            service.setPid(s.has("pid") ? s.getInt("pid") : 0);
-            service.setStatus(Service.Status.valueOf(s.getString("status")));            
+         for (int i = 0; i < roles.length(); i++) {
+            JSONObject s = roles.getJSONObject(i);
+            Role role = new Role();
+            role.setHostname(host.getName());
+            role.setCluster(s.getString("cluster"));           
+            role.setServiceGroup(s.getString("service"));
+            role.setRole(s.getString("role"));
+            role.setWebPort(s.has("web-port") ? s.getInt("web-port"): null);
+            role.setPid(s.has("pid") ? s.getInt("pid") : 0);
+            role.setStatus(Role.Status.valueOf(s.getString("status")));            
             if (s.has("stop-time")) {
-               service.setUptime(s.getLong("stop-time") - s.getLong("start-time"));
+               role.setUptime(s.getLong("stop-time") - s.getLong("start-time"));
             } else if (s.has("start-time")) {
-               service.setUptime(agentTime - s.getLong("start-time"));
+               role.setUptime(agentTime - s.getLong("start-time"));
             }
-            serviceEJB.storeService(service);
+            roleEjb.store(role);
          }
       } catch (Exception ex) {
          System.err.println("Exception: " + ex);

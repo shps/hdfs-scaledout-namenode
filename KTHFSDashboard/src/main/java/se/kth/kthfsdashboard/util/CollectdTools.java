@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 import javax.ejb.EJB;
 import net.stamfest.rrd.CommandResult;
 import net.stamfest.rrd.RRDp;
-import se.kth.kthfsdashboard.service.ServiceEJB;
+import se.kth.kthfsdashboard.role.RoleEJB;
 
 /**
  *
@@ -32,7 +32,7 @@ public class CollectdTools {
    static final Logger logger = Logger.getLogger(CollectdTools.class.getName());
    Parser parser = new Parser();
    @EJB
-   ServiceEJB serviceEJB;
+   RoleEJB serviceEJB;
 
    enum ChartType {
 

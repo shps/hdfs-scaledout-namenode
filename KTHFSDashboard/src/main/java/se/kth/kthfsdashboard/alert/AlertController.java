@@ -22,8 +22,8 @@ public class AlertController implements Serializable{
    private AlertEJB alertEJB;
    @ManagedProperty("#{param.hostname}")
    private String hostname;
-   @ManagedProperty("#{param.service}")
-   private String service;
+   @ManagedProperty("#{param.role}")
+   private String role;
    @ManagedProperty("#{param.servicegroup}")
    private String serviceGroup;
    @ManagedProperty("#{param.cluster}")
@@ -33,12 +33,12 @@ public class AlertController implements Serializable{
    public AlertController() {
    }
 
-   public String getService() {
-      return service;
+   public String getRole() {
+      return role;
    }
 
-   public void setService(String service) {
-      this.service = service;
+   public void setRole(String role) {
+      this.role = role;
    }
 
    public String getServiceGroup() {
